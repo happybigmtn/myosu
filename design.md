@@ -106,20 +106,74 @@ the typeface. Design for:
 | `Title Case` | never |
 | `camelCase` | never |
 
-## 5. notation
+## 5. notation — typed object system
 
-Universal across all games.
+Every game object is one of 6 types. Each type has a fixed rendering pattern
+that works in any terminal, any locale, any column width. No CJK characters.
+No ambiguous symbols. The type IS the visual language.
+
+### object types
+
+| type | pattern | examples | notes |
+|------|---------|----------|-------|
+| **card** | `Rank``Suit` | `A♠` `K♥` `Q♦` `J♣` `T♠` `9♥` | western deck: rank + suit glyph |
+| **tile** | `[``id``]` | `[1m]` `[9p]` `[Ew]` `[Dr]` | bracketed = tile (mahjong, dominoes) |
+| **flower** | `{``month``.``type``}` | `{jan.R}` `{feb.B}` `{mar.L}` `{dec.R}` | hwatu/hanafuda: month.type (R=ribbon, B=bright, L=leaf, S=seed) |
+| **die** | `[``face``]` | `[3]` `[5]` `[1]` | bracketed numeral = die face |
+| **hidden** | `··` or `░` | `·· ·· ··` `░░░░░░░` | dots = known count, bars = unknown count |
+| **piece** | `○` `●` or letter | `○3` `●5` `○bar` | backgammon, stratego pieces |
+
+### why this works
+
+- **cards** are bare (no brackets) — `A♠ K♥` is instantly recognizable
+- **tiles** are bracketed — `[1m]` visually groups the id, distinguishes from cards
+- **flowers** are braced — `{jan.R}` is unambiguous, English month names, no kanji
+- **dice** are bracketed numerals — `[3]` reads as "a die showing 3"
+- **hidden** uses two visual weights — `··` for "I know how many" vs `░` for "unknown blob"
+
+### hwatu / hanafuda notation
+
+The original `[松1]` notation fails: kanji breaks column alignment, is
+culturally specific to Japanese (hwatu is Korean), and many terminals
+render CJK at double-width unpredictably.
+
+Instead, each flower card is `{month.type}`:
+
+| month | code | bright (B) | ribbon (R) | seed (S) | leaf (L) |
+|-------|------|-----------|-----------|---------|---------|
+| January | jan | crane | red poem | — | — |
+| February | feb | bush warbler | red poem | — | — |
+| March | mar | curtain | red poem | — | — |
+| April | apr | cuckoo | red | — | — |
+| May | may | bridge | red | — | — |
+| June | jun | butterflies | blue | — | — |
+| July | jul | boar | red | — | — |
+| August | aug | moon | geese | — | — |
+| September | sep | sake cup | blue | — | — |
+| October | oct | deer | blue | — | — |
+| November | nov | rain-man | swallow | lightning | — |
+| December | dec | phoenix | — | — | — |
+
+Each month has 4 cards. The type suffix distinguishes them:
+`{jan.B}` = January bright (crane), `{jan.R}` = January ribbon,
+`{jan.S}` = January seed, `{jan.L}` = January leaf.
+
+This renders cleanly at fixed width (7 chars per card), reads in English,
+and is culturally neutral between Korean and Japanese variants.
+
+### dou di zhu / big two notation
+
+Chinese card games use the western deck. No special notation needed.
+Jokers: `BJ` (black joker), `RJ` (red joker).
+
+### formatting constants
 
 ```
-CARDS       A♠ K♥ Q♦ J♣ T♠ 9♥ 8♦ 7♣
-HIDDEN      ·· ··
-TILES       [1m] [2p] [3s] [Ew] [Dr]
-DICE        ⚀ ⚁ ⚂ ⚃ ⚄ ⚅
-CHIPS       142bb  (big blinds)
-POINTS      25000  (integer)
-RATIO       97.4%  (one decimal)
-EMPTY       --
-SEPARATOR   ───
+QUANTITY    142bb  (big blinds, lowercase unit)
+POINTS     25000  (integer, no separator)
+RATIO      97.4%  (one decimal)
+EMPTY      --
+SEPARATOR  ───
 ```
 
 ## 6. declarations
@@ -256,8 +310,8 @@ MYOSU / LIARS DICE / ROUND 3
 
 THE SYSTEM AWAITS YOUR DECISION
 
-  you       ⚂ ⚄ ⚅ ⚀ ⚃        5 dice
-  solver    ?? ?? ?? ??         4 dice remaining
+  you       [3] [5] [6] [1] [4]      5 dice
+  solver    ·· ·· ·· ··              4 dice remaining
   last bid  three fives (solver)
 
 ───
@@ -328,13 +382,13 @@ SOLVER IS COMPUTING
 
   you (○)    pip: 167    bar: 0    off: 0
   solver (●) pip: 167    bar: 0    off: 0
-  dice       ⚂ ⚄        cube: 1
+  dice       [3] [5]    cube: 1
 
 ───
 
-  solver rolls ⚃ ⚁
+  solver rolls [4] [2]
   solver moves 8/4 6/5
-  you roll ⚂ ⚄
+  you roll [3] [5]
 
 > move 24/20 13/10
 ```
@@ -346,18 +400,18 @@ MYOSU / HWATU / ROUND 5
 
 THE SYSTEM AWAITS YOUR DECISION
 
-  hand     [松1] [梅3] [桜2] [藤1] [菖1] [牡2] [萩3]
-  field    [松2] [梅1] [桜3] [柳1]
-  capture  [松3][松4] [梅2][梅4]          score: 3
-  solver   ░░░░░░░░░                     score: 1
+  hand     {jan.B} {feb.L} {mar.R} {apr.S} {may.S} {jul.R} {oct.L}
+  field    {jan.R} {feb.S} {mar.L} {nov.S}
+  capture  {jan.S}{jan.L} {feb.R}{feb.B}         score: 3
+  solver   ░░░░░░░░░                              score: 1
   deck     26 remaining
 
 ───
 
-  solver plays [柳2], captures [柳1]
-  you draw [松1]
+  solver plays {nov.R}, captures {nov.S}
+  you draw {jan.B}
 
-> play 松1
+> play {jan.B}
 ```
 
 ### 8.9 GIN RUMMY
@@ -570,7 +624,61 @@ Before shipping any screen:
 | works at 60 columns? | reflow |
 | works without color? | restructure (color is overlay) |
 
-## 13. final rule
+## 13. what makes this distinctive
+
+Most terminal apps look the same: box-drawing borders, tables, dim text on
+dark background. lazygit, bottom, k9s — competent, interchangeable. myosu
+must be instantly recognizable.
+
+### the signature elements
+
+**A. Declarations as hero text.**
+
+No other terminal app uses full-width declarative statements as the visual
+anchor. `STRATEGIES ARE CONVERGING` is not a status bar — it is the first
+thing the eye reads. It functions like a newspaper headline: it tells you
+the story before you read the data. This is the single most distinctive
+element. It must be preserved in every screen.
+
+**B. The separator rhythm.**
+
+The `───` separator is not a border. It is a breath. It appears between
+state and log, between log sections, between hands. The rhythm of
+separator-data-separator-data creates a visual cadence unique to myosu.
+Most TUIs use box-drawing borders to contain content. myosu uses horizontal
+rules to pace it.
+
+**C. Two-space indent as information hierarchy.**
+
+All data in the state and log panels is indented 2 spaces from the left edge.
+Headers (SUBNET FIELD, SIGNAL) are flush left. This creates a consistent
+left-margin rhythm that reads differently from the flush-left tables of most
+terminal apps.
+
+**D. The `/command` metachannel.**
+
+Game actions are bare words: `call`, `raise 15`, `discard 3m`.
+System actions use a `/` prefix: `/stats`, `/analyze`, `/quit`.
+This split makes the interface feel like two layers: the game conversation
+(foreground) and the system shell (background). No other game interface
+has this layered input model.
+
+**E. The `--pipe` protocol.**
+
+The ability to strip all formatting and pipe to another process is not just
+a feature — it is the identity claim. "This interface is a protocol, not a
+product." No other game platform treats its UI as a machine-readable API.
+
+### the anti-lazygit test
+
+If a screenshot of myosu could be mistaken for lazygit or htop, the screen
+has failed. Check:
+- Is there a declaration? (lazygit has none)
+- Is the dominant visual element text, not borders? (lazygit is border-heavy)
+- Does the screen make a claim about the system's state? (dashboards don't)
+- Could an LLM read it and take an action? (monitoring tools can't)
+
+## 14. final rule
 
 If an interface feels like SaaS → remove polish.
 If it feels like docs → remove explanation.
