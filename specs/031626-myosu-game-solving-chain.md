@@ -23,6 +23,7 @@ Depends-on: none
 | `031626-multi-game-architecture.md` | FG-01 | MG-01..04 | Draft |
 | `031626-tui-implementation.md` | (new) | TU-01..07 | Draft |
 | `031626-abstraction-pipeline.md` | (new) | AP-01..03 | Draft |
+| `031626-launch-integration.md` | (new) | LI-01..05 | Draft |
 
 ## Purpose
 

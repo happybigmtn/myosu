@@ -19,6 +19,7 @@ Date: 2026-03-16
 | 031626-multi-game-architecture.md | MG-01..04 | 4 |
 | 031626-tui-implementation.md | TU-01..07 | 7 |
 | 031626-abstraction-pipeline.md | AP-01..03 | 3 |
+| 031626-launch-integration.md | LI-01..05 | 5 |
 
 ---
 
@@ -514,3 +515,48 @@ Source spec: specs/031626-abstraction-pipeline.md
   - Verify: Download completes in <5min on 100Mbps; hash matches; miner starts after download; tampered artifact rejected
   - Integration: `Trigger=miner startup detects missing abstractions; Callsite=main.rs bootstrap; State=files on disk; Persistence=~3GB; Signal=hash logged`
   - Rollback: artifact URL unavailable
+
+---
+
+## Stage 9: Launch Integration (NLHE HU as Product)
+Source spec: specs/031626-launch-integration.md
+
+- [ ] **LI-01** — Devnet Orchestration
+  - Where: `ops/devnet/docker-compose.yml (new)`, `ops/devnet/README.md (new)`
+  - Tests: `docker compose up -d && sleep 30 && curl -sf http://localhost:8080/health`
+  - Blocking: Developers and testers need one command to run the full stack
+  - Verify: Chain produces blocks within 10s; miner registers within 30s; validator submits within first tempo; curl /health responds; compose down cleans up
+  - Integration: `Trigger=docker compose up; Callsite=ops/devnet/; State=full stack running; Persistence=volumes; Signal=all services healthy`
+  - Rollback: Docker build times exceed 30 minutes
+
+- [ ] **LI-02** — Miner Bootstrap Sequence
+  - Where: `crates/myosu-miner/src/bootstrap.rs (new)`, `scripts/miner-bootstrap.sh (new)`
+  - Tests: `cargo test -p myosu-miner bootstrap::tests::full_sequence_on_devnet`
+  - Blocking: New miners must go from zero to operational automatically
+  - Verify: Fresh miner downloads abstractions, registers, starts training; resume from checkpoint works; chain unreachable → retry with backoff; subnet not found → clear error
+  - Integration: `Trigger=miner startup; Callsite=main.rs; State=10-step bootstrap; Persistence=abstractions + checkpoint; Signal=log at each step`
+  - Rollback: abstraction download fails in Docker network
+
+- [ ] **LI-03** — Gameplay ↔ TUI Wiring
+  - Where: `crates/myosu-play/src/main.rs (extend)`, `crates/myosu-games-poker/src/renderer.rs (new)`
+  - Tests: `cargo test -p myosu-play integration::tests::one_hand_in_tui`
+  - Blocking: Gameplay must render through the TUI shell, not ad-hoc CLI prompts
+  - Verify: NlheRenderer implements GameRenderer; TUI matches design.md 8.1; bot actions in log; /stats works; --pipe plays one hand
+  - Integration: `Trigger=myosu-play CLI; Callsite=main.rs creates TUI shell with NlheRenderer; State=game + TUI; Persistence=hand history; Signal=design.md screen rendered`
+  - Rollback: GameRenderer trait can't express NLHE state panel
+
+- [ ] **LI-04** — End-to-End Acceptance Test
+  - Where: `tests/e2e/nlhe_launch.rs (new)`
+  - Tests: `cargo test --test nlhe_launch -- --ignored` (long-running, opt-in)
+  - Blocking: If this test passes, we can launch. If it fails, we can't.
+  - Verify: Chain → subnet → miner → train → validator → Yuma → emissions → gameplay → hand history. All 8 steps pass. Total < 120 seconds. Uses preflop-only abstractions for speed.
+  - Integration: `Trigger=cargo test; Callsite=tests/e2e/; State=full stack lifecycle; Persistence=temp; Signal=all assertions pass`
+  - Rollback: any component integration failure
+
+- [ ] **LI-05** — Launch Readiness Checklist
+  - Where: `docs/launch-checklist.md (new)`
+  - Tests: N/A (documentation + manual verification)
+  - Blocking: Prevents declaring launch before all critical paths work
+  - Verify: All checklist items checkable; covers chain, solver, scoring, gameplay, integration; explicitly lists what's NOT required
+  - Integration: `N/A (documentation)`
+  - Rollback: N/A
