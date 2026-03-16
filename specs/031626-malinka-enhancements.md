@@ -52,7 +52,14 @@ timeout will kill the engine mid-compilation.
 Also set `engine.timeout_secs: 7200` (2 hours) for tasks that involve full
 workspace builds.
 
-### NC-02: Proof command timeout configuration
+### NC-02: Fix `grep -c` exit code inversion in CF-02
+
+**Problem**: CF-02's test command is `cargo tree -p myosu-runtime 2>&1 | grep -c "pallet.subtensor"` expecting count 0. But `grep -c` returns exit code 1 when count is 0. The loop's `verify_required_tests()` treats non-zero exit as FAIL. The desired success (no subtensor deps) is reported as failure.
+
+**Fix**: Rewrite CF-02's test in IMPLEMENT.md to:
+`! cargo tree -p myosu-runtime 2>&1 | grep -q 'pallet.subtensor'`
+
+### NC-03: Proof command timeout configuration
 
 **Problem**: `cargo build --release` for the Substrate runtime can take 10+
 minutes. Proof commands may have default timeouts that are too short.
@@ -218,7 +225,22 @@ for proof commands, not overridden by project.yaml's global proof_commands.
 - **Effort**: 2-3 days (scheduler enhancement + worktree management)
 - **Priority**: P2 (optimization — sequential works, just slower)
 
-### EN-08: Branch naming convention (trunk, not main)
+### EN-08: Substrate-specific build prompt enrichment
+
+- **What**: The generic `PROMPT_build.md` has no Substrate domain context
+- **Why**: Agents writing pallet code (GS-01..09) need FRAME macro patterns,
+  `construct_runtime!` conventions, `TestExternalities` mock setup, and
+  storage attribute syntax. Without this, agents make structural errors.
+- **Current**: `PROMPT_build.md` is 37 lines of generic "implement + test + RESULT"
+- **Proposed**: Support `RALPH_PROMPT_FILE` override per-repo. Myosu creates its
+  own `loop/PROMPT_build.md` extending the generic template with a Substrate
+  context block covering `#[pallet::*]` macros, storage types, mock runtime
+  setup, and WASM build conventions.
+- **Effort**: 4-8 hours (myosu creates custom prompt, malinka needs no change
+  since `RALPH_PROMPT_FILE` already exists)
+- **Priority**: P1 (blocks quality of pallet development tasks)
+
+### EN-09: Branch naming convention (trunk, not main)
 
 - **What**: Support configurable default branch name
 - **Why**: myosu uses `trunk` as its default branch, not `main`. If malinka

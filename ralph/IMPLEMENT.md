@@ -46,7 +46,7 @@ Source spec: specs/031626-chain-fork-scaffold.md
 
 - [ ] **CF-02** — Prune Workspace Dependencies
   - Where: `crates/myosu-chain/Cargo.toml (new)`, `crates/myosu-chain/runtime/Cargo.toml (new)`
-  - Tests: `cargo tree -p myosu-runtime 2>&1 | grep -c "pallet.subtensor"` → 0
+  - Tests: `! cargo tree -p myosu-runtime 2>&1 | grep -q 'pallet.subtensor'`
   - Blocking: Dependency contamination from stripped pallets will cause build failures
   - Verify: No references to subtensor/frontier/drand in dependency tree; build succeeds; WASM blob produced
   - Integration: `Trigger=cargo build; Callsite=Cargo resolver; State=dependency tree resolved; Persistence=Cargo.lock; Signal=cargo tree shows no stripped crates`

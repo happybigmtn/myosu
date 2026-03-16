@@ -171,8 +171,11 @@ Out of scope:
   }
   ```
 
-  Checkpoint format: bincode serialization of `NlheProfile` to file. The
-  encoder is reconstructed from abstraction tables (separate from checkpoint).
+  Checkpoint format: 4-byte magic (`MYOS`) + 4-byte version (u32) + bincode
+  serialization of `NlheProfile`. On load, verify magic and version; reject
+  with clear error if mismatched ("checkpoint version 1, expected 2; re-train
+  required"). The encoder is reconstructed from abstraction tables (separate
+  from checkpoint, pinned to a hash-checked versioned artifact).
 
 - Whole-system effect: the miner binary wraps this struct. Without it, there's
   no way to train or query poker strategies.

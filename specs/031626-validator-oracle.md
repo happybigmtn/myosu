@@ -173,6 +173,12 @@ Out of scope:
   ```
 
   The seed is derived from: `hash(subnet_id, epoch_number, validator_hotkey)`.
+
+  **Encoder pinning for INV-003**: All validators must use identical
+  abstraction tables (NlheEncoder state). Pin the encoder to a versioned,
+  hash-checked artifact. On startup, log the encoder hash. The INV-003
+  integration test (milestone 7) must use independently-initialized
+  validators to catch encoder divergence.
   This ensures: same validator produces same positions each epoch (deterministic),
   different validators produce different positions (diverse coverage),
   positions change each epoch (no memorization).
@@ -248,11 +254,19 @@ Out of scope:
   6. Score miners (VO-04)
   7. Submit `reveal_weights(subnet_id, uids, values, salt)`
 
-  The commit-reveal flow prevents miners from seeing which positions will be
-  tested before they commit their strategy. A miner that tailors responses
-  to known test positions would be scored honestly on unknown positions.
+  **Clarification on commit-reveal**: The on-chain commit-reveal mechanism
+  hides the **weight vector** from other validators (preventing weight
+  copying — the standard Bittensor anti-gaming mechanism). It does NOT hide
+  test positions from miners — miners see queries in real-time at step 5.
+  Miner gaming of specific positions is mitigated by: (a) large, varied test
+  position sets that change each epoch, and (b) the validator choosing
+  positions deterministically from a seed miners can't predict.
 
   Evaluation cadence: once per tempo (every `Tempo[subnet]` blocks).
+  **Miners should be queried concurrently** (`futures::join_all` or bounded
+  `FuturesUnordered`) to avoid sequential round-trip overhead. Set a hard
+  deadline at `tempo * 0.8` blocks — if exceeded, submit partial weights
+  (scored miners get computed weight, unscored get 0).
 - Required tests:
   - `cargo test -p myosu-validator submitter::tests::submit_direct_weights`
   - `cargo test -p myosu-validator submitter::tests::commit_reveal_flow`

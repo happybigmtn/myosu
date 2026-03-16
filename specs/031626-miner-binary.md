@@ -159,9 +159,18 @@ Out of scope:
       }
   }
   ```
-  The solver is behind `Arc<RwLock>` so the axon server can read the current
-  strategy while training writes to it. RwLock allows concurrent reads
-  (strategy queries) with exclusive writes (training updates).
+  The solver uses a **double-buffer pattern** via `arc_swap::ArcSwap<PokerSolver>`.
+  The training loop writes to a private "hot" profile, and every N iterations
+  publishes a snapshot to the shared `ArcSwap`. Reads always hit the published
+  snapshot with **zero contention** — no locks, no blocking. This avoids the
+  RwLock problem where training batches (seconds of CPU work) would starve
+  all strategy queries.
+
+  The training task's `JoinHandle` is monitored. On panic (OOM, arithmetic
+  overflow), the miner logs the error, saves a checkpoint, and either restarts
+  training from the last checkpoint or shuts down. The `/health` endpoint
+  includes `training_active: bool` and `last_training_epoch: usize` so
+  validators and operators can detect stalled miners.
 - Whole-system effect: produces strategy quality over time. The longer a
   miner runs, the better its strategy becomes.
 - State: PokerSolver training state (regrets, weights).
@@ -189,7 +198,11 @@ Out of scope:
 - How: HTTP server (axum or actix-web) on the configured port:
 
   `POST /strategy` — accepts `WireStrategy` query, returns `WireStrategy` response.
-  `GET /health` — returns `{ "status": "ok", "epochs": N, "exploitability": X }`.
+  `POST /strategy/batch` — accepts `Vec<WireStrategy>`, returns `Vec<WireStrategy>`.
+  `GET /health` — returns `{ "status": "ok", "epochs": N, "exploitability": X, "training_active": true }`.
+
+  Content type: `application/octet-stream` (bincode) for strategy endpoints,
+  `application/json` for health. Include `X-Myosu-Version: 1` header.
 
   The axon reads from the shared `Arc<RwLock<PokerSolver>>` without blocking
   training (uses RwLock read lock).

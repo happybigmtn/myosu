@@ -136,8 +136,11 @@ Out of scope:
   - `LiarsDiceTurn: CfrTurn` — `Player(0)`, `Player(1)`, `Chance`, `Terminal`
   - `LiarsDiceInfo: CfrInfo` — (my die, bid history) — player can't see opponent's die
 
-  State space: ~6 × 6 × ~20 possible bid sequences ≈ ~720 terminal states.
-  Small enough for exact solution.
+  State space: 36 die outcomes × 4,095 bid sequences ≈ **147,420 terminal
+  states** and **~24,576 information sets**. (max_bids = max_quantity(2) ×
+  num_faces(6) = 12 distinct ordered bids; 2^12 - 1 = 4,095 strictly
+  increasing subsequences ending in challenge.) Still trivially solvable —
+  converges in seconds, comparable to Kuhn poker (~30 info sets).
 
 - Whole-system effect: proves CfrGame works for non-poker games.
 - State: game state (two dice, bid history).
