@@ -87,11 +87,12 @@ Out of scope:
 | Sub-problem | Existing code / flow | Reuse / extend / replace | Why |
 |-------------|----------------------|--------------------------|-----|
 | TUI framework | ratatui 0.29+ | reuse | Standard Rust TUI framework |
-| Terminal backend | crossterm | reuse | Cross-platform terminal manipulation |
-| Input widget | tui-textarea crate | evaluate | May provide readline-style input |
-| Scrollable panel | ratatui built-in Paragraph with scroll | reuse | For log panel |
-| Color system | ratatui::style::{Color, Style, Modifier} | reuse | Maps to design.md color semantics |
-| Layout | ratatui::layout::{Layout, Constraint, Direction} | reuse | 5-panel vertical layout |
+| Terminal backend | crossterm (event-stream feature) | reuse | Cross-platform terminal + async EventStream |
+| Input widget | tui-textarea 0.7+ | reuse | Built-in emacs keybindings (Ctrl-A/E/K/U/W/Y), undo/redo |
+| Scrollable panel | tui-scrollview 0.6+ | reuse | Variable-height styled content scrolling |
+| Color system | ratatui::style::{Color, Style, Modifier, Stylize} | reuse | Maps to design.md color semantics |
+| Layout | ratatui::layout::{Layout, Constraint} with Fill | reuse | 5-panel vertical layout, Fill for flex |
+| Async events | tokio + crossterm EventStream | reuse | `tokio::select!` for concurrent key + miner events |
 
 ## Ownership Map
 

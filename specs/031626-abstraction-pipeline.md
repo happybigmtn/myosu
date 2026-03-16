@@ -130,9 +130,27 @@ Out of scope:
   Runs the full pipeline: enumerate isomorphisms → compute equity
   distributions → k-means clustering → write abstraction table to files.
 
-  Output: one file per street (`preflop.bin`, `flop.bin`, `turn.bin`,
-  `river.bin`), each containing a `BTreeMap<Isomorphism, Abstraction>`
-  serialized as bincode.
+  Output: three files per street (lookup + metric + future):
+
+  ```
+  abstractions/
+  ├── preflop.lookup.bin     # (i64, i16) pairs: iso → abs, 4KB
+  ├── preflop.metric.bin     # (i32, f32) pairs: triangular EMD, 301KB
+  ├── flop.lookup.bin        # iso → abs, 32MB
+  ├── flop.metric.bin        # triangular EMD, 175KB
+  ├── flop.future.bin        # (i16, i16, f32): centroid distributions
+  ├── turn.lookup.bin        # iso → abs, 347MB
+  ├── turn.metric.bin        # triangular EMD, 175KB
+  ├── turn.future.bin        # centroid distributions
+  ├── river.lookup.bin       # iso → abs, ~3GB
+  └── manifest.json
+  ```
+
+  The lookup files contain `BTreeMap<Isomorphism, Abstraction>` as bincode.
+  The metric files contain pairwise EMD distances between abstract buckets
+  (needed for hierarchical clustering: flop clustering reads turn metric).
+  The future files contain centroid histogram distributions for belief
+  propagation between streets.
 
   Also writes `manifest.json`:
   ```json
@@ -267,15 +285,17 @@ Out of scope:
 
 ## Resource Requirements
 
-| phase | CPU | RAM | disk | time |
-|-------|-----|-----|------|------|
-| preflop clustering | 1 core | 1 MB | <1 MB | <1 second |
-| flop clustering | 16 cores | 32 MB | 32 MB | ~10 minutes |
-| turn clustering | 16 cores | 347 MB | 347 MB | ~2 hours |
-| river clustering | 16 cores | 3.02 GB | 3.02 GB | ~8 hours |
-| **total** | **16 cores** | **~4 GB peak** | **~3.4 GB** | **~10 hours** |
+| phase | CPU | peak RAM | disk output | time |
+|-------|-----|----------|-------------|------|
+| preflop | 1 core | 1 MB | 4 KB + 301 KB | <1 second |
+| flop k-means | 16 cores | ~1.3 GB | 32 MB + 175 KB | ~10 minutes |
+| turn k-means | 16 cores | ~16 GB | 347 MB + 175 KB | ~2 hours |
+| river equity | 16 cores | streaming | ~3 GB | ~8 hours |
+| **total** | **16 cores** | **~16 GB peak** | **~3.4 GB** | **~10 hours** |
 
-Source: robopoker COMPLEXITY.md
+Peak RAM is during turn clustering: 14M histograms × 144 buckets × 4 bytes
+× 2 (data + bounds) ≈ 16 GB. River is streamed (no full-memory load).
+Source: robopoker clustering architecture analysis.
 
 ## Decision Log
 
