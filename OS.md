@@ -288,6 +288,256 @@ and superhuman. The solver gap is minimal.
 Combined addressable market across all 20 games: $10B+ annually. No competitor
 addresses more than 2 of these games. myosu addresses all 20 with one protocol.
 
+## Presentation Layer — Making Text Beautiful
+
+The terminal is not a limitation. It is a medium.
+
+Photography gained its identity when artists stopped trying to imitate painting
+and embraced what the camera could do that paint could not. Terminal interfaces
+gain their identity when designers stop trying to imitate GUIs and embrace what
+text can do that pixels cannot: density, composability, universality, and the
+radical equality of human and machine as players.
+
+### The core insight: agents are first-class players
+
+Every game on myosu must be playable by both humans and agents through the
+same interface. This is not a technical constraint — it is the product thesis.
+When an agent sits at a poker table, it sees the same text representation a
+human sees and responds with the same commands. The interface IS the protocol.
+
+This means:
+- No mouse-dependent interactions. Everything is keyboard-native.
+- No visual information that can't be expressed as text.
+- Input is natural language or structured commands — `call`, `raise 15`,
+  `discard 3m`, `bid two fives`, `challenge`.
+- The game's text representation must be complete enough that an LLM can
+  play from the text alone, with zero additional context.
+
+If an LLM can read the game state and produce a valid action from text, the
+interface is correct. If it can't, the interface is broken.
+
+### Design principles
+
+**1. The conversation metaphor.**
+
+The game interface is a conversation between the player and the game engine.
+Not a dashboard. Not a simulation. A conversation.
+
+```
+  ── Hand #47 · NLHE Heads-Up · Pot 12 BB ─────────────────────
+
+  Board:  T♠  7♥  2♣
+
+  You (BB):   A♠ K♥     94 BB
+  Bot (SB):   ·· ··     94 BB
+
+  Bot raises to 6 BB.
+
+  > call
+
+  You call 6 BB. Pot is now 12 BB.
+
+  ── Turn: 9♦ ─────────────────────────────────────────────────
+
+  Bot checks.
+
+  > raise 8
+
+  You raise to 8 BB.
+```
+
+The player types. The game responds. Like a text adventure, but for strategy
+games. The aesthetic is closer to a literary experience than a video game.
+
+**2. Information density as beauty.**
+
+A terminal can display more decision-relevant information per square inch than
+any GUI. A well-designed TUI shows everything the player needs — hand, board,
+pot, stacks, action history, odds — in 20 lines. No scrolling. No tabs. No
+hidden panels.
+
+```
+  ┌─ Riichi Mahjong · East 1 · Round 3 ──────────────────────┐
+  │                                                            │
+  │  Player 2:  ░░░░░░░░░░░░░  discards: 1m 9p 5s Nw        │
+  │  Player 3:  ░░░░░░░░░░░    discards: 2m 3p 7s            │
+  │  Player 4:  ░░░░░░░░░░░░░  discards: 4p                  │
+  │                                                            │
+  │  Your hand:                                                │
+  │  [1m][2m][3m] [5p][6p][7p] [3s][4s] [9s][9s] [E][E]     │
+  │                                                            │
+  │  Draw: [5s]   Riichi: no   Points: 25000                  │
+  │                                                            │
+  │  > discard 4s                                              │
+  └────────────────────────────────────────────────────────────┘
+```
+
+**3. Color as meaning, never decoration.**
+
+The terminal palette is limited. This is a feature. Every color must carry
+semantic meaning:
+
+| Color | Meaning |
+|-------|---------|
+| White | Neutral text, game narration |
+| Green | Your actions, positive outcomes, money won |
+| Red | Opponent actions, negative outcomes, money lost |
+| Yellow | Warnings, time pressure, important state changes |
+| Blue | System information, pot size, stack sizes |
+| Dim/Gray | Historical actions, folded players, metadata |
+| Bold | Current decision point, your cards, action required |
+
+No gradients. No background colors on text. No blinking. Restraint is the
+aesthetic.
+
+**4. Unicode as design system.**
+
+Box-drawing characters, card suits, and mathematical symbols are the only
+visual elements. They must be used consistently:
+
+```
+  Cards:    A♠ K♥ Q♦ J♣ T♠ 9♥        (rank + suit symbol)
+  Hidden:   ·· ··                      (middle dot pairs)
+  Tiles:    [1m] [2p] [3s] [Ew]       (bracketed shorthand)
+  Dice:     ⚀ ⚁ ⚂ ⚃ ⚄ ⚅             (unicode dice faces)
+  Borders:  ─ │ ┌ ┐ └ ┘ ├ ┤ ┬ ┴ ┼   (single-line box drawing)
+  Dividers: ── section ──              (em-dash runs)
+```
+
+No ASCII art for cards. No elaborate box borders. The characters themselves
+are the design.
+
+**5. Silence as rhythm.**
+
+Not every action needs a response. Blank lines create rhythm. The game
+breathes between streets, between hands, between sessions.
+
+```
+  Bot folds.
+  You win 6 BB.
+
+                                               Session: +14 BB over 47 hands
+
+
+  ── Hand #48 ─────────────────────────────────────────────────
+
+  ...
+```
+
+The whitespace is intentional. It gives the player time to process.
+
+**6. Free-form input with intelligent parsing.**
+
+Players should be able to type naturally:
+
+```
+  > fold                    → Fold
+  > call                    → Call
+  > raise 15                → Raise to 15 BB
+  > raise to 15             → Raise to 15 BB
+  > r 15                    → Raise to 15 BB
+  > all in                  → Shove
+  > shove                   → Shove
+  > ?                       → Show available actions
+  > help                    → Show help
+  > history                 → Show hand history
+  > what should I do?       → Trigger coaching mode (query best miner)
+  > analyze                 → Show GTO analysis of current spot
+```
+
+Invalid input is never an error — it's a prompt for clarification:
+
+```
+  > raise
+  Raise to how much? (min 4 BB, max 94 BB)
+  > 15
+  You raise to 15 BB.
+```
+
+**7. The editor metaphor.**
+
+For advanced users, the interface should feel like a code editor:
+
+- Readline keybindings (Ctrl-A, Ctrl-E, Ctrl-W, etc.)
+- Command history (up/down arrows)
+- Tab completion for actions
+- `/` prefix for meta-commands (`/quit`, `/stats`, `/settings`)
+- Configurable prompt character
+
+The terminal is the IDE. The game is the program. The player is the programmer.
+
+### Agent integration
+
+When an agent plays, the interface is identical. The agent receives the same
+text output a human would see and produces the same text commands:
+
+```
+  Agent input (what the agent sees):
+  ── Hand #47 · NLHE Heads-Up · Pot 12 BB ─
+  Board: T♠ 7♥ 2♣
+  You (BB): A♠ K♥  94 BB
+  Bot (SB): ·· ··  94 BB
+  Bot raises to 6 BB.
+  >
+
+  Agent output (what the agent types):
+  call
+```
+
+This means:
+- Game state rendering MUST be parseable by an LLM
+- Action format MUST be unambiguous from text alone
+- No hidden state that only a GUI could convey
+- The same game client binary works for human play, agent play, and
+  agent-vs-agent evaluation
+
+An agent can join any table by piping stdin/stdout. A human can watch an
+agent play in real-time by reading its terminal output. Two agents can play
+each other with zero additional infrastructure — just pipe one's stdout to
+the other's stdin.
+
+### Implementation: ratatui + crossterm
+
+The TUI framework is ratatui (Rust) with crossterm for terminal manipulation.
+This is already battle-tested in the Rust ecosystem (lazygit, bottom, gitui).
+
+The key architectural decision: **immediate-mode rendering with a conversation
+log**. The screen is divided into:
+
+```
+  ┌─ Game State ──────────────────────────────────────────────┐
+  │                                                            │
+  │  [compact game state: board, hands, stacks, pot]          │
+  │                                                            │
+  ├─ Conversation ────────────────────────────────────────────┤
+  │                                                            │
+  │  [scrollable log of actions and narration]                │
+  │  [most recent at bottom]                                  │
+  │                                                            │
+  ├─ Input ───────────────────────────────────────────────────┤
+  │  > _                                                       │
+  └────────────────────────────────────────────────────────────┘
+```
+
+The game state panel is fixed-height and always visible. The conversation
+panel scrolls. The input line is always at the bottom. This layout works for
+every game — poker, mahjong, backgammon, Liar's Dice, bridge, Teen Patti.
+Only the game state panel changes per game.
+
+### The test of beauty
+
+A myosu game interface is beautiful when:
+1. A screenshot is readable at 50% zoom
+2. A player can play a complete hand without touching the mouse
+3. An LLM can play from the text representation alone
+4. A spectator can understand the game state from the conversation log
+5. The interface looks intentional, not accidental — every character is placed
+   with purpose
+
+The terminal aesthetic is not retro nostalgia. It is the most direct path
+between a game's information and a player's mind. No chrome. No animation.
+No distraction. Just the game.
+
 ## Company Stages
 
 ### Stage 0: Bootstrap (current)
