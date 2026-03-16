@@ -7,24 +7,25 @@ Date: 2026-03-16
 
 | Spec File | AC Prefix | Count |
 |-----------|-----------|-------|
+| `031626-00-master-index.md` | — | index |
 | (robopoker fork prerequisites) | RF-01..02 | 2 |
-| 031626-myosu-game-solving-chain.md | (master index) | — |
-| 031626-chain-fork-scaffold.md | CF-01..05 | 5 |
-| 031626-game-solving-pallet.md | GS-01..10 | 10 |
-| 031626-game-engine-traits.md | GT-01..05 | 5 |
-| 031626-poker-engine.md | PE-01..04 | 4 |
-| 031626-miner-binary.md | MN-01..05 | 5 |
-| 031626-validator-oracle.md | VO-01..06 | 6 |
-| 031626-gameplay-cli.md | GP-01..04 | 4 |
-| 031626-multi-game-architecture.md | MG-01..04 | 4 |
-| 031626-tui-implementation.md | TU-01..07 | 7 |
-| 031626-abstraction-pipeline.md | AP-01..03 | 3 |
-| 031626-launch-integration.md | LI-01..05 | 5 |
+| `031626-01-chain-fork-scaffold.md` | CF-01..05 | 5 |
+| `031626-02a-game-engine-traits.md` | GT-01..05 | 5 |
+| `031626-02b-poker-engine.md` | PE-01..04 | 4 |
+| `031626-03-game-solving-pallet.md` | GS-01..10 | 10 |
+| `031626-04a-miner-binary.md` | MN-01..05 | 5 |
+| `031626-04b-validator-oracle.md` | VO-01..06 | 6 |
+| `031626-05-gameplay-cli.md` | GP-01..04 | 4 |
+| `031626-06-multi-game-architecture.md` | MG-01..04 | 4 |
+| `031626-07-tui-implementation.md` | TU-01..07 | 7 |
+| `031626-08-abstraction-pipeline.md` | AP-01..03 | 3 |
+| `031626-09-launch-integration.md` | LI-01..05 | 5 |
+| `031626-99-malinka-enhancements.md` | — | external |
 
 ---
 
 ## Stage 0: Robopoker Fork Prerequisites
-Source: specs/031626-game-engine-traits.md Blocking Prerequisites
+Source: specs/031626-02a-game-engine-traits.md Blocking Prerequisites
 
 - [ ] **RF-01** — Fork robopoker v1.0.0 and add serde feature
   - Where: `happybigmtn/robopoker (new fork)`
@@ -45,7 +46,7 @@ Source: specs/031626-game-engine-traits.md Blocking Prerequisites
 ---
 
 ## Stage 1: Chain Fork Scaffold
-Source spec: specs/031626-chain-fork-scaffold.md
+Source spec: specs/031626-01-chain-fork-scaffold.md
 
 - [ ] **CF-02** — Prune Workspace Dependencies
   - Where: `crates/myosu-chain/Cargo.toml (new)`, `crates/myosu-chain/runtime/Cargo.toml (new)`
@@ -90,7 +91,7 @@ Source spec: specs/031626-chain-fork-scaffold.md
 ---
 
 ## Stage 2a: Game Engine Traits
-Source spec: specs/031626-game-engine-traits.md
+Source spec: specs/031626-02a-game-engine-traits.md
 
 - [ ] **GT-01** — Re-export and Extend Robopoker CFR Traits
   - Where: `crates/myosu-games/src/traits.rs (new)`
@@ -135,7 +136,7 @@ Source spec: specs/031626-game-engine-traits.md
 ---
 
 ## Stage 2b: Poker Engine
-Source spec: specs/031626-poker-engine.md
+Source spec: specs/031626-02b-poker-engine.md
 
 - [ ] **PE-01** — Poker Solver Wrapper
   - Where: `crates/myosu-games-poker/src/solver.rs (new)`
@@ -172,7 +173,7 @@ Source spec: specs/031626-poker-engine.md
 ---
 
 ## Stage 3: On-Chain Incentives
-Source spec: specs/031626-game-solving-pallet.md
+Source spec: specs/031626-03-game-solving-pallet.md
 
 - [ ] **GS-01** — Pallet Scaffold with Config and Storage
   - Where: `crates/myosu-chain/pallets/game-solver/src/lib.rs (new)`
@@ -257,7 +258,7 @@ Source spec: specs/031626-game-solving-pallet.md
 ---
 
 ## Stage 4a: Miner Binary
-Source spec: specs/031626-miner-binary.md
+Source spec: specs/031626-04a-miner-binary.md
 
 - [ ] **MN-01** — CLI and Chain Registration
   - Where: `crates/myosu-miner/src/main.rs (new)`, `src/chain.rs (new)`
@@ -302,7 +303,7 @@ Source spec: specs/031626-miner-binary.md
 ---
 
 ## Stage 4b: Validator Oracle
-Source spec: specs/031626-validator-oracle.md
+Source spec: specs/031626-04b-validator-oracle.md
 
 - [ ] **VO-01** — CLI and Chain Registration
   - Where: `crates/myosu-validator/src/main.rs (new)`, `src/chain.rs (new)`
@@ -355,7 +356,7 @@ Source spec: specs/031626-validator-oracle.md
 ---
 
 ## Stage 5: Product Layer
-Source spec: specs/031626-gameplay-cli.md
+Source spec: specs/031626-05-gameplay-cli.md
 
 - [ ] **GP-01** — Best Miner Discovery
   - Where: `crates/myosu-play/src/discovery.rs (new)`
@@ -392,7 +393,7 @@ Source spec: specs/031626-gameplay-cli.md
 ---
 
 ## Stage 6: Multi-Game Validation
-Source spec: specs/031626-multi-game-architecture.md
+Source spec: specs/031626-06-multi-game-architecture.md
 
 - [ ] **MG-01** — Liar's Dice Game Engine
   - Where: `crates/myosu-games-liars-dice/ (new)`
@@ -429,7 +430,7 @@ Source spec: specs/031626-multi-game-architecture.md
 ---
 
 ## Stage 7: TUI Implementation
-Source spec: specs/031626-tui-implementation.md
+Source spec: specs/031626-07-tui-implementation.md
 
 - [ ] **TU-01** — GameRenderer Trait
   - Where: `crates/myosu-tui/src/renderer.rs (new)`
@@ -490,7 +491,7 @@ Source spec: specs/031626-tui-implementation.md
 ---
 
 ## Stage 8: Abstraction Pipeline
-Source spec: specs/031626-abstraction-pipeline.md
+Source spec: specs/031626-08-abstraction-pipeline.md
 
 - [ ] **AP-01** — Clustering Binary
   - Where: `crates/myosu-cluster/src/main.rs (new)`
@@ -519,7 +520,7 @@ Source spec: specs/031626-abstraction-pipeline.md
 ---
 
 ## Stage 9: Launch Integration (NLHE HU as Product)
-Source spec: specs/031626-launch-integration.md
+Source spec: specs/031626-09-launch-integration.md
 
 - [ ] **LI-01** — Devnet Orchestration
   - Where: `ops/devnet/docker-compose.yml (new)`, `ops/devnet/README.md (new)`

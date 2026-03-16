@@ -95,8 +95,8 @@ In scope:
 - RPS reference implementation proving the trait system works
 
 Out of scope:
-- Poker-specific implementation (spec: 031626-poker-engine.md)
-- Liar's Dice implementation (spec: 031626-multi-game-architecture.md)
+- Poker-specific implementation (spec: 031626-02b-poker-engine.md)
+- Liar's Dice implementation (spec: 031626-06-multi-game-architecture.md)
 - Network transport protocol — serialization format only, not wire protocol
 - Training configuration — that's the miner spec
 

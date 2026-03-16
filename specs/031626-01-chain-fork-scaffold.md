@@ -12,7 +12,7 @@ that produces blocks on a local devnet. This spec strips all AI/ML-specific
 pallets (weights, epochs, EVM, AMM, randomness beacon) while preserving the
 core Substrate infrastructure (consensus, accounts, balances, transaction
 payment). The result is a blank-slate chain ready to receive the game-solving
-pallet (spec: `031626-game-solving-pallet.md`).
+pallet (spec: `031626-03-game-solving-pallet.md`).
 
 The primary consumer is every subsequent spec — nothing works without a
 running chain. The secondary consumer is the developer, who needs a
@@ -75,7 +75,7 @@ In scope:
 - Verify block production and RPC
 
 Out of scope:
-- Game-solving pallet — that's a separate spec (031626-game-solving-pallet.md)
+- Game-solving pallet — that's a separate spec (031626-03-game-solving-pallet.md)
 - Custom transaction extensions — keep standard Substrate extensions
 - EVM or smart contract support — stripped and not coming back
 - Production chain spec — devnet only

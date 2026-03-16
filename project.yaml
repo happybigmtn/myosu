@@ -39,7 +39,7 @@ codex:
 
 doctrine:
   mission_paths:
-    - specs/031626-myosu-game-solving-chain.md
+    - specs/031626-00-master-index.md
     - ralph/SPEC.md
   invariant_paths:
     - INVARIANTS.md

@@ -13,17 +13,17 @@ Depends-on: none
 
 | Spec File | Expands | AC Prefix | Status |
 |-----------|---------|-----------|--------|
-| `031626-chain-fork-scaffold.md` | CH-01 | CF-01..05 | Draft |
-| `031626-game-solving-pallet.md` | CH-02 | GS-01..10 | Draft |
-| `031626-game-engine-traits.md` | GE-01 | GT-01..05 | Draft |
-| `031626-poker-engine.md` | GE-02 | PE-01..04 | Draft |
-| `031626-miner-binary.md` | MN-01 | MN-01..05 | Draft |
-| `031626-validator-oracle.md` | VL-01 | VO-01..06 | Draft |
-| `031626-gameplay-cli.md` | GP-01 | GP-01..04 | Draft |
-| `031626-multi-game-architecture.md` | FG-01 | MG-01..04 | Draft |
-| `031626-tui-implementation.md` | (new) | TU-01..07 | Draft |
-| `031626-abstraction-pipeline.md` | (new) | AP-01..03 | Draft |
-| `031626-launch-integration.md` | (new) | LI-01..05 | Draft |
+| `031626-01-chain-fork-scaffold.md` | CH-01 | CF-01..05 | Draft |
+| `031626-03-game-solving-pallet.md` | CH-02 | GS-01..10 | Draft |
+| `031626-02a-game-engine-traits.md` | GE-01 | GT-01..05 | Draft |
+| `031626-02b-poker-engine.md` | GE-02 | PE-01..04 | Draft |
+| `031626-04a-miner-binary.md` | MN-01 | MN-01..05 | Draft |
+| `031626-04b-validator-oracle.md` | VL-01 | VO-01..06 | Draft |
+| `031626-05-gameplay-cli.md` | GP-01 | GP-01..04 | Draft |
+| `031626-06-multi-game-architecture.md` | FG-01 | MG-01..04 | Draft |
+| `031626-07-tui-implementation.md` | (new) | TU-01..07 | Draft |
+| `031626-08-abstraction-pipeline.md` | (new) | AP-01..03 | Draft |
+| `031626-09-launch-integration.md` | (new) | LI-01..05 | Draft |
 
 ## Purpose
 

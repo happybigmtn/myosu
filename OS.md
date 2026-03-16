@@ -5,7 +5,7 @@ last_updated: "2026-03-16"
 company_name: "Myosu"
 company_stage: "stage_0_bootstrap"
 domain_overlay: "game_solving_chain"
-primary_mission_doctrine: "specs/031626-myosu-game-solving-chain.md"
+primary_mission_doctrine: "specs/031626-00-master-index.md"
 hard_invariants_doctrine:
   - "INVARIANTS.md"
 kpi_registry_path: "ops/kpi_registry.yaml"
@@ -200,7 +200,7 @@ happybigmtn/robopoker (fork)       happybigmtn/myosu
 ### Autonomous Development
 
 Malinka drives the build loop from `ralph/IMPLEMENT.md`. Enhancement spec
-at `specs/031626-malinka-enhancements.md` defines 9 capabilities malinka
+at `specs/031626-99-malinka-enhancements.md` defines 9 capabilities malinka
 needs for end-to-end autonomy (service management, proof timeouts, prompt
 enrichment). Manual prerequisites: robopoker fork (RF-01..02) and
 subtensor copy (CF-01..02) must be done by hand before malinka takes over.
