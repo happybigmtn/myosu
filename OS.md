@@ -521,7 +521,7 @@ Myosu remains in stage 0 until ALL of the following are true:
 2. **Fork subtensor** — strip to minimal chain, get blocks producing (CF-01..05)
 3. **Game engine traits** — re-export robopoker CFR traits with wire serialization (GT-01..05)
 4. **Poker engine** — wrap NlheSolver, checkpoint, query, exploitability (PE-01..04)
-5. **Game-solving pallet** — subnet registry, neurons, weights, Yuma, emission (GS-01..10)
+5. **Game-solving pallet** — subnet registry, neurons, weights, Yuma, emission, runtime API (GS-01..10, 10 ACs)
 6. **Miner binary** — register, train, serve axon, checkpoint (MN-01..05)
 7. **Validator binary** — register, stake, query, score, submit weights (VO-01..06)
 8. **Gameplay CLI** — human vs bot poker (GP-01..04)

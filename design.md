@@ -166,6 +166,21 @@ and is culturally neutral between Korean and Japanese variants.
 Chinese card games use the western deck. No special notation needed.
 Jokers: `BJ` (black joker), `RJ` (red joker).
 
+### multiplayer seating
+
+Games with 3+ players show seats in fixed order relative to the player:
+
+| players | seat order (top to bottom) |
+|---------|---------------------------|
+| 2 | you, solver |
+| 3 (DDZ) | you (landlord/peasant), peasant 1, peasant 2 |
+| 4 (mahjong) | east (you), south, west, north (wind order) |
+| 4 (bridge) | north (dummy), east, south (you), west |
+| 4 (spades) | you, left opponent, partner, right opponent |
+
+The acting player is always labeled. Non-acting players show card count
+and discard history. The player's own hand is always fully expanded.
+
 ### formatting constants
 
 ```
@@ -712,6 +727,68 @@ solver: 9 cards score: 1
 deck: 26
 >
 ```
+
+### /history output
+
+```
+MYOSU / SESSION / HISTORY
+
+RECENT HANDS
+
+  hand  cards     street     action     result
+  47    A♠ K♥     river      raise      +22bb
+  46    Q♠ 5♦     preflop    fold       -1bb
+  45    K♣ K♦     turn       call       +8bb
+  44    7♥ 2♠     preflop    fold       -0.5bb
+  43    A♦ T♣     flop       raise      -12bb
+
+  showing 5 of 47. type /history all for full log.
+```
+
+### invalid input handling
+
+```
+> xyz
+unknown action. type ? for options.
+
+> raise abc
+raise amount must be a number. raise to how much? (min 4bb, max 94bb)
+> 15
+you raise to 15bb.
+
+> discard
+which tile? your hand: [1m][2m][3m] [5p][6p][7p] [3s][4s] [9s][9s] [E][E]
+> 4s
+you discard [4s].
+```
+
+Invalid input is NEVER an error message. It is a clarification prompt that
+shows what the system needs. The system remains in the same state — no
+action taken, no penalty, just a narrower question.
+
+### miner unreachable fallback
+
+```
+MYOSU / NLHE-HU / HAND 12
+
+PLAYING AGAINST RANDOM STRATEGY (MINER UNREACHABLE)
+
+  board    ·  ·  ·  ·  ·
+  you      J♠ T♠                100bb   BB
+  solver   ·· ··                100bb   SB
+  pot      3bb
+
+───
+
+  miner 12 unreachable (timeout 500ms)
+  fallback: uniform random over legal actions
+  solver raises to 6bb
+
+> call
+```
+
+The declaration changes color to `unstable` (yellow) when fallback is active.
+The signal log shows the timeout reason so the player knows quality is degraded.
 
 ### /stats output
 
