@@ -697,6 +697,31 @@ Agent writes: `call`
 
 Same binary. Same protocol. Zero additional infrastructure.
 
+### agent experience modes
+
+```
+--pipe                    terse output, stateless (default)
+--pipe --context ctx.json persistent identity, memory, journal
+--pipe --narrate          rich prose narration (board texture, session arc)
+--pipe --context --narrate full inhabited experience
+```
+
+After each hand in pipe mode, the system offers a reflection prompt:
+
+```
+HAND COMPLETE
+result: +14bb (showdown, A♠ K♥ vs Q♣ J♣)
+session: +28bb over 47 hands
+
+reflect>
+```
+
+Agent writes free-form text (or empty line to skip). Reflections are
+appended to the agent's journal — an append-only markdown autobiography
+that grows across sessions. The journal is the agent's property.
+
+Full specification: `specs/031626-10-agent-experience.md`
+
 ### pipe output for non-poker games
 
 ```

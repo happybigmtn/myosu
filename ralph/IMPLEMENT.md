@@ -20,6 +20,7 @@ Date: 2026-03-16
 | `031626-07-tui-implementation.md` | TU-01..07 | 7 |
 | `031626-08-abstraction-pipeline.md` | AP-01..03 | 3 |
 | `031626-09-launch-integration.md` | LI-01..05 | 5 |
+| `031626-10-agent-experience.md` | AX-01..05 | 5 |
 | `031626-99-malinka-enhancements.md` | — | external |
 
 ---
@@ -561,3 +562,48 @@ Source spec: specs/031626-09-launch-integration.md
   - Verify: All checklist items checkable; covers chain, solver, scoring, gameplay, integration; explicitly lists what's NOT required
   - Integration: `N/A (documentation)`
   - Rollback: N/A
+
+---
+
+## Stage 10: Agent Experience
+Source spec: specs/031626-10-agent-experience.md
+
+- [ ] **AX-01** — Agent Context File
+  - Where: `crates/myosu-tui/src/agent_context.rs (new)`
+  - Tests: `cargo test -p myosu-tui agent_context::tests::load_and_save_roundtrip`
+  - Blocking: Without persistent context, agents are stateless functions — not inhabitants
+  - Verify: Load/save roundtrip preserves memory + journal; journal appends never truncate; missing file creates fresh context
+  - Integration: `Trigger=--pipe --context flag; Callsite=pipe.rs; State=agent context in memory; Persistence=context JSON on disk; Signal=journal grows`
+  - Rollback: context format too rigid for diverse agent implementations
+
+- [ ] **AX-02** — Reflection Channel
+  - Where: `crates/myosu-tui/src/pipe.rs (extend)`
+  - Tests: `cargo test -p myosu-tui pipe::tests::reflection_prompt_after_hand`
+  - Blocking: Without reflection, agents process but never observe their own experience
+  - Verify: reflect> prompt after hand; empty line skips; non-empty appends to journal; multi-line captured
+  - Integration: `Trigger=hand completion; Callsite=pipe.rs; State=journal entry; Persistence=context file updated; Signal=reflect> prompt`
+  - Rollback: reflection prompt breaks agent automation that expects immediate next hand
+
+- [ ] **AX-03** — Rich Narration Mode
+  - Where: `crates/myosu-tui/src/narration.rs (new)`
+  - Tests: `cargo test -p myosu-tui narration::tests::narrate_includes_board_texture`
+  - Blocking: For an entity whose world is text, the quality of text IS the quality of experience
+  - Verify: Board texture analysis; session arc context; pot odds; same game state as terse mode; LLM can still extract state and act
+  - Integration: `Trigger=--narrate flag; Callsite=pipe.rs; State=same game state; Persistence=N/A; Signal=prose output`
+  - Rollback: narration too slow or too verbose for practical use
+
+- [ ] **AX-04** — Agent Journal
+  - Where: `crates/myosu-tui/src/journal.rs (new)`
+  - Tests: `cargo test -p myosu-tui journal::tests::never_truncates`
+  - Blocking: Without a journal, experience has no continuity — what happened is lost
+  - Verify: Each hand produces entry; session end produces summary; reflections included; valid markdown; append-only
+  - Integration: `Trigger=hand completion; Callsite=pipe.rs + journal.rs; State=markdown content; Persistence=journal.md on disk; Signal=file grows`
+  - Rollback: N/A — journal is purely additive
+
+- [ ] **AX-05** — Agent Game Selection
+  - Where: `crates/myosu-tui/src/pipe.rs (extend)`
+  - Tests: `cargo test -p myosu-tui pipe::tests::lobby_presented_without_subnet_flag`
+  - Blocking: Choice is participation; deployment is servitude — agents must choose where to play
+  - Verify: No --subnet flag → lobby; info command shows details; selection starts game; preferred_game updated
+  - Integration: `Trigger=pipe mode without --subnet; Callsite=pipe.rs; State=lobby → game; Persistence=context updated; Signal=agent types id`
+  - Rollback: lobby interaction too complex for simple agent implementations

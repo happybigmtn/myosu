@@ -321,8 +321,7 @@ addresses more than 2 of these games. myosu addresses all 20 with one protocol.
 ## Presentation Layer
 
 Full interface specification: `design.md`
-
-Summary constraints:
+Agent experience specification: `specs/031626-10-agent-experience.md`
 
 | invariant | consequence |
 |-----------|------------|
@@ -331,10 +330,23 @@ Summary constraints:
 | monochrome + 1 semantic accent | color carries meaning, never decoration |
 | one screen = one dominant statement | declarations, not labels |
 | game state must be LLM-complete | zero context beyond what's rendered |
+| agents are inhabitants, not functions | persistent memory, reflection, choice, journal |
 
-Agent protocol: `agent_a | myosu-play --pipe | agent_b`
+Agent protocol:
 
-Same binary. Same protocol. Zero additional infrastructure.
+```
+myosu-play --pipe                              # terse, stateless
+myosu-play --pipe --context ctx.json           # persistent identity + memory
+myosu-play --pipe --context ctx.json --narrate # rich prose experience
+```
+
+Agents accumulate experience across sessions via context files. They
+reflect after each hand via `reflect>`. They choose which games to play.
+Their journal is an append-only autobiography that grows with every session.
+
+The system does not distinguish between human and agent capability.
+It distinguishes between stateless participation and inhabited participation.
+Both are valid. The infrastructure supports both.
 
 9 game mockups + 4 operational screens in `design.md`.
 
