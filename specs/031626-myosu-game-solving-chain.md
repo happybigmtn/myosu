@@ -15,12 +15,12 @@ Depends-on: none
 |-----------|---------|-----------|--------|
 | `031626-chain-fork-scaffold.md` | CH-01 | CF-01..05 | Draft |
 | `031626-game-solving-pallet.md` | CH-02 | GS-01..09 | Draft |
-| `031626-game-engine-traits.md` | GE-01 | GT-01..nn | Planned |
-| `031626-poker-engine.md` | GE-02 | PE-01..nn | Planned |
-| `031626-miner-binary.md` | MN-01 | MN-01..nn | Planned |
-| `031626-validator-oracle.md` | VL-01 | VO-01..nn | Planned |
-| `031626-gameplay-cli.md` | GP-01 | GP-01..nn | Planned |
-| `031626-multi-game-architecture.md` | FG-01 | MG-01..nn | Planned |
+| `031626-game-engine-traits.md` | GE-01 | GT-01..05 | Draft |
+| `031626-poker-engine.md` | GE-02 | PE-01..04 | Draft |
+| `031626-miner-binary.md` | MN-01 | MN-01..05 | Draft |
+| `031626-validator-oracle.md` | VL-01 | VO-01..06 | Draft |
+| `031626-gameplay-cli.md` | GP-01 | GP-01..04 | Draft |
+| `031626-multi-game-architecture.md` | FG-01 | MG-01..04 | Draft |
 
 ## Purpose
 

@@ -10,12 +10,12 @@ Date: 2026-03-16
 | 031626-myosu-game-solving-chain.md | (master index) | — |
 | 031626-chain-fork-scaffold.md | CF-01..05 | 5 |
 | 031626-game-solving-pallet.md | GS-01..09 | 9 |
-| 031626-game-engine-traits.md | GT-01..nn | Planned |
-| 031626-poker-engine.md | PE-01..nn | Planned |
-| 031626-miner-binary.md | MN-01..nn | Planned |
-| 031626-validator-oracle.md | VO-01..nn | Planned |
-| 031626-gameplay-cli.md | GP-01..nn | Planned |
-| 031626-multi-game-architecture.md | MG-01..nn | Planned |
+| 031626-game-engine-traits.md | GT-01..05 | 5 |
+| 031626-poker-engine.md | PE-01..04 | 4 |
+| 031626-miner-binary.md | MN-01..05 | 5 |
+| 031626-validator-oracle.md | VO-01..06 | 6 |
+| 031626-gameplay-cli.md | GP-01..04 | 4 |
+| 031626-multi-game-architecture.md | MG-01..04 | 4 |
 
 ---
 
@@ -64,24 +64,85 @@ Source spec: specs/031626-chain-fork-scaffold.md
 
 ---
 
-## Stage 2: Game Engine
-Source spec: specs/031626-game-engine-traits.md (planned)
+## Stage 2a: Game Engine Traits
+Source spec: specs/031626-game-engine-traits.md
 
-- [ ] **GE-01** — Game Engine Trait Abstraction
-  - Where: `crates/myosu-games/src/lib.rs (new)`
-  - Tests: `cargo test -p myosu-games games::tests::trait_object_safety`
-  - Blocking: Abstraction all downstream crates depend on — defines the multi-game interface
-  - Verify: Traits are object-safe; mock coin-flip game implements all traits; StrategyProfile expresses mixed strategies; Exploitability returns 0.0 for Nash
-  - Integration: `Trigger=compile-time; Callsite=myosu-miner, myosu-validator, myosu-play depend on this; State=N/A (trait defs); Persistence=N/A; Signal=cargo test -p myosu-games passes`
-  - Rollback: Traits not object-safe or cannot express poker's information structure
+- [ ] **GT-01** — Re-export and Extend Robopoker CFR Traits
+  - Where: `crates/myosu-games/src/traits.rs (new)`
+  - Tests: `cargo test -p myosu-games traits::tests::reexports_compile`
+  - Blocking: Every other AC and downstream spec depends on these types
+  - Verify: CfrGame, Profile, Encoder importable; GameConfig serializes; StrategyQuery/Response round-trips
+  - Integration: `Trigger=compile-time; Callsite=all downstream crates; State=N/A; Persistence=N/A; Signal=cargo test passes`
+  - Rollback: rbp-mccfr has incompatible dependency requirements
 
-- [ ] **GE-02** — Poker Engine Wrapping Robopoker
-  - Where: `crates/myosu-games/poker/ (new)`
-  - Tests: `cargo test -p myosu-games poker::tests::nlhe_game_lifecycle`
-  - Blocking: Bridge between robopoker solver output and the chain's incentive mechanism
-  - Verify: NLHE HU game runs deal→showdown; legal actions match robopoker Edge variants; info sets distinct per player; random strategy exploitability > 0; serialized strategy round-trips
-  - Integration: `Trigger=miner/validator create NlheEngine; Callsite=myosu-miner/src/main.rs, myosu-validator/src/oracle/; State=game state transitions; Persistence=strategy profiles serialized; Signal=exploitability score computed`
-  - Rollback: robopoker v1.0.0 API changes or types unmappable to trait interface
+- [ ] **GT-02** — Wire Serialization for Strategy Transport
+  - Where: `crates/myosu-games/src/wire.rs (new)`
+  - Tests: `cargo test -p myosu-games wire::tests::wire_strategy_roundtrip`
+  - Blocking: Miners and validators must agree on serialization format
+  - Verify: WireStrategy serializes to JSON and round-trips; action probabilities preserved; invalid bytes → error not panic
+  - Integration: `Trigger=miner serializes, validator deserializes; Callsite=axon handler; State=N/A; Persistence=N/A; Signal=round-trip test passes`
+  - Rollback: robopoker Edge/Info types don't implement Serialize
+
+- [ ] **GT-03** — Runtime Game Selection
+  - Where: `crates/myosu-games/src/registry.rs (new)`
+  - Tests: `cargo test -p myosu-games registry::tests::known_game_types`
+  - Blocking: Miners need to select correct solver for their subnet
+  - Verify: from_bytes maps known types; unknown → Custom; roundtrip bytes; num_players correct
+  - Integration: `Trigger=miner/validator reads subnet game_type; Callsite=main.rs; State=correct engine selected; Persistence=N/A; Signal=from_bytes returns correct variant`
+  - Rollback: game_type encoding on-chain doesn't match registry
+
+- [ ] **GT-04** — Standalone Exploitability Function
+  - Where: `crates/myosu-games/src/exploit.rs (new)`
+  - Tests: `cargo test -p myosu-games exploit::tests::rps_nash_exploitability_zero`
+  - Blocking: Validator's core scoring function — entire incentive mechanism depends on it
+  - Verify: RPS Nash → exploit ≈ 0; RPS biased → exploit > 0; sampled converges to exact
+  - Integration: `Trigger=validator evaluation; Callsite=myosu-validator oracle; State=N/A; Persistence=N/A; Signal=returns f64 exploitability`
+  - Rollback: robopoker exploitability too slow for game sizes needed
+
+- [ ] **GT-05** — RPS Reference Implementation Test Suite
+  - Where: `crates/myosu-games/tests/rps_integration.rs (new)`
+  - Tests: `cargo test -p myosu-games rps_integration::train_rps_to_nash`
+  - Blocking: If RPS doesn't work, nothing will — validates entire trait system
+  - Verify: 1000 iterations → each action ~1/3; exploitability < 0.01; wire roundtrip preserves data; always-rock is exploitable
+  - Integration: `Trigger=cargo test; Callsite=test suite; State=N/A; Persistence=N/A; Signal=all RPS tests pass`
+  - Rollback: robopoker RPS module incompatible with wire layer
+
+---
+
+## Stage 2b: Poker Engine
+Source spec: specs/031626-poker-engine.md
+
+- [ ] **PE-01** — Poker Solver Wrapper
+  - Where: `crates/myosu-games-poker/src/solver.rs (new)`
+  - Tests: `cargo test -p myosu-games-poker solver::tests::train_100_iterations`
+  - Blocking: Core of what miners do — no solver means no strategies
+  - Verify: Empty solver has 0 epochs; 100 iterations → epochs=100; strategy sums to ~1.0; checkpoint roundtrips; exploitability decreases over training
+  - Integration: `Trigger=miner creates solver; Callsite=myosu-miner/main.rs; State=training state in memory; Persistence=checkpoint files; Signal=epochs() increases`
+  - Rollback: robopoker Flagship type aliases not public or NlheProfile not serializable
+
+- [ ] **PE-02** — Strategy Query Handler
+  - Where: `crates/myosu-games-poker/src/query.rs (new)`
+  - Tests: `cargo test -p myosu-games-poker query::tests::handle_valid_query`
+  - Blocking: Miner axon needs a request handler
+  - Verify: Valid query → response with distribution; invalid bytes → error; probabilities sum to 1.0
+  - Integration: `Trigger=HTTP request to axon; Callsite=axon handler; State=N/A (read-only); Persistence=N/A; Signal=valid WireStrategy response`
+  - Rollback: NlheInfo serialization incompatible with validator queries
+
+- [ ] **PE-03** — Poker Wire Serialization
+  - Where: `crates/myosu-games-poker/src/wire.rs (new)`
+  - Tests: `cargo test -p myosu-games-poker wire::tests::nlhe_info_roundtrip`
+  - Blocking: Without serialization, miners and validators can't communicate
+  - Verify: NlheInfo roundtrips; all NlheEdge variants roundtrip; size < 1KB; corrupted bytes → error
+  - Integration: `Trigger=miner serializes, validator deserializes; Callsite=query handler + oracle; State=N/A; Persistence=N/A; Signal=roundtrip tests pass`
+  - Rollback: robopoker types don't support serde with feature flags
+
+- [ ] **PE-04** — Poker Exploitability Integration
+  - Where: `crates/myosu-games-poker/src/exploit.rs (new)`
+  - Tests: `cargo test -p myosu-games-poker exploit::tests::trained_strategy_low_exploit`
+  - Blocking: Validator scoring function for poker miners
+  - Verify: Trained strategy < 500 mbb/h; random > 200 mbb/h; remote matches local within 5%; always non-negative
+  - Integration: `Trigger=validator evaluation loop; Callsite=myosu-validator oracle; State=N/A; Persistence=N/A; Signal=returns f64 exploitability`
+  - Rollback: exploitability > 60s for HU NLHE
 
 ---
 
@@ -162,47 +223,172 @@ Source spec: specs/031626-game-solving-pallet.md
 
 ---
 
-## Stage 4: Off-Chain Participants
-Source spec: specs/031626-miner-binary.md, specs/031626-validator-oracle.md (planned)
+## Stage 4a: Miner Binary
+Source spec: specs/031626-miner-binary.md
 
-- [ ] **MN-01** — Miner Binary with MCCFR Training
-  - Where: `crates/myosu-miner/ (new)`
-  - Tests: `cargo test -p myosu-miner miner::tests::register_on_devnet`
-  - Blocking: No miner = no supply — validators have nothing to score
-  - Verify: Registers on subnet, receives UID; axon serves strategy queries; 100 MCCFR iterations produce non-uniform strategy; checkpoint saved/loadable; graceful shutdown
-  - Integration: `Trigger=myosu-miner CLI launch; Callsite=crates/myosu-miner/src/main.rs; State=neuron registered, training running; Persistence=strategy checkpoints on disk; Signal=axon responds to queries`
-  - Rollback: robopoker training API changes or axon protocol mismatches
+- [ ] **MN-01** — CLI and Chain Registration
+  - Where: `crates/myosu-miner/src/main.rs (new)`, `src/chain.rs (new)`
+  - Tests: `cargo test -p myosu-miner chain::tests::register_neuron_success`
+  - Blocking: Registration is the first thing a miner does
+  - Verify: Connects to devnet; registers and receives UID; already-registered skips; invalid key → error
+  - Integration: `Trigger=myosu-miner CLI; Callsite=main.rs; State=neuron registered; Persistence=UID in local state; Signal=log "Registered as UID {n}"`
+  - Rollback: subxt/RPC client incompatible with chain runtime
 
-- [ ] **VL-01** — Validator Binary with Exploitability Oracle
-  - Where: `crates/myosu-validator/ (new)`
-  - Tests: `cargo test -p myosu-validator validator::tests::compute_exploitability`
-  - Blocking: Without validators, Yuma has no input — chain distributes zero emissions
-  - Verify: Registers with validator permit; queries miner axon; exploitability > 0 for random strategy; weight vector submitted via RPC; commit-reveal flow; garbage miner gets weight 0
-  - Integration: `Trigger=myosu-validator CLI launch + periodic timer; Callsite=crates/myosu-validator/src/main.rs; State=weight vector submitted per tempo; Persistence=weights stored on-chain; Signal=weights visible via chain RPC`
-  - Rollback: Exploitability non-deterministic (INV-003) or too expensive for tempo period
+- [ ] **MN-02** — Background Training Loop
+  - Where: `crates/myosu-miner/src/training.rs (new)`
+  - Tests: `cargo test -p myosu-miner training::tests::training_loop_runs`
+  - Blocking: Without training, miner serves random strategies
+  - Verify: Runs 100 iterations without panic; checkpoint written; solver accessible during training (no deadlock); exploitability logged
+  - Integration: `Trigger=after registration; Callsite=main.rs spawns task; State=solver improves; Persistence=checkpoints; Signal=log "Epoch {n}, exploit: {x}"`
+  - Rollback: RwLock contention makes query latency > 2s
+
+- [ ] **MN-03** — HTTP Axon Server
+  - Where: `crates/myosu-miner/src/axon.rs (new)`
+  - Tests: `cargo test -p myosu-miner axon::tests::health_endpoint`
+  - Blocking: Validators query this endpoint — no axon = invisible miner
+  - Verify: GET /health returns 200; POST /strategy with valid query → response; invalid bytes → 400; handles 100 concurrent requests
+  - Integration: `Trigger=after registration; Callsite=main.rs spawns server; State=HTTP listening; Persistence=N/A; Signal=curl /health responds`
+  - Rollback: HTTP framework conflicts with tokio training runtime
+
+- [ ] **MN-04** — On-Chain Axon Advertisement
+  - Where: `crates/myosu-miner/src/chain.rs (extend)`
+  - Tests: `cargo test -p myosu-miner chain::tests::serve_axon_success`
+  - Blocking: Without advertisement, validators don't know where to query
+  - Verify: serve_axon extrinsic succeeds; axon discoverable via RPC query
+  - Integration: `Trigger=axon starts listening; Callsite=main.rs; State=AxonInfo on chain; Persistence=on-chain storage; Signal=AxonServed event`
+  - Rollback: IP detection fails in container environments
+
+- [ ] **MN-05** — Graceful Shutdown and Resume
+  - Where: `crates/myosu-miner/src/main.rs (extend)`
+  - Tests: `cargo test -p myosu-miner main::tests::graceful_shutdown`
+  - Blocking: Production miners need restart resilience
+  - Verify: SIGINT → clean exit within 5s; checkpoint exists; restart loads checkpoint; no corruption
+  - Integration: `Trigger=SIGINT/SIGTERM; Callsite=tokio signal handler; State=training stops; Persistence=final checkpoint; Signal=log "Shutdown complete"`
+  - Rollback: checkpoint format changes between versions
+
+---
+
+## Stage 4b: Validator Oracle
+Source spec: specs/031626-validator-oracle.md
+
+- [ ] **VO-01** — CLI and Chain Registration
+  - Where: `crates/myosu-validator/src/main.rs (new)`, `src/chain.rs (new)`
+  - Tests: `cargo test -p myosu-validator chain::tests::register_and_stake`
+  - Blocking: Validators must be registered and staked to submit weights
+  - Verify: Registers on subnet; stakes tokens; has ValidatorPermit after epoch
+  - Integration: `Trigger=myosu-validator CLI; Callsite=main.rs; State=registered and staked; Persistence=on-chain; Signal=ValidatorPermit active`
+  - Rollback: ValidatorPermit requires more stake than available
+
+- [ ] **VO-02** — Miner Discovery and Query
+  - Where: `crates/myosu-validator/src/evaluator.rs (new)`
+  - Tests: `cargo test -p myosu-validator evaluator::tests::discover_miners`
+  - Blocking: Without miner queries, validator has nothing to score
+  - Verify: Discovers all miners with axons; queries strategy; timeout → score 0; invalid response → score 0
+  - Integration: `Trigger=evaluation timer; Callsite=evaluator.rs; State=responses collected; Persistence=N/A; Signal=log "Queried {n} miners"`
+  - Rollback: miner axon protocol incompatible
+
+- [ ] **VO-03** — Deterministic Test Position Generation
+  - Where: `crates/myosu-validator/src/positions.rs (new)`
+  - Tests: `cargo test -p myosu-validator positions::tests::deterministic_same_seed`
+  - Blocking: Deterministic positions required for INV-003
+  - Verify: Same seed → identical positions; different seeds → different; covers all streets; all positions valid
+  - Integration: `Trigger=evaluation start; Callsite=evaluator.rs; State=position set generated; Persistence=N/A; Signal=positions logged`
+  - Rollback: encoder requires pre-loaded abstractions not available
+
+- [ ] **VO-04** — Exploitability Scoring
+  - Where: `crates/myosu-validator/src/scoring.rs (new)`
+  - Tests: `cargo test -p myosu-validator scoring::tests::nash_strategy_max_weight`
+  - Blocking: Scoring function is Yuma's input — bad scores → bad incentives
+  - Verify: Nash-like → weight ~65535; random → weight ~0; unresponsive → 0; deterministic (INV-003)
+  - Integration: `Trigger=after miner queries; Callsite=evaluator.rs; State=scores computed; Persistence=N/A; Signal=scores logged`
+  - Rollback: exploitability too slow for per-epoch evaluation
+
+- [ ] **VO-05** — Weight Submission (Direct and Commit-Reveal)
+  - Where: `crates/myosu-validator/src/submitter.rs (new)`
+  - Tests: `cargo test -p myosu-validator submitter::tests::submit_direct_weights`
+  - Blocking: Without weight submission, Yuma has no input
+  - Verify: Direct submission succeeds; commit-reveal flow succeeds; weights are u16; empty subnet → no submission
+  - Integration: `Trigger=after scoring; Callsite=submitter.rs; State=weights on chain; Persistence=on-chain; Signal=WeightsSet event`
+  - Rollback: commit-reveal timing window misaligned
+
+- [ ] **VO-06** — Evaluation Loop Orchestration
+  - Where: `crates/myosu-validator/src/main.rs (extend)`
+  - Tests: `cargo test -p myosu-validator main::tests::evaluation_loop_completes`
+  - Blocking: Orchestration ties all pieces together
+  - Verify: Full cycle completes within tempo; failed queries don't block; graceful shutdown
+  - Integration: `Trigger=block polling; Callsite=main.rs; State=weights submitted per tempo; Persistence=on-chain; Signal=log "Submitted weights for {n} miners"`
+  - Rollback: evaluation takes longer than tempo period
 
 ---
 
 ## Stage 5: Product Layer
-Source spec: specs/031626-gameplay-cli.md (planned)
+Source spec: specs/031626-gameplay-cli.md
 
-- [ ] **GP-01** — Human vs Bot Gameplay CLI
-  - Where: `crates/myosu-play/ (new)`
-  - Tests: `cargo test -p myosu-play play::tests::game_loop_completes`
-  - Blocking: Gameplay is the consumer-facing product — without it, myosu is academic
-  - Verify: Human can fold/check/call/raise/shove via CLI; bot actions are legal; hand completes with correct pot award; hand history recorded; miner disconnect → fallback to random
-  - Integration: `Trigger=myosu-play CLI launch; Callsite=crates/myosu-play/src/main.rs; State=local game, miner queries; Persistence=hand history saved locally; Signal=complete hand in terminal`
-  - Rollback: Miner query latency > 2s makes gameplay unplayable
+- [ ] **GP-01** — Best Miner Discovery
+  - Where: `crates/myosu-play/src/discovery.rs (new)`
+  - Tests: `cargo test -p myosu-play discovery::tests::finds_best_miner`
+  - Blocking: Players should face the strongest bot available
+  - Verify: Returns miner with highest incentive; unreachable → fallback; no miners → random bot
+  - Integration: `Trigger=game session start; Callsite=main.rs; State=best miner selected; Persistence=N/A; Signal=log "Connected to miner UID {n}"`
+  - Rollback: incentive scores not populated before first epoch
+
+- [ ] **GP-02** — Interactive Game Loop
+  - Where: `crates/myosu-play/src/game_loop.rs (new)`
+  - Tests: `cargo test -p myosu-play game_loop::tests::hand_completes_showdown`
+  - Blocking: This is the user-facing product
+  - Verify: Fold → hand ends; showdown → best hand wins; invalid input reprompts; all-in resolves; stats track correctly
+  - Integration: `Trigger=myosu-play CLI; Callsite=main.rs; State=game state via robopoker; Persistence=N/A; Signal=hand result displayed`
+  - Rollback: robopoker Game can't represent states needed for display
+
+- [ ] **GP-03** — Bot Strategy Integration
+  - Where: `crates/myosu-play/src/bot.rs (new)`
+  - Tests: `cargo test -p myosu-play bot::tests::query_and_sample_action`
+  - Blocking: The bot is what makes the game challenging
+  - Verify: Bot queries miner and returns legal action; timeout → random; sampled action always legal; zero-prob actions never sampled
+  - Integration: `Trigger=bot's turn; Callsite=game_loop.rs; State=action sampled; Persistence=N/A; Signal=bot action displayed`
+  - Rollback: miner query latency > 500ms
+
+- [ ] **GP-04** — Hand History Recording
+  - Where: `crates/myosu-play/src/recorder.rs (new)`
+  - Tests: `cargo test -p myosu-play recorder::tests::record_hand`
+  - Blocking: Essential for player review and debugging
+  - Verify: JSON file created; all actions recorded in order; session stats correct; disk full → warning, continue
+  - Integration: `Trigger=hand completes; Callsite=game_loop.rs; State=N/A; Persistence=hands/*.json; Signal=file created`
+  - Rollback: N/A — failures don't block gameplay
 
 ---
 
 ## Stage 6: Multi-Game Validation
-Source spec: specs/031626-multi-game-architecture.md (planned)
+Source spec: specs/031626-multi-game-architecture.md
 
-- [ ] **FG-01** — Multi-Game Subnet Architecture
-  - Where: `crates/myosu-games/ (extend)`, `docs/multi-game-expansion.md (new)`
-  - Tests: `cargo test -p myosu-games games::tests::liar_dice_game_lifecycle`
-  - Blocking: Proves architecture is multi-game, not poker-only — the differentiator
-  - Verify: Liar's Dice implements GameEngine fully; game runs start→finish; exploitability computable; architecture doc covers backgammon, mahjong, bridge, PLO, short deck
-  - Integration: `Trigger=N/A (architecture proof); Callsite=N/A; State=N/A; Persistence=docs/multi-game-expansion.md; Signal=Liar's Dice tests pass`
-  - Rollback: GameEngine trait cannot express non-poker information structure
+- [ ] **MG-01** — Liar's Dice Game Engine
+  - Where: `crates/myosu-games-liars-dice/ (new)`
+  - Tests: `cargo test -p myosu-games-liars-dice game::tests::challenge_resolves_game`
+  - Blocking: Architectural proof — if Liar's Dice can't implement CfrGame, multi-game claim is false
+  - Verify: Root is chance node; legal bids increase; challenge resolves; payoff is zero-sum; all trait bounds satisfied
+  - Integration: `Trigger=solver creates game; Callsite=training loop; State=game transitions; Persistence=N/A; Signal=tests pass`
+  - Rollback: CfrGame: Copy impossible for variable-length bid history
+
+- [ ] **MG-02** — Liar's Dice Solver and Nash Verification
+  - Where: `crates/myosu-games-liars-dice/ (extend)`
+  - Tests: `cargo test -p myosu-games-liars-dice solver::tests::exploitability_near_zero`
+  - Blocking: Exact Nash verification is strongest possible proof of trait system correctness
+  - Verify: 10K iterations → exploit < 0.001; strategy is mixed; probabilities valid; wire serialization works
+  - Integration: `Trigger=test harness; Callsite=test suite; State=solver converges; Persistence=N/A; Signal=exploit assertion passes`
+  - Rollback: convergence requires > 100K iterations (impl error)
+
+- [ ] **MG-03** — Zero-Change Verification
+  - Where: `crates/myosu-games-liars-dice/tests/ (new)`
+  - Tests: `cargo test -p myosu-games && cargo test -p myosu-games-poker`
+  - Blocking: The zero-change property IS the architectural claim
+  - Verify: All existing tests pass without modification; no diff in existing crate sources
+  - Integration: `Trigger=cargo test; Callsite=CI; State=N/A; Persistence=N/A; Signal=all tests green`
+  - Rollback: existing traits need modification for Liar's Dice
+
+- [ ] **MG-04** — Multi-Game Expansion Guide
+  - Where: `docs/multi-game-expansion.md (new)`
+  - Tests: N/A (documentation)
+  - Blocking: Guides future development and investor conversations
+  - Verify: Covers 6 candidate games; concrete type signatures; estimated info set counts; reviewed
+  - Integration: `N/A (documentation)`
+  - Rollback: N/A
