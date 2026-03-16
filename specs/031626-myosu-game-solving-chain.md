@@ -14,7 +14,7 @@ Depends-on: none
 | Spec File | Expands | AC Prefix | Status |
 |-----------|---------|-----------|--------|
 | `031626-chain-fork-scaffold.md` | CH-01 | CF-01..05 | Draft |
-| `031626-game-solving-pallet.md` | CH-02 | GS-01..nn | Planned |
+| `031626-game-solving-pallet.md` | CH-02 | GS-01..09 | Draft |
 | `031626-game-engine-traits.md` | GE-01 | GT-01..nn | Planned |
 | `031626-poker-engine.md` | GE-02 | PE-01..nn | Planned |
 | `031626-miner-binary.md` | MN-01 | MN-01..nn | Planned |

@@ -9,7 +9,7 @@ Date: 2026-03-16
 |-----------|-----------|-------|
 | 031626-myosu-game-solving-chain.md | (master index) | — |
 | 031626-chain-fork-scaffold.md | CF-01..05 | 5 |
-| 031626-game-solving-pallet.md | GS-01..nn | Planned |
+| 031626-game-solving-pallet.md | GS-01..09 | 9 |
 | 031626-game-engine-traits.md | GT-01..nn | Planned |
 | 031626-poker-engine.md | PE-01..nn | Planned |
 | 031626-miner-binary.md | MN-01..nn | Planned |
@@ -86,15 +86,79 @@ Source spec: specs/031626-game-engine-traits.md (planned)
 ---
 
 ## Stage 3: On-Chain Incentives
-Source spec: specs/031626-game-solving-pallet.md (planned)
+Source spec: specs/031626-game-solving-pallet.md
 
-- [ ] **CH-02** — Game-Solving Pallet Core
-  - Where: `crates/myosu-chain/pallets/game-solver/ (new)`
-  - Tests: `cargo test -p pallet-game-solver pallet::tests::create_subnet`
-  - Blocking: The on-chain incentive engine — miners/validators are useless without it
-  - Verify: create_subnet returns subnet_id; register_neuron assigns uid; set_weights + tempo → emissions distributed; Yuma clips at consensus median; bond EMA accumulates; commit-reveal flow works; full subnet prunes lowest scorer
-  - Integration: `Trigger=on_initialize every block; Callsite=pallets/game-solver/src/lib.rs::on_initialize(); State=Yuma updates bonds/emissions at tempo; Persistence=on-chain storage maps; Signal=Emission event per tempo`
-  - Rollback: Yuma math diverges from subtensor for identical inputs, or emission accounting creates/loses tokens
+- [ ] **GS-01** — Pallet Scaffold with Config and Storage
+  - Where: `crates/myosu-chain/pallets/game-solver/src/lib.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver scaffold::tests::pallet_compiles`
+  - Blocking: Every other GS-* AC reads or writes these storage items
+  - Verify: Pallet compiles; ~25 storage items with correct defaults; Config trait has Currency + constants; AxonInfo encodes/decodes; mock runtime works
+  - Integration: `Trigger=construct_runtime!; Callsite=runtime/src/lib.rs; State=storage items available; Persistence=on-chain storage; Signal=cargo build succeeds`
+  - Rollback: Storage layout incompatible with Yuma's access patterns
+
+- [ ] **GS-02** — Subnet Registry
+  - Where: `crates/myosu-chain/pallets/game-solver/src/subnets.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver subnets::tests::create_subnet_basic`
+  - Blocking: Neurons can only register on existing subnets — unblocks GS-03
+  - Verify: create_subnet burns tokens, assigns id, emits event; dissolve clears state; max subnet limit enforced; set_hyperparams sudo-only
+  - Integration: `Trigger=create_subnet extrinsic; Callsite=pallet dispatchable; State=subnet registered with game_type; Persistence=10 storage items per subnet; Signal=SubnetCreated event`
+  - Rollback: game_type storage can't represent needed metadata
+
+- [ ] **GS-03** — Neuron Registration and Pruning
+  - Where: `crates/myosu-chain/pallets/game-solver/src/registration.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver registration::tests::register_basic`
+  - Blocking: Without neurons, nothing to weight or reward — unblocks GS-04, GS-07
+  - Verify: Sequential UIDs assigned; burn cost enforced; full subnet prunes weakest; immunity period respected; duplicate rejected; storage vectors extended
+  - Integration: `Trigger=register_neuron extrinsic; Callsite=pallet dispatchable; State=UID assigned, vectors extended; Persistence=Keys, Uids, IsNetworkMember; Signal=NeuronRegistered event`
+  - Rollback: Pruning logic incorrectly removes high-scoring neurons
+
+- [ ] **GS-04** — Weight Submission
+  - Where: `crates/myosu-chain/pallets/game-solver/src/weights.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver weights::tests::set_weights_basic`
+  - Blocking: Weights feed Yuma Consensus — bridge between off-chain evaluation and on-chain incentives
+  - Verify: set_weights stores and validates; commit_weights stores hash; reveal_weights verifies and stores; rate limiting enforced; validator permit required
+  - Integration: `Trigger=set_weights/commit_weights extrinsic; Callsite=pallet dispatchable; State=weight matrix updated; Persistence=Weights storage; Signal=WeightsSet event`
+  - Rollback: Weight validation rejects valid game-solving patterns
+
+- [ ] **GS-05** — Yuma Consensus Port
+  - Where: `crates/myosu-chain/pallets/game-solver/src/epoch.rs (new)`, `src/math.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver epoch::tests::yuma_matches_subtensor_output`
+  - Blocking: Core algorithm — getting it wrong breaks the entire incentive mechanism
+  - Verify: Consensus clips above median; bonds accumulate via EMA; INV-003: bit-identical output to subtensor for same inputs; zero weights → zero emission
+  - Integration: `Trigger=on_initialize at tempo boundary; Callsite=lib.rs::Hooks::on_initialize(); State=scores computed, bonds updated; Persistence=7 storage maps updated; Signal=EpochCompleted event`
+  - Rollback: Fixed-point math diverges from subtensor due to dependency mismatch
+
+- [ ] **GS-06** — Emission Distribution
+  - Where: `crates/myosu-chain/pallets/game-solver/src/emission.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver emission::tests::equal_subnet_split`
+  - Blocking: Emission is the revenue model — miners won't run solvers without economic reward
+  - Verify: Equal subnet split; 50/50 miner/validator; proportional to scores; no emission without weights; TotalIssuance tracks correctly; no tokens created from thin air
+  - Integration: `Trigger=on_initialize after run_epoch; Callsite=lib.rs::Hooks; State=balances increased; Persistence=balance updates + TotalIssuance; Signal=EmissionDistributed event`
+  - Rollback: Emission accounting error creates or destroys tokens
+
+- [ ] **GS-07** — Axon Serving
+  - Where: `crates/myosu-chain/pallets/game-solver/src/serving.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver serving::tests::serve_axon_basic`
+  - Blocking: Without axon discovery, validators can't find miners
+  - Verify: Registered neuron serves axon; unregistered rejected; IP/port validated; rate limited; queryable via RPC
+  - Integration: `Trigger=serve_axon extrinsic; Callsite=pallet dispatchable; State=AxonInfo stored; Persistence=Axons storage; Signal=AxonServed event`
+  - Rollback: AxonInfo encoding incompatible with miner endpoint format
+
+- [ ] **GS-08** — Basic Staking
+  - Where: `crates/myosu-chain/pallets/game-solver/src/staking.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver staking::tests::add_stake_basic`
+  - Blocking: Without staking, all validators have equal power — no skin-in-the-game
+  - Verify: add_stake transfers tokens; remove_stake returns tokens; stake determines validator power; insufficient balance/stake rejected
+  - Integration: `Trigger=add_stake/remove_stake extrinsic; Callsite=pallet dispatchable; State=Stake updated; Persistence=Stake storage + balance reserve; Signal=StakeAdded/StakeRemoved event`
+  - Rollback: Stake accounting error creates or loses tokens
+
+- [ ] **GS-09** — Add Pallet to Runtime at Index 7
+  - Where: `crates/myosu-chain/runtime/src/lib.rs (extend)`
+  - Tests: `cargo test -p myosu-chain integration::tests::full_incentive_loop`
+  - Blocking: Integration gate — until pallet is in runtime, it's just library code
+  - Verify: Runtime compiles with pallet; index 7 occupied; create_subnet callable; full loop works (create→register→stake→weights→epoch→emission); no CF-05 regression
+  - Integration: `Trigger=runtime compilation; Callsite=runtime/src/lib.rs; State=pallet in block execution; Persistence=pallet storage in chain state; Signal=create_subnet callable via RPC`
+  - Rollback: Config requirements conflict with existing runtime
 
 ---
 
