@@ -184,25 +184,109 @@ Stage 2-3 (growth):
 - **Coaching subscriptions.** Players pay for strategy analysis — "the bot would
   have played X here because Y."
 - **Tournament entry.** Human vs bot tournaments with prize pools.
-- **Strategy marketplace.** Miners sell specialized strategies (e.g., "tournament
+- **Strategy marketplace.** Subnets sell specialized strategies (e.g., "tournament
   ICM-adjusted" or "exploitative vs recreational players").
 - **API access.** Third-party platforms pay for real-time strategy queries.
 
 All revenue flows back to the chain as emission funding, replacing inflation
 with sustainable economics.
 
-## Target Games (by Priority)
+## Target Games (20 games, by priority)
 
-| Priority | Game | Why | Subnet Count | Status |
-|----------|------|-----|--------------|--------|
-| 1 | NLHE Heads-Up | Smallest, fastest to solve, largest market | 1 | Stage 0 |
-| 2 | NLHE 6-max | Most popular online format | 1 | Stage 1 |
-| 3 | Short Deck | Growing variant, smaller state space | 1 | Stage 1 |
-| 4 | PLO | Massive demand, 10x NLHE complexity | 1 | Stage 1 |
-| 5 | Backgammon | Dice + decisions, large community, gambling market | 1 | Stage 2 |
-| 6 | Mahjong (Riichi) | Massive in Asia, 4-player, huge state space | 1 | Stage 2 |
-| 7 | Bridge | Partnership game, bidding + play, dedicated community | 1 | Stage 2 |
-| 8 | Liar's Dice | Architecture proof — small, exactly solvable | 1 | Stage 0 (test only) |
+The selection criteria, in order: CFR fit (imperfect information?) → solver gap
+(demand exists but no tool?) → market size (players × willingness to pay) →
+cultural narrative (does it tell a story for the brand?) → tractability (can
+MCCFR converge in reasonable time?).
+
+```
+  CIRCLE 1: POKER               CIRCLE 2: ASIAN CARD GAMES     CIRCLE 3: STRATEGY GAMES
+  (capture existing $6B          (expand into $5B+ Asian        (prove the platform works
+   solver market)                 gambling markets)              for any imperfect-info game)
+
+  ┌──────────────────────┐      ┌──────────────────────┐       ┌──────────────────────┐
+  │ 1. NLHE Heads-Up     │      │ 6. Teen Patti        │       │ 12. Stratego          │
+  │ 2. NLHE 6-max        │      │ 8. Hwatu / Go-Stop   │       │ 13. OFC Chinese Poker │
+  │ 3. PLO               │      │ 9. Mahjong (Riichi)  │       │ 14. Spades            │
+  │ 4. NLHE Tournament   │      │ 11. Gin Rummy        │       │ 15. Liar's Dice       │
+  │ 5. Short Deck        │      │ 16. Dou Di Zhu       │       │ 20. Backgammon        │
+  │                      │      │ 17. Pusoy Dos        │       └──────────────────────┘
+  └──────────────────────┘      │ 18. Tien Len         │
+                                │ 19. Call Break       │
+                                │ 10. Bridge           │
+                                │ 7. Hanafuda          │
+                                └──────────────────────┘
+```
+
+### Prioritized game list
+
+| # | Game | Market | Solver Gap | CFR Fit | Geography | Stage |
+|---|------|--------|-----------|---------|-----------|-------|
+| **1** | **NLHE Heads-Up** | $6B+ poker market | PioSolver $250+ | Perfect | Global | 0 |
+| **2** | **NLHE 6-max** | Most-played online poker format | PioSolver, expensive | Perfect | Global | 1 |
+| **3** | **PLO (4-card Omaha)** | $400M-1.2B; MonkerSolver's entire business | Massive — postflop PLO is unsolved | Perfect | Global | 1 |
+| **4** | **NLHE Tournament (ICM)** | Most online poker is tournaments | No ICM-aware CFR solver exists | Perfect | Global | 1 |
+| **5** | **Short Deck (6+)** | Niche but 30% smaller state space | Limited solver support | Perfect | Asia | 1 |
+| **6** | **Teen Patti** | India $2-3B projected by 2028 | No solver exists | Strong (3-card = fast convergence) | India | 2 |
+| **7** | **Hanafuda (Koi-Koi)** | Cultural — Nintendo was founded as hanafuda co. | No solver exists | Moderate | Japan | 2 |
+| **8** | **Hwatu / Go-Stop** | Part of Korea's $9-10B gambling market | No solver exists | Moderate | Korea | 2 |
+| **9** | **Mahjong (Riichi)** | $1.5-2.1B market; 10% CAGR | Zero consumer solvers despite superhuman AI | Good (4-player caveat) | Japan, China | 2 |
+| **10** | **Bridge** | 200M+ players worldwide; affluent demographic | No comprehensive solver (bidding unsolved) | Good (partnership) | Global | 2 |
+| **11** | **Gin Rummy** | $1.5B Indian rummy market alone (RummyCircle 50M+ users) | No public solver | Good (state space challenge) | India, Global | 2 |
+| **12** | **Stratego** | Niche but passionate; DeepNash proved feasibility | DeepNash research-only, not deployed | Moderate (huge state space) | Netherlands, Global | 3 |
+| **13** | **OFC Chinese Poker** | High-stakes poker niche; solvers historically $30K+ | Moderate gap, becoming accessible | Moderate (MCTS may be better) | Russia/CIS, Asia | 3 |
+| **14** | **Spades** | Large casual US base; millions daily | No solver exists | Moderate (4-player) | US | 3 |
+| **15** | **Liar's Dice (full)** | Casual; architecture proof at scale | Academic only | Perfect | Global | 3 |
+| **16** | **Dou Di Zhu (斗地主)** | China's #1 card game; Tencent version 600M+ users | No solver exists | Good (3-player asymmetric 2v1) | China | 3 |
+| **17** | **Pusoy Dos / Big Two** | Dominant card game in Philippines, HK, Taiwan, Singapore | No solver exists | Good (shedding game) | SE Asia | 3 |
+| **18** | **Tien Len (Thirteen)** | Vietnam's national card game; fast-growing online market | No solver exists | Good (similar to Big Two) | Vietnam | 3 |
+| **19** | **Call Break** | South Asia's most popular trick-taking game; 10M+ app downloads each | No solver exists | Good (simple, fast convergence) | Nepal, India, Bangladesh | 3 |
+| **20** | **Backgammon** | Middle East/Mediterranean; gambling tradition | Essentially solved (XG, GNU BG are superhuman since 1990s) | Mixed (perfect info + doubling cube) | Turkey, Israel, Global | 3 |
+
+### Why this order
+
+**Games 1-5 (Poker):** Capture the existing solver market. Every serious poker
+player has either paid for PioSolver or wishes they could afford it. PLO at #3
+is the single highest-value solver gap — MonkerSolver's entire business is PLO
+solving, and postflop PLO is genuinely unsolved. Tournament/ICM at #4 is a huge
+untapped market — no ICM-aware CFR solver exists.
+
+**Games 6-11 (Asian card games):** This is where the 10x opportunity lives.
+Teen Patti (#6) is India's massive gambling game with zero solver tooling.
+Hwatu (#8) ties to myosu's Korean identity. Mahjong (#9) has a $1.5-2.1B market
+with superhuman AI existing in research but zero consumer products. Bridge (#10)
+has 200M+ players and no comprehensive solver. Gin Rummy (#11) taps the $1.5B
+Indian rummy market.
+
+**Games 7 + 8 (Hanafuda + Hwatu):** The same card deck, different games,
+different countries (Japan + Korea). This pairing makes the multi-game story
+feel curated. Nintendo was founded in 1889 as a hanafuda company — there's a
+narrative thread connecting traditional Japanese gaming to a decentralized
+game-solving protocol named in Korean.
+
+**Games 12-20 (Platform proof):** Each game validates a different aspect of the
+architecture. Stratego (#12) proves CFR works for massive state spaces.
+Dou Di Zhu (#16) proves 3-player asymmetric games work. Backgammon (#20) is
+deliberately last because it's essentially solved — existing tools are cheap
+and superhuman. The solver gap is minimal.
+
+### Geographic coverage
+
+```
+  CHINA           KOREA        JAPAN         INDIA          SE ASIA        WEST
+  ┌──────────┐   ┌────────┐   ┌─────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
+  │Dou Di Zhu│   │Hwatu   │   │Mahjong  │   │Teen Patti│   │Pusoy Dos │   │Bridge    │
+  │(600M+    │   │(Go-Stop│   │(Riichi) │   │(500M+   │   │(Big Two) │   │Spades    │
+  │ users)   │   │  )     │   │Hanafuda │   │ Diwali)  │   │Tien Len  │   │Stratego  │
+  │          │   │        │   │(Koi-Koi)│   │Call Break│   │(Vietnam) │   │Liar's    │
+  │          │   │        │   │         │   │Gin Rummy │   │          │   │ Dice     │
+  └──────────┘   └────────┘   └─────────┘   └──────────┘   └──────────┘   │Backgammon│
+                                                                           │OFC       │
+                 ◄─── 6 POKER VARIANTS SPAN ALL GEOGRAPHIES ──►            └──────────┘
+  NLHE HU, NLHE 6max, PLO, NLHE Tournament, Short Deck, OFC
+```
+
+Combined addressable market across all 20 games: $10B+ annually. No competitor
+addresses more than 2 of these games. myosu addresses all 20 with one protocol.
 
 ## Company Stages
 
