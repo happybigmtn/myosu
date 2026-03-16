@@ -376,12 +376,3 @@ No entity builds decentralized game-solving infrastructure.
 | 8 | gameplay: human vs solver | GP-01..04 | stage_0 exit |
 | 9 | multi-game proof: Liar's Dice | MG-01..04 | stage_0 exit |
 
-## hiring
-
-| order | role | unblocks |
-|-------|------|----------|
-| 1 | Substrate engineer | chain fork velocity |
-| 2 | poker domain expert | solver quality validation |
-| 3 | growth | community, game partnerships |
-
-Dormant at zero humans. System operates via malinka autonomous loop.
