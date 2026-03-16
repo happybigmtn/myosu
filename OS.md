@@ -159,21 +159,51 @@ backgammon — it only knows subnets, neurons, weights, and emissions.
 ### Layer 2: Solvers (off-chain compute)
 
 Miners run MCCFR training on their hardware. They serve trained strategies via
-HTTP endpoints. The longer they train, the closer to Nash equilibrium, the
-higher they score. Robopoker v1.0.0 is the first solver engine; others can be
-built by anyone.
+HTTP endpoints (axon). The longer they train, the closer to Nash equilibrium,
+the higher they score. The robopoker fork (`happybigmtn/robopoker`) is the
+first solver engine; others can be built by anyone. Miners use ArcSwap
+double-buffering for zero-contention concurrent training + serving.
 
 ### Layer 3: Validators (off-chain quality control)
 
-Validators query miners, measure exploitability (distance from Nash equilibrium),
-and submit scores to the chain. Yuma Consensus aggregates validator scores with
-stake-weighted median clipping, preventing collusion.
+Validators query miners via HTTP, measure exploitability using a RemoteProfile
+adapter (distance from Nash equilibrium), and submit weight vectors to the
+chain. Yuma Consensus aggregates validator scores with stake-weighted median
+clipping, preventing collusion. Commit-reveal protects weight vectors from
+inter-validator copying (not test positions from miners — miners see queries
+in real-time). Encoder state must be pinned to a hash-checked artifact for
+deterministic scoring (INV-003).
 
 ### Layer 4: Gameplay (consumer product)
 
 Humans play against the best miner's strategy. This is the product that makes
 the solver market matter. A solver no one plays against is academic. A solver
 humans lose to is valuable.
+
+### Crate Architecture
+
+```
+happybigmtn/robopoker (fork)       happybigmtn/myosu
+├─ rbp-mccfr (CFR traits)          ├─ myosu-games (trait re-exports, wire, registry)
+├─ rbp-nlhe (NLHE solver)          ├─ myosu-games-poker (NlheSolver wrapper)
+├─ rbp-gameplay (game engine)      ├─ myosu-games-liars-dice (architecture proof)
+└─ rbp-cards (hand evaluation)     ├─ myosu-chain/ (Substrate fork)
+                                   │  ├─ runtime/ (14 pallets + game-solver at index 7)
+                                   │  ├─ node/ (binary, chain spec, RPC)
+                                   │  └─ pallets/game-solver/ (Yuma, subnets, staking)
+                                   ├─ myosu-chain-client (shared RPC client)
+                                   ├─ myosu-miner (train + serve)
+                                   ├─ myosu-validator (score + submit)
+                                   └─ myosu-play (human/agent vs solver)
+```
+
+### Autonomous Development
+
+Malinka drives the build loop from `ralph/IMPLEMENT.md`. Enhancement spec
+at `specs/031626-malinka-enhancements.md` defines 9 capabilities malinka
+needs for end-to-end autonomy (service management, proof timeouts, prompt
+enrichment). Manual prerequisites: robopoker fork (RF-01..02) and
+subtensor copy (CF-01..02) must be done by hand before malinka takes over.
 
 ## Revenue Model (Planned)
 
@@ -327,7 +357,7 @@ Exit criteria:
 - 3+ poker variant subnets running
 - 10+ miners competing per subnet
 - Token economics sustain miner incentives without inflation death spiral
-- Web-based gameplay interface live
+- TUI gameplay interface live (design spec: `design.md`)
 
 ### Stage 2: Platform
 **Objective:** Expand beyond poker. Third-party game engines.
@@ -454,6 +484,23 @@ Forking myosu's chain is trivial. Forking the solver ecosystem is hard:
    to the platform's value. A fork must reimplement all game engines.
 
 The chain is commodity infrastructure. The network of trained solvers is the moat.
+
+## Key Engineering Decisions (from spec review)
+
+| decision | rationale | spec |
+|----------|-----------|------|
+| ArcSwap double-buffer for miner | zero read contention during training batches | MN-02 |
+| RemoteProfile adapter for validator | `Profile::exploitability()` needs a Profile impl from query responses | GT-04 |
+| checkpoint versioning: 4-byte magic + version | prevent silent corruption on format changes | PE-01 |
+| encoder pinning: hash-checked artifact | INV-003 requires identical encoder across validators | VO-03 |
+| commit-reveal protects weight copying | does NOT hide test positions from miners | VO-05 |
+| 14 pallets kept (not 13) | SafeMode at index 20 included | CF-01 |
+| genesis subnet in dev chain spec | prevents chicken-and-egg in integration tests | CF-04/GS-09 |
+| `substrate_fixed` pinned to subtensor version | bit-identical Yuma output requires identical fixed-point lib | GS-05 |
+| 5 concrete Yuma test vectors | synthetic inputs with all intermediate values as JSON fixtures | GS-05 |
+| GS-10 runtime API | efficient state queries for off-chain participants | GS-10 |
+| shared `myosu-chain-client` crate | prevents DRY violation across miner/validator/play | MN-01/VO-01 |
+| robopoker fork (not upstream dep) | need serde feature + NlheEncoder constructor | RF-01/RF-02 |
 
 ## Bootstrap Exit Criteria
 

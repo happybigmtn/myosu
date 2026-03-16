@@ -435,6 +435,80 @@ THE SYSTEM AWAITS YOUR DECISION
 > draw discard
 ```
 
+### 8.10 BRIDGE BIDDING PHASE
+
+```
+MYOSU / BRIDGE / BOARD 14 / AUCTION
+
+THE SYSTEM AWAITS YOUR BID
+
+  you (south)   K♠ J♠ · A♥ 8♥ 3♥ · Q♦ J♦ 7♦ 3♦ · A♣ 6♣
+  hcp: 15       distribution: 2-3-4-4
+
+  AUCTION
+
+  west    north   east    south
+  --      --      --      ?
+
+───
+
+  bidding opened to you
+
+> bid 1nt
+```
+
+### 8.11 COACHING / ANALYZE OUTPUT
+
+```
+MYOSU / NLHE-HU / HAND 47 / ANALYSIS
+
+SOLVER RECOMMENDS RAISING
+
+  board    T♠  7♥  2♣
+  you      A♠ K♥         94bb   BB
+  pot      12bb
+
+  EQUILIBRIUM MIX
+
+  action      frequency    EV
+  raise 8bb   47.2%        +2.8bb
+  raise 12bb  18.6%        +2.4bb
+  call        22.1%        +1.9bb
+  check       12.1%        +1.1bb
+
+───
+
+  your hand is in the top 8% of possible holdings
+  solver exploitability: 13.2 mbb/h (miner 12)
+
+> raise 8
+```
+
+### 8.12 GAME SELECTION
+
+```
+MYOSU / LOBBY
+
+SELECT A GAME
+
+  AVAILABLE SUBNETS
+
+  id  game         miners  best_exploit   your_balance
+  1   nlhe-hu      12      13.2 mbb/h     1000bb
+  2   nlhe-6max    18      15.8 mbb/h     1000bb
+  3   plo          12      --             1000bb
+  4   teen-patti    4      8.1 mbb/h      --
+  5   liars-dice    2      0.02           --
+
+───
+
+  type subnet id to join, or:
+  /new       create practice session
+  /spectate  watch agent vs agent
+
+> 1
+```
+
 ## 9. operational screens
 
 ### 9.1 NETWORK CONSOLE
@@ -607,6 +681,61 @@ action: solver raises 6bb
 Agent writes: `call`
 
 Same binary. Same protocol. Zero additional infrastructure.
+
+### pipe output for non-poker games
+
+```
+MYOSU/RIICHI/EAST1R3
+hand: 1m 2m 3m 5p 6p 7p 3s 4s 9s 9s Ew Ew
+draw: 5s
+south: 13 tiles discards: 1m 9p 5s Nw
+west: 11 tiles discards: 2m 3p 7s
+north: 13 tiles discards: 4p
+riichi: no points: 25000 dora: 3m
+>
+```
+
+```
+MYOSU/LIARS-DICE/R3
+you: 3 5 6 1 4 (5 dice)
+solver: 4 dice
+last_bid: three fives (solver)
+>
+```
+
+```
+MYOSU/HWATU/R5
+hand: jan.B feb.L mar.R apr.S may.S jul.R oct.L
+field: jan.R feb.S mar.L nov.S
+capture: jan.S jan.L feb.R feb.B score: 3
+solver: 9 cards score: 1
+deck: 26
+>
+```
+
+### /stats output
+
+```
+MYOSU / SESSION STATS
+
+  game         nlhe-hu
+  hands        47
+  result       +14bb
+  bb/hand      +0.30
+
+  STREAKS
+
+  current      W3
+  best         W7 (hands 22-28)
+  worst        L4 (hands 8-11)
+
+  POSITION
+
+  as BB        +0.42 bb/hand (24 hands)
+  as SB        +0.17 bb/hand (23 hands)
+
+  solver source: miner 12 (13.2 mbb/h)
+```
 
 ## 12. build checklist
 
