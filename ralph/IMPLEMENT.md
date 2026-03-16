@@ -17,6 +17,8 @@ Date: 2026-03-16
 | 031626-validator-oracle.md | VO-01..06 | 6 |
 | 031626-gameplay-cli.md | GP-01..04 | 4 |
 | 031626-multi-game-architecture.md | MG-01..04 | 4 |
+| 031626-tui-implementation.md | TU-01..07 | 7 |
+| 031626-abstraction-pipeline.md | AP-01..03 | 3 |
 
 ---
 
@@ -422,3 +424,93 @@ Source spec: specs/031626-multi-game-architecture.md
   - Verify: Covers 6 candidate games; concrete type signatures; estimated info set counts; reviewed
   - Integration: `N/A (documentation)`
   - Rollback: N/A
+
+---
+
+## Stage 7: TUI Implementation
+Source spec: specs/031626-tui-implementation.md
+
+- [ ] **TU-01** — GameRenderer Trait
+  - Where: `crates/myosu-tui/src/renderer.rs (new)`
+  - Tests: `cargo test -p myosu-tui renderer::tests::trait_is_object_safe`
+  - Blocking: Every game renderer depends on this trait — must be stable first
+  - Verify: Object-safe (Box<dyn GameRenderer> compiles); mock renderer works; pipe_output returns structured text; completions non-empty
+  - Integration: `Trigger=compile-time; Callsite=shell.rs calls render_state(); State=N/A; Persistence=N/A; Signal=trait compiles`
+  - Rollback: trait requires game-specific types
+
+- [ ] **TU-07** — Color Theme Implementation
+  - Where: `crates/myosu-tui/src/theme.rs (new)`
+  - Tests: `cargo test -p myosu-tui theme::tests::all_colors_defined`
+  - Blocking: Shell layout needs theme for declaration styling
+  - Verify: All 8 color tokens from design.md defined; readable without color
+  - Integration: `Trigger=compile-time; Callsite=shell.rs applies theme; State=N/A; Persistence=N/A; Signal=tests pass`
+  - Rollback: N/A
+
+- [ ] **TU-02** — Five-Panel Shell Layout
+  - Where: `crates/myosu-tui/src/shell.rs (new)`
+  - Tests: `cargo test -p myosu-tui shell::tests::layout_at_60_columns`
+  - Blocking: Universal visual frame for all 20 games
+  - Verify: 5 panels render at 60-120 columns; state panel min 4 lines; log scrolls; header shows game path
+  - Integration: `Trigger=resize or state change; Callsite=event loop; State=frame buffer; Persistence=N/A; Signal=5 panels visible`
+  - Rollback: layout constraints conflict at small terminal sizes
+
+- [ ] **TU-04** — Readline Input with History
+  - Where: `crates/myosu-tui/src/input.rs (new)`
+  - Tests: `cargo test -p myosu-tui input::tests::tab_completion`
+  - Blocking: Input quality determines gameplay feel
+  - Verify: Type + submit works; history navigation; tab completion; Ctrl-W deletes word; /commands detected
+  - Integration: `Trigger=key events; Callsite=events.rs; State=buffer, cursor, history; Persistence=N/A; Signal=characters appear`
+  - Rollback: readline keybindings conflict with game keys
+
+- [ ] **TU-03** — Event Loop and Async Updates
+  - Where: `crates/myosu-tui/src/events.rs (new)`
+  - Tests: `cargo test -p myosu-tui events::tests::key_event_handled`
+  - Blocking: Ties shell + input + async miner queries together
+  - Verify: Key press triggers re-render within 16ms; miner response updates state without blocking; Ctrl-C clean shutdown
+  - Integration: `Trigger=key event or miner response; Callsite=main.rs; State=game + terminal; Persistence=N/A; Signal=responsive UI`
+  - Rollback: crossterm and tokio event loops conflict
+
+- [ ] **TU-05** — Screen State Machine
+  - Where: `crates/myosu-tui/src/screens.rs (new)`
+  - Tests: `cargo test -p myosu-tui screens::tests::lobby_to_game`
+  - Blocking: Navigation between game states
+  - Verify: Lobby→Game on subnet select; Game→Stats on /stats; /analyze→Coaching; any key returns from overlay
+  - Integration: `Trigger=/commands or game completion; Callsite=event loop; State=Screen enum; Persistence=N/A; Signal=display switches`
+  - Rollback: screen transitions lose game state
+
+- [ ] **TU-06** — Pipe Mode for Agent Protocol
+  - Where: `crates/myosu-tui/src/pipe.rs (new)`
+  - Tests: `cargo test -p myosu-tui pipe::tests::pipe_output_no_ansi`
+  - Blocking: Agent-native design depends on pipe mode
+  - Verify: --pipe output has zero ANSI codes; matches design.md pipe format; stdin accepted; agent plays complete hand
+  - Integration: `Trigger=--pipe flag; Callsite=main.rs; State=stdin/stdout; Persistence=hand history; Signal=structured text output`
+  - Rollback: pipe vs TUI rendering diverges
+
+---
+
+## Stage 8: Abstraction Pipeline
+Source spec: specs/031626-abstraction-pipeline.md
+
+- [ ] **AP-01** — Clustering Binary
+  - Where: `crates/myosu-cluster/src/main.rs (new)`
+  - Tests: `cargo test -p myosu-cluster cluster::tests::preflop_produces_169_entries`
+  - Blocking: Without abstraction tables, miners produce random strategies
+  - Verify: Preflop produces 169 entries; all 4 files written; manifest SHA-256 matches; deterministic re-run
+  - Integration: `Trigger=myosu-cluster CLI; Callsite=main.rs; State=clustering state; Persistence=4 bin files + manifest.json; Signal=manifest with hashes`
+  - Rollback: robopoker clustering API not accessible outside rbp-autotrain
+
+- [ ] **AP-02** — File-Based Encoder Loading
+  - Where: `happybigmtn/robopoker rbp-nlhe/src/encoder.rs (extend)`
+  - Tests: `cargo test -p rbp-nlhe encoder::tests::from_dir_loads_all_streets`
+  - Blocking: Part of RF-02 — miners load encoder without PostgreSQL
+  - Verify: from_dir loads all 4 streets; abstraction() returns valid values; tampered file rejected; hash deterministic
+  - Integration: `Trigger=miner startup; Callsite=PokerSolver::new(); State=encoder populated; Persistence=read-only; Signal=hash logged`
+  - Rollback: 138M entries don't fit in memory
+
+- [ ] **AP-03** — Pre-Computed Artifact Distribution
+  - Where: `artifacts/abstractions/ (new)`, `scripts/download-abstractions.sh (new)`
+  - Tests: `scripts/download-abstractions.sh exits 0`
+  - Blocking: Without pre-computed artifacts, every miner spends hours clustering
+  - Verify: Download completes in <5min on 100Mbps; hash matches; miner starts after download; tampered artifact rejected
+  - Integration: `Trigger=miner startup detects missing abstractions; Callsite=main.rs bootstrap; State=files on disk; Persistence=~3GB; Signal=hash logged`
+  - Rollback: artifact URL unavailable

@@ -21,6 +21,8 @@ Depends-on: none
 | `031626-validator-oracle.md` | VL-01 | VO-01..06 | Draft |
 | `031626-gameplay-cli.md` | GP-01 | GP-01..04 | Draft |
 | `031626-multi-game-architecture.md` | FG-01 | MG-01..04 | Draft |
+| `031626-tui-implementation.md` | (new) | TU-01..07 | Draft |
+| `031626-abstraction-pipeline.md` | (new) | AP-01..03 | Draft |
 
 ## Purpose
 
