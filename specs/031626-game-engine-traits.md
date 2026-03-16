@@ -4,6 +4,7 @@ Source: Master spec AC-GE-01, robopoker v1.0.0 trait analysis
 Status: Draft
 Date: 2026-03-16
 Depends-on: none (pure library, no chain dependency)
+Blocked-by: robopoker fork with `serde` feature for rbp-nlhe (see Blocking Prerequisites)
 
 ## Purpose
 
@@ -36,10 +37,29 @@ Current state:
 - No myosu game abstraction exists
 
 This spec adds:
-- `myosu-games` crate with thin wrapper traits over robopoker's trait system
+- `myosu-games` crate with selective re-exports of robopoker's trait system
 - Serialization layer for network transport of game states and strategies
-- Game registry for runtime game selection
-- Exploitability as a standalone queryable function (not just on Profile)
+- Game registry with typed game parameters for runtime game selection
+- Upstream robopoker PR adding serde derives to NLHE types
+
+## Blocking Prerequisites
+
+**Upstream robopoker changes required before this spec can be implemented:**
+
+1. **`serde` feature for `rbp-nlhe`**: Add conditional serde derives to `NlheInfo`,
+   `NlheEdge`, `NlhePublic`, `NlheSecret`, `NlheProfile`, `Encounter`. Propagate
+   through `rbp-gameplay` (`Path`, `Edge`) and `rbp-cards` (`Abstraction`).
+   Without this, GT-02, PE-03, and all checkpoint/wire serialization is impossible.
+
+2. **Non-database `NlheEncoder` constructor**: Currently `NlheEncoder` can only be
+   populated via `Hydrate::hydrate(postgres_client)`. Add `NlheEncoder::from_map()`
+   or `NlheEncoder::from_file()` for environments without PostgreSQL.
+   Without this, PE-01 cannot create a functional solver.
+
+**Approach**: Fork robopoker v1.0.0 into `happybigmtn/robopoker` and make these
+changes directly. We own the fork — no upstream PR dependency. The fork tracks
+v1.0.0 as a baseline but we're free to add features. Update INV-006 to reflect
+fork ownership rather than upstream fidelity. Estimated effort: 1-2 days.
 
 If all ACs land:
 - Any game implementing robopoker's CFR traits can plug into myosu
@@ -136,21 +156,31 @@ Out of scope:
   core CFR traits with myosu-specific documentation:
 
   ```rust
-  // Re-exports from robopoker — these ARE the game-agnostic interface
+  // Selective re-exports — traits and scalars only.
+  // Consumers needing Tree/Node/Branch depend on rbp-mccfr directly.
   pub use rbp_mccfr::{CfrGame, CfrEdge, CfrTurn, CfrInfo, Profile, Encoder};
-  pub use rbp_mccfr::{Tree, Node, Branch, InfoSet};
   pub use rbp_core::{Utility, Probability};
   ```
 
-  Add a `GameConfig` struct for subnet-specific configuration:
+  Add a `GameConfig` struct with typed parameters:
   ```rust
   #[derive(Clone, Debug, Serialize, Deserialize)]
   pub struct GameConfig {
-      pub game_type: String,       // "nlhe_hu", "nlhe_6max", "liars_dice", etc.
+      pub game_type: GameType,
       pub num_players: u8,
-      pub params: serde_json::Value,  // game-specific config (stack sizes, blind structure, etc.)
+      pub params: GameParams,
+  }
+
+  #[derive(Clone, Debug, Serialize, Deserialize)]
+  pub enum GameParams {
+      NlheHeadsUp { stack_bb: u32, ante_bb: Option<u32> },
+      LiarsDice { num_dice: u8, num_faces: u8 },
+      Custom(serde_json::Value),
   }
   ```
+
+  The typed `GameParams` enum provides compile-time validation for known games
+  while preserving extensibility via the `Custom` variant.
 
   Add a `StrategyQuery` and `StrategyResponse` pair for miner communication:
   ```rust
@@ -311,83 +341,65 @@ Out of scope:
   type mapping, they can't select the right engine for their subnet.
 - Rollback condition: game_type encoding on-chain doesn't match registry expectations.
 
-### AC-GT-04: Standalone Exploitability Function
+### AC-GT-04: Remote Strategy Profile Adapter
 
-- Where: `crates/myosu-games/src/exploit.rs (new)`
-- How: Expose exploitability as a standalone function that validators can call
-  without constructing a full Profile. Wrap robopoker's `Profile::exploitability()`:
-
-  ```rust
-  /// Compute exploitability of a strategy defined by an action distribution function.
-  ///
-  /// Returns exploitability in game-native utility units.
-  /// For poker: milli-big-blinds per hand (mbb/h).
-  ///
-  /// The `strategy_fn` closure maps info sets to action distributions.
-  /// This allows validators to test miner strategies without having
-  /// the full Profile object — just the query interface.
-  pub fn compute_exploitability<G, E, T, I, P>(
-      profile: &P,
-      tree: Tree<T, E, G, I>,
-  ) -> Utility
-  where
-      P: Profile<T = T, E = E, G = G, I = I>,
-      G: CfrGame<E = E, T = T>,
-      E: CfrEdge,
-      T: CfrTurn,
-      I: CfrInfo<E = E, T = T>,
-  {
-      profile.exploitability(tree)
-  }
-  ```
-
-  This is essentially a thin wrapper that makes the call site cleaner for
-  validators. The real work is in robopoker's `Profile::exploitability()`.
-
-  Also expose a **sampled exploitability** function for large games where
-  full tree traversal is too expensive:
+- Where: `crates/myosu-games/src/remote_profile.rs (new)`
+- How: Validators don't have a miner's full `NlheProfile` — they only have
+  the query interface (send info set, receive action distribution). To use
+  `Profile::exploitability()`, validators need a `Profile` impl that fetches
+  strategies from a closure or cache.
 
   ```rust
-  /// Sample-based exploitability estimation.
-  /// Generates `n_samples` random game states, computes best-response
-  /// value at each, and returns the average.
-  pub fn sampled_exploitability<G, E, T, I, P>(
-      profile: &P,
-      n_samples: usize,
-      rng: &mut impl Rng,
-  ) -> Utility
-  where
-      P: Profile<T = T, E = E, G = G, I = I>,
-      ...
-  {
-      // Sample random game states by playing random actions from root
-      // At each terminal state, compute best-response deviation
-      // Average over samples
+  /// Adapter that implements Profile by looking up pre-fetched action distributions.
+  /// Used by validators to compute exploitability of remote miner strategies.
+  pub struct RemoteProfile<E: CfrEdge, I: CfrInfo<E = E>> {
+      responses: HashMap<I, Vec<(E, Probability)>>,
+      epochs: usize,
   }
+
+  impl<E, I> RemoteProfile<E, I> {
+      pub fn from_responses(responses: HashMap<I, Vec<(E, Probability)>>) -> Self { ... }
+  }
+
+  // Implements Profile by mapping cum_weight to the averaged distribution values.
+  // cum_regret returns the same values (regret-matching with these weights
+  // produces the same distribution). This is sufficient for exploitability
+  // computation which only needs averaged_distribution() internally.
   ```
 
-- Whole-system effect: the validator oracle's core scoring function. Without
-  this, validators can't compute how close a miner's strategy is to Nash.
-- State: no runtime state — pure computation.
+  **Why not a wrapper function?** `Profile::exploitability()` is a trait method
+  that recursively calls `averaged()`, `external_reach()`, and
+  `optimal_response_evalue()` on `&self`. A standalone function can't inject
+  custom strategy lookup into this recursion. A `Profile` impl can.
+
+  Validators call `profile.exploitability(tree)` on this adapter rather than
+  the miner's actual profile. The adapter maps `cum_weight(info, edge)` to
+  the pre-fetched action probabilities.
+
+- Whole-system effect: enables validators to compute exploitability of remote
+  strategies without having the full training state.
+- State: HashMap of info → action distributions (populated by miner queries).
 - Wiring contract:
-  - Trigger: validator evaluation loop calls this per miner
-  - Callsite: myosu-validator/src/oracle/
-  - State effect: N/A (pure function)
+  - Trigger: validator builds RemoteProfile from miner query responses
+  - Callsite: myosu-validator/src/scoring.rs
+  - State effect: N/A (read-only computation)
   - Persistence effect: N/A
-  - Observable signal: returns f64 exploitability value
+  - Observable signal: `profile.exploitability(tree)` returns valid f64
 - Required tests:
-  - `cargo test -p myosu-games exploit::tests::rps_nash_exploitability_zero`
-  - `cargo test -p myosu-games exploit::tests::rps_biased_exploitability_positive`
-  - `cargo test -p myosu-games exploit::tests::sampled_converges_to_exact`
+  - `cargo test -p myosu-games remote_profile::tests::rps_nash_exploitability_zero`
+  - `cargo test -p myosu-games remote_profile::tests::rps_biased_exploitability_positive`
+  - `cargo test -p myosu-games remote_profile::tests::matches_local_profile`
 - Pass/fail:
-  - RPS Nash equilibrium (1/3, 1/3, 1/3) → exploitability ≈ 0.0
-  - RPS biased strategy (always rock) → exploitability > 0
-  - Sampled exploitability with 10,000 samples within 5% of exact value
-  - Invalid profile (NaN probabilities) → error, not panic
-- Blocking note: this is the validator's scoring function. The entire
-  incentive mechanism depends on accurate exploitability measurement.
-- Rollback condition: robopoker's exploitability computation is too slow for
-  the game sizes we need, or doesn't support 2+ player games correctly.
+  - RemoteProfile built from RPS Nash distributions → exploitability ≈ 0.0
+  - RemoteProfile built from always-rock → exploitability > 0
+  - RemoteProfile exploitability within 1% of local Profile exploitability
+    for the same strategy (validates the adapter produces equivalent results)
+  - Missing info set in responses → returns uniform distribution (graceful fallback)
+- Blocking note: without this adapter, validators cannot use
+  `Profile::exploitability()` on remote strategies. The alternative is
+  reimplementing best-response from scratch, which is error-prone.
+- Rollback condition: `Profile` trait's internal recursion requires state
+  that can't be faked from action distributions alone (e.g., cum_evalue).
 
 ---
 

@@ -141,6 +141,7 @@ construct_runtime! {
     Preimage:           pallet_preimage                 = 14,
     Scheduler:          pallet_scheduler                = 15,
     Proxy:              pallet_proxy                    = 16,
+    SafeMode:           pallet_safe_mode                = 20,
 }
 ```
 
@@ -192,7 +193,7 @@ Failure loop:
   | 29 | pallet_contracts | WASM smart contracts |
   | 30 | pallet_shield | MEV protection |
 
-  **Keep (indices 0-6, 11-16, 20):**
+  **Keep (indices 0-6, 11-16, 20) — 14 pallets total:**
   System(0), RandomnessFlip(1), Timestamp(2), Aura(3), Grandpa(4),
   Balances(5), TransactionPayment(6), Utility(11), Sudo(12), Multisig(13),
   Preimage(14), Scheduler(15), Proxy(16), SafeMode(20).
@@ -222,7 +223,7 @@ Failure loop:
 - Pass/fail:
   - `cargo build -p myosu-runtime` compiles without errors
   - Runtime version reports `spec_name: "myosu"`, `spec_version: 1`
-  - `construct_runtime!` contains exactly 13 pallets (System through SafeMode)
+  - `construct_runtime!` contains exactly 14 pallets (System through SafeMode)
   - No references to `pallet_subtensor`, `pallet_ethereum`, `pallet_evm`,
     `pallet_drand`, `pallet_shield`, `pallet_crowdloan`, `pallet_subtensor_swap`
     remain in the compiled runtime
@@ -374,6 +375,11 @@ Failure loop:
 
   No subtensor genesis, no EVM genesis, no drand genesis.
   Properties: `token_symbol: "MYOSU"`, `token_decimals: 9`, `ss58_format: 42`.
+
+  **Dev mode genesis subnet**: When GS-09 integrates the game-solver pallet,
+  the dev chain spec should include a genesis subnet (subnet 1, game_type
+  `b"nlhe_hu"`, owned by Alice) so integration tests don't need explicit
+  subnet creation as a setup step. Document this cross-AC dependency.
 
   Support `--dev` (single validator, instant seal) and `--chain local`
   (two validators, Alice + Bob, 6-second blocks).

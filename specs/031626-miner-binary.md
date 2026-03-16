@@ -102,7 +102,7 @@ Out of scope:
 | Component | Status | Location |
 |-----------|--------|----------|
 | CLI + main | New | crates/myosu-miner/src/main.rs |
-| Chain client | New | crates/myosu-miner/src/chain.rs |
+| Chain client | New (shared crate) | crates/myosu-chain-client/ (shared with validator + play) |
 | Training loop | New | crates/myosu-miner/src/training.rs |
 | Axon server | New | crates/myosu-miner/src/axon.rs |
 | Checkpoint mgmt | New | crates/myosu-miner/src/checkpoint.rs |

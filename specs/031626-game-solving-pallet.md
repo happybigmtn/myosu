@@ -259,9 +259,16 @@ Failure loop:
   - `PruningScores`: StorageMap<u16, Vec<u16>>
   - `LastUpdate`: StorageMap<u16, Vec<u64>>
 
+  Commit-reveal:
+  - `WeightCommits`: StorageDoubleMap<u16, T::AccountId, (H256, u64)> — (subnet, hotkey) → (hash, block)
+
   Staking:
   - `TotalStake`: StorageValue<u64>
   - `Stake`: StorageDoubleMap<T::AccountId, u16, u64> — (hotkey, subnet) → amount
+
+  Emission config:
+  - `EmissionSplit`: StorageMap<u16, u8> — subnet → miner percentage (default 50, meaning 50/50)
+  - `BlockEmission`: StorageValue<u64> — tokens minted per block (default 1_000_000_000)
 
   Serving:
   - `Axons`: StorageDoubleMap<u16, T::AccountId, AxonInfo>
@@ -297,8 +304,10 @@ Failure loop:
   - Config constants (InitialTempo=100, MaxSubnets=32, etc.) are accessible
   - Events and errors are defined and encodable
   - `AxonInfo` encodes/decodes correctly
-  - Mock runtime test infrastructure works
+  - Mock runtime test infrastructure works (`mock.rs` with `construct_runtime!`,
+    `impl Config for Test`, genesis builder, test helpers)
 - Blocking note: every other GS-* AC reads or writes these storage items.
+  The mock runtime is required for ALL pallet unit tests (GS-02 through GS-08).
   The scaffold must be solid before adding logic.
 - Rollback condition: storage layout is incompatible with Yuma's access patterns.
 
@@ -368,10 +377,14 @@ Failure loop:
   no PoW, no dynamic difficulty).
 
   **`register_neuron(origin, subnet_id: u16)`**:
-  1. Ensure signed origin (hotkey)
+  1. Ensure signed origin (the signing account acts as both hotkey and funder)
   2. Check subnet exists and registration enabled
-  3. Check hotkey not already registered on this subnet
-  4. Burn `InitialBurnCost` from associated coldkey
+  3. Check account not already registered on this subnet
+  4. Burn `InitialBurnCost` from the signing account (no separate coldkey for bootstrap)
+
+  Note: any registered neuron may act as both miner and validator. The role
+  distinction is off-chain: miners serve axons, validators set weights.
+  `ValidatorPermit` (top N by stake) gates weight submission.
   5. If `SubnetworkN < MaxAllowedUids`:
      - Append neuron at uid = current_n
      - Increment `SubnetworkN`
@@ -536,12 +549,24 @@ Failure loop:
   }
   ```
 
-  Use `substrate_fixed::types::I32F32` and `I64F64` for fixed-point arithmetic
-  (same as subtensor). This ensures bit-exact results.
+  Use `substrate_fixed::types::I32F32` and `I64F64` for fixed-point arithmetic.
+  **Pin `substrate_fixed` to the exact version from subtensor's Cargo.lock** to
+  ensure bit-exact results.
 
-  **Verification**: write a test that runs both subtensor's and myosu's epoch
-  on identical synthetic inputs and asserts identical outputs. This is the
-  INV-003 compliance test.
+  **Empty-weights guard**: if the weight matrix is entirely zero (no validator
+  submitted weights since last epoch), skip consensus computation and emit
+  zero for all UIDs. This prevents division-by-zero in normalization functions.
+
+  **Verification**: generate concrete test vectors by running subtensor's
+  `epoch_mechanism()` on synthetic inputs. Ship as JSON fixtures:
+  - Scenario 1: 2 equal-stake validators, 3 miners, uniform weights
+  - Scenario 2: 2 unequal-stake validators, 3 miners, divergent weights (tests clipping)
+  - Scenario 3: 1 validator, 1 miner (degenerate)
+  - Scenario 4: all validators identical weights (consensus = weights)
+  - Scenario 5: multi-epoch bond EMA accumulation (3 consecutive epochs)
+  Each fixture captures: inputs (weights, stakes, kappa, bonds) and all
+  intermediate + final values (preranks, consensus, clipped, ranks, incentive,
+  dividends, bonds_delta, ema_bonds, emission per UID).
 
 - Whole-system effect: Yuma Consensus is the incentive engine. Without it,
   weights have no effect and emissions don't flow.
@@ -773,6 +798,49 @@ Failure loop:
   runtime, it's just library code.
 - Rollback condition: pallet's Config requirements conflict with existing
   runtime configuration, or pallet panics during block execution.
+
+### AC-GS-10: Runtime API for State Queries
+
+- Where: `crates/myosu-chain/pallets/game-solver/src/rpc.rs (new)`,
+  `crates/myosu-chain/runtime/src/lib.rs (extend)`
+- How: Implement a `GameSolverRuntimeApi` so miners and validators can
+  efficiently query subnet state without iterating storage keys:
+
+  ```rust
+  sp_api::decl_runtime_apis! {
+      pub trait GameSolverApi {
+          fn subnet_info(netuid: u16) -> Option<SubnetInfo>;
+          fn neuron_info(netuid: u16, uid: u16) -> Option<NeuronInfo>;
+          fn all_axons(netuid: u16) -> Vec<(u16, AxonInfo)>;
+          fn all_incentives(netuid: u16) -> Vec<(u16, u16)>;  // uid → incentive
+          fn subnet_count() -> u16;
+      }
+  }
+  ```
+
+  Without this, the validator's miner discovery (VO-02) must iterate storage
+  keys one by one, which is slow and error-prone.
+
+- Whole-system effect: enables efficient off-chain queries for miners, validators,
+  and gameplay.
+- State: no new state — reads existing storage.
+- Wiring contract:
+  - Trigger: RPC call from miner/validator/player client
+  - Callsite: runtime API implementation
+  - State effect: N/A (read-only)
+  - Persistence effect: N/A
+  - Observable signal: `all_axons(1)` returns list of miner endpoints
+- Required tests:
+  - `cargo test -p myosu-runtime runtime::tests::runtime_api_subnet_info`
+  - `cargo test -p myosu-runtime runtime::tests::runtime_api_all_axons`
+- Pass/fail:
+  - `subnet_info(1)` returns SubnetInfo with game_type, tempo, neuron count
+  - `all_axons(1)` returns all registered axon endpoints
+  - `all_incentives(1)` returns per-UID scores after epoch
+  - Nonexistent subnet → None
+- Blocking note: without efficient queries, the off-chain participants
+  (MN, VO, GP) have no practical way to discover chain state.
+- Rollback condition: runtime API types incompatible with subxt codegen.
 
 ---
 

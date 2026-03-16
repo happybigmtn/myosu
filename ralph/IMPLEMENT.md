@@ -7,15 +7,37 @@ Date: 2026-03-16
 
 | Spec File | AC Prefix | Count |
 |-----------|-----------|-------|
+| (robopoker fork prerequisites) | RF-01..02 | 2 |
 | 031626-myosu-game-solving-chain.md | (master index) | — |
 | 031626-chain-fork-scaffold.md | CF-01..05 | 5 |
-| 031626-game-solving-pallet.md | GS-01..09 | 9 |
+| 031626-game-solving-pallet.md | GS-01..10 | 10 |
 | 031626-game-engine-traits.md | GT-01..05 | 5 |
 | 031626-poker-engine.md | PE-01..04 | 4 |
 | 031626-miner-binary.md | MN-01..05 | 5 |
 | 031626-validator-oracle.md | VO-01..06 | 6 |
 | 031626-gameplay-cli.md | GP-01..04 | 4 |
 | 031626-multi-game-architecture.md | MG-01..04 | 4 |
+
+---
+
+## Stage 0: Robopoker Fork Prerequisites
+Source: specs/031626-game-engine-traits.md Blocking Prerequisites
+
+- [ ] **RF-01** — Fork robopoker v1.0.0 and add serde feature
+  - Where: `happybigmtn/robopoker (new fork)`
+  - Tests: `cargo test --features serde` in forked repo
+  - Blocking: GT-02, PE-01, PE-03 all require serializable NLHE types
+  - Verify: NlheInfo, NlheEdge, NlheProfile, NlheEncoder, Path, Encounter all derive Serialize/Deserialize under `serde` feature; existing tests still pass
+  - Integration: `Trigger=myosu-games depends on fork; Callsite=Cargo.toml git dep; State=types serializable; Persistence=N/A; Signal=cargo test --features serde passes`
+  - Rollback: serde derives conflict with existing trait bounds
+
+- [ ] **RF-02** — Add non-database NlheEncoder constructor
+  - Where: `happybigmtn/robopoker crates/nlhe/src/encoder.rs (extend)`
+  - Tests: `cargo test -p rbp-nlhe encoder::tests::from_map_constructor`
+  - Blocking: PE-01 cannot create a functional solver without populated encoder
+  - Verify: `NlheEncoder::from_map(BTreeMap<Isomorphism, Abstraction>)` works; `NlheEncoder::from_file(path)` loads binary abstraction table; existing DB path unaffected
+  - Integration: `Trigger=miner creates encoder on startup; Callsite=PokerSolver::new(); State=encoder populated; Persistence=abstraction file on disk; Signal=abstraction() returns valid values`
+  - Rollback: private field prevents non-DB construction without refactoring
 
 ---
 
@@ -214,12 +236,20 @@ Source spec: specs/031626-game-solving-pallet.md
   - Rollback: Stake accounting error creates or loses tokens
 
 - [ ] **GS-09** — Add Pallet to Runtime at Index 7
-  - Where: `crates/myosu-chain/runtime/src/lib.rs (extend)`
+  - Where: `crates/myosu-chain/runtime/src/lib.rs (extend)`, `node/src/chain_spec.rs (extend)`
   - Tests: `cargo test -p myosu-chain integration::tests::full_incentive_loop`
   - Blocking: Integration gate — until pallet is in runtime, it's just library code
-  - Verify: Runtime compiles with pallet; index 7 occupied; create_subnet callable; full loop works (create→register→stake→weights→epoch→emission); no CF-05 regression
+  - Verify: Runtime compiles with pallet; index 7 occupied; create_subnet callable; full loop works (create→register→stake→weights→epoch→emission); no CF-05 regression; dev chain spec includes genesis subnet 1 (nlhe_hu, owned by Alice)
   - Integration: `Trigger=runtime compilation; Callsite=runtime/src/lib.rs; State=pallet in block execution; Persistence=pallet storage in chain state; Signal=create_subnet callable via RPC`
   - Rollback: Config requirements conflict with existing runtime
+
+- [ ] **GS-10** — Runtime API for State Queries
+  - Where: `crates/myosu-chain/pallets/game-solver/src/rpc.rs (new)`, `runtime/src/lib.rs (extend)`
+  - Tests: `cargo test -p myosu-runtime runtime::tests::runtime_api_all_axons`
+  - Blocking: Without efficient queries, off-chain participants have no practical way to discover chain state
+  - Verify: subnet_info(1) returns SubnetInfo; all_axons(1) returns miner endpoints; all_incentives(1) returns scores after epoch; nonexistent subnet → None
+  - Integration: `Trigger=RPC call; Callsite=runtime API impl; State=N/A (read-only); Persistence=N/A; Signal=all_axons returns data`
+  - Rollback: runtime API types incompatible with subxt codegen
 
 ---
 

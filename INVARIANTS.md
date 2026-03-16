@@ -63,14 +63,15 @@ Hard rules for the myosu game-solving subnet chain.
 - No-ship rule: unresolved divergence after recovery is at least `S1`.
 - Fallback mode: roll back plan status, preserve evidence, treat as incomplete.
 
-## INV-006: Robopoker Upstream Fidelity
+## INV-006: Robopoker Fork Coherence
 
-- Statement: The robopoker dependency must track the upstream v1.0.0+ release.
-  Local patches must be documented in `PATCHES.md` and submitted upstream when
-  possible.
-- Why: Diverging from upstream creates maintenance burden and loses community
-  improvements to the MCCFR engine.
-- Enforcement: `Cargo.toml` git dependency pinned to tag, patch documentation.
-- Measurement: delta between local and upstream HEAD.
-- No-ship rule: undocumented divergence from upstream is `S2`.
-- Fallback mode: document the divergence, open upstream PR.
+- Statement: The robopoker fork (`happybigmtn/robopoker`) must track v1.0.0 as
+  its baseline. Changes must be documented in CHANGELOG.md with rationale.
+  Core MCCFR algorithm changes require review.
+- Why: We own the fork but the v1.0.0 MCCFR engine is proven. Diverging from
+  core algorithm correctness risks solver quality.
+- Enforcement: `Cargo.toml` git dependency pinned to fork branch/tag,
+  CHANGELOG.md in fork documents all changes from v1.0.0 baseline.
+- Measurement: diff between fork and v1.0.0 tag is documented and intentional.
+- No-ship rule: undocumented algorithm changes are `S2`.
+- Fallback mode: document the change, review for correctness.

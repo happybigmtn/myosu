@@ -1,13 +1,13 @@
 # Specification: Poker Engine — NLHE Implementation via Robopoker v1.0.0
 
-Source: Master spec AC-GE-02, robopoker v1.0.0 crate analysis
+Source: Master spec AC-GE-02, robopoker fork crate analysis
 Status: Draft
 Date: 2026-03-16
 Depends-on: GT-01..05 (game engine traits must exist)
 
 ## Purpose
 
-Implement the No-Limit Hold'em poker engine by wrapping robopoker v1.0.0's
+Implement the No-Limit Hold'em poker engine by wrapping robopoker fork's
 `rbp-nlhe` and `rbp-gameplay` crates. This produces the first concrete game
 that miners can solve, validators can score, and players can play.
 
@@ -26,7 +26,7 @@ patches documented in PATCHES.md and submitted upstream (INV-006).
 
 Current state:
 - `myosu-games` provides trait re-exports and wire serialization (GT-01..05)
-- robopoker v1.0.0 provides `rbp-nlhe` with `NlheSolver`, `NlheEncoder`,
+- robopoker fork provides `rbp-nlhe` with `NlheSolver`, `NlheEncoder`,
   `NlheProfile`, `NlheGame`, `NlheEdge`, `NlheTurn`, `NlheInfo`
 - robopoker's `NlheProfile` already implements `Profile::exploitability()`
 - No poker-specific myosu integration exists
@@ -136,7 +136,7 @@ Out of scope:
   use rbp_mccfr::*;
 
   /// Configured NLHE solver using Pluribus sampling and linear discounting.
-  pub type Flagship = NlheSolver<PluribusRegret, LinearPolicy, PluribusSampling>;
+  pub type Flagship = NlheSolver<PluribusRegret, LinearWeight, PluribusSampling>;
 
   pub struct PokerSolver {
       solver: Flagship,
@@ -372,7 +372,7 @@ Failure modes:
 
 ## Decision Log
 
-- 2026-03-16: Use Pluribus-style solver (PluribusRegret, LinearPolicy,
+- 2026-03-16: Use Pluribus-style solver (PluribusRegret, LinearWeight,
   PluribusSampling) as default — best known configuration for NLHE.
 - 2026-03-16: Bincode for wire serialization — compact, fast, well-supported.
   JSON is too verbose for action distributions.
