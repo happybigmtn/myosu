@@ -1,9 +1,26 @@
-# Specification: Myosu Game-Solving Chain — Bittensor Fork for Competitive Game Strategy Markets
+# Specification: Myosu Game-Solving Chain — Master Index
 
 Source: Research analysis of opentensor/subtensor architecture + codexpoker solver infrastructure
-Status: Draft
+Status: Active (index document — individual specs are Draft)
 Date: 2026-03-16
 Depends-on: none
+
+> **This document is a master index.** Each original AC has been expanded into
+> its own spec with multiple detailed ACs. The sections below preserve the
+> original high-level design. See the Spec Index for detailed build contracts.
+
+## Spec Index
+
+| Spec File | Expands | AC Prefix | Status |
+|-----------|---------|-----------|--------|
+| `031626-chain-fork-scaffold.md` | CH-01 | CF-01..05 | Draft |
+| `031626-game-solving-pallet.md` | CH-02 | GS-01..nn | Planned |
+| `031626-game-engine-traits.md` | GE-01 | GT-01..nn | Planned |
+| `031626-poker-engine.md` | GE-02 | PE-01..nn | Planned |
+| `031626-miner-binary.md` | MN-01 | MN-01..nn | Planned |
+| `031626-validator-oracle.md` | VL-01 | VO-01..nn | Planned |
+| `031626-gameplay-cli.md` | GP-01 | GP-01..nn | Planned |
+| `031626-multi-game-architecture.md` | FG-01 | MG-01..nn | Planned |
 
 ## Purpose
 
