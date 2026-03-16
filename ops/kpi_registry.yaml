@@ -1,0 +1,49 @@
+# Myosu KPI Registry
+# Machine-readable KPI and guardrail contracts.
+
+north_star:
+  id: solver_exploitability_convergence
+  definition: "best miner's strategy exploitability in mbb/hand, approaching zero"
+  formula: "min(exploitability_scores) across active miners per subnet"
+  source: validator consensus
+  cadence: per_tempo
+  green: "<= 50 mbb/hand"
+  yellow: "50-200 mbb/hand"
+  red: "> 200 mbb/hand"
+  default_action: "investigate solver quality, increase training iterations"
+
+guardrails:
+  - id: false_green_proof_count
+    formula: "count of completion claims whose named proof did not actually execute"
+    source: proof audit / decision log
+    cadence: daily
+    green: "0"
+    yellow: "1"
+    red: "> 1"
+    default_action: "stop completion claims, repair proof honesty"
+
+  - id: structured_closure_rate_7d
+    formula: "turns_with_RESULT_or_BLOCKED / total_dispatched_turns over 7 days"
+    source: adjudication history
+    cadence: daily
+    green: ">= 0.98"
+    yellow: "0.90-0.979"
+    red: "< 0.90"
+    default_action: "prioritize closure contract and repair logic"
+
+  - id: validator_determinism
+    formula: "max score divergence across validators for identical inputs"
+    source: validator logs cross-referenced
+    cadence: per_tempo
+    green: "< 1e-6"
+    yellow: "1e-6 to 1e-3"
+    red: "> 1e-3"
+    default_action: "freeze solver emissions, investigate INV-003 violation"
+
+  - id: solver_gameplay_separation
+    formula: "cargo tree dependency check — no path from play → solver or solver → play"
+    source: cargo tree output
+    cadence: per_build
+    green: "no cross-dependency"
+    red: "any direct dependency"
+    default_action: "revert offending dependency, refactor into engine crate"

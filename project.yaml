@@ -1,0 +1,161 @@
+# Myosu repo profile — game-solving subnet chain.
+#
+# 묘수 (myosu) — "brilliant move" / "masterstroke" in Korean.
+# A Bittensor-forked chain where miners solve games and validators verify quality.
+
+name: myosu
+
+spec_dir: specs/
+plan_file: ralph/IMPLEMENT.md
+
+proof_commands:
+  - cargo test
+  - cargo clippy -- -D warnings
+  - cargo build --release
+
+tracker:
+  kind: file
+  path: ralph/IMPLEMENT.md
+
+polling:
+  interval_ms: 30000
+
+runtime_workspace:
+  cache_root: .myosu-cache
+  cache_scope: repo
+
+hooks:
+  after_create: ""
+  before_run: ""
+  after_run: ""
+  timeout_ms: 60000
+
+agent:
+  max_concurrent_agents: 3
+  max_retry_backoff_ms: 300000
+
+codex:
+  stall_timeout_ms: 300000
+
+doctrine:
+  mission_paths:
+    - specs/031626-myosu-game-solving-chain.md
+    - ralph/SPEC.md
+  invariant_paths:
+    - INVARIANTS.md
+  os_path: OS.md
+  kpi_registry_paths:
+    - ops/kpi_registry.yaml
+  scorecard_paths:
+    - ops/scorecard.md
+  no_ship_paths:
+    - ops/no-ship-ledger.md
+  reference_paths:
+    - ops/risk_register.md
+    - ops/instrumentation_backlog.md
+    - ops/decision_log.md
+
+recurring:
+  tasks:
+    - id: strategy
+      role: strategy
+      cadence: 24h
+      focus_source: doctrine
+      freshness: 36h
+      proof_commands:
+        - true
+      engine:
+        adapter: codex
+        model: gpt-5.4
+        reasoning: high
+        command: codex exec --yolo
+    - id: security
+      role: security
+      cadence: 24h
+      focus_source: specs
+      freshness: 36h
+      audit_scopes:
+        - id: chain
+          roots:
+            - crates/myosu-chain
+          attestation_dir: state/tasks/security/attestations/chain
+        - id: solver
+          roots:
+            - crates/myosu-solver
+          attestation_dir: state/tasks/security/attestations/solver
+        - id: gameplay
+          roots:
+            - crates/myosu-play
+          attestation_dir: state/tasks/security/attestations/gameplay
+      engine:
+        adapter: codex
+        model: gpt-5.4
+        reasoning: high
+        command: codex exec --yolo
+    - id: operations
+      role: operations
+      cadence: 15m
+      focus_source: doctrine
+      freshness: 1h
+      no_change_yield_after: 2
+      no_change_yield_multiplier: 2
+      proof_commands:
+        - true
+      engine:
+        adapter: codex
+        model: gpt-5.4
+        reasoning: high
+        command: codex exec --yolo
+
+recurring_sources:
+  strategy:
+    artifact_path: state/tasks/strategy/source-output.json
+    writable_targets:
+      - kind: file
+        path: ralph/IMPLEMENT.md
+      - kind: file
+        path: OS.md
+      - kind: file
+        path: INVARIANTS.md
+      - kind: directory
+        path: ops
+      - kind: directory
+        path: specs
+    semantic_adapters:
+      - id: repo_strategy_lane_aliases
+        kind: strategy_operating_lane_aliases
+        aliases:
+          endurance_gate: game_solving_chain
+  security:
+    artifact_path: state/tasks/security/source-output.json
+    writable_targets:
+      - kind: file
+        path: ralph/IMPLEMENT.md
+      - kind: directory
+        path: state/tasks/security/attestations
+      - kind: directory
+        path: specs
+  operations:
+    artifact_path: state/tasks/operations/source-output.json
+    writable_targets:
+      - kind: file
+        path: project.yaml
+      - kind: file
+        path: WORKFLOW.md
+      - kind: directory
+        path: ops
+
+health:
+  heartbeat_stale_after: 90s
+  result_stale_after: 30m
+
+engine:
+  adapter: codex
+  model: gpt-5.4
+  reasoning: high
+  command: codex exec --yolo
+  timeout_secs: 3600
+
+workspace:
+  root: ~/coding/myosu-workspaces
+  max_drift_commits: 20
