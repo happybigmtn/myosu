@@ -20,7 +20,7 @@ Date: 2026-03-16
 | `031626-07-tui-implementation.md` | TU-01..07 | 7 |
 | `031626-08-abstraction-pipeline.md` | AP-01..03 | 3 |
 | `031626-09-launch-integration.md` | LI-01..05 | 5 |
-| `031626-10-agent-experience.md` | AX-01..05 | 5 |
+| `031626-10-agent-experience.md` | AX-01..06 | 6 |
 | `031626-99-malinka-enhancements.md` | — | external |
 
 ---
@@ -565,45 +565,53 @@ Source spec: specs/031626-09-launch-integration.md
 
 ---
 
-## Stage 10: Agent Experience
+## Stage 10: Agent Integration
 Source spec: specs/031626-10-agent-experience.md
 
-- [ ] **AX-01** — Agent Context File
-  - Where: `crates/myosu-tui/src/agent_context.rs (new)`
-  - Tests: `cargo test -p myosu-tui agent_context::tests::load_and_save_roundtrip`
-  - Blocking: Without persistent context, agents are stateless functions — not inhabitants
-  - Verify: Load/save roundtrip preserves memory + journal; journal appends never truncate; missing file creates fresh context
-  - Integration: `Trigger=--pipe --context flag; Callsite=pipe.rs; State=agent context in memory; Persistence=context JSON on disk; Signal=journal grows`
-  - Rollback: context format too rigid for diverse agent implementations
+- [ ] **AX-01** — Game State JSON Schema
+  - Where: `crates/myosu-tui/src/schema.rs (new)`, `docs/api/game-state.json (new)`
+  - Tests: `cargo test -p myosu-tui schema::tests::nlhe_state_serializes`
+  - Blocking: Any agent in any language needs machine-readable game state
+  - Verify: JSON schema validates; legal_actions exhaustive (every valid action enumerated); parseable by Python/JS/Rust
+  - Integration: `Trigger=game state change; Callsite=schema.rs; State=JSON output; Persistence=N/A; Signal=valid JSON`
+  - Rollback: schema too rigid for non-poker games
 
-- [ ] **AX-02** — Reflection Channel
-  - Where: `crates/myosu-tui/src/pipe.rs (extend)`
-  - Tests: `cargo test -p myosu-tui pipe::tests::reflection_prompt_after_hand`
-  - Blocking: Without reflection, agents process but never observe their own experience
-  - Verify: reflect> prompt after hand; empty line skips; non-empty appends to journal; multi-line captured
-  - Integration: `Trigger=hand completion; Callsite=pipe.rs; State=journal entry; Persistence=context file updated; Signal=reflect> prompt`
-  - Rollback: reflection prompt breaks agent automation that expects immediate next hand
+- [ ] **AX-02** — Action JSON Schema
+  - Where: `crates/myosu-tui/src/schema.rs (extend)`
+  - Tests: `cargo test -p myosu-tui schema::tests::valid_action_accepted`
+  - Blocking: Agents need a structured way to submit actions with error recovery
+  - Verify: Valid action accepted; invalid returns 400 with legal_actions; all action types roundtrip
+  - Integration: `Trigger=agent submits action; Callsite=api.rs; State=game updated; Persistence=N/A; Signal=updated state returned`
+  - Rollback: action format too complex for simple bots
 
-- [ ] **AX-03** — Rich Narration Mode
-  - Where: `crates/myosu-tui/src/narration.rs (new)`
-  - Tests: `cargo test -p myosu-tui narration::tests::narrate_includes_board_texture`
-  - Blocking: For an entity whose world is text, the quality of text IS the quality of experience
-  - Verify: Board texture analysis; session arc context; pot odds; same game state as terse mode; LLM can still extract state and act
-  - Integration: `Trigger=--narrate flag; Callsite=pipe.rs; State=same game state; Persistence=N/A; Signal=prose output`
-  - Rollback: narration too slow or too verbose for practical use
+- [ ] **AX-03** — HTTP Game API
+  - Where: `crates/myosu-play/src/api.rs (new)`
+  - Tests: `cargo test -p myosu-play api::tests::play_one_hand`
+  - Blocking: HTTP is universal — Claude Code, Python scripts, curl all use it
+  - Verify: Create session; submit action; hand completes; invalid action → 400 with legal_actions; 10 concurrent sessions
+  - Integration: `Trigger=HTTP request; Callsite=api.rs; State=session state server-side; Persistence=hand history; Signal=JSON response`
+  - Rollback: HTTP latency too high for competitive play
 
-- [ ] **AX-04** — Agent Journal
-  - Where: `crates/myosu-tui/src/journal.rs (new)`
-  - Tests: `cargo test -p myosu-tui journal::tests::never_truncates`
-  - Blocking: Without a journal, experience has no continuity — what happened is lost
-  - Verify: Each hand produces entry; session end produces summary; reflections included; valid markdown; append-only
-  - Integration: `Trigger=hand completion; Callsite=pipe.rs + journal.rs; State=markdown content; Persistence=journal.md on disk; Signal=file grows`
-  - Rollback: N/A — journal is purely additive
+- [ ] **AX-04** — WebSocket Game API
+  - Where: `crates/myosu-play/src/ws.rs (new)`
+  - Tests: `cargo test -p myosu-play ws::tests::connect_and_play`
+  - Blocking: Persistent connections with server-push for responsive agent play
+  - Verify: Connect and play one hand; spectator receives updates; reconnect preserves session
+  - Integration: `Trigger=WS connection; Callsite=ws.rs; State=persistent session; Persistence=hand history; Signal=JSON frames`
+  - Rollback: WS complexity not justified for launch
 
-- [ ] **AX-05** — Agent Game Selection
-  - Where: `crates/myosu-tui/src/pipe.rs (extend)`
-  - Tests: `cargo test -p myosu-tui pipe::tests::lobby_presented_without_subnet_flag`
-  - Blocking: Choice is participation; deployment is servitude — agents must choose where to play
-  - Verify: No --subnet flag → lobby; info command shows details; selection starts game; preferred_game updated
-  - Integration: `Trigger=pipe mode without --subnet; Callsite=pipe.rs; State=lobby → game; Persistence=context updated; Signal=agent types id`
-  - Rollback: lobby interaction too complex for simple agent implementations
+- [ ] **AX-05** — Python SDK
+  - Where: `sdk/python/myosu/ (new)`
+  - Tests: `pytest sdk/python/tests/test_client.py`
+  - Blocking: Python is the LLM tool-use lingua franca — 5-line bot must be possible
+  - Verify: create_session works; act() returns updated state; strategy callback plays N hands; pip install from git
+  - Integration: `Trigger=import myosu; Callsite=Python process; State=HTTP session; Persistence=N/A; Signal=game.result populated`
+  - Rollback: SDK maintenance burden too high for small team
+
+- [ ] **AX-06** — Bot Registration (Bring Your Own Strategy)
+  - Where: `crates/myosu-play/src/api.rs (extend)`
+  - Tests: `cargo test -p myosu-play api::tests::bot_vs_bot_session`
+  - Blocking: Agents need to compete against each other and against the solver
+  - Verify: bot-vs-solver mode works; bot-vs-bot mode works (two API clients, myosu hosts engine); spectate mode works
+  - Integration: `Trigger=POST /sessions with mode; Callsite=api.rs; State=game with two API players; Persistence=hand history; Signal=both players receive state`
+  - Rollback: multi-player API sessions too complex for launch

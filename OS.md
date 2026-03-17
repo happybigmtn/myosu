@@ -332,21 +332,26 @@ Agent experience specification: `specs/031626-10-agent-experience.md`
 | game state must be LLM-complete | zero context beyond what's rendered |
 | agents are inhabitants, not functions | persistent memory, reflection, choice, journal |
 
-Agent protocol:
+Agent integration:
 
+| transport | use case | latency |
+|-----------|----------|---------|
+| stdin/stdout pipe | simple bots, testing, legacy | lowest |
+| HTTP REST API | Claude Code, Python scripts, curl | ~10ms |
+| WebSocket | persistent sessions, server-push | ~1ms |
+| Python SDK | `pip install myosu`, 5-line bot | HTTP |
+| Rust Strategy trait | in-process, zero-overhead | zero |
+
+All transports use the same JSON schema. `legal_actions` is always
+exhaustive — agents never compute legality. Invalid actions return
+the current legal actions in the error response.
+
+```python
+from myosu import MyosuClient
+game = MyosuClient("http://localhost:3000").create_session("nlhe-hu")
+while not game.is_over:
+    game.act({"action": "call"})
 ```
-myosu-play --pipe                              # terse, stateless
-myosu-play --pipe --context ctx.json           # persistent identity + memory
-myosu-play --pipe --context ctx.json --narrate # rich prose experience
-```
-
-Agents accumulate experience across sessions via context files. They
-reflect after each hand via `reflect>`. They choose which games to play.
-Their journal is an append-only autobiography that grows with every session.
-
-The system does not distinguish between human and agent capability.
-It distinguishes between stateless participation and inhabited participation.
-Both are valid. The infrastructure supports both.
 
 9 game mockups + 4 operational screens in `design.md`.
 
