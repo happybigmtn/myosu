@@ -594,7 +594,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=resize or state change; Callsite=event loop; State=frame buffer; Persistence=N/A; Signal=5 panels visible`
   - Rollback: layout constraints conflict at small terminal sizes
 
-- [ ] **TU-04** — Readline Input with History
+- [x] **TU-04** — Readline Input with History
   - Where: `crates/myosu-tui/src/input.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Input quality determines gameplay feel
