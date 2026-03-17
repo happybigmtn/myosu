@@ -13,6 +13,7 @@ Date: 2026-03-16
 | `031626-02a-game-engine-traits.md` | GT-01..05 | 5 |
 | `031626-02b-poker-engine.md` | PE-01..04 | 4 |
 | `031626-03-game-solving-pallet.md` | GS-01..10 | 10 |
+| (shared chain client) | CC-01 | 1 |
 | `031626-04a-miner-binary.md` | MN-01..05 | 5 |
 | `031626-04b-validator-oracle.md` | VO-01..06 | 6 |
 | `031626-05-gameplay-cli.md` | GP-01..04 | 4 |
@@ -61,7 +62,7 @@ Source spec: specs/031626-01-chain-fork-scaffold.md
   - Where: `crates/myosu-chain/runtime/src/lib.rs (new, from subtensor)`
   - Tests: `cargo test -p myosu-runtime runtime::tests::runtime_compiles`
   - Blocking: Everything downstream depends on a compilable runtime — single most critical unblock
-  - Verify: Runtime compiles; spec_name="myosu"; 13 pallets in construct_runtime!; no subtensor/frontier/EVM references; WASM < 5MB
+  - Verify: Runtime compiles; spec_name="myosu"; 14 pallets in construct_runtime! (incl SafeMode at index 20); no subtensor/frontier/EVM references; WASM < 5MB
   - Integration: `Trigger=cargo build -p myosu-runtime; Callsite=runtime/build.rs WASM builder; State=WASM blob compiled; Persistence=target/ artifact; Signal=build exits 0`
   - Rollback: Runtime fails to compile after stripping — hidden inter-pallet dependencies
 
@@ -118,13 +119,13 @@ Source spec: specs/031626-02a-game-engine-traits.md
   - Integration: `Trigger=miner/validator reads subnet game_type; Callsite=main.rs; State=correct engine selected; Persistence=N/A; Signal=from_bytes returns correct variant`
   - Rollback: game_type encoding on-chain doesn't match registry
 
-- [ ] **GT-04** — Standalone Exploitability Function
-  - Where: `crates/myosu-games/src/exploit.rs (new)`
-  - Tests: `cargo test -p myosu-games exploit::tests::rps_nash_exploitability_zero`
-  - Blocking: Validator's core scoring function — entire incentive mechanism depends on it
-  - Verify: RPS Nash → exploit ≈ 0; RPS biased → exploit > 0; sampled converges to exact
-  - Integration: `Trigger=validator evaluation; Callsite=myosu-validator oracle; State=N/A; Persistence=N/A; Signal=returns f64 exploitability`
-  - Rollback: robopoker exploitability too slow for game sizes needed
+- [ ] **GT-04** — Remote Strategy Profile Adapter
+  - Where: `crates/myosu-games/src/remote_profile.rs (new)`
+  - Tests: `cargo test -p myosu-games remote_profile::tests::rps_nash_exploitability_zero`
+  - Blocking: Validators need to compute exploitability from miner query responses without the full Profile object
+  - Verify: RemoteProfile from RPS Nash distributions → exploit ≈ 0; from always-rock → exploit > 0; matches local Profile within 1%; missing info set → uniform fallback
+  - Integration: `Trigger=validator builds RemoteProfile from responses; Callsite=myosu-validator scoring.rs; State=HashMap of info→distributions; Persistence=N/A; Signal=profile.exploitability(tree) returns valid f64`
+  - Rollback: Profile trait requires state beyond cum_weight for exploitability path
 
 - [ ] **GT-05** — RPS Reference Implementation Test Suite
   - Where: `crates/myosu-games/tests/rps_integration.rs (new)`
@@ -258,11 +259,19 @@ Source spec: specs/031626-03-game-solving-pallet.md
 
 ---
 
-## Stage 4a: Miner Binary
+## Stage 4a: Shared Chain Client + Miner Binary
 Source spec: specs/031626-04a-miner-binary.md
 
+- [ ] **CC-01** — Shared Chain Client Crate
+  - Where: `crates/myosu-chain-client/src/lib.rs (new)`
+  - Tests: `cargo test -p myosu-chain-client client::tests::connect_to_devnet`
+  - Blocking: MN-01, VO-01, GP-01 all need chain RPC — DRY violation without shared crate
+  - Verify: Connects to devnet via WebSocket; submits extrinsics (register_neuron, serve_axon, set_weights, add_stake); queries storage (Axons, Incentive, SubnetInfo via runtime API); account/keypair management from seed string
+  - Integration: `Trigger=any binary startup; Callsite=myosu-miner, myosu-validator, myosu-play; State=RPC connection; Persistence=N/A; Signal=chain queries return data`
+  - Rollback: subxt codegen incompatible with myosu runtime metadata
+
 - [ ] **MN-01** — CLI and Chain Registration
-  - Where: `crates/myosu-miner/src/main.rs (new)`, `src/chain.rs (new)`
+  - Where: `crates/myosu-miner/src/main.rs (new)`
   - Tests: `cargo test -p myosu-miner chain::tests::register_neuron_success`
   - Blocking: Registration is the first thing a miner does
   - Verify: Connects to devnet; registers and receives UID; already-registered skips; invalid key → error
@@ -524,7 +533,7 @@ Source spec: specs/031626-08-abstraction-pipeline.md
 Source spec: specs/031626-09-launch-integration.md
 
 - [ ] **LI-01** — Devnet Orchestration
-  - Where: `ops/devnet/docker-compose.yml (new)`, `ops/devnet/README.md (new)`
+  - Where: `ops/devnet/docker-compose.yml (new)`, `ops/devnet/README.md (new)`, `crates/myosu-chain/Dockerfile (new)`, `crates/myosu-miner/Dockerfile (new)`, `crates/myosu-validator/Dockerfile (new)`
   - Tests: `docker compose up -d && sleep 30 && curl -sf http://localhost:8080/health`
   - Blocking: Developers and testers need one command to run the full stack
   - Verify: Chain produces blocks within 10s; miner registers within 30s; validator submits within first tempo; curl /health responds; compose down cleans up
