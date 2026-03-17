@@ -52,9 +52,7 @@ impl Theme {
     /// Style for LLM/coach text — italic signals "not fact".
     #[must_use]
     pub fn assistant_style(&self) -> Style {
-        Style::default()
-            .fg(self.fg)
-            .add_modifier(Modifier::ITALIC)
+        Style::default().fg(self.fg).add_modifier(Modifier::ITALIC)
     }
 
     /// All 8 color tokens as an array, for iteration or validation.

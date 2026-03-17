@@ -69,16 +69,34 @@ Source: specs/031626-02a-game-engine-traits.md Blocking Prerequisites
 ## Stage 1a: Chain Fork Prerequisites (must compile before CF-01..05)
 Source spec: specs/031626-01-chain-fork-scaffold.md (extended)
 
-Note: CF-07 is the FIRST commit — nothing compiles without it. CF-06, CF-08..11
+Note: CF-07a is the FIRST commit — nothing compiles without it. CF-06, CF-08..11
 are parallel prerequisites that must all land before CF-01 can strip pallets.
 
-- [ ] **CF-07** — Strip drand/crowdloan Config Supertraits
-  - Where: `crates/myosu-chain/pallets/game-solver/src/macros/config.rs (from subtensor)`, `src/coinbase/block_step.rs (from subtensor)`
+- [x] **CF-07a** — Strip drand/crowdloan from Config definition
+  - Where: `crates/myosu-chain/pallets/game-solver/src/macros/config.rs`
   - Tests: `cargo check -p pallet-game-solver`
-  - Blocking: pallet_subtensor::Config requires pallet_drand::Config + pallet_crowdloan::Config — NOTHING compiles without this change. This is the FIRST COMMIT in the fork.
-  - Verify: Config trait compiles without drand/crowdloan supertraits (config.rs:17); `impl<T: Config + pallet_drand::Config>` in block_step.rs:6 changed to just `impl<T: Config>`; all `pallet_drand::*` and `pallet_crowdloan::*` imports removed; leasing.rs stripped entirely; block_step no longer calls reveal_crv3_commits; RoundNumber type usage removed
-  - Integration: `Trigger=cargo check; Callsite=config.rs:17 + block_step.rs:6; State=Config compiles; Persistence=N/A; Signal=cargo check exits 0`
-  - Rollback: Config requires types from drand/crowdloan that are deeply woven into core logic
+  - Blocking: `Config` trait must not inherit from `pallet_drand::Config` or `pallet_crowdloan::Config`.
+  - Verify: `pub trait Config: frame_system::Config + ...` no longer lists drand or crowdloan.
+  - Integration: `Trigger=cargo check; Callsite=config.rs:17; State=Config definition updated; Persistence=N/A; Signal=compilation progresses`
+  - Rollback: Types are too deeply nested.
+
+- [ ] **CF-07b** — Strip drand from block_step.rs
+  - Where: `crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs`
+  - Depends on: `CF-07a`
+  - Tests: `cargo check -p pallet-game-solver`
+  - Blocking: Cannot compile block_step if it relies on drand.
+  - Verify: `impl<T: Config + pallet_drand::Config>` changed to `impl<T: Config>`. `reveal_crv3_commits` calls removed.
+  - Integration: `Trigger=cargo check; Callsite=block_step.rs; State=block_step simplified; Persistence=N/A; Signal=compilation progresses`
+  - Rollback: Tightly coupled to drand logic.
+
+- [ ] **CF-07c** — Remove leasing.rs and lingering imports
+  - Where: `crates/myosu-chain/pallets/game-solver/src/leasing.rs`, `crates/myosu-chain/pallets/game-solver/src/lib.rs`
+  - Depends on: `CF-07b`
+  - Tests: `cargo check -p pallet-game-solver`
+  - Blocking: leasing depends on crowdloan. Must be stripped.
+  - Verify: `leasing.rs` is deleted. \`mod leasing;\` removed from \`lib.rs\`. All \`pallet_drand::*\` imports removed.
+  - Integration: \`Trigger=cargo check; Callsite=lib.rs; State=unneeded module deleted; Persistence=N/A; Signal=compilation progresses\`
+  - Rollback: Module used elsewhere.
 
 - [!] **CF-06** — SwapInterface No-Op Stub
   - Where: `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs (new)`
@@ -104,7 +122,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=validator calls commit_weights; Callsite=weights.rs; State=hash stored in WeightCommits; Persistence=on-chain; Signal=commit + reveal flow succeeds`
   - Rollback: v2 commit-reveal has a bug that CRV3 was fixing
 
-- [x] **CF-10** — Port Primitives and Runtime Common Types
+- [ ] **CF-10** — Port Primitives and Runtime Common Types
   - Where: `crates/myosu-chain/primitives/safe-math/ (new, from subtensor)`, `crates/myosu-chain/primitives/share-pool/ (new, from subtensor)`, `crates/myosu-chain/common/ (new, from subtensor/common/)`
   - Tests: `cargo check -p myosu-safe-math && cargo check -p myosu-share-pool && cargo check -p myosu-runtime-common`
   - Blocking: Yuma epoch uses safe-math; ALL stake operations (20+ functions) use share-pool; NetUid/MechId/TaoCurrency/AlphaCurrency from runtime_common used in nearly every pallet file
@@ -112,7 +130,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=epoch.rs + staking.rs + lib.rs import these; Callsite=run_epoch, stake_utils, storage declarations; State=N/A (pure types + math); Persistence=N/A; Signal=all three crates' tests pass`
   - Rollback: runtime_common has deep coupling to stripped pallet types that can't be aliased
 
-- [ ] **CF-11** — Stub ProxyInterface, CommitmentsInterface, AuthorshipProvider, and CheckColdkeySwap
+- [x] **CF-11** — Stub ProxyInterface, CommitmentsInterface, AuthorshipProvider, and CheckColdkeySwap
   - Where: `crates/myosu-chain/pallets/game-solver/src/stubs.rs (new)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: pallet Config requires ProxyInterface, CommitmentsInterface, GetCommitments, AuthorshipProvider, and frame_system DispatchGuard (CheckColdkeySwap depends on pallet_shield::Config)
@@ -127,7 +145,7 @@ Source spec: specs/031626-01-chain-fork-scaffold.md
 
 - [ ] **CF-02** — Prune Workspace Dependencies
   - Where: `crates/myosu-chain/Cargo.toml (new)`, `crates/myosu-chain/runtime/Cargo.toml (new)`
-  - Depends on: `CF-07`, `CF-06`, `CF-08`, `CF-09`, `CF-10`, `CF-11`
+  - Depends on: `CF-07c`, `CF-06`, `CF-08`, `CF-09`, `CF-10`, `CF-11`
   - Tests: `! cargo tree -p myosu-runtime 2>&1 | grep -q 'pallet.subtensor'`
   - Blocking: Dependency contamination from stripped pallets will cause build failures
   - Verify: No references to subtensor/frontier/drand in dependency tree; build succeeds; WASM blob produced
@@ -143,7 +161,7 @@ Source spec: specs/031626-01-chain-fork-scaffold.md
   - Integration: `Trigger=cargo build -p myosu-runtime; Callsite=runtime/build.rs WASM builder; State=WASM blob compiled; Persistence=target/ artifact; Signal=build exits 0`
   - Rollback: Runtime fails to compile after stripping — hidden inter-pallet dependencies
 
-- [x] **CF-04** — Local Devnet Chain Spec
+- [ ] **CF-04** — Local Devnet Chain Spec
   - Where: `crates/myosu-chain/node/src/chain_spec.rs (new, from subtensor)`
   - Depends on: `CF-01`
   - Tests: `cargo check -p myosu-node`
@@ -569,7 +587,7 @@ Source spec: specs/031626-06-multi-game-architecture.md
 ## Stage 7: TUI Implementation
 Source spec: specs/031626-07-tui-implementation.md
 
-- [x] **TU-01** — GameRenderer Trait
+- [ ] **TU-01** — GameRenderer Trait
   - Where: `crates/myosu-tui/src/renderer.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Every game renderer depends on this trait — must be stable first
@@ -577,7 +595,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=compile-time; Callsite=shell.rs calls render_state(); State=N/A; Persistence=N/A; Signal=trait compiles`
   - Rollback: trait requires game-specific types
 
-- [x] **TU-07** — Color Theme Implementation
+- [ ] **TU-07** — Color Theme Implementation
   - Where: `crates/myosu-tui/src/theme.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Shell layout needs theme for declaration styling
@@ -594,7 +612,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=resize or state change; Callsite=event loop; State=frame buffer; Persistence=N/A; Signal=5 panels visible`
   - Rollback: layout constraints conflict at small terminal sizes
 
-- [x] **TU-04** — Readline Input with History
+- [ ] **TU-04** — Readline Input with History
   - Where: `crates/myosu-tui/src/input.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Input quality determines gameplay feel
@@ -620,7 +638,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=/commands or game completion; Callsite=event loop; State=Screen enum; Persistence=N/A; Signal=display switches`
   - Rollback: screen transitions lose game state
 
-- [x] **TU-06** — Pipe Mode for Agent Protocol
+- [ ] **TU-06** — Pipe Mode for Agent Protocol
   - Where: `crates/myosu-tui/src/pipe.rs (new)`
   - Depends on: `TU-01`
   - Tests: `cargo check -p myosu-tui`
@@ -680,7 +698,7 @@ Source spec: specs/031626-07-tui-implementation.md
 ## Stage 8: Abstraction Pipeline
 Source spec: specs/031626-08-abstraction-pipeline.md
 
-- [x] **AP-01** — Clustering Binary
+- [ ] **AP-01** — Clustering Binary
   - Where: `crates/myosu-cluster/src/main.rs (new)`
   - Depends on: `RF-03`
   - Tests: `cargo check -p myosu-cluster`
@@ -698,7 +716,7 @@ Source spec: specs/031626-08-abstraction-pipeline.md
   - Integration: `Trigger=miner startup; Callsite=PokerSolver::new(); State=encoder populated; Persistence=read-only; Signal=hash logged`
   - Rollback: 138M entries don't fit in memory
 
-- [x] **AP-03** — Pre-Computed Artifact Distribution
+- [ ] **AP-03** — Pre-Computed Artifact Distribution
   - Where: `artifacts/abstractions/ (new)`, `scripts/download-abstractions.sh (new)`
   - Depends on: `AP-01`, `AP-02`
   - Tests: `scripts/download-abstractions.sh exits 0`
