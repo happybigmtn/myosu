@@ -80,7 +80,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=cargo check; Callsite=config.rs:17 + block_step.rs:6; State=Config compiles; Persistence=N/A; Signal=cargo check exits 0`
   - Rollback: Config requires types from drand/crowdloan that are deeply woven into core logic
 
-- [ ] **CF-06** — SwapInterface No-Op Stub
+- [x] **CF-06** — SwapInterface No-Op Stub
   - Where: `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs (new)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: SwapInterface is called in 37 production callsites across registration, staking, and emission. Config requires: `SwapHandler + SwapEngine<GetAlphaForTao<Self>> + SwapEngine<GetTaoForAlpha<Self>>`. All three trait bounds must be satisfied.

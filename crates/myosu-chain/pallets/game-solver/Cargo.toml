@@ -1,0 +1,10 @@
+[package]
+name = "pallet-game-solver"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Game-solving pallet for the myosu chain"
+
+[dependencies]
+
+[dev-dependencies]
