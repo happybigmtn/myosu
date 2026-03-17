@@ -1,0 +1,527 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://myosu.io/schemas/game-state.json",
+  "title": "Myosu Game State",
+  "description": "Universal machine-readable game state schema for all myosu games. Enables programmatic agents (LLMs, bots, scripts) to parse and act in any game.",
+  "type": "object",
+  "required": ["game_type", "phase", "state", "legal_actions"],
+  "properties": {
+    "game_type": {
+      "type": "string",
+      "description": "Game type identifier (e.g., nlhe_hu, liars_dice, riichi)",
+      "examples": ["nlhe_hu", "nlhe_6max", "liars_dice", "riichi", "backgammon", "bridge"]
+    },
+    "hand_number": {
+      "type": "integer",
+      "description": "Hand/round number (0-indexed or 1-indexed, game-dependent)",
+      "minimum": 0
+    },
+    "phase": {
+      "$ref": "#/$defs/GamePhase"
+    },
+    "state": {
+      "type": "object",
+      "description": "Game-specific state payload. Structure varies by game_type."
+    },
+    "legal_actions": {
+      "type": "array",
+      "description": "EXHAUSTIVE list of all legal actions available to the current player. Agents never need to guess legality.",
+      "items": {
+        "$ref": "#/$defs/LegalAction"
+      }
+    },
+    "meta": {
+      "$ref": "#/$defs/MetaInfo"
+    }
+  },
+  "$defs": {
+    "GamePhase": {
+      "type": "string",
+      "description": "Current game phase",
+      "enum": [
+        "waiting",
+        "action",
+        "betting",
+        "showdown",
+        "complete",
+        "ended"
+      ]
+    },
+    "LegalAction": {
+      "type": "object",
+      "description": "A legal action with its parameters",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Action type identifier",
+          "enum": [
+            "fold",
+            "call",
+            "check",
+            "raise",
+            "bet",
+            "shove",
+            "discard",
+            "riichi",
+            "tsumo",
+            "ron",
+            "pass",
+            "bid",
+            "challenge",
+            "play",
+            "draw"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "action": { "const": "call" } }
+          },
+          "then": {
+            "required": ["amount"],
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount to call (in game units, usually big blinds for poker)",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "raise" } }
+          },
+          "then": {
+            "required": ["min", "max"],
+            "properties": {
+              "min": {
+                "type": "integer",
+                "description": "Minimum raise amount",
+                "minimum": 0
+              },
+              "max": {
+                "type": "integer",
+                "description": "Maximum raise amount",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "bet" } }
+          },
+          "then": {
+            "required": ["min", "max"],
+            "properties": {
+              "min": {
+                "type": "integer",
+                "description": "Minimum bet amount",
+                "minimum": 0
+              },
+              "max": {
+                "type": "integer",
+                "description": "Maximum bet amount",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "shove" } }
+          },
+          "then": {
+            "required": ["amount"],
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Total amount being shoved",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "discard" } }
+          },
+          "then": {
+            "required": ["item"],
+            "properties": {
+              "item": {
+                "type": "string",
+                "description": "The item to discard (tile notation like '4s', '1m')"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "riichi" } }
+          },
+          "then": {
+            "properties": {
+              "discard": {
+                "type": "string",
+                "description": "Tile to discard when declaring riichi"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "bid" } }
+          },
+          "then": {
+            "required": ["quantity", "face"],
+            "properties": {
+              "quantity": {
+                "type": "integer",
+                "description": "Quantity being bid",
+                "minimum": 1
+              },
+              "face": {
+                "type": "integer",
+                "description": "Face value being bid (1-6 for dice)",
+                "minimum": 1,
+                "maximum": 6
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "action": { "const": "play" } }
+          },
+          "then": {
+            "required": ["cards"],
+            "properties": {
+              "cards": {
+                "type": "array",
+                "description": "Cards/tiles being played",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "MetaInfo": {
+      "type": "object",
+      "description": "Metadata about the game session and solver",
+      "properties": {
+        "solver_source": {
+          "type": "string",
+          "description": "Source of the solver strategy (e.g., 'miner-12', 'blueprint', 'heuristic')"
+        },
+        "solver_exploitability": {
+          "type": "number",
+          "description": "Solver exploitability in millibig blinds per hand (lower is better)",
+          "minimum": 0
+        },
+        "subnet_id": {
+          "type": "integer",
+          "description": "Subnet ID on the myosu chain",
+          "minimum": 0
+        },
+        "miner_uid": {
+          "type": "integer",
+          "description": "Miner UID that served this strategy",
+          "minimum": 0
+        },
+        "block_height": {
+          "type": "integer",
+          "description": "Block height when this strategy was published",
+          "minimum": 0
+        }
+      }
+    },
+    "OpponentInfo": {
+      "type": "object",
+      "description": "Opponent information for games with hidden information",
+      "required": ["seat"],
+      "properties": {
+        "seat": {
+          "type": "string",
+          "description": "Seat/position identifier (e.g., 'SB', 'BB', 'east', 'south')"
+        },
+        "stack": {
+          "type": "integer",
+          "description": "Current stack/chip count (if visible)",
+          "minimum": 0
+        },
+        "hand_count": {
+          "type": "integer",
+          "description": "Number of tiles/cards in hand (when hidden)",
+          "minimum": 0
+        },
+        "hand": {
+          "type": "array",
+          "description": "Visible hand (when revealed or in showdown)",
+          "items": { "type": "string" }
+        },
+        "discards": {
+          "type": "array",
+          "description": "Recent discards/actions",
+          "items": { "type": "string" }
+        },
+        "riichi": {
+          "type": "boolean",
+          "description": "Whether this opponent is in riichi (Mahjong)"
+        }
+      }
+    },
+    "LastAction": {
+      "type": "object",
+      "description": "Last action taken in the game",
+      "required": ["player", "action"],
+      "properties": {
+        "player": {
+          "type": "string",
+          "description": "Player who took the action ('you' or seat identifier)"
+        },
+        "action": {
+          "type": "string",
+          "description": "Action type"
+        },
+        "amount": {
+          "type": "integer",
+          "description": "Action amount (for bet/raise/call)",
+          "minimum": 0
+        }
+      }
+    },
+    "NlheState": {
+      "type": "object",
+      "description": "No-Limit Hold'em specific game state",
+      "required": ["board", "your_hand", "your_stack", "your_position", "opponents", "pot", "to_act", "street"],
+      "properties": {
+        "board": {
+          "type": "array",
+          "description": "Community cards (0-5 cards in standard notation like 'As', 'Th', '2c')",
+          "items": { "type": "string", "pattern": "^[2-9TJQKA][shdc]$" },
+          "maxItems": 5
+        },
+        "your_hand": {
+          "type": "array",
+          "description": "Hero's hole cards",
+          "items": { "type": "string", "pattern": "^[2-9TJQKA][shdc]$" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "your_stack": {
+          "type": "integer",
+          "description": "Hero's remaining stack (in big blinds)",
+          "minimum": 0
+        },
+        "your_position": {
+          "type": "string",
+          "description": "Hero's position (e.g., 'SB', 'BB', 'UTG', 'BTN')"
+        },
+        "opponents": {
+          "type": "array",
+          "description": "Opponent information",
+          "items": { "$ref": "#/$defs/OpponentInfo" }
+        },
+        "pot": {
+          "type": "integer",
+          "description": "Current pot size (in big blinds)",
+          "minimum": 0
+        },
+        "to_act": {
+          "type": "string",
+          "description": "Whose turn it is ('you' or seat identifier)"
+        },
+        "last_action": {
+          "$ref": "#/$defs/LastAction"
+        },
+        "to_call": {
+          "type": "integer",
+          "description": "Amount needed to call (0 if no bet to call)",
+          "minimum": 0
+        },
+        "hand_strength": {
+          "type": "string",
+          "description": "Hero's hand strength description (e.g., 'top pair', 'flush draw')"
+        },
+        "street": {
+          "type": "string",
+          "description": "Current street",
+          "enum": ["preflop", "flop", "turn", "river"]
+        }
+      }
+    },
+    "RiichiState": {
+      "type": "object",
+      "description": "Riichi Mahjong specific game state",
+      "required": ["your_hand", "opponents", "dora", "points", "round", "wall_tiles"],
+      "properties": {
+        "your_hand": {
+          "type": "array",
+          "description": "Your hand tiles (e.g., ['1m', '2m', '3m', '5p', 'Ew'])",
+          "items": { "type": "string" }
+        },
+        "draw": {
+          "type": "string",
+          "description": "Most recent draw (if any)"
+        },
+        "opponents": {
+          "type": "array",
+          "description": "Opponent information",
+          "items": { "$ref": "#/$defs/OpponentInfo" }
+        },
+        "dora": {
+          "type": "array",
+          "description": "Dora indicator tiles",
+          "items": { "type": "string" }
+        },
+        "riichi": {
+          "type": "boolean",
+          "description": "Whether you are in riichi"
+        },
+        "points": {
+          "type": "integer",
+          "description": "Your current points"
+        },
+        "round": {
+          "type": "string",
+          "description": "Current round (e.g., 'East 1', 'South 2')"
+        },
+        "wall_tiles": {
+          "type": "integer",
+          "description": "Number of tiles remaining in the wall",
+          "minimum": 0,
+          "maximum": 136
+        }
+      }
+    },
+    "LiarsDiceState": {
+      "type": "object",
+      "description": "Liar's Dice specific game state",
+      "required": ["your_dice", "opponent_dice_counts", "to_act", "total_dice"],
+      "properties": {
+        "your_dice": {
+          "type": "array",
+          "description": "Your dice values (hidden from opponents)",
+          "items": { "type": "integer", "minimum": 1, "maximum": 6 }
+        },
+        "opponent_dice_counts": {
+          "type": "array",
+          "description": "Number of dice per opponent (hidden values)",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "current_bid": {
+          "type": "object",
+          "description": "Current bid (if any)",
+          "required": ["player", "quantity", "face"],
+          "properties": {
+            "player": { "type": "string" },
+            "quantity": { "type": "integer", "minimum": 1 },
+            "face": { "type": "integer", "minimum": 1, "maximum": 6 }
+          }
+        },
+        "to_act": {
+          "type": "string",
+          "description": "Whose turn it is"
+        },
+        "total_dice": {
+          "type": "integer",
+          "description": "Total dice remaining in the game",
+          "minimum": 0
+        }
+      }
+    },
+    "AgentAction": {
+      "type": "object",
+      "description": "Action submitted by an agent",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["fold", "call", "check", "raise", "bet", "shove", "discard", "riichi", "tsumo", "ron", "pass", "bid", "challenge", "play"]
+        }
+      }
+    },
+    "ActionError": {
+      "type": "object",
+      "description": "Error response when an invalid action is submitted",
+      "required": ["error", "message", "legal_actions"],
+      "properties": {
+        "error": {
+          "type": "string",
+          "description": "Error code"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "legal_actions": {
+          "type": "array",
+          "description": "Current legal actions so agent can retry",
+          "items": { "$ref": "#/$defs/LegalAction" }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "game_type": "nlhe_hu",
+      "hand_number": 47,
+      "phase": "action",
+      "state": {
+        "board": ["Ts", "7h", "2c"],
+        "your_hand": ["As", "Kh"],
+        "your_stack": 94,
+        "your_position": "BB",
+        "opponents": [
+          {"seat": "SB", "stack": 94, "hand": null}
+        ],
+        "pot": 12,
+        "to_act": "you",
+        "last_action": {"player": "SB", "action": "raise", "amount": 6},
+        "to_call": 6,
+        "hand_strength": "top pair",
+        "street": "flop"
+      },
+      "legal_actions": [
+        {"action": "fold"},
+        {"action": "call", "amount": 6},
+        {"action": "raise", "min": 12, "max": 94},
+        {"action": "shove", "amount": 94}
+      ],
+      "meta": {
+        "solver_source": "miner-12",
+        "solver_exploitability": 13.2,
+        "subnet_id": 1
+      }
+    },
+    {
+      "game_type": "riichi",
+      "phase": "action",
+      "state": {
+        "your_hand": ["1m", "2m", "3m", "5p", "6p", "7p", "3s", "4s", "9s", "9s", "Ew", "Ew"],
+        "draw": "5s",
+        "opponents": [
+          {"seat": "south", "hand_count": 13, "discards": ["1m", "9p", "5s", "Nw"]},
+          {"seat": "west", "hand_count": 11, "discards": ["2m", "3p", "7s"]},
+          {"seat": "north", "hand_count": 13, "discards": ["4p"]}
+        ],
+        "dora": ["3m"],
+        "riichi": false,
+        "points": 25000,
+        "round": "East 1",
+        "wall_tiles": 70
+      },
+      "legal_actions": [
+        {"action": "discard", "item": "1m"},
+        {"action": "discard", "item": "5s"},
+        {"action": "tsumo"},
+        {"action": "riichi", "discard": "4s"}
+      ]
+    }
+  ]
+}

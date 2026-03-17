@@ -66,6 +66,19 @@ Source: specs/031626-02a-game-engine-traits.md Blocking Prerequisites
 
 ---
 
+
+---
+
+## Stage 0b: OS Maintenance & Self-Healing
+Source: Phase 11 Forensic Audit
+
+- [ ] **MNT-01** — Scaffold missing Company OS artifacts
+  - Where: `ops/instrumentation_backlog.md`, `ops/incidents/`
+  - Tests: `ls ops/incidents/TEMPLATE_S0_Consensus_Failure.md`
+  - Blocking: Strategy brain remains in bootstrap mode until templates exist
+  - Verify: All 3 incident templates exist; instrumentation backlog has 5+ items; risk register initialized
+  - Integration: `Trigger=strategy turn; Callsite=strategy.rs; State=OS artifacts populated; Persistence=filesystem; Signal=strategy lane exits bootstrap`
+
 ## Stage 1a: Chain Fork Prerequisites (must compile before CF-01..05)
 Source spec: specs/031626-01-chain-fork-scaffold.md (extended)
 
@@ -106,7 +119,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=register_neuron calls burn; Callsite=registration.rs swap call; State=tokens burned directly (no AMM); Persistence=balance deducted; Signal=registration succeeds`
   - Rollback: SwapInterface trait has methods beyond those enumerated here
 
-- [ ] **CF-08** — Replace fp_self_contained Extrinsic Types and Custom Fee Handler
+- [!] **CF-08** — Replace fp_self_contained Extrinsic Types and Custom Fee Handler
   - Where: `crates/myosu-chain/runtime/src/lib.rs (from subtensor)`
   - Tests: `cargo check -p myosu-runtime`
   - Blocking: UncheckedExtrinsic and CheckedExtrinsic use Frontier's fp_self_contained types — runtime won't compile after removing Frontier deps. Also: subtensor's custom transaction fee handler (pallets/transaction-fee/) hard-depends on pallet_subtensor_swap::Config even though Alpha fees are disabled.
@@ -587,7 +600,7 @@ Source spec: specs/031626-06-multi-game-architecture.md
 ## Stage 7: TUI Implementation
 Source spec: specs/031626-07-tui-implementation.md
 
-- [ ] **TU-01** — GameRenderer Trait
+- [x] **TU-01** — GameRenderer Trait
   - Where: `crates/myosu-tui/src/renderer.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Every game renderer depends on this trait — must be stable first
@@ -620,7 +633,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=resize or state change; Callsite=event loop; State=frame buffer; Persistence=N/A; Signal=5 panels visible`
   - Rollback: layout constraints conflict at small terminal sizes
 
-- [ ] **TU-04** — Readline Input with History
+- [x] **TU-04** — Readline Input with History
   - Where: `crates/myosu-tui/src/input.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Input quality determines gameplay feel
@@ -804,7 +817,7 @@ Source spec: specs/031626-09-launch-integration.md
 ## Stage 10: Agent Integration
 Source spec: specs/031626-10-agent-experience.md
 
-- [ ] **AX-01** — Game State JSON Schema
+- [x] **AX-01** — Game State JSON Schema
   - Where: `crates/myosu-tui/src/schema.rs (new)`, `docs/api/game-state.json (new)`
   - Depends on: `TU-01`
   - Tests: `cargo check -p myosu-tui`
