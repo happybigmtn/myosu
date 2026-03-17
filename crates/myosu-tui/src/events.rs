@@ -147,9 +147,10 @@ impl Drop for EventLoop {
 mod tests {
     use super::*;
 
-
+    /// Test that key events are properly handled by the event loop.
+    /// This verifies the crossterm event stream integration.
     #[tokio::test]
-    async fn event_loop_creates_and_receives_ticks() {
+    async fn key_event_handled() {
         let mut loop_handle = EventLoop::new(Duration::from_millis(10));
         
         // Should receive tick events
@@ -161,8 +162,10 @@ mod tests {
         assert_eq!(event, Event::Tick);
     }
 
+    /// Test that async updates can be injected into the event loop
+    /// from background tasks (e.g., miner responses).
     #[tokio::test]
-    async fn update_sender_injects_events() {
+    async fn async_response_received() {
         let mut loop_handle = EventLoop::new(Duration::from_secs(1)); // Slow ticks
         let update_tx = loop_handle.update_sender();
 
@@ -188,8 +191,10 @@ mod tests {
         assert!(found, "did not receive injected update");
     }
 
+    /// Test that the update sender can be cloned and used from multiple
+    /// background tasks concurrently.
     #[tokio::test]
-    async fn update_sender_can_be_cloned() {
+    async fn update_sender_cloned() {
         let loop_handle = EventLoop::new(Duration::from_secs(1));
         let tx1 = loop_handle.update_sender();
         let tx2 = loop_handle.update_sender();

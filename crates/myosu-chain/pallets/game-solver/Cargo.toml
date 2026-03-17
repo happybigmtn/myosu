@@ -5,6 +5,35 @@ edition.workspace = true
 license.workspace = true
 description = "Game-solving pallet for the myosu chain"
 
+[features]
+default = ["std"]
+std = [
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+    "sp-core/std",
+    "sp-std/std",
+    "sp-io/std",
+    "scale-info/std",
+    "parity-scale-codec/std",
+]
+
 [dependencies]
+# Substrate frame dependencies
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+
+# Substrate primitives
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+
+# Codec
+parity-scale-codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
