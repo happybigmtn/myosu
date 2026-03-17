@@ -127,7 +127,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=cargo build -p myosu-runtime; Callsite=runtime/src/lib.rs type aliases; State=extrinsic types correct; Persistence=N/A; Signal=runtime compiles`
   - Rollback: other runtime code depends on fp_self_contained methods or custom fee logic
 
-- [ ] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
+- [x] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
   - Where: `crates/myosu-chain/pallets/game-solver/src/coinbase/ (from subtensor)`, `src/subnets/weights.rs (from subtensor)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: CRV3 depends on pallet_drand::Pulses for timelock encryption — cannot function without drand
