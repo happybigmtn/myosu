@@ -58,21 +58,21 @@ recurring:
   tasks:
     - id: strategy
       role: strategy
-      cadence: 24h
+      cadence: 2h
       focus_source: doctrine
-      freshness: 36h
+      freshness: 4h
       proof_commands:
         - true
       engine:
-        adapter: claude
-        model: claude-opus-4-6
-        reasoning: high
-        command: claude --effort max
+        adapter: kimi
+        command: kimi --yolo --thinking
     - id: security
       role: security
-      cadence: 24h
+      cadence: 2h
       focus_source: specs
-      freshness: 36h
+      freshness: 4h
+      proof_commands:
+        - true
       audit_scopes:
         - id: chain
           roots:
@@ -87,10 +87,8 @@ recurring:
             - crates/myosu-play
           attestation_dir: state/tasks/security/attestations/gameplay
       engine:
-        adapter: claude
-        model: claude-opus-4-6
-        reasoning: high
-        command: claude --effort max
+        adapter: kimi
+        command: kimi --yolo --thinking
     - id: operations
       role: operations
       cadence: 15m
@@ -101,10 +99,8 @@ recurring:
       proof_commands:
         - true
       engine:
-        adapter: claude
-        model: claude-opus-4-6
-        reasoning: high
-        command: claude --effort max
+        adapter: kimi
+        command: kimi --yolo --thinking
 
 recurring_sources:
   strategy:
@@ -149,10 +145,10 @@ health:
   result_stale_after: 30m
 
 engine:
-  adapter: claude
-  model: claude-opus-4-6
+  adapter: kimi
+  model: kimi-code/kimi-for-coding
   reasoning: high
-  command: claude --effort max
+  command: kimi --yolo --thinking
   timeout_secs: 3600
 
 workspace:

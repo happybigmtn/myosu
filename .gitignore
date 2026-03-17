@@ -27,3 +27,18 @@ Thumbs.db
 
 # Debug
 tmp-debug/
+
+# Temp files from malinka/ARC
+tmp*.txt
+ralph/IMPLEMENT.md.lock
+
+# Python artifacts (except SDK)
+__pycache__/
+*.pyc
+
+# Research pipeline scratch
+artifacts/
+results.json
+
+# Reconciliation scratch
+ops/reconciliation/

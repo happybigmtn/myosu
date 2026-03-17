@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/myosu-games",
+    "crates/myosu-tui",
     # "crates/myosu-chain",      # Stage 1: Substrate chain fork
     # "crates/myosu-miner",      # Stage 4: Miner binary
     # "crates/myosu-validator",   # Stage 4: Validator binary
@@ -24,3 +25,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1"
 rand = "0.8"
+crossterm = { version = "0.28", features = ["event-stream"] }
+ratatui = "0.29"
+futures = "0.3"
+tokio-test = "0.4"

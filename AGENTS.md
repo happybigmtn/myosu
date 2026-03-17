@@ -248,6 +248,193 @@ Myosu remains in stage 0 until ALL of the following are true:
 | 5 | `ops/risk_register.md`, `ops/decision_log.md` | context for decisions |
 | 6 | `state/` | whether the kernel is behaving |
 
+## malinka platform capabilities
+
+Malinka is the autonomous development kernel executing this plan. Binary at
+`~/.local/bin/malinka`, source at `~/coding/malinka`.
+
+### task dispatch
+
+- Parses `ralph/IMPLEMENT.md` into a dependency DAG
+- `Depends on:` field → tasks only dispatch when all deps are `[x]`
+- `Conflicts with:` field → mutually exclusive tasks never run simultaneously
+- `Affinity:` field → workspace reuse for related tasks
+- `Priority:` field → explicit priority override (lower = higher priority)
+- `Tags:` field → workflow routing and filtering
+- Repair-pending tasks get priority over new dispatch
+- Section order is tiebreaker when priorities are equal
+
+### IMPLEMENT.md fields (all optional except Where + Tests)
+
+```
+- [ ] **TASK-ID** — Title
+  - Where: `path/to/files`
+  - Depends on: `DEP-01`, `DEP-02`
+  - Conflicts with: `OTHER-01`
+  - Tests: `cargo check -p crate-name`
+  - Tags: `chain`, `critical`
+  - Priority: `0`
+  - Affinity: `chain-scaffold`
+  - Blocking: why this matters
+  - Verify: acceptance criteria
+  - Integration: `Trigger=X; Callsite=Y; State=Z; Persistence=W; Signal=V`
+  - Rollback: what could go wrong
+  - Spec path: `specs/031626-01.md`
+  - Blocked by: `lineage-ref`
+  - Quality gate: `approved`
+```
+
+### proof system
+
+- `Tests:` field in IMPLEMENT.md = per-task proof commands
+- Proof gate runs AFTER worker produces `RESULT:` line
+- Pass → trunk integrator lands the work
+- `ZeroTestsMatched` → `proof_contract_repair` (re-dispatch)
+- `CommandFailed` → `rejected` (task marked failed)
+- For greenfield crates: use `cargo check -p <crate>` not specific test names
+- `Requires services:` field can start devnet/DB before proof runs
+
+### trunk integrator
+
+- On proof pass: commits workspace diff to trunk automatically
+- Commit message: `AC-{TASK_ID}: {title}`
+- Worker does NOT create commits — malinka handles it
+- Workspace changes are uncommitted diffs that malinka applies
+
+### engine: kimi adapter
+
+```yaml
+engine:
+  adapter: kimi
+  model: kimi-code/kimi-for-coding
+  reasoning: high
+  command: kimi --yolo --thinking
+  timeout_secs: 3600
+```
+
+Ensure kimi is authenticated before running: `kimi login` (one-time setup).
+
+Previous claude configuration hit rate limits; all tasks now use kimi.
+
+### recurring lanes
+
+| lane | role | cadence | what it does |
+|------|------|---------|-------------|
+| strategy | steering | 24h | reads doctrine, produces generated_work items for the plan |
+| security | auditing | 24h | scans audit_scopes, produces findings + remediation_packets |
+| operations | monitoring | 15m | checks runtime health, diagnoses failures |
+| learning | improving | 6h | identifies patterns, proposes process improvements |
+
+Each lane writes `state/tasks/<lane>/source-output.json`.
+Strategy can generate new plan entries. Security can create remediation tasks.
+Operations has `pre_authorized_action_classes: [inspect, status_check, log_read]`.
+
+### workspace model
+
+- Each task gets a git worktree clone at `~/coding/myosu-workspaces/<task-id>/`
+- Worker operates in isolation — no interference with other workers
+- On success: trunk integrator applies diff to trunk
+- On failure: workspace preserved for debugging (configurable)
+- `workspace.max_drift_commits: 20` — max divergence from trunk before rebase
+
+### company OS doctrine
+
+```
+OS.md frontmatter:
+  domain_overlay: platform | world_simulation | decentralized_casino | other
+  company_stage: stage_0_bootstrap | stage_1_pmf | stage_2_early_scale | ...
+```
+
+Controls deployment freezes, no-ship gates, error budgets, allowed exceptions.
+
+### health monitoring
+
+| Command | Shows |
+|---------|-------|
+| `malinka health` | Workers, recurring status, execution metrics |
+| `malinka queue` | Admitted queue, selected tasks, priorities |
+| `malinka list` | All tasks grouped by section |
+| `malinka status` | Counts + next ready task |
+| `malinka monitor` | Current task runtime state |
+
+**Key state files:**
+| File | Purpose |
+|------|---------|
+| `state/health.json` | Machine-readable health snapshot |
+| `state/session.json` | Failed tasks, retry counts, provider cooldowns |
+| `state/queue.json` | Admitted queue state |
+| `state/workspaces/*.json` | Per-task workspace status |
+
+**Troubleshooting:**
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| `git exited with code -1` | Git credential prompt without stdin | `export GIT_TERMINAL_PROMPT=0` |
+| `patch does not apply` | Stale workspace patches | `rm state/workspaces/*.patch` and restart |
+| Task stuck retrying | High retry count blocking dispatch | Clear from `state/session.json` failed_tasks/retrying_tasks |
+| No tasks selected | All workers busy or tasks blocked | Check `malinka queue` for blocked status |
+
+### session state + retry
+
+- `state/session.json` — running tasks, failed tasks, retry counts
+- Exponential backoff on failure: `max_retry_backoff_ms: 300000`
+- `proof_contract_repair` tasks get re-dispatched with priority
+- Hot-reload: config changes in `project.yaml` picked up within one poll cycle (30s)
+
+**Clear a stuck task:**
+```python
+import json
+with open('state/session.json', 'r') as f: d = json.load(f)
+d['failed_tasks'] = [t for t in d['failed_tasks'] if t['task_id'] != 'TASK-ID']
+d['retrying_tasks'] = [t for t in d['retrying_tasks'] if t['task_id'] != 'TASK-ID']
+with open('state/session.json', 'w') as f: json.dump(d, f)
+```
+
+### semantic adapters (recurring source validation)
+
+Bounded vocabulary for recurring lane outputs:
+- `response_class`: page | ticket | log | freeze | other (PR1 fix)
+- `evidence_freshness`: fresh | stale | missing
+- `severity`: s0 | s1 | s2 | s3
+- `lane`: platform | world_simulation | decentralized_casino | other (PR1 fix)
+- `arbitration_status`: approved_with_conditions | challenged | blocked
+
+### commands
+
+```bash
+# Start supervisor
+export GIT_TERMINAL_PROMPT=0   # Required: prevents git credential hangs
+malinka run --native           # Foreground mode (good for debugging)
+malinka run --native --task X  # Run single task
+
+# Monitoring
+malinka status                 # Task counts, next ready, completion stats
+malinka queue                  # Admitted queue, selected tasks, priorities
+malinka health                 # Live workers, recurring status, metrics
+malinka monitor                # Current task runtime state
+malinka list                   # All tasks grouped by section
+
+# Maintenance
+malinka soak --turns N         # Bounded N-turn run
+malinka daemon                 # Background daemon mode
+malinka set-status TASK done   # Manually mark task complete
+```
+
+### key config (project.yaml)
+
+```yaml
+agent:
+  max_concurrent_agents: 8     # total worker slots
+polling:
+  interval_ms: 30000           # config hot-reload interval
+health:
+  heartbeat_stale_after: 90s
+  result_stale_after: 30m
+workspace:
+  root: ~/coding/myosu-workspaces
+  max_drift_commits: 20
+```
+
 ## manual prerequisites (before malinka can execute)
 
 | # | work | who | est. |

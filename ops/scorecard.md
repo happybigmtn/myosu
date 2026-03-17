@@ -26,7 +26,7 @@ Last updated: 2026-03-16
 
 ### Strategy
 - Current stage: stage_0_bootstrap
-- Top priority: CH-01 chain scaffold
+- Top priority: CF-01 chain scaffold
 - Scope creep risk: low (spec is bounded)
 
 ### Security
