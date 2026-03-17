@@ -5,5 +5,10 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-crossterm = "0.28"
-ratatui = "0.29"
+crossterm = { workspace = true }
+ratatui = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
