@@ -8,19 +8,19 @@ Date: 2026-03-16
 | Spec File | AC Prefix | Count |
 |-----------|-----------|-------|
 | `031626-00-master-index.md` | — | index |
-| (robopoker fork prerequisites) | RF-01..02 | 2 |
-| `031626-01-chain-fork-scaffold.md` | CF-01..05 | 5 |
+| (robopoker fork prerequisites) | RF-01..04 | 4 |
+| `031626-01-chain-fork-scaffold.md` | CF-01..11 | 11 |
 | `031626-02a-game-engine-traits.md` | GT-01..05 | 5 |
 | `031626-02b-poker-engine.md` | PE-01..04 | 4 |
 | `031626-03-game-solving-pallet.md` | GS-01..10 | 10 |
 | (shared chain client) | CC-01 | 1 |
 | `031626-04a-miner-binary.md` | MN-01..05 | 5 |
-| `031626-04b-validator-oracle.md` | VO-01..06 | 6 |
+| `031626-04b-validator-oracle.md` | VO-01..07 | 7 |
 | `031626-05-gameplay-cli.md` | GP-01..04 | 4 |
 | `031626-06-multi-game-architecture.md` | MG-01..04 | 4 |
-| `031626-07-tui-implementation.md` | TU-01..07 | 7 |
+| `031626-07-tui-implementation.md` | TU-01..12 | 12 |
 | `031626-08-abstraction-pipeline.md` | AP-01..03 | 3 |
-| `031626-09-launch-integration.md` | LI-01..05 | 5 |
+| `031626-09-launch-integration.md` | LI-01..06 | 6 |
 | `031626-10-agent-experience.md` | AX-01..06 | 6 |
 | `031626-99-malinka-enhancements.md` | — | external |
 
@@ -45,9 +45,81 @@ Source: specs/031626-02a-game-engine-traits.md Blocking Prerequisites
   - Integration: `Trigger=miner creates encoder on startup; Callsite=PokerSolver::new(); State=encoder populated; Persistence=abstraction file on disk; Signal=abstraction() returns valid values`
   - Rollback: private field prevents non-DB construction without refactoring
 
+- [ ] **RF-03** — Expose clustering APIs for standalone use
+  - Where: `happybigmtn/robopoker crates/clustering/src/layer.rs (extend)`, `crates/clustering/src/lookup.rs (extend)`
+  - Tests: `cargo test -p rbp-clustering clustering::tests::preflop_clusters_without_db`
+  - Blocking: AP-01 needs clustering without PostgreSQL; Layer::cluster() currently takes &Client
+  - Verify: File-based I/O alternatives for Lookup, Metric types; preflop clustering produces 169 entries from in-memory data; existing DB path unaffected
+  - Integration: `Trigger=myosu-cluster binary; Callsite=clustering::layer::Layer::cluster_to_file(); State=clustering state; Persistence=binary abstraction files; Signal=output files with correct entry counts`
+  - Rollback: clustering internals too coupled to PostgreSQL COPY protocol
+
+- [ ] **RF-04** — File-based checkpoint save/load for NlheProfile
+  - Where: `happybigmtn/robopoker crates/nlhe/src/profile.rs (extend)`
+  - Tests: `cargo test -p rbp-nlhe profile::tests::checkpoint_roundtrip`
+  - Blocking: MN-05 needs restart resilience; only PostgreSQL persistence exists
+  - Verify: save_checkpoint(path) writes bincode; load_checkpoint(path) restores; round-trip preserves iterations + encounters; corrupted file → error not panic; Metrics field skipped (reconstructed on load)
+  - Integration: `Trigger=miner shutdown or periodic save; Callsite=training.rs; State=NlheProfile serialized; Persistence=checkpoint file on disk; Signal=file size > 0, load succeeds`
+  - Rollback: NlheProfile too large for bincode (>10GB serialized)
+
 ---
 
-## Stage 1: Chain Fork Scaffold
+## Stage 1a: Chain Fork Prerequisites (must compile before CF-01..05)
+Source spec: specs/031626-01-chain-fork-scaffold.md (extended)
+
+Note: CF-07 is the FIRST commit — nothing compiles without it. CF-06, CF-08..11
+are parallel prerequisites that must all land before CF-01 can strip pallets.
+
+- [ ] **CF-07** — Strip drand/crowdloan Config Supertraits
+  - Where: `crates/myosu-chain/pallets/game-solver/src/macros/config.rs (from subtensor)`, `src/coinbase/block_step.rs (from subtensor)`
+  - Tests: `cargo check -p pallet-game-solver`
+  - Blocking: pallet_subtensor::Config requires pallet_drand::Config + pallet_crowdloan::Config — NOTHING compiles without this change. This is the FIRST COMMIT in the fork.
+  - Verify: Config trait compiles without drand/crowdloan supertraits (config.rs:17); `impl<T: Config + pallet_drand::Config>` in block_step.rs:6 changed to just `impl<T: Config>`; all `pallet_drand::*` and `pallet_crowdloan::*` imports removed; leasing.rs stripped entirely; block_step no longer calls reveal_crv3_commits; RoundNumber type usage removed
+  - Integration: `Trigger=cargo check; Callsite=config.rs:17 + block_step.rs:6; State=Config compiles; Persistence=N/A; Signal=cargo check exits 0`
+  - Rollback: Config requires types from drand/crowdloan that are deeply woven into core logic
+
+- [ ] **CF-06** — SwapInterface No-Op Stub
+  - Where: `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs (new)`
+  - Tests: `cargo test -p pallet-game-solver swap_stub::tests::identity_swap`
+  - Blocking: SwapInterface is called in 37 production callsites across registration, staking, and emission. Config requires: `SwapHandler + SwapEngine<GetAlphaForTao<Self>> + SwapEngine<GetTaoForAlpha<Self>>`. All three trait bounds must be satisfied.
+  - Verify: Identity stub implements ALL SwapHandler methods: swap() returns input=output, sim_swap() same, approx_fee_amount() returns zero, current_alpha_price() returns 1:1 (U96F32::from_num(1)), get_protocol_tao() returns ZERO, max_price()/min_price() return C::MAX/C::ZERO, adjust_protocol_liquidity() no-op, is_user_liquidity_enabled() returns false, dissolve_all_liquidity_providers()/clear_protocol_liquidity() return Ok(()), toggle_user_liquidity() no-op. DefaultPriceLimit::default_price_limit returns C::MAX. SwapEngine::swap() returns SwapResult with amount_in=amount_out, zero fees. ~80-100 lines total.
+  - Integration: `Trigger=register_neuron calls burn; Callsite=registration.rs swap call; State=tokens burned directly (no AMM); Persistence=balance deducted; Signal=registration succeeds`
+  - Rollback: SwapInterface trait has methods beyond those enumerated here
+
+- [ ] **CF-08** — Replace fp_self_contained Extrinsic Types and Custom Fee Handler
+  - Where: `crates/myosu-chain/runtime/src/lib.rs (from subtensor)`
+  - Tests: `cargo check -p myosu-runtime`
+  - Blocking: UncheckedExtrinsic and CheckedExtrinsic use Frontier's fp_self_contained types — runtime won't compile after removing Frontier deps. Also: subtensor's custom transaction fee handler (pallets/transaction-fee/) hard-depends on pallet_subtensor_swap::Config even though Alpha fees are disabled.
+  - Verify: UncheckedExtrinsic uses standard generic::UncheckedExtrinsic; CheckedExtrinsic uses standard generic::CheckedExtrinsic; SignedPayload uses standard sp_runtime::generic::SignedPayload; DrandPriority removed from TransactionExtensions tuple; SubtensorTransactionExtension removed; custom fee handler replaced with standard pallet_transaction_payment::FungibleAdapter (removes pallet_subtensor_swap compile dependency); delete fp_self_contained::SelfContainedCall impl (~60 lines)
+  - Integration: `Trigger=cargo build -p myosu-runtime; Callsite=runtime/src/lib.rs type aliases; State=extrinsic types correct; Persistence=N/A; Signal=runtime compiles`
+  - Rollback: other runtime code depends on fp_self_contained methods or custom fee logic
+
+- [ ] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
+  - Where: `crates/myosu-chain/pallets/game-solver/src/coinbase/ (from subtensor)`, `src/subnets/weights.rs (from subtensor)`
+  - Tests: `cargo test -p pallet-game-solver weights::tests::commit_reveal_v2_works`
+  - Blocking: CRV3 depends on pallet_drand::Pulses for timelock encryption — cannot function without drand
+  - Verify: TimelockedWeightCommits storage removed; CRV3WeightCommits* storage removed; reveal_crv3_commits function removed; hash-based commit-reveal v2 (WeightCommits, commit_weights, reveal_weights) fully functional; DrandPriority transaction extension removed
+  - Integration: `Trigger=validator calls commit_weights; Callsite=weights.rs; State=hash stored in WeightCommits; Persistence=on-chain; Signal=commit + reveal flow succeeds`
+  - Rollback: v2 commit-reveal has a bug that CRV3 was fixing
+
+- [ ] **CF-10** — Port Primitives and Runtime Common Types
+  - Where: `crates/myosu-chain/primitives/safe-math/ (new, from subtensor)`, `crates/myosu-chain/primitives/share-pool/ (new, from subtensor)`, `crates/myosu-chain/common/ (new, from subtensor/common/)`
+  - Tests: `cargo test -p myosu-safe-math && cargo test -p myosu-share-pool && cargo test -p myosu-runtime-common`
+  - Blocking: Yuma epoch uses safe-math; ALL stake operations (20+ functions) use share-pool; NetUid/MechId/TaoCurrency/AlphaCurrency from runtime_common used in nearly every pallet file
+  - Verify: safe-math + share-pool pass existing tests; runtime_common compiles with TaoCurrency=AlphaCurrency (single-token alias); NetUid, MechId, NetUidStorageIndex importable; no deps on stripped pallets
+  - Integration: `Trigger=epoch.rs + staking.rs + lib.rs import these; Callsite=run_epoch, stake_utils, storage declarations; State=N/A (pure types + math); Persistence=N/A; Signal=all three crates' tests pass`
+  - Rollback: runtime_common has deep coupling to stripped pallet types that can't be aliased
+
+- [ ] **CF-11** — Stub ProxyInterface, CommitmentsInterface, AuthorshipProvider, and CheckColdkeySwap
+  - Where: `crates/myosu-chain/pallets/game-solver/src/stubs.rs (new)`
+  - Tests: `cargo check -p pallet-game-solver`
+  - Blocking: pallet Config requires ProxyInterface, CommitmentsInterface, GetCommitments, AuthorshipProvider, and frame_system DispatchGuard (CheckColdkeySwap depends on pallet_shield::Config)
+  - Verify: No-op ProxyInterface (already has () impl in subtensor); no-op CommitmentsInterface (5 lines); no-op GetCommitments (return empty vec); AuthorshipProvider reads Aura block author or returns fixed account; replace CheckColdkeySwap DispatchGuard with no-op (always allow dispatch); Config compiles with all stubs
+  - Integration: `Trigger=Config type resolution; Callsite=runtime Config impl; State=N/A; Persistence=N/A; Signal=cargo check passes`
+  - Rollback: AuthorshipProvider needed for real emission distribution to block authors
+
+---
+
+## Stage 1b: Chain Fork Scaffold
 Source spec: specs/031626-01-chain-fork-scaffold.md
 
 - [ ] **CF-02** — Prune Workspace Dependencies
@@ -62,15 +134,15 @@ Source spec: specs/031626-01-chain-fork-scaffold.md
   - Where: `crates/myosu-chain/runtime/src/lib.rs (new, from subtensor)`
   - Tests: `cargo test -p myosu-runtime runtime::tests::runtime_compiles`
   - Blocking: Everything downstream depends on a compilable runtime — single most critical unblock
-  - Verify: Runtime compiles; spec_name="myosu"; 14 pallets in construct_runtime! (incl SafeMode at index 20); no subtensor/frontier/EVM references; WASM < 5MB
+  - Verify: Runtime compiles; spec_name="myosu"; 13 pallets in construct_runtime! (index 7 reserved for game-solver, SafeMode at index 20); no subtensor/frontier/EVM references; WASM < 5MB
   - Integration: `Trigger=cargo build -p myosu-runtime; Callsite=runtime/build.rs WASM builder; State=WASM blob compiled; Persistence=target/ artifact; Signal=build exits 0`
   - Rollback: Runtime fails to compile after stripping — hidden inter-pallet dependencies
 
-- [ ] **CF-04** — Local Devnet Chain Spec
+- [x] **CF-04** — Local Devnet Chain Spec
   - Where: `crates/myosu-chain/node/src/chain_spec.rs (new, from subtensor)`
   - Tests: `cargo test -p myosu-node chain_spec::tests::dev_spec_is_valid`
   - Blocking: Chain spec defines genesis state — node can't start without it
-  - Verify: Dev and local specs produce valid genesis; Alice/Bob/Charlie/Dave/Eve/Ferdie funded with 1M MYOSU each; Alice is sudo; token symbol MYOSU, 9 decimals; no subtensor/EVM genesis
+  - Verify: Dev and local specs produce valid genesis; Alice/Bob/Charlie/Dave/Eve/Ferdie funded with 1M MYOSU each; Alice is sudo; token symbol MYOSU, 9 decimals; no subtensor/EVM genesis. Pallet GenesisConfig must initialize: NetworksAdded(false initially — GS-09 adds genesis subnet), TotalIssuance(sum of balances), BlockEmission(1_000_000_000 RAO = 1 MYOSU), EmissionSplit {miner: 61, validator: 21, owner: 18}. Genesis subnet (added by GS-09 later): netuid=1, game_type=b"nlhe_hu", tempo=180, max_uids=256, max_validators=64, owner=Alice. CRITICAL: genesis must also set FirstEmissionBlockNumber(netuid, 1) and SubtokenEnabled(netuid, true) for the game subnet — without these, emission never flows (silent failure). Set SubnetMechanism(netuid, 0) for Stable (1:1 identity swap, single-token model). Override on_runtime_upgrade to no-op (skip all 42 subtensor migrations on fresh chain).
   - Integration: `Trigger=node startup reads chain spec; Callsite=node/src/command.rs; State=genesis block initialized; Persistence=genesis block in DB; Signal=build-spec outputs valid JSON`
   - Rollback: Genesis requires types from stripped pallets
 
@@ -144,7 +216,7 @@ Source spec: specs/031626-02b-poker-engine.md
   - Where: `crates/myosu-games-poker/src/solver.rs (new)`
   - Tests: `cargo test -p myosu-games-poker solver::tests::train_100_iterations`
   - Blocking: Core of what miners do — no solver means no strategies
-  - Verify: Empty solver has 0 epochs; 100 iterations → epochs=100; strategy sums to ~1.0; checkpoint roundtrips; exploitability decreases over training
+  - Verify: Empty solver has 0 epochs; 100 iterations → epochs=100; strategy sums to ~1.0; checkpoint roundtrips; exploitability decreases over training; snapshot_profile() returns cheaply cloneable Arc<NlheProfile> for ArcSwap publishing (required by MN-02)
   - Integration: `Trigger=miner creates solver; Callsite=myosu-miner/main.rs; State=training state in memory; Persistence=checkpoint files; Signal=epochs() increases`
   - Rollback: robopoker Flagship type aliases not public or NlheProfile not serializable
 
@@ -177,11 +249,11 @@ Source spec: specs/031626-02b-poker-engine.md
 ## Stage 3: On-Chain Incentives
 Source spec: specs/031626-03-game-solving-pallet.md
 
-- [ ] **GS-01** — Pallet Scaffold with Config and Storage
-  - Where: `crates/myosu-chain/pallets/game-solver/src/lib.rs (new)`
+- [ ] **GS-01** — Pallet Scaffold with Config, Storage, Mock Runtime, Errors, and Events
+  - Where: `crates/myosu-chain/pallets/game-solver/src/lib.rs (new)`, `src/tests/mock.rs (new)`
   - Tests: `cargo test -p pallet-game-solver scaffold::tests::pallet_compiles`
-  - Blocking: Every other GS-* AC reads or writes these storage items
-  - Verify: Pallet compiles; ~25 storage items with correct defaults; Config trait has Currency + constants; AxonInfo encodes/decodes; mock runtime works
+  - Blocking: Every other GS-* AC reads or writes these storage items; mock runtime required for ALL pallet unit tests
+  - Verify: Pallet compiles; ~30 storage items with correct defaults; Config trait has Currency + ~20 constants (InitialTempo, InitialKappa, InitialBondsMovingAverage, InitialBondsPenalty, InitialImmunityPeriod, InitialActivityCutoff, InitialMaxAllowedValidators, InitialMinAllowedWeights, etc.); mock runtime includes System+Balances+Timestamp+Aura+Scheduler+Preimage+GameSolver; Config stubs: SwapInterface=NoOpSwap, ProxyInterface=(), CommitmentsInterface=(), GetCommitments=(), AuthorshipProvider=MockAuthor; AxonInfo encodes/decodes; test helpers: new_test_ext(), add_network(), register_ok_neuron(), step_block(), step_epochs(); errors enumerated (~25: SubnetNotExists, HotKeyAlreadyRegistered, TooManyRegistrations, NotEnoughStake, WeightVecNotEqualSize, DuplicateUids, etc.); events enumerated (~10: NetworkAdded, NeuronRegistered, WeightsSet, StakeAdded, StakeRemoved, WeightsCommitted, WeightsRevealed, EpochCompleted, EmissionDistributed, AxonServed)
   - Integration: `Trigger=construct_runtime!; Callsite=runtime/src/lib.rs; State=storage items available; Persistence=on-chain storage; Signal=cargo build succeeds`
   - Rollback: Storage layout incompatible with Yuma's access patterns
 
@@ -212,17 +284,17 @@ Source spec: specs/031626-03-game-solving-pallet.md
 - [ ] **GS-05** — Yuma Consensus Port
   - Where: `crates/myosu-chain/pallets/game-solver/src/epoch.rs (new)`, `src/math.rs (new)`
   - Tests: `cargo test -p pallet-game-solver epoch::tests::yuma_matches_subtensor_output`
-  - Blocking: Core algorithm — getting it wrong breaks the entire incentive mechanism
-  - Verify: Consensus clips above median; bonds accumulate via EMA; INV-003: bit-identical output to subtensor for same inputs; zero weights → zero emission
-  - Integration: `Trigger=on_initialize at tempo boundary; Callsite=lib.rs::Hooks::on_initialize(); State=scores computed, bonds updated; Persistence=7 storage maps updated; Signal=EpochCompleted event`
+  - Blocking: Core algorithm — getting it wrong breaks the entire incentive mechanism. Port ~3200 lines from subtensor epoch/run_epoch.rs + math.rs. Use plain NetUid as storage keys (not NetUidStorageIndex) since single-mechanism. Collapse epoch_with_mechanisms() to directly call epoch_mechanism() for MechId::MAIN only. Must simplify get_stake_weights_for_network() to read from share-pool without the TAO/Alpha dual-token weighting (single token = alpha_stake only, no tao_weight multiplication).
+  - Verify: Consensus clips above median (kappa=0.5); bonds accumulate via EMA (alpha from BondsMovingAverage); bond penalty (beta=0.1) penalizes out-of-consensus validators; INV-003: bit-identical output to subtensor for same inputs on matching test vectors; zero weights → zero emission; Yuma v3 sigmoid per-bond EMA works
+  - Integration: `Trigger=on_initialize at tempo boundary; Callsite=lib.rs::Hooks::on_initialize(); State=scores computed, bonds updated; Persistence=Incentive, Dividends, Bonds, Consensus, ValidatorTrust, ValidatorPermit, Emission, StakeWeight updated; Signal=EpochCompleted event`
   - Rollback: Fixed-point math diverges from subtensor due to dependency mismatch
 
-- [ ] **GS-06** — Emission Distribution
-  - Where: `crates/myosu-chain/pallets/game-solver/src/emission.rs (new)`
+- [ ] **GS-06** — Emission Distribution (rewrite, not port)
+  - Where: `crates/myosu-chain/pallets/game-solver/src/emission.rs (new)`, `src/block_step.rs (new)`
   - Tests: `cargo test -p pallet-game-solver emission::tests::equal_subnet_split`
-  - Blocking: Emission is the revenue model — miners won't run solvers without economic reward
-  - Verify: Equal subnet split; 50/50 miner/validator; proportional to scores; no emission without weights; TotalIssuance tracks correctly; no tokens created from thin air
-  - Integration: `Trigger=on_initialize after run_epoch; Callsite=lib.rs::Hooks; State=balances increased; Persistence=balance updates + TotalIssuance; Signal=EmissionDistributed event`
+  - Blocking: Emission is the revenue model — miners won't run solvers without economic reward. NOTE: subtensor's run_coinbase (957 lines) assumes root network + AMM + multi-subnet; 80% is unnecessary. Write clean ~100 line emission from scratch. The on_initialize call chain must be: `on_initialize(n) → block_step() → { adjust_registration_terms(), get_block_emission(), accumulate_pending(), drain_pending() → { should_run_epoch()=true → run_epoch() → distribute_emission(61/21/18) } }`. Strip: CRV3 reveals, moving prices, root proportion, childkey scheduling, auto-claim root divs, hotkey swap cleanup. Keep: adjust_registration_terms, should_run_epoch (formula: `(block + netuid + 1) % (tempo + 1) == 0`), blocks_until_next_epoch.
+  - Verify: 61% to miners proportional to Yuma incentive scores; 21% to validators proportional to bond×rank; 18% to subnet owner; no emission without weights; TotalIssuance tracks correctly; no tokens created from thin air; sum(all emissions) == block_emission per epoch; on_initialize weight hardcoded (acceptable for testnet, benchmark before mainnet)
+  - Integration: `Trigger=on_initialize at tempo boundary; Callsite=lib.rs::Hooks::on_initialize(); State=pending emission accumulated per block, distributed on epoch; Persistence=balance updates + TotalIssuance; Signal=EmissionDistributed event`
   - Rollback: Emission accounting error creates or destroys tokens
 
 - [ ] **GS-07** — Axon Serving
@@ -284,7 +356,7 @@ Source spec: specs/031626-04a-miner-binary.md
   - Blocking: Without training, miner serves random strategies
   - Verify: Runs 100 iterations without panic; checkpoint written; solver accessible during training (no deadlock); exploitability logged
   - Integration: `Trigger=after registration; Callsite=main.rs spawns task; State=solver improves; Persistence=checkpoints; Signal=log "Epoch {n}, exploit: {x}"`
-  - Rollback: RwLock contention makes query latency > 2s
+  - Rollback: ArcSwap publish contention or snapshot clone too slow for query latency < 2s
 
 - [ ] **MN-03** — HTTP Axon Server
   - Where: `crates/myosu-miner/src/axon.rs (new)`
@@ -362,6 +434,14 @@ Source spec: specs/031626-04b-validator-oracle.md
   - Verify: Full cycle completes within tempo; failed queries don't block; graceful shutdown
   - Integration: `Trigger=block polling; Callsite=main.rs; State=weights submitted per tempo; Persistence=on-chain; Signal=log "Submitted weights for {n} miners"`
   - Rollback: evaluation takes longer than tempo period
+
+- [ ] **VO-07** — Two-Validator INV-003 Agreement Test
+  - Where: `crates/myosu-validator/tests/determinism.rs (new)`
+  - Tests: `cargo test -p myosu-validator determinism::tests::two_validators_agree`
+  - Blocking: Most important correctness property — if validators disagree, Yuma consensus is meaningless
+  - Verify: Two independently initialized validators score same miner on same epoch; scores identical within epsilon (1e-6); different encoder hashes → test fails; same positions generated from same seed
+  - Integration: `Trigger=cargo test; Callsite=tests/determinism.rs; State=two validator instances; Persistence=N/A; Signal=score_a == score_b within epsilon`
+  - Rollback: floating-point non-determinism in exploitability computation
 
 ---
 
@@ -498,6 +578,47 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=--pipe flag; Callsite=main.rs; State=stdin/stdout; Persistence=hand history; Signal=structured text output`
   - Rollback: pipe vs TUI rendering diverges
 
+- [ ] **TU-10** — Blueprint Strategy Loading
+  - Where: `crates/myosu-play/src/blueprint.rs (new)`
+  - Tests: `cargo test -p myosu-play blueprint::tests::load_valid_artifact`
+  - Blocking: Enables trained bot + solver advisor. Without this, training mode uses heuristic-only bot.
+  - Verify: Artifact discovery from env var / default path / home dir; manifest schema validation; mmap strategy lookup < 1μs; hash mismatch → error with actionable message; distribution sums to 1.0; all returned actions are legal
+  - Integration: `Trigger=training mode startup; Callsite=training.rs; State=mmap files opened; Persistence=read-only; Signal=~ bot strategy: blueprint · exploit X mbb/h`
+  - Test fixture: `~/.codexpoker/blueprint/` — 113M infosets, 335M edges, schema v1. Validated 2026-03-17: +2.35 chips/hand vs random (1000 hands), mirror ~0 (balanced). Set `MYOSU_BLUEPRINT_DIR=~/.codexpoker/blueprint` to use. Edge regression test: assert > 1.0 chips/hand vs random. Balance test: assert |edge| < 1.0 mirror. Port reference: `codexpoker/src/bin/bot_duel.rs`, `practice_probe.rs`, `test_blueprint_load.rs`
+  - Rollback: myosu abstraction format incompatible with codexpoker format
+
+- [ ] **TU-08** — NLHE Poker Renderer and Truth Stream
+  - Where: `crates/myosu-games-poker/src/renderer.rs (new)`, `crates/myosu-games-poker/src/truth_stream.rs (new)`
+  - Tests: `cargo test -p myosu-games-poker renderer::tests::render_preflop_state`
+  - Blocking: Reference GameRenderer implementation. Validates TU-01 trait design and establishes pattern for all game renderers.
+  - Verify: State panel shows cards with suit symbols, board, pot, stacks, hero cards; truth stream processes Events into log lines with visual grammar (icons, separators, colors); parse_input handles poker actions (f/c/r/s); pipe_output is machine-parseable with zero ANSI codes; pot odds and MDF calculated correctly
+  - Integration: `Trigger=game state change; Callsite=shell.rs calls render_state(); State=gameboard + truth stream; Persistence=N/A; Signal=cards render, actions appear in log`
+  - Rollback: GameRenderer trait needs methods not anticipated by TU-01
+
+- [ ] **TU-09** — Training Mode (Local Bot Play)
+  - Where: `crates/myosu-play/src/training.rs (new)`
+  - Tests: `cargo test -p myosu-play training::tests::hand_completes_showdown`
+  - Blocking: Phase 0 poker experience. Standalone play without chain infrastructure.
+  - Verify: Hand completes via fold and showdown; /deal sets hero cards; /board sets board; /stack sets stacks; /showdown forces runout; practice chips start at 10,000 and update correctly; bot uses blueprint (TU-10) or heuristic fallback; alternating button; bot acts within 500ms
+  - Integration: `Trigger=myosu-play --train or /practice; Callsite=main.rs creates TrainingTable; State=game + chips + pending commands; Persistence=hand history JSON; Signal=hands play to completion`
+  - Rollback: robopoker Game API insufficient for bot dispatch
+
+- [ ] **TU-11** — Solver Advisor
+  - Where: `crates/myosu-play/src/advisor.rs (new)`
+  - Tests: `cargo test -p myosu-play advisor::tests::blueprint_advisor_returns_distribution`
+  - Blocking: Key differentiating feature — transforms training mode from "play against bot" to "learn GTO from trained solver"
+  - Verify: Shows action distribution when hero has pending decision; filters actions < 1% probability; round probabilities to integers; toggle with /advisor; ON by default in training mode; distribution from same backend as bot; format matches "SOLVER: fold X% · call Y% · raise Z%"
+  - Integration: `Trigger=hero decision pending + advisor enabled; Callsite=NlheRenderer::render_state(); State=cached distribution; Persistence=N/A; Signal=advisor line visible in state panel`
+  - Rollback: BotBackend::action_distribution() too slow (should be < 1ms)
+
+- [ ] **TU-12** — Session Stats and HUD
+  - Where: `crates/myosu-play/src/stats.rs (new)`, `crates/myosu-games-poker/src/hud.rs (new)`
+  - Tests: `cargo test -p myosu-play stats::tests::vpip_tracks_correctly`
+  - Blocking: Not blocking for core gameplay — provides session feedback loop
+  - Verify: Tracks hands played, win rate (BB/h), total profit, showdown %; HUD shows bot VPIP/PFR/AF; stats < 30 hands marked unreliable (*); stats reset on session entry; /stats shows full session summary
+  - Integration: `Trigger=hand completion; Callsite=training.rs updates stats; State=PlayerStats counters; Persistence=N/A (session-scoped); Signal=header shows chips, /stats shows summary`
+  - Rollback: N/A — pure accumulation
+
 ---
 
 ## Stage 8: Abstraction Pipeline
@@ -514,12 +635,12 @@ Source spec: specs/031626-08-abstraction-pipeline.md
 - [ ] **AP-02** — File-Based Encoder Loading
   - Where: `happybigmtn/robopoker rbp-nlhe/src/encoder.rs (extend)`
   - Tests: `cargo test -p rbp-nlhe encoder::tests::from_dir_loads_all_streets`
-  - Blocking: Part of RF-02 — miners load encoder without PostgreSQL
+  - Blocking: Builds on RF-02 (from_map/from_file constructors) — adds from_dir with multi-street loading and hash verification
   - Verify: from_dir loads all 4 streets; abstraction() returns valid values; tampered file rejected; hash deterministic
   - Integration: `Trigger=miner startup; Callsite=PokerSolver::new(); State=encoder populated; Persistence=read-only; Signal=hash logged`
   - Rollback: 138M entries don't fit in memory
 
-- [ ] **AP-03** — Pre-Computed Artifact Distribution
+- [x] **AP-03** — Pre-Computed Artifact Distribution
   - Where: `artifacts/abstractions/ (new)`, `scripts/download-abstractions.sh (new)`
   - Tests: `scripts/download-abstractions.sh exits 0`
   - Blocking: Without pre-computed artifacts, every miner spends hours clustering
@@ -568,9 +689,17 @@ Source spec: specs/031626-09-launch-integration.md
   - Where: `docs/launch-checklist.md (new)`
   - Tests: N/A (documentation + manual verification)
   - Blocking: Prevents declaring launch before all critical paths work
-  - Verify: All checklist items checkable; covers chain, solver, scoring, gameplay, integration; explicitly lists what's NOT required
+  - Verify: All checklist items checkable; covers chain, solver, scoring, gameplay, integration; explicitly lists what's NOT required; does NOT list /analyze coaching output (deferred to post-launch)
   - Integration: `N/A (documentation)`
   - Rollback: N/A
+
+- [ ] **LI-06** — Consolidated Invariant Gate Test
+  - Where: `tests/e2e/invariant_gate.rs (new)`
+  - Tests: `cargo test --test invariant_gate -- --ignored`
+  - Blocking: OS.md bootstrap exit requires "all 6 invariants pass"; no single test validates this
+  - Verify: INV-003 (two validators agree within epsilon on same miner); INV-004 (cargo tree shows no path myosu-play→myosu-miner or reverse); INV-006 (robopoker fork CHANGELOG.md exists and documents changes from v1.0.0); emission accounting (sum distributions == block_emission * epochs)
+  - Integration: `Trigger=cargo test; Callsite=tests/e2e/invariant_gate.rs; State=full stack + invariant checks; Persistence=N/A; Signal=all invariant assertions pass`
+  - Rollback: any invariant violation discovered during gate test
 
 ---
 
