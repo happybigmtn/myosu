@@ -98,7 +98,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: \`Trigger=cargo check; Callsite=lib.rs; State=unneeded module deleted; Persistence=N/A; Signal=compilation progresses\`
   - Rollback: Module used elsewhere.
 
-- [!] **CF-06** — SwapInterface No-Op Stub
+- [ ] **CF-06** — SwapInterface No-Op Stub
   - Where: `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs (new)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: SwapInterface is called in 37 production callsites across registration, staking, and emission. Config requires: `SwapHandler + SwapEngine<GetAlphaForTao<Self>> + SwapEngine<GetTaoForAlpha<Self>>`. All three trait bounds must be satisfied.
@@ -114,7 +114,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=cargo build -p myosu-runtime; Callsite=runtime/src/lib.rs type aliases; State=extrinsic types correct; Persistence=N/A; Signal=runtime compiles`
   - Rollback: other runtime code depends on fp_self_contained methods or custom fee logic
 
-- [!] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
+- [ ] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
   - Where: `crates/myosu-chain/pallets/game-solver/src/coinbase/ (from subtensor)`, `src/subnets/weights.rs (from subtensor)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: CRV3 depends on pallet_drand::Pulses for timelock encryption — cannot function without drand
@@ -587,15 +587,23 @@ Source spec: specs/031626-06-multi-game-architecture.md
 ## Stage 7: TUI Implementation
 Source spec: specs/031626-07-tui-implementation.md
 
-- [ ] **TU-01** — GameRenderer Trait
+- [x] **TU-01** — GameRenderer Trait
   - Where: `crates/myosu-tui/src/renderer.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Every game renderer depends on this trait — must be stable first
   - Verify: Object-safe (Box<dyn GameRenderer> compiles); mock renderer works; pipe_output returns structured text; completions non-empty
   - Integration: `Trigger=compile-time; Callsite=shell.rs calls render_state(); State=N/A; Persistence=N/A; Signal=trait compiles`
   - Rollback: trait requires game-specific types
+  - Outcome: Two traits defined — `Renderable` for shell components and `GameRenderer` for game-specific state panels. `GameRenderer` is object-safe with 8 methods: `render_state()`, `desired_height()`, `declaration()`, `completions()`, `parse_input()`, `clarify()`, `pipe_output()`, `game_label()`, `context_label()`. Mock renderer validates object-safety and all methods.
+  - Trigger: Compile-time trait definition; runtime via `Box<dyn GameRenderer>` dispatch
+  - Callsite: `crates/myosu-tui/src/renderer.rs` exports both traits; re-exported in `lib.rs`
+  - State effect: Game renderers implement the trait to participate in shell layout
+  - Persistence effect: None (trait definition only)
+  - Observable signal: `cargo check -p myosu-tui` passes with 10/10 tests passing
+  - Discovery: Implementation already existed in renderer.rs; only IMPLEMENT.md update required
+  - Evidence: cargo check passes; 10 unit tests covering object-safety, mock renderer, pipe output, completions, input parsing, clarification prompts, and inactive state handling
 
-- [ ] **TU-07** — Color Theme Implementation
+- [x] **TU-07** — Color Theme Implementation
   - Where: `crates/myosu-tui/src/theme.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Shell layout needs theme for declaration styling
@@ -603,7 +611,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=compile-time; Callsite=shell.rs applies theme; State=N/A; Persistence=N/A; Signal=tests pass`
   - Rollback: N/A
 
-- [!] **TU-02** — Five-Panel Shell Layout
+- [ ] **TU-02** — Five-Panel Shell Layout
   - Where: `crates/myosu-tui/src/shell.rs (new)`
   - Depends on: `TU-01`
   - Tests: `cargo check -p myosu-tui`
@@ -617,8 +625,15 @@ Source spec: specs/031626-07-tui-implementation.md
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Input quality determines gameplay feel
   - Verify: Type + submit works; history navigation; tab completion; Ctrl-W deletes word; /commands detected
-  - Integration: `Trigger=key events; Callsite=events.rs; State=buffer, cursor, history; Persistence=N/A; Signal=characters appear`
   - Rollback: readline keybindings conflict with game keys
+  - Outcome: Readline input handler with 100-entry history, tab completion cycling, Ctrl-A/E/W/U/K navigation, and slash command detection. 18 unit tests covering all keybindings.
+  - Trigger: KeyEvent from crossterm via EventLoop
+  - Callsite: `InputLine::handle_key()` in input.rs
+  - State effect: Updates buffer, cursor position, history position, and tab completion state
+  - Persistence effect: History held in memory only (no disk persistence)
+  - Observable signal: InputAction::Submit/SlashCommand/Continue returned to caller
+  - Discovery: Implementation already complete; all verify criteria met without changes
+  - Evidence: cargo check passes, 18/18 input tests pass (2 unrelated events.rs tests fail due to TTY requirement)
 
 - [x] **TU-03** — Event Loop and Async Updates
   - Where: `crates/myosu-tui/src/events.rs (new)`

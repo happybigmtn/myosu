@@ -4,5 +4,13 @@
 // Poker, backgammon, mahjong, bridge, and other games each provide
 // an implementation of these traits. The solver (miner), validator,
 // and gameplay layers depend on this crate.
-//
-// Implementation deferred to AC-GE-01 and AC-GE-02.
+
+#![doc = include_str!("../README.md")]
+
+pub mod traits;
+
+// Re-export commonly used types for convenience
+pub use traits::{
+    CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Profile,
+    Probability, StrategyQuery, StrategyResponse, Utility,
+};

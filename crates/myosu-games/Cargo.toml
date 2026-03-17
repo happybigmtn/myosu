@@ -11,4 +11,10 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 rand = { workspace = true }
 
+# Robopoker dependencies - local path during fork development
+# TODO: Switch to git dependency once happybigmtn/robopoker fork is published
+rbp-core = { path = "/home/r/coding/robopoker/crates/util" }
+rbp-mccfr = { path = "/home/r/coding/robopoker/crates/mccfr" }
+
 [dev-dependencies]
+tokio-test = { workspace = true }
