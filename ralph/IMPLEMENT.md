@@ -80,7 +80,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=cargo check; Callsite=config.rs:17 + block_step.rs:6; State=Config compiles; Persistence=N/A; Signal=cargo check exits 0`
   - Rollback: Config requires types from drand/crowdloan that are deeply woven into core logic
 
-- [x] **CF-06** — SwapInterface No-Op Stub
+- [!] **CF-06** — SwapInterface No-Op Stub
   - Where: `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs (new)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: SwapInterface is called in 37 production callsites across registration, staking, and emission. Config requires: `SwapHandler + SwapEngine<GetAlphaForTao<Self>> + SwapEngine<GetTaoForAlpha<Self>>`. All three trait bounds must be satisfied.
@@ -569,7 +569,7 @@ Source spec: specs/031626-06-multi-game-architecture.md
 ## Stage 7: TUI Implementation
 Source spec: specs/031626-07-tui-implementation.md
 
-- [ ] **TU-01** — GameRenderer Trait
+- [x] **TU-01** — GameRenderer Trait
   - Where: `crates/myosu-tui/src/renderer.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Every game renderer depends on this trait — must be stable first
@@ -585,7 +585,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=compile-time; Callsite=shell.rs applies theme; State=N/A; Persistence=N/A; Signal=tests pass`
   - Rollback: N/A
 
-- [ ] **TU-02** — Five-Panel Shell Layout
+- [!] **TU-02** — Five-Panel Shell Layout
   - Where: `crates/myosu-tui/src/shell.rs (new)`
   - Depends on: `TU-01`
   - Tests: `cargo check -p myosu-tui`
@@ -594,7 +594,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=resize or state change; Callsite=event loop; State=frame buffer; Persistence=N/A; Signal=5 panels visible`
   - Rollback: layout constraints conflict at small terminal sizes
 
-- [!] **TU-04** — Readline Input with History
+- [x] **TU-04** — Readline Input with History
   - Where: `crates/myosu-tui/src/input.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Input quality determines gameplay feel
@@ -620,7 +620,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=/commands or game completion; Callsite=event loop; State=Screen enum; Persistence=N/A; Signal=display switches`
   - Rollback: screen transitions lose game state
 
-- [ ] **TU-06** — Pipe Mode for Agent Protocol
+- [x] **TU-06** — Pipe Mode for Agent Protocol
   - Where: `crates/myosu-tui/src/pipe.rs (new)`
   - Depends on: `TU-01`
   - Tests: `cargo check -p myosu-tui`
