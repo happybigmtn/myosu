@@ -104,7 +104,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=validator calls commit_weights; Callsite=weights.rs; State=hash stored in WeightCommits; Persistence=on-chain; Signal=commit + reveal flow succeeds`
   - Rollback: v2 commit-reveal has a bug that CRV3 was fixing
 
-- [ ] **CF-10** — Port Primitives and Runtime Common Types
+- [x] **CF-10** — Port Primitives and Runtime Common Types
   - Where: `crates/myosu-chain/primitives/safe-math/ (new, from subtensor)`, `crates/myosu-chain/primitives/share-pool/ (new, from subtensor)`, `crates/myosu-chain/common/ (new, from subtensor/common/)`
   - Tests: `cargo check -p myosu-safe-math && cargo check -p myosu-share-pool && cargo check -p myosu-runtime-common`
   - Blocking: Yuma epoch uses safe-math; ALL stake operations (20+ functions) use share-pool; NetUid/MechId/TaoCurrency/AlphaCurrency from runtime_common used in nearly every pallet file
@@ -602,7 +602,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=key events; Callsite=events.rs; State=buffer, cursor, history; Persistence=N/A; Signal=characters appear`
   - Rollback: readline keybindings conflict with game keys
 
-- [ ] **TU-03** — Event Loop and Async Updates
+- [x] **TU-03** — Event Loop and Async Updates
   - Where: `crates/myosu-tui/src/events.rs (new)`
   - Depends on: `TU-01`
   - Tests: `cargo check -p myosu-tui`
