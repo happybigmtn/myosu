@@ -13,17 +13,26 @@ Depends-on: none
 
 | Spec File | Expands | AC Prefix | Status |
 |-----------|---------|-----------|--------|
-| `031626-01-chain-fork-scaffold.md` | CH-01 | CF-01..05 | Draft |
+| `031626-01-chain-fork-scaffold.md` | CH-01 | CF-01..11 | Draft |
 | `031626-03-game-solving-pallet.md` | CH-02 | GS-01..10 | Draft |
 | `031626-02a-game-engine-traits.md` | GE-01 | GT-01..05 | Draft |
 | `031626-02b-poker-engine.md` | GE-02 | PE-01..04 | Draft |
 | `031626-04a-miner-binary.md` | MN-01 | MN-01..05 | Draft |
-| `031626-04b-validator-oracle.md` | VL-01 | VO-01..06 | Draft |
+| `031626-04b-validator-oracle.md` | VL-01 | VO-01..07 | Draft |
 | `031626-05-gameplay-cli.md` | GP-01 | GP-01..04 | Draft |
 | `031626-06-multi-game-architecture.md` | FG-01 | MG-01..04 | Draft |
-| `031626-07-tui-implementation.md` | (new) | TU-01..07 | Draft |
+| `031626-07-tui-implementation.md` | (new) | TU-01..12 | Draft |
 | `031626-08-abstraction-pipeline.md` | (new) | AP-01..03 | Draft |
-| `031626-09-launch-integration.md` | (new) | LI-01..05 | Draft |
+| `031626-09-launch-integration.md` | (new) | LI-01..06 | Draft |
+| `031626-10-agent-experience.md` | (new) | AX-01..06 | Draft |
+| `031626-12-nlhe-incentive-mechanism.md` | (new) | — (design) | Draft |
+| `031626-13-n-player-trait-design.md` | (new) | — (decision) | Draft |
+| `031626-14-poker-variant-family.md` | (new) | PV-01..06 | Draft |
+| `031626-15-key-management.md` | (new) | KM-01..04 | Draft |
+| `031626-16-cross-game-scoring.md` | (new) | CS-01..03 | Draft |
+| `031626-17-spectator-protocol.md` | (new) | SP-01..03 | Draft |
+| `031626-18-operational-rpcs.md` | (new) | OR-01..04 | Draft |
+| `031626-19-game-engine-sdk.md` | (new) | SDK-01..05 | Draft |
 
 ## Purpose
 
@@ -104,12 +113,22 @@ In scope:
 
 Out of scope:
 - Production deployment and mainnet launch — requires tokenomics design
-- Non-poker games — architecture supports them but implementation is later
-- Web UI or TUI — CLI is sufficient for bootstrap
+- Non-poker game engine implementations — architecture supports them, all 20
+  games have TUI mockups in DESIGN.md, but only NLHE ships in Phase 0
+- Web UI — TUI addressed by spec 031626-07 (TU-01..12) and integrated via LI-03
 - P2P multiplayer between humans — single-player vs bot only
 - Mental poker cryptography — not needed for human vs bot
 - Bridge/deposit contract to external chains
 - Token economics beyond basic emission mechanics
+
+Design-complete but not yet implemented:
+- Onboarding flow (DESIGN.md 8.0a-8.0c) — first-run account creation, seed
+  backup, network selection. Designed for keyboard-only, agent-compatible input.
+- Wallet screen (DESIGN.md 8.0d) — balance, staking, session overview.
+- 19 non-NLHE game screens (DESIGN.md 9.2-9.20) — full TUI mockups exist for
+  all 20 games from OS.md. Each requires a `GameRenderer` implementation when
+  the corresponding game engine is built.
+- Spectator mode (DESIGN.md 9.24) — watch agent vs agent play.
 
 ## Current State
 
@@ -146,7 +165,7 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Game engine (poker) | New (wraps robopoker) | crates/myosu-games/poker/ |
+| Game engine (poker) | New (wraps robopoker) | crates/myosu-games-poker/ |
 | Game engine traits | New | crates/myosu-games/src/lib.rs |
 | Chain runtime | New (fork subtensor) | crates/myosu-chain/ |
 | Game-solving pallet | New | crates/myosu-chain/pallets/game-solver/ |
@@ -355,7 +374,7 @@ Failure loop:
 
 ### AC-GE-02: Poker Engine Wrapping Robopoker
 
-- Where: `crates/myosu-games/poker/` (new)
+- Where: `crates/myosu-games-poker/` (new)
 - How: Implement `GameEngine` for No-Limit Hold'em by wrapping robopoker v1.0.0.
   Map robopoker's `Game`, `Edge`, `Turn`, `Seat` types to the trait interface.
   Wrap robopoker's `Info` → `StrategyProfile` via the `Blueprint` trait.

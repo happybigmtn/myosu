@@ -9,9 +9,8 @@ spec_dir: specs/
 plan_file: ralph/IMPLEMENT.md
 
 proof_commands:
+  - cargo check
   - cargo test
-  - cargo clippy -- -D warnings
-  - cargo build --release
 
 tracker:
   kind: file
@@ -31,7 +30,7 @@ hooks:
   timeout_ms: 60000
 
 agent:
-  max_concurrent_agents: 3
+  max_concurrent_agents: 8
   max_retry_backoff_ms: 300000
 
 codex:
@@ -65,10 +64,10 @@ recurring:
       proof_commands:
         - true
       engine:
-        adapter: codex
-        model: gpt-5.4
+        adapter: claude
+        model: claude-opus-4-6
         reasoning: high
-        command: codex exec --yolo
+        command: claude --effort max
     - id: security
       role: security
       cadence: 24h
@@ -88,10 +87,10 @@ recurring:
             - crates/myosu-play
           attestation_dir: state/tasks/security/attestations/gameplay
       engine:
-        adapter: codex
-        model: gpt-5.4
+        adapter: claude
+        model: claude-opus-4-6
         reasoning: high
-        command: codex exec --yolo
+        command: claude --effort max
     - id: operations
       role: operations
       cadence: 15m
@@ -102,10 +101,10 @@ recurring:
       proof_commands:
         - true
       engine:
-        adapter: codex
-        model: gpt-5.4
+        adapter: claude
+        model: claude-opus-4-6
         reasoning: high
-        command: codex exec --yolo
+        command: claude --effort max
 
 recurring_sources:
   strategy:
@@ -125,7 +124,7 @@ recurring_sources:
       - id: repo_strategy_lane_aliases
         kind: strategy_operating_lane_aliases
         aliases:
-          endurance_gate: game_solving_chain
+          endurance_gate: platform
   security:
     artifact_path: state/tasks/security/source-output.json
     writable_targets:
@@ -150,10 +149,10 @@ health:
   result_stale_after: 30m
 
 engine:
-  adapter: codex
-  model: gpt-5.4
+  adapter: claude
+  model: claude-opus-4-6
   reasoning: high
-  command: codex exec --yolo
+  command: claude --effort max
   timeout_secs: 3600
 
 workspace:

@@ -1,11 +1,11 @@
 ---
 os_kind: autonomous_kernel
-os_version: "2.0"
-last_updated: "2026-03-16"
+os_version: "3.0"
+last_updated: "2026-03-17"
 system: myosu
 state: stage_0
 domain: game_solving_chain
-mission_doctrine: specs/031626-myosu-game-solving-chain.md
+mission_doctrine: specs/031626-00-master-index.md
 invariants: INVARIANTS.md
 kpi: ops/kpi_registry.yaml
 scorecard: ops/scorecard.md
@@ -41,13 +41,12 @@ to the strongest solvers. Agents and humans play through the same text interface
           │ HTTP /strategy  │◄─┤ submit_weights   │
           └────────┬────────┘  └──────────────────┘
                    │
-                   ▼
-          ┌─────────────────┐
-          │ GAMEPLAY         │
-          │                  │
-          │ stdin/stdout     │
-          │ agent = human    │
-          └─────────────────┘
+          ┌────────▼──────────┐
+          │ GAMEPLAY           │
+          │                    │
+          │ TUI / HTTP / WS    │
+          │ agent = human      │
+          └────────────────────┘
 ```
 
 | layer | function | actors |
@@ -55,222 +54,188 @@ to the strongest solvers. Agents and humans play through the same text interface
 | chain | on-chain coordination: subnets, neurons, weights, emissions | pallet_game_solver |
 | solvers | off-chain compute: MCCFR training, strategy serving | miners |
 | validation | off-chain quality: exploitability scoring, weight submission | validators |
-| gameplay | output surface: text interface, agent-native, stdin/stdout | humans, agents |
+| gameplay | output surface: text interface, agent-native, HTTP/WS/pipe | humans, agents |
 
-## market position
+## source repo knowledge
 
-| incumbent | price | games | verification | status |
-|-----------|-------|-------|--------------|--------|
-| PioSolver | $249-2500 | NLHE only | trust-me | monopoly |
-| MonkerSolver | €250+ | PLO only | trust-me | monopoly |
-| GTO+ | $75 | NLHE only | trust-me | budget |
-| Suphx (MSFT) | not deployed | Riichi only | research | locked |
-| DeepNash (DeepMind) | not deployed | Stratego only | research | locked |
+### robopoker (happybigmtn/robopoker fork)
 
-Protocol replaces all of the above. Exploitability is deterministic and
-on-chain verifiable. New game = one trait implementation. No chain changes.
+Audited 2026-03-17. Key findings:
 
-## structural advantages
+| area | status | notes |
+|------|--------|-------|
+| CFR traits (CfrGame, CfrEdge, CfrTurn, CfrInfo, Profile, Encoder) | WORKS AS-IS | All game-agnostic. None are object-safe (require Copy+Sized). Use enum dispatch. |
+| RPS reference impl | WORKS AS-IS | Full CfrGame+Profile+Encoder+Solver. 60+ convergence tests. |
+| Flagship solver alias | WORKS AS-IS | `NlheSolver<PluribusRegret, LinearWeight, PluribusSampling>` at nlhe/src/lib.rs:80-84 |
+| Programmatic MCCFR | WORKS AS-IS | `Solver::step()` runs one iteration. `Solver::solve()` runs full loop. |
+| Exploitability | WORKS AS-IS | `(BR(P1) + BR(P2)) / 2` in profile.rs:424-429. |
+| Hand evaluation | WORKS AS-IS | Bitwise evaluator (no lookup tables). Nanosecond speed. |
+| Game state generation | WORKS AS-IS | `NlheInfo::random()`, `Observation::from(Street)`, `Partial::initial()` |
+| Serde on NLHE types (RF-01) | NEEDS FORK CHANGE | ~12 types across 4 crates. `Metrics` field needs `#[serde(skip)]`. serde 1.0 already in workspace. |
+| Non-DB encoder constructor (RF-02) | NEEDS FORK CHANGE | Internal repr IS `BTreeMap<Isomorphism, Abstraction>`. `from_map()` is a one-liner. |
+| Clustering pipeline | **DB-ONLY** | `Layer::cluster()` takes `&Client`. No standalone file path. Need RF-03. |
+| File-based checkpoints | **MISSING** | Only PostgreSQL persistence. Need RF-04. |
+| Wire serialization | MISSING | No binary wire format. DTOs use string-encoded JSON. RF-01 is prerequisite. |
+| Game parameters | HARDCODED | `N=2`, `STACK=100`, `B_BLIND=2`, `S_BLIND=1` are compile-time constants. |
+| Full encoder memory | 7-11 GB RAM | 138M entries. Hardware reqs must be documented. |
+| Training loop control | process-global atomic | `rbp_core::interrupted()`. Use `Solver::step()` for external orchestration. |
 
-| advantage | mechanism | fork resistance |
-|-----------|-----------|-----------------|
-| compute moat | months of MCCFR iterations compound toward Nash | fork starts at random strategy |
-| abstraction tables | 13M isomorphisms clustered into 500 buckets (days of compute) | fork starts with empty tables |
-| bond EMA | validator reputation accumulates over epochs | fork starts with zero trust |
-| game engines | each `CfrGame` impl adds to platform value | fork must reimplement all games |
-| network effects | miners → strategies → players → revenue → miners | fork has zero liquidity |
+### subtensor (opentensor/subtensor)
 
-Chain is commodity infrastructure. Trained solver network is the moat.
+Audited 2026-03-17. Key findings:
 
-## revenue model
+| area | status | notes |
+|------|--------|-------|
+| Pallet inventory | 14 keep, 12 strip, 1 replace | runtime/src/lib.rs:1591-1629 |
+| **Config supertraits** | **BLOCKED** | `pallet_subtensor::Config` requires `pallet_drand::Config + pallet_crowdloan::Config`. Must strip FIRST. |
+| **SwapInterface** | **BLOCKED** | Called in registration, staking, AND emission. Need no-op stub. |
+| **fp_self_contained** | **BLOCKED** | Frontier's extrinsic types. Must replace with standard Substrate types. |
+| **CRV3 timelock** | **BLOCKED** | Depends on `pallet_drand::Pulses`. Must strip, keep commit-reveal v2 only. |
+| Yuma Consensus | NEEDS ADAPTATION | epoch/run_epoch.rs + math.rs = ~3200 lines. Port core, strip Alpha/AMM. |
+| Emission/coinbase | COMPLEX | 957 lines, deeply entangled with AMM. **Recommend rewrite, not port.** |
+| Weight submission | STRAIGHTFORWARD | subnets/weights.rs, 1343 lines. commit-reveal v2 is clean. |
+| Axon serving | STRAIGHTFORWARD | subnets/serving.rs, 372 lines. Self-contained. |
+| Neuron registration | STRAIGHTFORWARD | But calls SwapInterface for burn. Need stub. |
+| Pruning | STRAIGHTFORWARD | Lowest-emission, immunity-period aware. |
+| Staking | COMPLEX | Share-pool model + SwapInterface. Simplify to direct token staking. |
+| Runtime APIs | NEEDS ADAPTATION | 5 API traits, ~20 methods. Strip AMM/Alpha-specific methods. |
+| Node service | NEEDS ADAPTATION | 29 Frontier/EVM references in service.rs. 12 in rpc.rs. |
+| Chain spec (devnet) | STRAIGHTFORWARD | devnet.rs already clean. Rebrand tokens/names. |
+| Storage items | ~194 total, ~80 needed | Must inventory carefully to avoid importing unused state. |
+| substrate_fixed | encointer/substrate-fixed fork | v0.6.0 with `transcendental::{exp, ln}`. Git dependency required. |
+| polkadot-sdk | opentensor fork | May contain subtensor-specific patches. |
+| safe-math + share-pool primitives | REQUIRED | Small local crates. Must carry into myosu. |
+| freeze_struct macro | CAUTION | Generates compile-time hash checks on storage struct layouts. |
 
-| stage | source | mechanism |
-|-------|--------|-----------|
-| 0-1 | token emission | inflation funds miners and validators |
-| 2+ | gameplay fees | per-session play against solvers |
-| 2+ | coaching | strategy analysis: "solver plays X here because Y" |
-| 2+ | tournaments | human vs solver with prize pools |
-| 2+ | strategy marketplace | specialized strategies (ICM-adjusted, exploitative) |
-| 2+ | API access | third-party platforms query strategies |
+## current priority
 
-Emission-funded bootstrap transitions to revenue-funded sustainability.
+| # | work | AC prefix | count | blocking |
+|---|------|-----------|-------|----------|
+| 1 | fork robopoker: serde + encoder + clustering + checkpoints | RF-01..04 | 4 | GT-02, PE-01, AP-01, MN-05 |
+| 2 | fork subtensor: strip + stubs + primitives | CF-01..11 | 11 | everything |
+| 3 | game engine traits: re-export + wire | GT-01..05 | 5 | PE, MN, VO, GP |
+| 4 | poker engine: solver, query, exploit | PE-01..04 | 4 | MN, VO, GP |
+| 5 | game-solving pallet: Yuma, subnets, staking | GS-01..10 | 10 | MN, VO |
+| 6 | shared chain client | CC-01 | 1 | MN, VO, GP |
+| 7 | miner: train, serve, checkpoint | MN-01..05 | 5 | VO, GP |
+| 8 | validator: score, submit weights, INV-003 test | VO-01..07 | 7 | GP |
+| 9 | gameplay: human vs solver | GP-01..04 | 4 | stage_0 exit |
+| 10 | multi-game proof: Liar's Dice | MG-01..04 | 4 | stage_0 exit |
+| 11 | TUI + NLHE game: shell, renderer, training, solver advisor | TU-01..12 | 12 | LI-03, stage_0 exit |
+| 12 | abstraction pipeline | AP-01..03 | 3 | MN-02 (full training) |
+| 13 | launch integration + invariant gate | LI-01..06 | 6 | stage_0 exit |
+| 14 | agent experience | AX-01..06 | 6 | stage_1 |
 
-## game targets
+**Total: 82 ACs across 14 stages.**
 
-Selection: CFR fit → solver gap → market size → geographic coverage → tractability.
-
-| # | game | market | solver gap | geography | stage |
-|---|------|--------|-----------|-----------|-------|
-| 1 | NLHE Heads-Up | $6B+ poker | PioSolver $250+ | global | 0 |
-| 2 | NLHE 6-max | most-played format | expensive | global | 1 |
-| 3 | PLO | $400M-1.2B | postflop unsolved | global | 1 |
-| 4 | NLHE Tournament/ICM | most poker is MTT | no ICM-CFR solver | global | 1 |
-| 5 | Short Deck | niche, 30% smaller state | limited | Asia | 1 |
-| 6 | Teen Patti | India $2-3B by 2028 | none | India | 2 |
-| 7 | Hanafuda (Koi-Koi) | cultural (Nintendo origin) | none | Japan | 2 |
-| 8 | Hwatu / Go-Stop | Korea $9-10B gambling | none | Korea | 2 |
-| 9 | Mahjong (Riichi) | $1.5-2.1B, 10% CAGR | zero consumer solvers | Japan, China | 2 |
-| 10 | Bridge | 200M+ players | bidding unsolved | global | 2 |
-| 11 | Gin Rummy | $1.5B Indian rummy | none | India | 2 |
-| 12 | Stratego | DeepNash proved feasibility | research-only | global | 3 |
-| 13 | OFC Chinese Poker | high-stakes niche | solvers were $30K+ | Russia/CIS | 3 |
-| 14 | Spades | millions daily US | none | US | 3 |
-| 15 | Liar's Dice | architecture proof | academic only | global | 3 |
-| 16 | Dou Di Zhu (斗地主) | 600M+ users (Tencent) | none | China | 3 |
-| 17 | Pusoy Dos / Big Two | dominant in PH/HK/TW/SG | none | SE Asia | 3 |
-| 18 | Tien Len | Vietnam national game | none | Vietnam | 3 |
-| 19 | Call Break | 10M+ app downloads each | none | Nepal, India | 3 |
-| 20 | Backgammon | gambling tradition | solved since 1990s | Middle East | 3 |
-
-```
-CHINA         KOREA      JAPAN       INDIA        SE ASIA      WEST
-┌─────────┐  ┌───────┐  ┌────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐
-│Dou Di   │  │Hwatu  │  │Mahjong │  │Teen     │  │Pusoy Dos│  │Bridge   │
-│Zhu      │  │       │  │Hanafuda│  │Patti    │  │Tien Len │  │Spades   │
-│(600M+)  │  │       │  │        │  │Call Brk │  │         │  │Stratego │
-│         │  │       │  │        │  │Gin Rummy│  │         │  │Liar's   │
-└─────────┘  └───────┘  └────────┘  └─────────┘  └─────────┘  │Dice     │
-                                                               │Backgamm.│
-              ◄── 6 poker variants span all geographies ──►    │OFC      │
-                                                               └─────────┘
-```
-
-Combined addressable market: $10B+ annually. No competitor addresses >2 games.
-
-## presentation layer
-
-### invariant
-
-Agents and humans interact through the same text interface. If an LLM cannot
-play from the rendered game state, the interface is broken.
-
-### constraints
-
-| constraint | rationale |
-|------------|-----------|
-| no mouse dependency | agents have no cursor |
-| no visual-only information | agents parse text |
-| input = natural language or structured commands | `call`, `raise 15`, `discard 3m` |
-| game state must be LLM-complete | zero additional context needed |
-| monochrome + 1 accent color max | density over decoration |
-| no gradients, no backgrounds, no blinking | restraint is the aesthetic |
-
-### color semantics
-
-| color | meaning |
-|-------|---------|
-| white | narration |
-| green | player action, positive outcome |
-| red | opponent action, negative outcome |
-| yellow | warning, time pressure |
-| blue | system info, pot, stacks |
-| dim | history, folded, metadata |
-| bold | decision point, player cards |
-
-### notation
+## chain fork critical path
 
 ```
-cards:   A♠ K♥ Q♦ J♣ T♠ 9♥
-hidden:  ·· ··
-tiles:   [1m] [2p] [3s] [Ew]
-dice:    ⚀ ⚁ ⚂ ⚃ ⚄ ⚅
-borders: ─ │ ┌ ┐ └ ┘
+CF-07 (strip drand/crowdloan supertraits)
+  │
+  ├──► CF-08 (replace fp_self_contained)
+  │      │
+  │      ▼
+  │    CF-01 (strip 12 pallets from construct_runtime!)
+  │      │
+  │      ▼
+  │    CF-02 (prune workspace dependencies)
+  │
+  ├──► CF-06 (SwapInterface no-op stub)
+  │
+  ├──► CF-09 (strip CRV3 timelock)
+  │
+  ├──► CF-10 (port safe-math + share-pool + runtime_common)
+  │
+  ├──► CF-11 (stub ProxyInterface + CommitmentsInterface + AuthorshipProvider)
+  │
+  ▼
+CF-03 (minimal node service)
+  │
+  ▼
+CF-04 (local devnet chain spec)
+  │
+  ▼
+CF-05 (E2E devnet smoke test)
 ```
 
-### layout
+CF-07 is the first commit. Without it, nothing compiles.
+
+## robopoker fork critical path
 
 ```
-┌─ state ────────────────────────────────────────┐
-│ [compact: board, hands, stacks, pot]           │
-├─ log ──────────────────────────────────────────┤
-│ [scrollable action history]                    │
-├─ input ────────────────────────────────────────┤
-│ > _                                            │
-└────────────────────────────────────────────────┘
+RF-01 (serde feature on NLHE types)
+  │
+  ├──► RF-02 (non-DB encoder constructor: from_map, from_file, from_dir)
+  │
+  ├──► RF-04 (file-based checkpoint save/load for NlheProfile)
+  │
+  ▼
+RF-03 (expose clustering APIs for standalone use)
 ```
 
-State panel: fixed height, always visible, game-specific.
-Log panel: scrollable conversation. Input: readline, tab-complete, `/commands`.
+RF-01 enables everything else. RF-03 is less urgent (miners can use
+pre-computed artifacts initially).
 
-Layout is game-agnostic. State panel is the only per-game customization.
+## key engineering decisions (updated with audit findings)
 
-### agent protocol
+| decision | rationale | spec |
+|----------|-----------|------|
+| ArcSwap double-buffer for miner | zero read contention during training batches | MN-02 |
+| RemoteProfile adapter for validator | `Profile::exploitability()` needs a Profile impl from query responses | GT-04 |
+| checkpoint versioning: 4-byte magic + version | prevent silent corruption on format changes | PE-01 |
+| encoder pinning: hash-checked artifact | INV-003 requires identical encoder across validators | VO-03 |
+| commit-reveal v2 only (hash-based) | CRV3 timelock depends on pallet_drand which is stripped | GS-04, CF-09 |
+| 13 pallets after CF-01 (14th added by GS-09) | SafeMode at index 20 included; index 7 reserved | CF-01, GS-09 |
+| `substrate_fixed` pinned to encointer fork v0.6.0 | bit-identical Yuma output requires identical fixed-point lib | GS-05 |
+| SwapInterface no-op stub (1:1 identity) | registration/staking/emission all call it; can't strip without stub | CF-06 |
+| emission rewrite (not port) | coinbase assumes root network + AMM + multi-subnet; 80% unused | GS-06 |
+| single-token model (not dual Alpha/TAO) | AMM pools add massive complexity for zero Stage 0 value | CF-06 |
+| enum dispatch (not trait objects) | all CFR traits require Copy+Sized; no dyn dispatch possible | GT-03 |
+| `Solver::step()` for training control | process-global `interrupted()` flag unsuitable for external orchestration | MN-02 |
+| polkadot-sdk from opentensor fork | upstream may diverge; accept as known risk | CF-02 |
+| robopoker fork (not upstream dep) | need serde, encoder constructors, clustering API exposure, file checkpoints | RF-01..04 |
+| shared `myosu-chain-client` crate | prevents DRY violation across miner/validator/play | CC-01 |
+| PokerSolver must support snapshot_profile() | ArcSwap publishing requires cheap profile cloning | PE-01, MN-02 |
+| port codexpoker TUI patterns (not rewrite) | 33K lines of production code; training, blueprint, truth stream | TU-08..12 |
+| BotBackend::action_distribution() shared API | same method serves bot decisions (sample) and solver advisor (display) | TU-09, TU-11 |
+| solver advisor ON by default in training mode | learning GTO is the value prop; OFF by default in chain mode (miner privacy) | TU-11 |
+| mmap blueprint files (not RAM load) | 50MB+ profiles stay on disk; < 1μs lookup via page faults | TU-10 |
+| training commands (/deal, /board, /stack) | enables scenario drilling with solver advisor | TU-09 |
 
-Agent receives rendered text on stdin. Agent writes action on stdout.
-Two agents play each other via pipe. Zero additional infrastructure.
+## spec inconsistencies to fix
 
-```
-agent_1 | game_engine | agent_2     # agent vs agent
-human   | game_engine | agent       # human vs agent
-```
+| issue | fix |
+|-------|-----|
+| INVARIANTS.md references nonexistent `myosu-solver` crate | change to `myosu-miner` / `myosu-games-poker` |
+| MN-02/MN-03 code snippets use RwLock, text says ArcSwap | fix code snippets to ArcSwap |
+| CF-01 says "14 pallets" | change to "13 pallets (index 7 reserved)" |
+| master index missing 031626-10-agent-experience.md | add to spec index |
+| master index crate path `myosu-games/poker/` | change to `myosu-games-poker/` |
+| master index out-of-scope says "no TUI" | update: TUI addressed by 031626-07 |
+| GS-01 says "~25 storage items" | actual count ~31 |
+| INV-006 says "git tag v1.0.0" | fork uses branch, not upstream tag |
+| design.md pipe enrichment modes contradict agent spec scope | resolve: mark enriched modes as future |
+| GP spec says TUI out of scope but LI-03 wires to TUI | add note: GP-02 rendering superseded by LI-03 |
+| AX-* dependency on TU-06 overly broad | AX-03/04 are independent of pipe mode |
 
-### design language rules
+## bootstrap exit criteria
 
-1. no marketing language — if it sounds like a pitch, delete it
-2. every section controls behavior — if it doesn't change a decision, remove it
-3. tables > lists > paragraphs
-4. one concept per block
-5. visuals = system diagrams only
-6. monochrome + 1 accent max
-7. agents over users — system actors, not personas
-8. deterministic tone — no hedging, no speculation
-9. metrics map to actions — otherwise invalid
-10. repo = runtime state, not documentation
-
-## system states
-
-```
-stage_0 ──► stage_1 ──► stage_2 ──► stage_3
-bootstrap    launch      platform    ecosystem
-```
-
-### stage_0: bootstrap
-
-System produces verified solver output on devnet.
-
-| exit condition | measured by |
-|----------------|-------------|
-| chain produces blocks with game-solving pallet | CF-05 smoke test |
-| poker subnet registered, miners scored by validators | GS-09 integration test |
-| miner produces MCCFR strategy profile | PE-01 training test |
-| validator computes exploitability, submits weights | VO-06 loop test |
-| Yuma distributes emissions proportional to quality | GS-05 Yuma test vectors |
-| human plays one hand against trained solver | GP-02 game loop test |
-| Liar's Dice validates multi-game (zero code changes) | MG-03 zero-change test |
-| all 6 invariants pass | INV-001 through INV-006 |
-
-### stage_1: launch
-
-Mainnet. Multiple poker subnets. Real token economics.
-
-| exit condition | measured by |
-|----------------|-------------|
-| mainnet with genesis validators | block production on public network |
-| 3+ poker variant subnets | subnet count query |
-| 10+ miners competing per subnet | active_miners_per_subnet metric |
-| token economics sustain incentives | emission vs stake ratio |
-
-### stage_2: platform
-
-Non-poker games. Third-party engines. Revenue.
-
-| exit condition | measured by |
-|----------------|-------------|
-| 2+ non-poker game subnets | subnet game_type diversity |
-| game engine SDK published | external developer adoption |
-| strategy marketplace operational | transaction count |
-| revenue exceeds emission cost | financial model |
-
-### stage_3: ecosystem
-
-Self-sustaining. Global infrastructure.
-
-| exit condition | measured by |
-|----------------|-------------|
-| 10+ game subnets across 5+ categories | subnet registry |
-| thousands of miners globally | neuron count |
-| coaching + tournament revenue | financial model |
-| third-party applications | API consumer count |
+Myosu remains in stage 0 until ALL of the following are true:
+- Substrate chain compiles and produces blocks on local devnet
+- Game-solving pallet integrated at index 7 with Yuma Consensus
+- At least one poker subnet registers and runs solver evaluation
+- One miner produces a strategy profile from robopoker MCCFR
+- One validator computes exploitability and submits weights
+- Two validators produce identical scores for same miner (INV-003)
+- Yuma Consensus distributes emissions proportional to quality
+- One human can play a hand of poker against the trained bot
+- Training mode works offline with blueprint bot and solver advisor
+- Solver advisor shows action distribution during hero decisions
+- Liar's Dice validates multi-game architecture (zero existing code changes)
+- No dependency path between myosu-play and myosu-miner (INV-004)
+- Emission accounting: sum(distributions) == block_emission * epochs (no-ship gate)
+- All 6 invariants pass (INV-001 through INV-006) via consolidated gate test
 
 ## doctrine hierarchy
 
@@ -283,96 +248,20 @@ Self-sustaining. Global infrastructure.
 | 5 | `ops/risk_register.md`, `ops/decision_log.md` | context for decisions |
 | 6 | `state/` | whether the kernel is behaving |
 
-## rule 0
+## manual prerequisites (before malinka can execute)
 
-System lacks trustworthy operating truth for a decision → install truth first.
+| # | work | who | est. |
+|---|------|-----|------|
+| 1 | Fork robopoker v1.0.0 to happybigmtn/robopoker | human | 1h |
+| 2 | RF-01: add serde feature (~12 types, 4 crates) | human/malinka | 1-2d |
+| 3 | RF-02: add from_map/from_file/from_dir to NlheEncoder | human/malinka | 1d |
+| 4 | RF-03: expose clustering APIs from rbp-clustering | human/malinka | 1d |
+| 5 | RF-04: file-based checkpoint save/load | human/malinka | 1d |
+| 6 | Copy subtensor into myosu workspace | human | 1h |
+| 7 | CF-07: strip drand/crowdloan supertraits (first commit) | human | 2h |
+| 8 | CF-06: SwapInterface no-op stub | human/malinka | 1d |
+| 9 | CF-08..11: remaining stubs and primitive ports | malinka | 2-3d |
 
-1. challenge the requirement
-2. delete before automating
-3. simplify before scaling
-4. shorten signal → decision → action path
-
-Metric without action → delete. Review without priority change → delete.
-Report without default action → noise.
-
-## north star
-
-| field | value |
-|-------|-------|
-| metric | `solver_exploitability_convergence` |
-| definition | min(exploitability) across active miners per subnet (mbb/hand) |
-| target | → 0 |
-| source | validator consensus |
-| cadence | per tempo |
-
-### leading indicators
-
-| metric | formula | action if red |
-|--------|---------|---------------|
-| `active_miners_per_subnet` | miners serving in last epoch | investigate incentive model |
-| `validator_agreement_rate` | % pairs with <10% score divergence | investigate INV-003 |
-| `gameplay_sessions_per_day` | completed human vs bot sessions | investigate product surface |
-
-## guardrails
-
-| metric | green | red | action |
-|--------|-------|-----|--------|
-| `false_green_proof_count` | 0 | >1 | halt claims, repair proof |
-| `validator_determinism` | <1e-6 | >1e-3 | freeze emissions |
-| `solver_gameplay_separation` | no cross-dep | any dep | revert |
-| `emission_balance` | distributions == block_emission | imbalance | halt, audit |
-
-## severity
-
-| level | condition | response |
-|-------|-----------|----------|
-| S0 | consensus compromised, token accounting broken, scoring non-deterministic | freeze emissions, preserve evidence, halt |
-| S1 | critical capability broken, consensus intact | freeze risky changes, mitigate |
-| S2 | serious degradation | elevated repair priority |
-| S3 | contained defect | backlog with owner |
-
-## no-ship
-
-System capability not ready if:
-- proof not trustworthy (INV-002)
-- validator determinism violated (INV-003)
-- solver/gameplay separation breached (INV-004)
-- emission accounting imbalanced
-- Yuma output diverges from subtensor for identical inputs
-
-## active functions
-
-| function | mandate | output |
-|----------|---------|--------|
-| strategy | stage transitions, scope control, bottleneck decisions | priorities |
-| security | consensus, verification, fairness, economics | audit, risk, no-ship |
-| execution | land verified code, honest completion claims | proof, closure |
-| product | gameplay surface, marketplace, game prioritization | UX decisions |
-
-Dormant until stage_1: growth, revenue, finance, support.
-
-## competitive landscape
-
-| competitor | games | price | verification | gap |
-|------------|-------|-------|--------------|-----|
-| PioSolver | 1 | $249-2500 | none | multi-game, verifiable, open |
-| MonkerSolver | 1 | €250+ | none | multi-game, verifiable, open |
-| GTO+ | 1 | $75 | none | multi-game, verifiable |
-| Bittensor SN | 0 games | $1-2M TAO lock | AI metrics | purpose-built for games |
-
-No entity builds decentralized game-solving infrastructure.
-
-## current priority
-
-| # | work | AC prefix | blocking |
-|---|------|-----------|----------|
-| 1 | fork robopoker: serde + encoder constructor | RF-01..02 | GT-02, PE-01 |
-| 2 | fork subtensor: strip to minimal chain | CF-01..05 | everything |
-| 3 | game engine traits: re-export + wire | GT-01..05 | PE, MN, VO, GP |
-| 4 | poker engine: solver, query, exploit | PE-01..04 | MN, VO, GP |
-| 5 | game-solving pallet: Yuma, subnets, staking | GS-01..10 | MN, VO |
-| 6 | miner: train, serve, checkpoint | MN-01..05 | VO, GP |
-| 7 | validator: score, submit weights | VO-01..06 | GP |
-| 8 | gameplay: human vs solver | GP-01..04 | stage_0 exit |
-| 9 | multi-game proof: Liar's Dice | MG-01..04 | stage_0 exit |
-
+After these, malinka executes CF-01..05 → GT-01..05 → PE-01..04 → GS-01..10
+→ CC-01 → MN-01..05 → VO-01..07 → GP-01..04 → MG-01..04 → TU-01..07
+→ AP-01..03 → LI-01..06 → AX-01..06 autonomously.

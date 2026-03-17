@@ -4,7 +4,7 @@ os_version: "0.3"
 last_updated: "2026-03-16"
 company_name: "Myosu"
 company_stage: "stage_0_bootstrap"
-domain_overlay: "game_solving_chain"
+domain_overlay: "platform"
 primary_mission_doctrine: "specs/031626-00-master-index.md"
 hard_invariants_doctrine:
   - "INVARIANTS.md"
@@ -95,8 +95,10 @@ strongest bots in existence.
 
 3. **Multi-game generalization.** The same infrastructure (chain, Yuma Consensus,
    miner/validator protocol) works for ANY imperfect-information game. Adding a
-   new game means implementing one trait (`CfrGame`) — no chain changes, no
-   protocol changes, no new infrastructure.
+   new game means implementing one trait (`CfrGame`), running the SDK test
+   harness, and calling `register_game_type` on-chain — no chain code changes,
+   no protocol changes, no new infrastructure. The Game Engine SDK
+   (`myosu-sdk`) provides scaffold, test harness, and registration CLI.
 
 4. **Compute moat.** The more MCCFR iterations a miner runs, the closer to Nash
    equilibrium. Catching up to a miner that has been running for months requires
@@ -192,6 +194,8 @@ happybigmtn/robopoker (fork)       happybigmtn/myosu
                                    │  ├─ node/ (binary, chain spec, RPC)
                                    │  └─ pallets/game-solver/ (Yuma, subnets, staking)
                                    ├─ myosu-chain-client (shared RPC client)
+                                   ├─ myosu-keys (key management, keystore)
+                                   ├─ myosu-sdk (developer SDK, scaffold, test harness)
                                    ├─ myosu-miner (train + serve)
                                    ├─ myosu-validator (score + submit)
                                    └─ myosu-play (human/agent vs solver)
@@ -320,7 +324,7 @@ addresses more than 2 of these games. myosu addresses all 20 with one protocol.
 
 ## Presentation Layer
 
-Full interface specification: `design.md`
+Full interface specification: `DESIGN.md`
 Agent experience specification: `specs/031626-10-agent-experience.md`
 
 | invariant | consequence |
@@ -353,7 +357,8 @@ while not game.is_over:
     game.act({"action": "call"})
 ```
 
-9 game mockups + 4 operational screens in `design.md`.
+20 game mockups + 4 operational screens + onboarding/wallet/spectator
+flows in `DESIGN.md`.
 
 ## Company Stages
 
@@ -374,16 +379,21 @@ Exit criteria:
 - 3+ poker variant subnets running
 - 10+ miners competing per subnet
 - Token economics sustain miner incentives without inflation death spiral
-- TUI gameplay interface live (design spec: `design.md`)
+- TUI gameplay interface live (design spec: `DESIGN.md`)
 
 ### Stage 2: Platform
-**Objective:** Expand beyond poker. Third-party game engines.
+**Objective:** Expand beyond poker. Third-party game engines. Myosu becomes
+infrastructure, not just a product.
 
 Exit criteria:
 - 2+ non-poker game subnets (backgammon + mahjong)
-- Game Engine SDK published for third-party developers
+- Game Engine SDK published (`myosu-sdk` crate, `myosu init` scaffold,
+  trait compliance test harness, developer documentation)
+- 2+ community-built game engines running on mainnet subnets
 - Strategy marketplace operational
 - Revenue from gameplay fees exceeds emission costs
+- API (HTTP + WebSocket) documented as primary integration surface
+  alongside TUI as consumer product
 
 ### Stage 3: Ecosystem
 **Objective:** Self-sustaining economy. Global game-solving infrastructure.

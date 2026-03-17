@@ -43,13 +43,14 @@ Hard rules for the myosu game-solving subnet chain.
   never share runtime state or trust boundaries.
 - Why: A compromised solver must not affect live gameplay fairness. A gameplay
   bug must not corrupt training data.
-- Enforcement: separate crates (`myosu-solver`, `myosu-play`), shared
-  dependency on game engine crates, no direct imports between solver and play.
-- Measurement: `cargo tree` dependency check — no path from play → solver or
-  solver → play.
-- No-ship rule: direct dependency between solver and play crates is `S1`.
+- Enforcement: separate crates (`myosu-miner`, `myosu-play`), shared
+  dependency on game engine crates (`myosu-games`, `myosu-games-poker`),
+  no direct imports between miner and play.
+- Measurement: `cargo tree` dependency check — no path from myosu-play →
+  myosu-miner or myosu-miner → myosu-play.
+- No-ship rule: direct dependency between miner and play crates is `S1`.
 - Fallback mode: revert the offending dependency, refactor shared code into
-  the engine crate.
+  the game engine crate.
 
 ## INV-005: Plan And Land Coherence
 

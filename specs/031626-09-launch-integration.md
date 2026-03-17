@@ -287,7 +287,6 @@ Out of scope:
   - [ ] Fallback to random on miner timeout
   - [ ] Hand completes to showdown correctly
   - [ ] /stats shows session statistics
-  - [ ] /analyze shows coaching output
   - [ ] --pipe mode works for agents
   - [ ] Hand history JSON recorded
 
@@ -302,9 +301,67 @@ Out of scope:
   - [ ] Token economics (flat emission)
   - [ ] Liar's Dice (defer to post-launch)
   - [ ] Web UI (TUI only)
+  - [ ] /analyze coaching output (deferred to post-launch)
   ```
 
 - Blocking note: prevents declaring launch before all critical paths work.
+
+### AC-LI-06: Consolidated Invariant Gate Test
+
+- Where: `tests/e2e/invariant_gate.rs (new)`
+- How: Integration test that validates all code-verifiable invariants in a
+  single pass. OS.md bootstrap exit requires "all 6 invariants pass (INV-001
+  through INV-006)." INV-001 and INV-002 are process invariants (tested by
+  malinka). This test covers INV-003, INV-004, and INV-006, plus the no-ship
+  conditions from OS.md:
+
+  ```rust
+  #[test]
+  #[ignore] // long-running
+  fn invariant_gate() {
+      // INV-003: Two validators agree on same miner scores
+      let (score_a, score_b) = run_two_validator_scoring(...);
+      assert!((score_a - score_b).abs() < 1e-6, "INV-003 violated");
+
+      // INV-004: No dependency path between play and miner
+      let tree_output = cargo_tree("myosu-play");
+      assert!(!tree_output.contains("myosu-miner"), "INV-004 violated");
+      let tree_output = cargo_tree("myosu-miner");
+      assert!(!tree_output.contains("myosu-play"), "INV-004 violated");
+
+      // INV-006: Robopoker fork changes documented
+      assert!(Path::new("vendor/robopoker/CHANGELOG.md").exists(), "INV-006: no CHANGELOG");
+
+      // No-ship: Emission accounting
+      let (total_distributed, expected) = run_emission_check(...);
+      assert_eq!(total_distributed, expected, "Emission accounting imbalanced");
+
+      // No-ship: Yuma output matches subtensor for test vectors
+      verify_yuma_test_vectors(...);
+  }
+  ```
+
+- Whole-system effect: single command to verify Stage 0 exit criteria. Without
+  this, "all invariants pass" is a manual, error-prone assertion.
+- State: full stack lifecycle for INV-003 + INV-004/006 via cargo commands.
+- Wiring contract:
+  - Trigger: `cargo test --test invariant_gate -- --ignored`
+  - Callsite: tests/e2e/invariant_gate.rs
+  - State effect: full stack started, tested, shut down
+  - Persistence effect: N/A
+  - Observable signal: all invariant assertions pass
+- Required tests:
+  - `cargo test --test invariant_gate -- --ignored`
+- Pass/fail:
+  - INV-003: two validators agree within 1e-6 on same miner
+  - INV-004: `cargo tree` shows no play→miner or miner→play path
+  - INV-006: CHANGELOG.md exists in robopoker fork
+  - Emission: sum(distributions) == block_emission * epochs_elapsed
+  - Yuma: test vectors produce identical output to subtensor reference
+- Blocking note: OS.md lists 5 no-ship conditions and 6 invariants. Without
+  a consolidated gate, declaring Stage 0 "done" requires manual verification
+  of each condition separately.
+- Rollback condition: any invariant violation discovered during gate test.
 
 ---
 
@@ -325,3 +382,4 @@ Out of scope:
 | 3 | Human plays one hand in TUI matching design.md 8.1 | TUI wiring | LI-03 |
 | 4 | E2E test: chain → miner → validator → Yuma → gameplay | Full product | LI-04 |
 | 5 | All launch checklist items checked | Readiness | LI-05 |
+| 6 | All invariants + no-ship conditions pass in single gate | Stage 0 exit | LI-06 |

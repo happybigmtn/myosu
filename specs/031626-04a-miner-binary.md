@@ -145,15 +145,18 @@ Out of scope:
 - How: Spawn a background task (tokio::spawn) that runs MCCFR training
   continuously:
   ```rust
-  async fn training_loop(solver: Arc<RwLock<PokerSolver>>, checkpoint_dir: PathBuf) {
+  async fn training_loop(
+      published: Arc<ArcSwap<PokerSolver>>,
+      checkpoint_dir: PathBuf,
+  ) {
+      let mut hot = PokerSolver::new(encoder.clone());
       loop {
-          {
-              let mut s = solver.write().await;
-              s.train(BATCH_SIZE);  // e.g., 1000 iterations per batch
-          }
+          hot.train(BATCH_SIZE);  // e.g., 1000 iterations per batch
+          // Publish snapshot for zero-contention reads
+          published.store(Arc::new(hot.snapshot_profile()));
           // Checkpoint every CHECKPOINT_INTERVAL batches
-          if solver.read().await.epochs() % CHECKPOINT_INTERVAL == 0 {
-              solver.read().await.save(&checkpoint_dir.join("latest.bin"))?;
+          if hot.epochs() % CHECKPOINT_INTERVAL == 0 {
+              hot.save_checkpoint(&checkpoint_dir.join("latest.bin"))?;
           }
           tokio::task::yield_now().await;
       }
@@ -190,7 +193,8 @@ Out of scope:
   - Strategy query succeeds while training is running (no deadlock)
   - Exploitability logged and decreasing over time
 - Blocking note: without training, the miner serves random strategies.
-- Rollback condition: RwLock contention makes query latency > 2 seconds.
+- Rollback condition: ArcSwap snapshot clone too expensive or publish contention
+  makes query latency > 2 seconds.
 
 ### AC-MN-03: HTTP Axon Server
 
@@ -204,8 +208,8 @@ Out of scope:
   Content type: `application/octet-stream` (bincode) for strategy endpoints,
   `application/json` for health. Include `X-Myosu-Version: 1` header.
 
-  The axon reads from the shared `Arc<RwLock<PokerSolver>>` without blocking
-  training (uses RwLock read lock).
+  The axon reads from the shared `ArcSwap<PokerSolver>` via `published.load()`
+  with zero contention — no locks, no blocking during training batches.
 - Whole-system effect: this is how validators discover and score the miner.
 - State: HTTP server bound to port.
 - Wiring contract:

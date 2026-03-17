@@ -20,7 +20,7 @@ Last updated: 2026-03-16
 ## Function Scorecards
 
 ### Execution / Dev
-- Plan entries completed: 0/8
+- Plan entries completed: 0/82
 - Proof commands passing: N/A (no code yet)
 - Blocked tasks: 0
 

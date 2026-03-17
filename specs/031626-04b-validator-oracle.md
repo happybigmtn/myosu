@@ -316,6 +316,53 @@ Out of scope:
 - Blocking note: the orchestration loop ties all pieces together.
 - Rollback condition: evaluation takes longer than tempo period.
 
+### AC-VO-07: Two-Validator INV-003 Agreement Test
+
+- Where: `crates/myosu-validator/tests/determinism.rs (new)`
+- How: Integration test that validates INV-003 (game verification determinism)
+  end-to-end by running two independently initialized validator instances
+  against the same miner:
+
+  1. Start devnet with one miner (trained for 100 iterations)
+  2. Initialize validator A with fresh state, seed from epoch
+  3. Initialize validator B with fresh state, same seed derivation
+  4. Both query the same miner with positions generated from same seed
+  5. Both compute exploitability scores
+  6. Assert: `|score_a - score_b| < 1e-6`
+  7. Additionally verify: both used identical encoder hash (AP-02 pinning)
+
+  This test catches:
+  - Non-deterministic RNG in position generation
+  - Floating-point ordering differences
+  - Encoder hash mismatches between validators
+  - Race conditions in miner query responses
+
+- Whole-system effect: proves the most important property of the system —
+  that independent validators converge on the same truth about miner quality.
+  Without this, Yuma Consensus is meaningless.
+- State: two validator instances + one miner + devnet.
+- Wiring contract:
+  - Trigger: `cargo test -p myosu-validator determinism`
+  - Callsite: tests/determinism.rs
+  - State effect: two complete evaluation cycles
+  - Persistence effect: N/A
+  - Observable signal: score equality assertion passes
+- Required tests:
+  - `cargo test -p myosu-validator determinism::tests::two_validators_agree`
+  - `cargo test -p myosu-validator determinism::tests::different_encoder_hash_detected`
+- Pass/fail:
+  - Two validators produce identical scores within epsilon (1e-6) for same miner
+  - Two validators generate identical test positions from same seed
+  - Validator with wrong encoder hash produces different scores (test validates
+    that the pinning mechanism works by showing what happens when it breaks)
+  - Test completes within 60 seconds
+- Blocking note: this is the single most important correctness property. OS.md
+  lists validator determinism as a no-ship condition. The pieces exist (VO-03
+  deterministic positions, VO-04 deterministic scoring) but no test proves two
+  independent instances agree.
+- Rollback condition: floating-point non-determinism in the exploitability
+  computation that cannot be resolved with canonical ordering.
+
 ---
 
 ## Decision Log
@@ -327,6 +374,9 @@ Out of scope:
 - 2026-03-16: 6-second poll interval — matches block time, minimal overhead.
 - 2026-03-16: Both direct and commit-reveal modes — direct for development
   simplicity, commit-reveal for production anti-gaming.
+- 2026-03-17: VO-07 added — two-validator agreement test for INV-003. Discovered
+  during pre-implementation audit that no existing AC validates end-to-end
+  determinism across independent validator instances.
 
 ## Milestone Verification
 
@@ -338,4 +388,5 @@ Out of scope:
 | 4 | Trained miner scores higher than random | Scoring | VO-04 |
 | 5 | Weights submitted and visible on-chain | Submission | VO-05 |
 | 6 | Full loop: discover → query → score → submit in one tempo | Integration | VO-06 |
-| 7 | Two validators produce same score for same miner (INV-003) | Determinism | VO-03, VO-04 |
+| 7 | Two validators produce same score for same miner (INV-003) | Determinism | VO-07 |
+| 8 | Wrong encoder hash → different scores (negative control) | Pinning | VO-07 |
