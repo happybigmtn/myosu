@@ -24,6 +24,18 @@ Rationale: The project has clear specs, bounded stages, and proof gates. Malinka
 structured RESULT/BLOCKED closure and plan-based tracking fits the multi-crate
 Substrate build.
 
+## 2026-03-16: Poker44 subnet analysis (Bittensor SN126)
+
+Decision: Adopt infrastructure patterns, reject domain approach.
+Analysis: Poker44 (github.com/Poker44/Poker44-subnet) is a bot DETECTION
+subnet, not a strategy subnet. Miners classify hands as bot/human. No CFR,
+no solvers, no game theory. Useful patterns: three-fallback set_weights()
+for SDK version variance, SHA256(seed:window) deterministic seeding,
+16-miner rotation sampling per cycle. Patterns rejected: 97% emission burn
+(hostile economics), over-aggressive sanitization (strips all useful data),
+random showdown winners (no hand evaluation). Reference for VO-03, VO-05,
+VO-06 infrastructure only.
+
 ## 2026-03-16: Project name "myosu" (묘수)
 
 Decision: Korean word meaning "brilliant move" or "masterstroke."
