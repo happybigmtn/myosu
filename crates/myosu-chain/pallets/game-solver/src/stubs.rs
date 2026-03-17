@@ -3,9 +3,21 @@
 //! Subtensor's runtime depends on several traits from other pallets that
 //! myosu does not need. These no-op stubs satisfy the trait bounds while
 //! keeping the runtime minimal.
+//!
+//! These stubs implement the traits defined in `crate::macros::config`:
+//! - ProxyInterface
+//! - CommitmentsInterface  
+//! - AuthorshipProvider
+//!
+//! Plus CheckColdkeySwap which is defined locally.
 
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+
+// Import the trait definitions from macros::config
+pub use crate::macros::config::{
+    AuthorshipProvider, CommitmentsInterface, ProxyInterface,
+};
 
 /// No-op proxy interface stub.
 ///
@@ -33,16 +45,6 @@ impl<T> ProxyStub<T> {
     pub fn is_pure(_who: &T) -> bool {
         false
     }
-}
-
-/// Trait for proxy operations.
-///
-/// Mirrors subtensor's ProxyInterface trait without the dependency.
-pub trait ProxyInterface<AccountId> {
-    fn exists(delegate: &AccountId) -> bool;
-    fn proxied(who: &AccountId) -> Option<AccountId>;
-    fn real(who: AccountId) -> AccountId;
-    fn is_pure(who: &AccountId) -> bool;
 }
 
 impl<T, AccountId> ProxyInterface<AccountId> for ProxyStub<T> {
@@ -86,15 +88,6 @@ impl<T> CommitmentsStub<T> {
     }
 }
 
-/// Trait for commitment operations.
-///
-/// Mirrors subtensor's CommitmentsInterface trait.
-pub trait CommitmentsInterface<AccountId> {
-    fn set_commitment(who: &AccountId, data: &[u8]) -> Result<(), ()>;
-    fn get_commitment(who: &AccountId) -> Option<Vec<u8>>;
-    fn rate_limit() -> u64;
-}
-
 impl<T, AccountId> CommitmentsInterface<AccountId> for CommitmentsStub<T> {
     fn set_commitment(_who: &AccountId, _data: &[u8]) -> Result<(), ()> {
         Ok(())
@@ -128,15 +121,6 @@ impl<T> AuthorshipStub<T> {
 
     /// No-op - no authorship set.
     pub fn set_author(_author: &T) {}
-}
-
-/// Trait for authorship operations.
-///
-/// Mirrors subtensor's AuthorshipProvider trait.
-pub trait AuthorshipProvider<AccountId> {
-    fn author() -> Option<AccountId>;
-    fn uncles() -> Vec<AccountId>;
-    fn set_author(author: &AccountId);
 }
 
 impl<T, AccountId> AuthorshipProvider<AccountId> for AuthorshipStub<T> {
