@@ -96,7 +96,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=cargo build -p myosu-runtime; Callsite=runtime/src/lib.rs type aliases; State=extrinsic types correct; Persistence=N/A; Signal=runtime compiles`
   - Rollback: other runtime code depends on fp_self_contained methods or custom fee logic
 
-- [ ] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
+- [!] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
   - Where: `crates/myosu-chain/pallets/game-solver/src/coinbase/ (from subtensor)`, `src/subnets/weights.rs (from subtensor)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: CRV3 depends on pallet_drand::Pulses for timelock encryption — cannot function without drand
@@ -577,7 +577,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=compile-time; Callsite=shell.rs calls render_state(); State=N/A; Persistence=N/A; Signal=trait compiles`
   - Rollback: trait requires game-specific types
 
-- [ ] **TU-07** — Color Theme Implementation
+- [x] **TU-07** — Color Theme Implementation
   - Where: `crates/myosu-tui/src/theme.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Shell layout needs theme for declaration styling
@@ -594,7 +594,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=resize or state change; Callsite=event loop; State=frame buffer; Persistence=N/A; Signal=5 panels visible`
   - Rollback: layout constraints conflict at small terminal sizes
 
-- [x] **TU-04** — Readline Input with History
+- [!] **TU-04** — Readline Input with History
   - Where: `crates/myosu-tui/src/input.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Input quality determines gameplay feel
