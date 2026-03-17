@@ -64,8 +64,8 @@ recurring:
       proof_commands:
         - true
       engine:
-        adapter: kimi
-        command: kimi --yolo --thinking
+        adapter: opencode
+        command: opencode run
     - id: security
       role: security
       cadence: 2h
@@ -87,8 +87,8 @@ recurring:
             - crates/myosu-play
           attestation_dir: state/tasks/security/attestations/gameplay
       engine:
-        adapter: kimi
-        command: kimi --yolo --thinking
+        adapter: opencode
+        command: opencode run
     - id: operations
       role: operations
       cadence: 15m
@@ -99,8 +99,8 @@ recurring:
       proof_commands:
         - true
       engine:
-        adapter: kimi
-        command: kimi --yolo --thinking
+        adapter: opencode
+        command: opencode run
 
 recurring_sources:
   strategy:
@@ -145,10 +145,10 @@ health:
   result_stale_after: 30m
 
 engine:
-  adapter: kimi
-  model: kimi-code/kimi-for-coding
+  adapter: opencode
+  model: kimi-for-coding/k2p5
   reasoning: high
-  command: kimi --yolo --thinking
+  command: opencode run
   timeout_secs: 3600
 
 workspace:
