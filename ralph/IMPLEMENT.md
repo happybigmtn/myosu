@@ -72,7 +72,7 @@ Source spec: specs/031626-01-chain-fork-scaffold.md (extended)
 Note: CF-07a is the FIRST commit — nothing compiles without it. CF-06, CF-08..11
 are parallel prerequisites that must all land before CF-01 can strip pallets.
 
-- [x] **CF-07a** — Strip drand/crowdloan from Config definition
+- [ ] **CF-07a** — Strip drand/crowdloan from Config definition
   - Where: `crates/myosu-chain/pallets/game-solver/src/macros/config.rs`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: `Config` trait must not inherit from `pallet_drand::Config` or `pallet_crowdloan::Config`.
@@ -587,7 +587,7 @@ Source spec: specs/031626-06-multi-game-architecture.md
 ## Stage 7: TUI Implementation
 Source spec: specs/031626-07-tui-implementation.md
 
-- [x] **TU-01** — GameRenderer Trait
+- [ ] **TU-01** — GameRenderer Trait
   - Where: `crates/myosu-tui/src/renderer.rs (new)`
   - Tests: `cargo check -p myosu-tui`
   - Blocking: Every game renderer depends on this trait — must be stable first
@@ -644,7 +644,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=key event or miner response; Callsite=main.rs; State=game + terminal; Persistence=N/A; Signal=responsive UI`
   - Rollback: crossterm and tokio event loops conflict
 
-- [ ] **TU-05** — Screen State Machine
+- [x] **TU-05** — Screen State Machine
   - Where: `crates/myosu-tui/src/screens.rs (new)`
   - Depends on: `TU-03`
   - Tests: `cargo check -p myosu-tui`
