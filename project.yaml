@@ -12,6 +12,9 @@ proof_commands:
   - cargo check
   - cargo test
 
+land_gate_commands:
+  - "cargo check --workspace 2>&1 | tail -20"
+
 tracker:
   kind: file
   path: ralph/IMPLEMENT.md
@@ -58,11 +61,26 @@ recurring:
   tasks:
     - id: strategy
       role: strategy
-      cadence: 2h
+      cadence: 5m
       focus_source: doctrine
-      freshness: 4h
+      freshness: 15m
+      no_change_yield_after: 2
+      no_change_yield_multiplier: 4
       proof_commands:
         - true
+      strategy_tracks:
+        - id: chain_platform
+          doctrine_roots:
+            - specs/031626-00-master-index.md
+            - INVARIANTS.md
+            - OS.md
+          focus_roots:
+            - crates/myosu-chain
+            - crates/myosu-solver
+            - crates/myosu-play
+            - ops
+          planning_surfaces:
+            - ralph/IMPLEMENT.md
       engine:
         adapter: opencode
         command: opencode run
@@ -71,6 +89,8 @@ recurring:
       cadence: 2h
       focus_source: specs
       freshness: 4h
+      no_change_yield_after: 2
+      no_change_yield_multiplier: 4
       proof_commands:
         - true
       audit_scopes:
@@ -96,6 +116,21 @@ recurring:
       freshness: 1h
       no_change_yield_after: 2
       no_change_yield_multiplier: 2
+      proof_commands:
+        - true
+      engine:
+        adapter: opencode
+        command: opencode run
+    - id: learning
+      role: learning
+      cadence: 6h
+      focus_source: doctrine
+      freshness: 12h
+      no_change_yield_after: 2
+      no_change_yield_multiplier: 2
+      pre_authorized_action_classes:
+        - inspect
+        - status_check
       proof_commands:
         - true
       engine:
@@ -134,6 +169,8 @@ recurring_sources:
     artifact_path: state/tasks/operations/source-output.json
     writable_targets:
       - kind: file
+        path: ralph/IMPLEMENT.md
+      - kind: file
         path: project.yaml
       - kind: file
         path: WORKFLOW.md
@@ -150,6 +187,11 @@ engine:
   reasoning: high
   command: opencode run
   timeout_secs: 3600
+fallback_engine:
+  adapter: claude
+  model: claude-opus-4-6
+  reasoning: high
+  command: claude
 
 workspace:
   root: ~/coding/myosu-workspaces
