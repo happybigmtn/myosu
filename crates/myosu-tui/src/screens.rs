@@ -96,8 +96,9 @@ impl ScreenManager {
     fn default_key_path() -> String {
         std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
-            .map(|h| format!("{}/.myosu/key", h))
-            .unwrap_or_else(|_| "~/.myosu/key".to_string())
+            .map(|h| format!("{h}/.myosu/key"))
+            // No HOME or USERPROFILE: return empty so Path::exists() returns false
+            .unwrap_or_default()
     }
 
     /// Create a screen manager with a specific starting screen (for testing).
@@ -106,7 +107,7 @@ impl ScreenManager {
         Self {
             current: screen,
             history: Vec::new(),
-            key_file_path: "~/.myosu/key".to_string(),
+            key_file_path: Self::default_key_path(),
         }
     }
 
@@ -130,11 +131,7 @@ impl ScreenManager {
     /// Pushes current screen to history before transitioning (for screens
     /// that support back navigation).
     pub fn transition(&mut self, to: Screen) {
-        // Save current screen to history if the new screen supports back
-        // or if we're going to an overlay
-        if to.supports_back() || self.current.is_game_overlay() {
-            self.history.push(self.current);
-        }
+        self.history.push(self.current);
         self.current = to;
     }
 

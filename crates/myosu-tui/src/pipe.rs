@@ -62,8 +62,7 @@ impl<'a> PipeMode<'a> {
     ///
     /// Pipe mode output must never contain ANSI codes.
     pub fn has_ansi_codes(s: &str) -> bool {
-        // ANSI escape sequences start with ESC (0x1B) followed by '['
-        s.contains("\x1b[") || s.contains("\u{001b}[")
+        s.contains("\x1b[")
     }
 
     /// Run the pipe mode loop.

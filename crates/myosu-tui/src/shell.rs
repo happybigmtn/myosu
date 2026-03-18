@@ -13,7 +13,7 @@
 
 use crate::events::{Event, EventLoop, UpdateEvent};
 use crate::input::{InputAction, InputLine};
-use crate::renderer::{GameRenderer, Renderable};
+use crate::renderer::GameRenderer;
 use crate::screens::{Screen, ScreenManager};
 use crate::theme::Theme;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -22,6 +22,7 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
+use std::collections::VecDeque;
 use std::io;
 use std::time::Duration;
 
@@ -42,7 +43,7 @@ pub struct Shell {
     /// Input line buffer with history and completion
     input: InputLine,
     /// Transcript/history of game events
-    transcript: Vec<String>,
+    transcript: VecDeque<String>,
     /// Screen navigation manager
     screens: ScreenManager,
     /// Whether the shell is running
@@ -80,7 +81,7 @@ impl Shell {
         Self {
             theme,
             input: InputLine::new(),
-            transcript: Vec::new(),
+            transcript: VecDeque::new(),
             screens: ScreenManager::new(),
             running: false,
             show_help: false,
@@ -94,7 +95,7 @@ impl Shell {
         Self {
             theme: Theme::default(),
             input: InputLine::new(),
-            transcript: Vec::new(),
+            transcript: VecDeque::new(),
             screens: ScreenManager::with_screen(screen),
             running: false,
             show_help: false,
@@ -145,8 +146,9 @@ impl Shell {
             return;
         }
 
-        // Help toggle with '?' (but not when typing in input)
-        if key.code == KeyCode::Char('?') && key.modifiers.is_empty() {
+        // Help toggle with '?' only when input buffer is empty
+        if key.code == KeyCode::Char('?') && key.modifiers.is_empty() && self.input.text().is_empty()
+        {
             self.show_help = !self.show_help;
             return;
         }
@@ -172,13 +174,19 @@ impl Shell {
         // Log the input to transcript
         self.log(format!("> {text}"));
 
+        // In Lobby, bare text (including numbers) routes to screen manager
+        if self.screens.current() == Screen::Lobby {
+            if self.screens.apply_command(&text) {
+                return;
+            }
+        }
+
         // Parse through game renderer
         match renderer.parse_input(&text) {
             Some(action) => {
                 self.log(format!("Action: {action}"));
             }
             None => {
-                // Check if there's a clarification prompt
                 if let Some(clarify) = renderer.clarify(&text) {
                     self.log(clarify);
                 } else {
@@ -250,14 +258,14 @@ impl Shell {
 
     /// Add a message to the transcript.
     pub fn log(&mut self, message: String) {
-        self.transcript.push(message);
+        self.transcript.push_back(message);
         if self.transcript.len() > MAX_TRANSCRIPT_LINES {
-            self.transcript.remove(0);
+            self.transcript.pop_front();
         }
     }
 
     /// Get a reference to the transcript.
-    pub fn transcript(&self) -> &[String] {
+    pub fn transcript(&self) -> &VecDeque<String> {
         &self.transcript
     }
 
@@ -536,21 +544,6 @@ impl Default for Shell {
     }
 }
 
-impl Renderable for Shell {
-    fn render(&self, area: Rect, buf: &mut Buffer) {
-        // This implementation is a placeholder - Shell requires a GameRenderer
-        // to render properly. Use Shell::draw() instead.
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title("Shell (no renderer)");
-        block.render(area, buf);
-    }
-
-    fn desired_height(&self, _width: u16) -> u16 {
-        10
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -763,17 +756,4 @@ mod tests {
         assert!(!shell.is_running());
     }
 
-    #[test]
-    fn shell_renderable_impl() {
-        let shell = Shell::new();
-        let mut buf = Buffer::empty(Rect::new(0, 0, 80, 24));
-        shell.render(Rect::new(0, 0, 80, 24), &mut buf);
-
-        let content: String = buf
-            .content
-            .iter()
-            .map(|cell| cell.symbol())
-            .collect();
-        assert!(content.contains("Shell"));
-    }
 }

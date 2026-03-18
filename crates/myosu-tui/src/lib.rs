@@ -14,6 +14,9 @@ pub mod events;
 pub mod input;
 pub mod pipe;
 pub mod renderer;
+pub mod schema;
+pub mod screens;
+pub mod shell;
 pub mod theme;
 
 pub use renderer::{GameRenderer, Renderable};

@@ -29,13 +29,13 @@ Date: 2026-03-16
 ## Stage 0: Robopoker Fork Prerequisites
 Source: specs/031626-02a-game-engine-traits.md Blocking Prerequisites
 
-- [ ] **RF-01** — Fork robopoker v1.0.0 and add serde feature
-  - Where: `happybigmtn/robopoker (new fork)`
-  - Tests: `cargo test --features serde` in forked repo
+- [x] **RF-01** — Fork robopoker v1.0.0 and add serde feature ✅ 2026-03-17
+  - Where: `happybigmtn/robopoker feat/serde branch`
+  - Tests: `cargo test -p rbp-nlhe --features serde` — 32 passed (22 existing + 10 serde); all 4 crates pass (263 total)
   - Blocking: GT-02, PE-01, PE-03 all require serializable NLHE types
   - Verify: NlheInfo, NlheEdge, NlheProfile, NlheEncoder, Path, Encounter all derive Serialize/Deserialize under `serde` feature; existing tests still pass
   - Integration: `Trigger=myosu-games depends on fork; Callsite=Cargo.toml git dep; State=types serializable; Persistence=N/A; Signal=cargo test --features serde passes`
-  - Rollback: serde derives conflict with existing trait bounds
+  - Note: local commit `2323afc` ahead of fork remote by 1 — push `feat/serde` to `fork` to publish
 
 - [ ] **RF-02** — Add non-database NlheEncoder constructor
   - Where: `happybigmtn/robopoker crates/nlhe/src/encoder.rs (extend)`
@@ -85,7 +85,7 @@ Source spec: specs/031626-01-chain-fork-scaffold.md (extended)
 Note: CF-07a is the FIRST commit — nothing compiles without it. CF-06, CF-08..11
 are parallel prerequisites that must all land before CF-01 can strip pallets.
 
-- [ ] **CF-07a** — Strip drand/crowdloan from Config definition
+- [!] **CF-07a** — Strip drand/crowdloan from Config definition
   - Where: `crates/myosu-chain/pallets/game-solver/src/macros/config.rs`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: `Config` trait must not inherit from `pallet_drand::Config` or `pallet_crowdloan::Config`.
@@ -111,7 +111,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: \`Trigger=cargo check; Callsite=lib.rs; State=unneeded module deleted; Persistence=N/A; Signal=compilation progresses\`
   - Rollback: Module used elsewhere.
 
-- [ ] **CF-06** — SwapInterface No-Op Stub
+- [!] **CF-06** — SwapInterface No-Op Stub
   - Where: `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs (new)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: SwapInterface is called in 37 production callsites across registration, staking, and emission. Config requires: `SwapHandler + SwapEngine<GetAlphaForTao<Self>> + SwapEngine<GetTaoForAlpha<Self>>`. All three trait bounds must be satisfied.
@@ -127,7 +127,7 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=cargo build -p myosu-runtime; Callsite=runtime/src/lib.rs type aliases; State=extrinsic types correct; Persistence=N/A; Signal=runtime compiles`
   - Rollback: other runtime code depends on fp_self_contained methods or custom fee logic
 
-- [x] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
+- [ ] **CF-09** — Strip CRV3 Timelock Commit-Reveal Path
   - Where: `crates/myosu-chain/pallets/game-solver/src/coinbase/ (from subtensor)`, `src/subnets/weights.rs (from subtensor)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: CRV3 depends on pallet_drand::Pulses for timelock encryption — cannot function without drand
@@ -143,13 +143,14 @@ are parallel prerequisites that must all land before CF-01 can strip pallets.
   - Integration: `Trigger=epoch.rs + staking.rs + lib.rs import these; Callsite=run_epoch, stake_utils, storage declarations; State=N/A (pure types + math); Persistence=N/A; Signal=all three crates' tests pass`
   - Rollback: runtime_common has deep coupling to stripped pallet types that can't be aliased
 
-- [x] **CF-11** — Stub ProxyInterface, CommitmentsInterface, AuthorshipProvider, and CheckColdkeySwap
+- [ ] **CF-11** — Stub ProxyInterface, CommitmentsInterface, AuthorshipProvider, and CheckColdkeySwap
   - Where: `crates/myosu-chain/pallets/game-solver/src/stubs.rs (new)`
   - Tests: `cargo check -p pallet-game-solver`
   - Blocking: pallet Config requires ProxyInterface, CommitmentsInterface, GetCommitments, AuthorshipProvider, and frame_system DispatchGuard (CheckColdkeySwap depends on pallet_shield::Config)
   - Verify: No-op ProxyInterface (already has () impl in subtensor); no-op CommitmentsInterface (5 lines); no-op GetCommitments (return empty vec); AuthorshipProvider reads Aura block author or returns fixed account; replace CheckColdkeySwap DispatchGuard with no-op (always allow dispatch); Config compiles with all stubs
   - Integration: `Trigger=Config type resolution; Callsite=runtime Config impl; State=N/A; Persistence=N/A; Signal=cargo check passes`
   - Rollback: AuthorshipProvider needed for real emission distribution to block authors
+  - **REVERTED**: stubs.rs not declared as module (dead code), wrong trait signatures, pallet has 988 errors from missing deps
 
 ---
 
@@ -206,7 +207,7 @@ Source spec: specs/031626-01-chain-fork-scaffold.md
 ## Stage 2a: Game Engine Traits
 Source spec: specs/031626-02a-game-engine-traits.md
 
-- [ ] **GT-01** — Re-export and Extend Robopoker CFR Traits
+- [!] **GT-01** — Re-export and Extend Robopoker CFR Traits
   - Where: `crates/myosu-games/src/traits.rs (new)`
   - Tests: `cargo test -p myosu-games`
   - Blocking: Every other AC and downstream spec depends on these types
@@ -624,7 +625,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=compile-time; Callsite=shell.rs applies theme; State=N/A; Persistence=N/A; Signal=tests pass`
   - Rollback: N/A
 
-- [ ] **TU-02** — Five-Panel Shell Layout
+- [x] **TU-02** — Five-Panel Shell Layout
   - Where: `crates/myosu-tui/src/shell.rs (new)`
   - Depends on: `TU-01`
   - Tests: `cargo check -p myosu-tui`
@@ -666,7 +667,7 @@ Source spec: specs/031626-07-tui-implementation.md
   - Integration: `Trigger=/commands or game completion; Callsite=event loop; State=Screen enum; Persistence=N/A; Signal=display switches`
   - Rollback: screen transitions lose game state
 
-- [ ] **TU-06** — Pipe Mode for Agent Protocol
+- [x] **TU-06** — Pipe Mode for Agent Protocol
   - Where: `crates/myosu-tui/src/pipe.rs (new)`
   - Depends on: `TU-01`
   - Tests: `cargo check -p myosu-tui`

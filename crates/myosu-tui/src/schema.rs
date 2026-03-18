@@ -62,9 +62,8 @@ pub struct GameState {
     /// Current game phase
     pub phase: GamePhase,
 
-    /// Game-specific state (board, hands, stacks, etc.)
-    #[serde(flatten)]
-    pub state_wrapper: GameStateWrapper,
+    /// Game-specific state payload (board, hands, stacks, etc.)
+    pub state: serde_json::Value,
 
     /// Exhaustive list of legal actions available to the current player
     pub legal_actions: Vec<LegalAction>,
@@ -72,13 +71,6 @@ pub struct GameState {
     /// Metadata about the game session and solver
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<MetaInfo>,
-}
-
-/// Wrapper to handle the game-specific state field.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct GameStateWrapper {
-    /// Game-specific state payload
-    pub state: serde_json::Value,
 }
 
 /// Game phase enumeration.
@@ -100,9 +92,6 @@ pub enum GamePhase {
     Complete,
     /// Game over, session ended
     Ended,
-    /// Custom phase for game-specific states
-    #[serde(untagged)]
-    Custom(String),
 }
 
 /// A legal action with its parameters.
@@ -187,17 +176,6 @@ pub enum LegalAction {
 
     /// Draw a card/tile
     Draw,
-
-    /// Custom action for game-specific moves
-    #[serde(untagged)]
-    Custom {
-        /// Action type identifier
-        #[serde(rename = "action")]
-        action_type: String,
-        /// Additional parameters as key-value pairs
-        #[serde(flatten)]
-        params: HashMap<String, serde_json::Value>,
-    },
 }
 
 /// Metadata about the game session.
@@ -410,9 +388,6 @@ pub enum AgentAction {
     Challenge,
     /// Play cards
     Play { cards: Vec<String> },
-    /// Custom action
-    #[serde(untagged)]
-    Custom(serde_json::Value),
 }
 
 /// Error response when an invalid action is submitted.
@@ -510,9 +485,7 @@ impl GameStateBuilder {
             game_type: self.game_type,
             hand_number: self.hand_number,
             phase: self.phase.ok_or(SchemaError::MissingPhase)?,
-            state_wrapper: GameStateWrapper {
-                state: self.state.ok_or(SchemaError::MissingState)?,
-            },
+            state: self.state.ok_or(SchemaError::MissingState)?,
             legal_actions: self.legal_actions,
             meta: self.meta,
         })
@@ -902,7 +875,6 @@ mod tests {
             GamePhase::Showdown,
             GamePhase::Complete,
             GamePhase::Ended,
-            GamePhase::Custom("special_phase".to_string()),
         ];
 
         for phase in phases {
