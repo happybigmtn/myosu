@@ -42,3 +42,4 @@ results.json
 
 # Reconciliation scratch
 ops/reconciliation/
+.malinka-scratch/
