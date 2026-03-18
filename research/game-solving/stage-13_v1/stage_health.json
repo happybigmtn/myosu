@@ -1,0 +1,17 @@
+{
+  "stage": "13_v1",
+  "title": "Refinement -- First Iteration",
+  "status": "completed",
+  "metrics": {
+    "sandbox_variants_run": 3,
+    "total_experiment_runs": 300,
+    "successful_runs": 300,
+    "v1_proposed_approach_primary_mean": 0.339,
+    "v1_fix_proposed_approach_primary_mean": 0.339,
+    "v4_proposed_approach_primary_mean": null,
+    "hyperparameter_sensitivity_assessed": true
+  },
+  "blockers": [],
+  "completion_date": "2026-03-13",
+  "notes": "Three sandbox variants completed. v1 and v1_fix results are consistent (fix was minor). The refinement shows different metric patterns compared to stage 10 due to the adjusted hyperparameters. Results feed into v2 refinement."
+}

@@ -1,0 +1,54 @@
+{
+  "stage": 3,
+  "title": "Algorithm-Game Matching",
+  "decisions": [
+    {
+      "id": "D3-01",
+      "question": "How many algorithm families should be included in the matching analysis?",
+      "chosen": "Seven families: Tabular CFR, Deep CFR, NFSP, Policy Gradient, IS-MCTS, Regret-based Search, Evolutionary/Population-based",
+      "rationale": "These seven families cover the major paradigms in imperfect-information game solving. Including fewer would miss important options; including more (e.g., breaking deep CFR into sub-variants) would create a matrix too fine-grained for the matching purpose. Sub-variant selection happens at implementation time in stages 8-9.",
+      "alternatives": [
+        {
+          "option": "Four families (CFR, deep learning, MCTS, evolutionary)",
+          "reason_rejected": "Too coarse. Deep CFR and NFSP have fundamentally different architecture requirements. Regret-based search (ReBeL) is distinct from both CFR and MCTS."
+        },
+        {
+          "option": "Twelve families including sub-variants",
+          "reason_rejected": "Over-specification at this stage. The matching is about broad suitability, not hyperparameter-level choices. Sub-variants within a family have similar complexity requirements."
+        }
+      ]
+    },
+    {
+      "id": "D3-02",
+      "question": "What defines 'architecture sensitivity' for a game-algorithm pair?",
+      "chosen": "Variance of performance across 5 random architecture samples, normalized by the mean performance",
+      "rationale": "Coefficient of variation (CV) provides a scale-free measure of how much performance depends on architecture. A high CV means the algorithm's success is architecture-dependent, making it a strong target for architecture search. Five samples is the minimum for a meaningful variance estimate while keeping the computational cost of this stage manageable.",
+      "alternatives": [
+        {
+          "option": "Binary classification based on literature reports",
+          "reason_rejected": "Literature rarely reports architecture sensitivity directly. Most papers use a single architecture. We need empirical measurement."
+        },
+        {
+          "option": "Full architecture sweep (50+ architectures)",
+          "reason_rejected": "Too expensive for a matching stage. The goal is to identify promising targets, not to optimize. Full sweeps happen in stages 7-10."
+        }
+      ]
+    },
+    {
+      "id": "D3-03",
+      "question": "How should team/cooperative games be handled in the matching framework?",
+      "chosen": "Treat as a separate structural category with modified convergence criteria",
+      "rationale": "Standard CFR convergence guarantees apply to 2-player zero-sum games. Team games (e.g., Bridge, cooperative card games) require team-maxmin or cooperative equilibrium concepts. Grouping them with adversarial games would produce misleading recommendations. The structural category approach ensures algorithm recommendations account for the cooperative dimension.",
+      "alternatives": [
+        {
+          "option": "Exclude team games from the matching",
+          "reason_rejected": "The 20-game set includes team games by design. Excluding them would leave gaps in the pipeline."
+        },
+        {
+          "option": "Convert team games to adversarial formulation",
+          "reason_rejected": "Adversarial conversion of cooperative games changes the equilibrium concept and may not reflect actual play. Better to match algorithms that natively handle team structure."
+        }
+      ]
+    }
+  ]
+}

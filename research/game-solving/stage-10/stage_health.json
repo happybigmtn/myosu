@@ -1,0 +1,20 @@
+{
+  "stage": 10,
+  "title": "Proposed Approach",
+  "status": "completed",
+  "metrics": {
+    "conditions_evaluated": 10,
+    "seeds_per_condition": 10,
+    "total_runs": 100,
+    "success_rate": "10/10 for all conditions",
+    "proposed_approach_primary_mean": 0.707,
+    "proposed_variant_primary_mean": 0.713,
+    "vs_random_search_effect_size": -2.019,
+    "vs_random_search_p_value": 0.002,
+    "nan_count": 0,
+    "degenerate_count": 0
+  },
+  "blockers": [],
+  "completion_date": "2026-03-10",
+  "notes": "All 100 runs completed successfully. Proposed approach significantly outperforms Random Search with very large effect size (d = -2.02). Ablation data collected for stage 11 analysis. Results artifact preserved at agent_sandbox/_project/results.json."
+}

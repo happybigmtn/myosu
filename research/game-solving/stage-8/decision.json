@@ -1,0 +1,54 @@
+{
+  "stage": 8,
+  "title": "Baseline Implementation",
+  "decisions": [
+    {
+      "id": "D8-01",
+      "question": "Which baseline methods should be included?",
+      "chosen": "Four methods: Random Search, DARTS, AdamW-based optimization, AugMax",
+      "rationale": "Random Search is the minimum baseline (any useful search method must beat random). DARTS represents the state-of-the-art in differentiable NAS. AdamW represents direct optimization over the architecture space. AugMax tests whether robustness-driven search produces better game solvers. Together, these four span the major paradigms: random, gradient-relaxation, direct optimization, and adversarial augmentation.",
+      "alternatives": [
+        {
+          "option": "Include evolutionary search (NSGA-II) as a fifth baseline",
+          "reason_rejected": "Evolutionary search requires a larger compute budget to produce competitive results. Within 1800 seconds, population-based methods cannot complete enough generations. It would underperform due to budget rather than method quality, producing a misleading comparison."
+        },
+        {
+          "option": "Only Random Search and DARTS",
+          "reason_rejected": "Two baselines are insufficient to characterize the search landscape. AdamW and AugMax explore different regions of the architecture space and provide richer baseline characterization."
+        }
+      ]
+    },
+    {
+      "id": "D8-02",
+      "question": "What time budget should each method receive?",
+      "chosen": "1800 seconds (30 minutes) per seed per condition",
+      "rationale": "1800 seconds is long enough for DARTS and AdamW to converge (based on convergence analysis during implementation) and short enough to allow 10-seed evaluation within a single day on available hardware. This budget matches the time_budget_seconds parameter in the stage-10 experiment harness.",
+      "alternatives": [
+        {
+          "option": "3600 seconds (1 hour)",
+          "reason_rejected": "Diminishing returns analysis shows all four methods plateau within 1200-1500 seconds. Doubling the budget would roughly double compute cost with minimal performance improvement."
+        },
+        {
+          "option": "600 seconds (10 minutes)",
+          "reason_rejected": "Too short for DARTS to complete its bilevel optimization and for AdamW to converge. Would unfairly disadvantage gradient-based methods relative to Random Search."
+        }
+      ]
+    },
+    {
+      "id": "D8-03",
+      "question": "Should baselines use the proxy task (CIFAR-100) or direct game evaluation?",
+      "chosen": "Both -- proxy task for architecture search, game evaluation for final metrics",
+      "rationale": "The proxy task enables fast architecture search (validated in stage 7). But the final performance metrics must come from actual game evaluation to ensure the results are meaningful for the research question. This two-phase approach (search on proxy, evaluate on games) is used by all methods including the proposed approach in stage 10.",
+      "alternatives": [
+        {
+          "option": "Direct game evaluation only (no proxy)",
+          "reason_rejected": "Would limit each method to evaluating ~3 architectures in the 1800-second budget (vs. 36 for Random Search using proxy). The comparison would test 'which method makes best use of 3 evaluations' rather than 'which search method finds the best architecture.'"
+        },
+        {
+          "option": "Proxy task only (report CIFAR-100 accuracy as the metric)",
+          "reason_rejected": "The research question is about game solver quality, not image classification. Proxy accuracy is a search tool, not the evaluation metric. Stage 7 validated the proxy correlation but also identified cases where it diverges."
+        }
+      ]
+    }
+  ]
+}

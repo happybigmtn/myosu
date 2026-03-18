@@ -1,0 +1,26 @@
+{
+  "corpus": "full",
+  "description": "Full 20-game corpus from OS.md target games list",
+  "games": [
+    { "id": "nlhe_hu",        "name": "NLHE Heads-Up",       "game_number": 1,  "stage": 0 },
+    { "id": "nlhe_6max",      "name": "NLHE 6-max",          "game_number": 2,  "stage": 1 },
+    { "id": "plo",            "name": "PLO (4-card Omaha)",   "game_number": 3,  "stage": 1 },
+    { "id": "nlhe_tournament", "name": "NLHE Tournament (ICM)", "game_number": 4, "stage": 1 },
+    { "id": "short_deck",     "name": "Short Deck (6+)",      "game_number": 5,  "stage": 1 },
+    { "id": "teen_patti",     "name": "Teen Patti",            "game_number": 6,  "stage": 2 },
+    { "id": "hanafuda",       "name": "Hanafuda (Koi-Koi)",    "game_number": 7,  "stage": 2 },
+    { "id": "hwatu",          "name": "Hwatu / Go-Stop",       "game_number": 8,  "stage": 2 },
+    { "id": "mahjong",        "name": "Mahjong (Riichi)",      "game_number": 9,  "stage": 2 },
+    { "id": "bridge",         "name": "Bridge",                "game_number": 10, "stage": 2 },
+    { "id": "gin_rummy",      "name": "Gin Rummy",             "game_number": 11, "stage": 2 },
+    { "id": "stratego",       "name": "Stratego",              "game_number": 12, "stage": 3 },
+    { "id": "ofc",            "name": "OFC Chinese Poker",     "game_number": 13, "stage": 3 },
+    { "id": "spades",         "name": "Spades",                "game_number": 14, "stage": 3 },
+    { "id": "liars_dice",     "name": "Liar's Dice (full)",    "game_number": 15, "stage": 3 },
+    { "id": "dou_di_zhu",     "name": "Dou Di Zhu",            "game_number": 16, "stage": 3 },
+    { "id": "pusoy_dos",      "name": "Pusoy Dos / Big Two",   "game_number": 17, "stage": 3 },
+    { "id": "tien_len",       "name": "Tien Len (Thirteen)",   "game_number": 18, "stage": 3 },
+    { "id": "call_break",     "name": "Call Break",             "game_number": 19, "stage": 3 },
+    { "id": "backgammon",     "name": "Backgammon",             "game_number": 20, "stage": 3 }
+  ]
+}

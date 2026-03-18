@@ -1,0 +1,54 @@
+{
+  "stage": 1,
+  "title": "Literature Survey",
+  "decisions": [
+    {
+      "id": "D1-01",
+      "question": "What publication date range should the survey cover?",
+      "chosen": "2000-present with emphasis on 2015+",
+      "rationale": "Pre-2000 work on imperfect-information games is largely theoretical. The computational breakthroughs (CFR convergence proofs, deep learning integration) begin around 2003-2007. Emphasizing 2015+ captures the deep CFR / NFSP / policy gradient era most relevant to architecture search.",
+      "alternatives": [
+        {
+          "option": "2010-present only",
+          "reason_rejected": "Would miss foundational CFR work (Zinkevich 2007) and early MCTS-for-imperfect-info papers that inform the theoretical grounding."
+        },
+        {
+          "option": "All available literature (no date filter)",
+          "reason_rejected": "Classical game theory papers (pre-2000) rarely contain computational results. Including them would inflate the bibliography without adding actionable data for algorithm selection."
+        }
+      ]
+    },
+    {
+      "id": "D1-02",
+      "question": "Should the survey include non-peer-reviewed preprints?",
+      "chosen": "Yes, include arXiv preprints with at least one citation or from established research groups",
+      "rationale": "The imperfect-information game solving field moves fast. Significant results (e.g., Pluribus details, ReBeL architecture) appear on arXiv months before formal publication. Excluding preprints would miss state-of-the-art results.",
+      "alternatives": [
+        {
+          "option": "Peer-reviewed publications only",
+          "reason_rejected": "Would exclude timely results from DeepMind, FAIR, and CMU that are critical to understanding the current frontier."
+        },
+        {
+          "option": "All preprints without filtering",
+          "reason_rejected": "Risk of including low-quality or superseded work. The citation/group filter provides a reasonable quality threshold."
+        }
+      ]
+    },
+    {
+      "id": "D1-03",
+      "question": "How should games with no prior computational work be handled?",
+      "chosen": "Flag explicitly and include closest-analog analysis",
+      "rationale": "Some games in the 20-game set may have no direct solver literature. Rather than leaving gaps, we identify the closest structurally-similar game that has been studied and note the analogy. This informs the algorithm-game matching in stage 3.",
+      "alternatives": [
+        {
+          "option": "Exclude unstudied games from the survey",
+          "reason_rejected": "Defeats the purpose of a comprehensive survey. The gaps are themselves valuable data."
+        },
+        {
+          "option": "Attempt novel formulation during the survey stage",
+          "reason_rejected": "Scope creep. Novel formulation belongs in later stages after complexity classification (stage 2) is complete."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "stage": 12,
+  "title": "Statistical Analysis",
+  "decisions": [
+    {
+      "id": "D12-01",
+      "question": "Which multiple comparison correction method should be primary?",
+      "chosen": "Holm-Bonferroni as primary, with Bonferroni and Benjamini-Hochberg as sensitivity checks",
+      "rationale": "Holm-Bonferroni is uniformly more powerful than Bonferroni while maintaining strong family-wise error rate control. It is the standard recommendation for confirmatory analysis with a moderate number of comparisons (45 pairs). Bonferroni is overly conservative for 45 comparisons. BH controls FDR rather than FWER, which is appropriate for exploratory but not confirmatory claims.",
+      "alternatives": [
+        {
+          "option": "Bonferroni only",
+          "reason_rejected": "With 45 comparisons, Bonferroni sets the per-comparison alpha at 0.05/45 = 0.0011. Given that the minimum achievable p-value with 10 seeds is 0.002, no comparison could survive Bonferroni correction. This is a power issue, not a significance issue."
+        },
+        {
+          "option": "No correction (report unadjusted p-values)",
+          "reason_rejected": "With 45 tests, the expected number of false positives at alpha=0.05 is 2.25. Unadjusted p-values would overstate the evidence. Some correction is necessary for credible claims."
+        }
+      ]
+    },
+    {
+      "id": "D12-02",
+      "question": "How many bootstrap resamples should be used?",
+      "chosen": "1000 for standard CIs, 10000 for the key comparison robustness check",
+      "rationale": "1000 resamples is standard for 95% CIs (provides stable estimates of the 2.5th and 97.5th percentiles). For the key comparison (proposed_approach vs. Random Search), 10000 resamples provide finer resolution on the bootstrap probability of superiority, which is a key result for the paper.",
+      "alternatives": [
+        {
+          "option": "10000 resamples everywhere",
+          "reason_rejected": "10x more compute for marginal improvement on the 44 non-key comparisons. The standard CIs are stable at 1000 resamples."
+        },
+        {
+          "option": "500 resamples",
+          "reason_rejected": "Insufficient for stable BCa confidence intervals. The bias-correction and acceleration terms in BCa require more resamples than the simple percentile method."
+        }
+      ]
+    },
+    {
+      "id": "D12-03",
+      "question": "Should heterogeneous treatment effects be tested, or should only the overall average be reported?",
+      "chosen": "Both -- report the overall average effect AND per-tier breakdown",
+      "rationale": "The algorithm-game matching (stage 3) predicts that the proposed approach should help more for high-complexity games. Reporting only the average would miss this predicted heterogeneity. The per-tier breakdown tests a pre-specified hypothesis, not a post-hoc exploration, so it does not inflate the multiple comparison burden (it is a planned contrast).",
+      "alternatives": [
+        {
+          "option": "Overall average only",
+          "reason_rejected": "Misses a key part of the research story. If the proposed approach helps a lot on Tier 3-4 games but not on Tier 1-2 games, the overall average understates its value for the target application."
+        },
+        {
+          "option": "Per-game analysis (20 separate comparisons)",
+          "reason_rejected": "Too many comparisons, each underpowered (10 seeds per game). Per-tier grouping provides meaningful subgroup analysis with adequate power."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "stage": 10,
+  "title": "Proposed Approach",
+  "decisions": [
+    {
+      "id": "D10-01",
+      "question": "Should ablation variants be included in the same experiment as the main evaluation?",
+      "chosen": "Yes -- all 10 conditions (4 baselines, 2 established, proposed approach, proposed variant, 2 ablations) run simultaneously",
+      "rationale": "Running all conditions in the same experiment ensures identical seeds, timing, and hardware conditions across all comparisons. Separating ablations into stage 11 while including them in the stage 10 run avoids the need for a second full experiment. The ablation analysis itself (interpretation and deeper investigation) is stage 11; the data collection happens here.",
+      "alternatives": [
+        {
+          "option": "Run proposed approach alone first, then decide which ablations to run",
+          "reason_rejected": "Sequential experimentation wastes time. The ablation variants are pre-determined from the approach design. Running them simultaneously avoids a second experiment cycle."
+        },
+        {
+          "option": "Run proposed approach and baselines only, defer ablations entirely to stage 11",
+          "reason_rejected": "Would require a second full experiment in stage 11 with potential hardware/timing differences. Including ablations in the same run ensures paired comparisons share identical conditions."
+        }
+      ]
+    },
+    {
+      "id": "D10-02",
+      "question": "How many graph iterations should the proposed approach use?",
+      "chosen": "24 graph iterations",
+      "rationale": "The proposed approach uses an iterative graph-based architecture refinement process. Preliminary experiments showed that 20-30 iterations are needed for the architecture graph to stabilize. 24 iterations provides convergence for Tier 2-3 games within the 1800-second budget while leaving compute headroom for the evaluation phase. Increasing to 30 would leave insufficient time for evaluation on Tier 4 games.",
+      "alternatives": [
+        {
+          "option": "12 iterations (faster, more evaluation time)",
+          "reason_rejected": "Architecture graph does not fully converge at 12 iterations for Tier 3 games. The discovered architecture would be suboptimal, not reflecting the method's true capability."
+        },
+        {
+          "option": "48 iterations (more refinement)",
+          "reason_rejected": "Exceeds the time budget for larger games. At 48 iterations, the search phase alone consumes >1500 seconds, leaving <300 seconds for evaluation on 20 games."
+        }
+      ]
+    },
+    {
+      "id": "D10-03",
+      "question": "What calibration_success_threshold should be used?",
+      "chosen": "0.72",
+      "rationale": "The calibration threshold determines the minimum proxy task accuracy an architecture must achieve before being considered for game evaluation. 0.72 corresponds to the 75th percentile of random architecture CIFAR-100 accuracy from stage 7. This filters out clearly poor architectures without being so selective that it discards architectures that might perform well on games despite mediocre proxy performance (since proxy correlation is 0.6-0.7, not perfect).",
+      "alternatives": [
+        {
+          "option": "0.80 (more selective)",
+          "reason_rejected": "Would filter out ~60% of candidate architectures, reducing the effective search space too aggressively. Some architectures with proxy accuracy 0.72-0.80 perform well on games due to the imperfect proxy correlation."
+        },
+        {
+          "option": "0.60 (less selective)",
+          "reason_rejected": "Would pass through nearly all architectures (only filtering outright failures), providing minimal search acceleration. The proxy task becomes a wasted computation step if it does not filter."
+        }
+      ]
+    }
+  ]
+}

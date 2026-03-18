@@ -1,0 +1,54 @@
+{
+  "stage": 11,
+  "title": "Ablation Study",
+  "decisions": [
+    {
+      "id": "D11-01",
+      "question": "Should additional ablation variants be run beyond the two included in stage 10?",
+      "chosen": "No -- analyze the two existing variants (without_key_component, simplified_version) from stage 10 data",
+      "rationale": "The two variants from stage 10 capture the primary decomposition: framework contribution vs. key component contribution. Running additional ablations (e.g., removing secondary features one-at-a-time) would require a new experiment and is better deferred to stage 13 refinement if the initial ablation results are inconclusive.",
+      "alternatives": [
+        {
+          "option": "Run 4 additional single-feature ablations",
+          "reason_rejected": "Combinatorial explosion. With 4+ features, single-feature ablations miss interaction effects. The two-variant decomposition from stage 10 is sufficient for the initial analysis. Stage 13 can explore finer-grained ablations if needed."
+        },
+        {
+          "option": "Run a full factorial ablation (all combinations of components)",
+          "reason_rejected": "Exponential compute cost. A full factorial with k components requires 2^k runs x 10 seeds each. The two-variant approach provides the key insights at 2 additional runs (already included in stage 10)."
+        }
+      ]
+    },
+    {
+      "id": "D11-02",
+      "question": "How should the unexpected result (simplified_version outperforming full method on primary metric) be handled?",
+      "chosen": "Investigate thoroughly before drawing conclusions -- analyze secondary metric, per-seed variance, and per-tier breakdown",
+      "rationale": "The simplified_version achieving primary_metric_mean 0.679 vs. the full method's 0.707 could reflect several things: a variance artifact (the CI overlap), a genuine case where simplification helps (the key component adds search noise that hurts average performance), or a metric-specific phenomenon (the secondary metric may tell a different story). All hypotheses must be investigated before concluding.",
+      "alternatives": [
+        {
+          "option": "Accept the result at face value and recommend the simplified version",
+          "reason_rejected": "Premature. The difference (0.028) may be within bootstrap CI overlap. The secondary metric shows different patterns. Jumping to conclusions without thorough analysis would be unscientific."
+        },
+        {
+          "option": "Dismiss the result as noise and proceed with the full method",
+          "reason_rejected": "Equally premature. If the simplified version genuinely outperforms, the key component is a liability, not an asset. The data must speak."
+        }
+      ]
+    },
+    {
+      "id": "D11-03",
+      "question": "What statistical threshold should be used for declaring a component 'essential'?",
+      "chosen": "Bootstrap CI on the paired difference excludes zero AND the effect size exceeds 0.3",
+      "rationale": "A component is essential if removing it causes a measurable, practically significant performance drop. The CI-excludes-zero criterion handles statistical significance; the effect size > 0.3 criterion handles practical significance. A component that causes a statistically significant but tiny (d < 0.3) drop is not essential -- it is a minor contributor.",
+      "alternatives": [
+        {
+          "option": "p < 0.05 only",
+          "reason_rejected": "With 10 seeds, p-values are coarse (minimum possible is 0.002). Also, statistical significance without practical significance is not actionable."
+        },
+        {
+          "option": "Effect size > 0.8 (large effect threshold)",
+          "reason_rejected": "Too strict. A medium effect (d = 0.3-0.8) on exploitability can translate to significant strategic differences in gameplay. The 0.3 threshold aligns with the minimum effect the metric design (stage 5) was powered to detect."
+        }
+      ]
+    }
+  ]
+}

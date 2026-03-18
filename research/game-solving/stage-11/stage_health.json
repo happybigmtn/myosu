@@ -1,0 +1,17 @@
+{
+  "stage": 11,
+  "title": "Ablation Study",
+  "status": "completed",
+  "metrics": {
+    "ablation_variants_analyzed": 2,
+    "without_key_component_primary_mean": 0.704,
+    "simplified_version_primary_mean": 0.679,
+    "key_component_effect_size": 0.052,
+    "simplification_effect_size": -0.443,
+    "per_tier_analysis_completed": true,
+    "architectural_comparison_completed": true
+  },
+  "blockers": [],
+  "completion_date": "2026-03-11",
+  "notes": "Analysis reveals nuanced picture. The key component's contribution is small on the primary metric (d=0.05) but larger on the secondary metric. The simplified version outperforms the full method on primary metric, prompting investigation in stage 13 refinement. Per-tier analysis shows the key component matters more for Tier 3-4 games."
+}

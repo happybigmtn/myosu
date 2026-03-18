@@ -1,0 +1,16 @@
+{
+  "stage": 5,
+  "title": "Metric Design",
+  "status": "completed",
+  "metrics": {
+    "primary_metrics_defined": 20,
+    "secondary_metrics_defined": 20,
+    "validation_games_tested": 4,
+    "bootstrap_coverage_empirical": 0.947,
+    "paired_test_false_positive_rate": 0.048,
+    "seed_count": 10
+  },
+  "blockers": [],
+  "completion_date": "2026-02-28",
+  "notes": "Bootstrap coverage at 94.7% (target 93-97%). Paired test FPR at 4.8% (target <=6%). All 20 games have defined primary and secondary metrics with normalization. Seed set fixed as [42, 123, 456, 789, 1024, 2048, 4096, 8192, 16384, 32768]."
+}

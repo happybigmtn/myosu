@@ -1,0 +1,17 @@
+{
+  "stage": 12,
+  "title": "Statistical Analysis",
+  "status": "completed",
+  "metrics": {
+    "pairwise_comparisons_computed": 45,
+    "comparisons_surviving_holm_bonferroni": 38,
+    "comparisons_surviving_bonferroni": 31,
+    "proposed_vs_random_bootstrap_superiority": 0.998,
+    "leave_one_out_conclusions_stable": true,
+    "post_hoc_power_proposed_vs_random": 0.99,
+    "minimum_detectable_effect_d": 0.35
+  },
+  "blockers": [],
+  "completion_date": "2026-03-12",
+  "notes": "Key comparison (proposed_approach vs. Random Search) survives all correction methods with bootstrap probability of superiority 99.8%. Leave-one-out analysis confirms no single seed drives the result. Minimum detectable effect at 80% power with 10 seeds is d=0.35, adequate for the observed effects (d > 1.0 for most comparisons)."
+}

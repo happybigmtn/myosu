@@ -1,0 +1,54 @@
+{
+  "stage": 15,
+  "title": "Final Report",
+  "decisions": [
+    {
+      "id": "D15-01",
+      "question": "What format and length should the final report take?",
+      "chosen": "30-50 page research report suitable for journal submission, with supplementary appendices",
+      "rationale": "The pipeline spans 15 stages with substantial experimental results. A full report captures the methodology, results, and recommendations with sufficient detail for reproducibility. The 30-50 page range fits a journal-length paper with appendices. A shorter conference paper format (8-12 pages) would require omitting important methodology details.",
+      "alternatives": [
+        {
+          "option": "8-page conference paper",
+          "reason_rejected": "Insufficient space to describe the full 15-stage pipeline and present all key results. Would require omitting stages 1-5 (methodology) and stages 11-14 (analysis/validation), leaving only the core experiment."
+        },
+        {
+          "option": "Technical report with no page limit",
+          "reason_rejected": "No page constraint removes the discipline of prioritizing content. The report should be comprehensive but focused. Appendices handle the overflow."
+        }
+      ]
+    },
+    {
+      "id": "D15-02",
+      "question": "Should the report recommend the full proposed approach or the simplified version?",
+      "chosen": "Present both, with a nuanced recommendation based on game complexity tier",
+      "rationale": "The stage 11 ablation study showed that the simplified version outperforms the full method on the primary metric. The full method may have advantages on the secondary metric and for specific game types. The honest recommendation is tier-specific: simplified version for Tier 1-2 games (where the additional complexity is not needed), full method for Tier 3-4 games (where the key component shows its largest effect). This nuanced recommendation is more useful than a single pick.",
+      "alternatives": [
+        {
+          "option": "Recommend only the full proposed approach",
+          "reason_rejected": "Would ignore the ablation evidence. Recommending a more complex method when a simpler one performs comparably or better is bad scientific practice."
+        },
+        {
+          "option": "Recommend only the simplified version",
+          "reason_rejected": "Would discard the per-tier analysis showing the full method helps on complex games. The recommendation should be conditional on the use case."
+        }
+      ]
+    },
+    {
+      "id": "D15-03",
+      "question": "How should negative or unexpected results be handled in the report?",
+      "chosen": "Dedicate a section to unexpected findings and present them as contributions, not failures",
+      "rationale": "The simplified version outperforming the full method, the Tier 4 proxy correlation gap, and the hyperparameter sensitivity discovered in stage 13 are all valuable findings. Presenting them as 'things we learned that inform better practice' makes the report stronger and more honest than suppressing them. Negative results in architecture search are under-reported in the NAS literature.",
+      "alternatives": [
+        {
+          "option": "Minimize discussion of negative results",
+          "reason_rejected": "Reduces the report's credibility. Reviewers will notice the ablation numbers and question why the simplified version was not recommended."
+        },
+        {
+          "option": "Present negative results only in an appendix",
+          "reason_rejected": "The ablation finding (simplified >= full) is a main result, not an appendix detail. It directly informs the architecture recommendations."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "stage": 14,
+  "title": "Cross-Game Validation",
+  "status": "pending",
+  "metrics": {},
+  "blockers": [
+    "Awaiting finalized stage 13 configuration selection before running cross-game analysis"
+  ],
+  "completion_date": null,
+  "notes": "Stage 14 reuses existing per-game data from stages 10 and 13. No new experiments required. Blocked on finalizing which stage 13 variant configuration to use as the primary result set for transfer analysis."
+}

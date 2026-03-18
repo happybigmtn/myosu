@@ -1,0 +1,30 @@
+{
+  "corpus": "smoke",
+  "description": "3-game smoke corpus: small/medium/large representative games",
+  "games": [
+    {
+      "id": "nlhe_hu",
+      "name": "NLHE Heads-Up",
+      "game_number": 1,
+      "category": "small",
+      "cfr_fit": "perfect",
+      "notes": "Baseline poker game; most-studied imperfect-information game"
+    },
+    {
+      "id": "liars_dice",
+      "name": "Liar's Dice (full)",
+      "game_number": 15,
+      "category": "medium",
+      "cfr_fit": "perfect",
+      "notes": "Architecture proof game; exact Nash computable"
+    },
+    {
+      "id": "backgammon",
+      "name": "Backgammon",
+      "game_number": 20,
+      "category": "large",
+      "cfr_fit": "mixed",
+      "notes": "Perfect info + doubling cube; stresses solver generalization"
+    }
+  ]
+}

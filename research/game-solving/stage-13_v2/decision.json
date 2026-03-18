@@ -1,0 +1,54 @@
+{
+  "stage": "13_v2",
+  "title": "Refinement -- Second Iteration",
+  "decisions": [
+    {
+      "id": "D13v2-01",
+      "question": "Should the determinism_noise_scale parameter be adopted?",
+      "chosen": "Yes, with a recommended value of 0.0005",
+      "rationale": "The determinism noise serves as a regularizer for the architecture search, preventing the search from overfitting to exact training dynamics. At 0.0005, the noise is small enough to preserve architecture ranking (determinism_mean > 0.9999) but large enough to improve seed-to-seed consistency. The 0.00075 value showed similar results, suggesting the method is not highly sensitive to the exact scale.",
+      "alternatives": [
+        {
+          "option": "No determinism noise (scale = 0)",
+          "reason_rejected": "The stage 10 results without noise show slightly higher seed-to-seed variance. The noise injection provides a small but consistent improvement in reliability at negligible computational cost."
+        },
+        {
+          "option": "Larger noise scale (0.005)",
+          "reason_rejected": "Would introduce meaningful perturbation to the architecture evaluation, potentially changing rankings. The noise should be imperceptible to the architecture scoring while breaking exact ties and reducing overfitting."
+        }
+      ]
+    },
+    {
+      "id": "D13v2-02",
+      "question": "Should reduced bootstrap samples (256 instead of 1000) be used for the final results?",
+      "chosen": "No -- use 256 for exploration, 1000 for final reported results",
+      "rationale": "The 256-bootstrap runs showed that method rankings are preserved (same ordinal ranking as 1000-bootstrap runs), confirming that 256 is sufficient for exploration. However, the CI widths are ~2x wider at 256 samples, which is unacceptable for publication-quality claims. The exploration phase uses 256; the final results and stage 12 analysis use 1000.",
+      "alternatives": [
+        {
+          "option": "256 bootstrap samples for everything",
+          "reason_rejected": "CI widths too wide for publication. The stage 12 analysis requires precise CIs to make credible significance claims."
+        },
+        {
+          "option": "1000 bootstrap samples for everything including exploration",
+          "reason_rejected": "Too slow for the iterative exploration in v2. Each variant with 1000 bootstrap takes ~4x longer. The 256-sample runs enable faster iteration during hyperparameter tuning."
+        }
+      ]
+    },
+    {
+      "id": "D13v2-03",
+      "question": "How should the large number of v2 variants (10+) be analyzed?",
+      "chosen": "Rank by proposed_approach primary_metric_mean, then verify top-3 with secondary metric and per-seed consistency",
+      "rationale": "With 10+ variants, exhaustive pairwise comparison is impractical. Ranking by the primary metric identifies the most promising candidates. Verifying the top 3 with secondary metrics and seed consistency catches cases where the top-ranked variant is a lucky outlier. This is a practical screening approach for hyperparameter tuning, not a rigorous statistical comparison (that is stage 12's job).",
+      "alternatives": [
+        {
+          "option": "Formal statistical comparison of all variant pairs",
+          "reason_rejected": "With 10+ variants and 10 seeds each, the per-comparison power is low and the multiple comparison burden is severe. The variants are hyperparameter explorations, not competing methods -- formal comparison is overkill."
+        },
+        {
+          "option": "Select the latest variant (v9_fix) as the final configuration",
+          "reason_rejected": "Later variants are not necessarily better. The exploration may have overshot. Selection must be based on measured performance, not chronological order."
+        }
+      ]
+    }
+  ]
+}

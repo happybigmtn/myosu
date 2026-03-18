@@ -1,0 +1,54 @@
+{
+  "stage": 6,
+  "title": "Architecture Candidates",
+  "decisions": [
+    {
+      "id": "D6-01",
+      "question": "Should the search space use cell-level search (NAS-style) or block-level search?",
+      "chosen": "Block-level search with configurable block types and connectivity",
+      "rationale": "Cell-level search (as in DARTS/NASNet) optimizes within a fixed macro-architecture. For game solvers, the macro-architecture itself matters -- whether to use attention vs. recurrence, how to encode information sets, etc. Block-level search allows these macro-level choices while keeping the space manageable. The DARTS method in stages 8-10 operates within this block-level space.",
+      "alternatives": [
+        {
+          "option": "Cell-level search (DARTS-style cells within fixed skeleton)",
+          "reason_rejected": "Too constrained for game solver architecture. The fixed skeleton assumes a known good macro-architecture, which does not exist for imperfect-information games across 20 diverse game types."
+        },
+        {
+          "option": "Full architecture search (no constraints on topology)",
+          "reason_rejected": "Intractable. Unconstrained topology search produces ~10^15+ configurations and many invalid architectures. The block-level approach with predefined block types and configurable connectivity provides the right balance."
+        }
+      ]
+    },
+    {
+      "id": "D6-02",
+      "question": "Should the search space include the game state encoding or treat it as fixed?",
+      "chosen": "Include encoding type as a searchable parameter (onehot vs. learned embedding)",
+      "rationale": "Encoding choice has a first-order effect on downstream architecture performance. A learned embedding may capture strategic similarity between cards/tiles that onehot encoding misses. Making it searchable lets the architecture search discover the best encoding jointly with the processing architecture. The abstraction from stage 4 operates at a higher level (which cards to group); the encoding operates at the neural network input level.",
+      "alternatives": [
+        {
+          "option": "Fix encoding to onehot for all games",
+          "reason_rejected": "Onehot encoding does not capture ordinal or relational structure in cards/tiles. For games with large action spaces, onehot is also memory-inefficient."
+        },
+        {
+          "option": "Include encoding as a separate search dimension with many options",
+          "reason_rejected": "Over-expands the search space. Two encoding types (onehot, learned embedding) capture the key dichotomy. More exotic encodings (graph, relational) are handled by the block types (GAT blocks)."
+        }
+      ]
+    },
+    {
+      "id": "D6-03",
+      "question": "What parameter budget constraint should be imposed on architectures?",
+      "chosen": "Maximum 10^7 parameters (10 million)",
+      "rationale": "This budget keeps individual architecture training runs under 1 GPU-hour for Tier 2 games and under 10 GPU-hours for Tier 3 games. It is large enough to represent complex architectures (8-layer attention networks with 256-dim hidden states fit within budget) but small enough to prevent the search from being dominated by training cost. The constraint also ensures architectures are deployable for real-time play inference.",
+      "alternatives": [
+        {
+          "option": "No parameter budget (let the search find the right size)",
+          "reason_rejected": "Without a budget, larger architectures always have a training advantage. The search would converge to the largest feasible architecture rather than discovering efficient architectures."
+        },
+        {
+          "option": "10^6 parameter budget",
+          "reason_rejected": "Too restrictive. Multi-head attention with 4+ heads at 128-dim hidden state already approaches 10^6 parameters. The budget would exclude many promising architectures."
+        }
+      ]
+    }
+  ]
+}

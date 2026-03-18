@@ -1,0 +1,54 @@
+{
+  "stage": 4,
+  "title": "Abstraction Taxonomy",
+  "decisions": [
+    {
+      "id": "D4-01",
+      "question": "Should the taxonomy include learned abstractions (neural embeddings) alongside hand-crafted methods?",
+      "chosen": "Yes, include both learned and hand-crafted abstractions as separate sub-categories",
+      "rationale": "Learned abstractions are increasingly competitive with hand-crafted ones, especially for games where domain expertise is limited. The architecture search pipeline (stages 6-10) may itself discover architectures that benefit from learned abstractions. Excluding them would leave a gap in the taxonomy.",
+      "alternatives": [
+        {
+          "option": "Hand-crafted abstractions only",
+          "reason_rejected": "Misses the trend toward end-to-end learned representations. Several games in the 20-game set lack the domain expertise needed for good hand-crafted abstractions."
+        },
+        {
+          "option": "Learned abstractions only",
+          "reason_rejected": "Hand-crafted abstractions remain state-of-the-art for well-studied games like poker. Ignoring them would discard proven techniques."
+        }
+      ]
+    },
+    {
+      "id": "D4-02",
+      "question": "How many games should be included in the abstraction-quality experiments?",
+      "chosen": "Five to six games spanning complexity Tiers 1-4",
+      "rationale": "Enough to observe trends across complexity levels without making this stage a full experimental campaign. One game per tier as minimum, plus 1-2 extras for games where abstraction is known to be particularly impactful. The full experimental treatment happens in stages 8-10.",
+      "alternatives": [
+        {
+          "option": "All 20 games",
+          "reason_rejected": "Scope explosion. Running abstraction-quality experiments on all 20 games would delay the pipeline by weeks and is not needed for taxonomy construction."
+        },
+        {
+          "option": "Two to three games only",
+          "reason_rejected": "Too few to observe cross-tier trends. The relationship between abstraction and quality may differ fundamentally between Tier 2 and Tier 4 games."
+        }
+      ]
+    },
+    {
+      "id": "D4-03",
+      "question": "Should action abstraction be treated as a separate category from state abstraction?",
+      "chosen": "Yes, four separate categories: card/tile, action, information set, board/state",
+      "rationale": "Action abstraction operates on a fundamentally different axis than state abstraction. In poker, bet sizing abstraction (action) is independent of card bucketing (state). Merging the categories would obscure which type of abstraction is driving quality changes. The four-category structure also aligns with how the literature organizes abstraction research.",
+      "alternatives": [
+        {
+          "option": "Two categories: information abstraction and action abstraction",
+          "reason_rejected": "Merging card/tile, information set, and board abstraction into one category loses important distinctions. Card abstraction in poker is very different from board abstraction in a tile-laying game."
+        },
+        {
+          "option": "Game-specific categories",
+          "reason_rejected": "Defeats the purpose of a taxonomy. The goal is to identify cross-game patterns, not to create 20 separate classification schemes."
+        }
+      ]
+    }
+  ]
+}

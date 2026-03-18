@@ -1,0 +1,17 @@
+{
+  "stage": 7,
+  "title": "Proxy Task Selection",
+  "status": "completed",
+  "metrics": {
+    "architectures_evaluated": 36,
+    "proxy_training_time_per_arch_minutes": 4.8,
+    "spearman_rho_tier2_game": 0.71,
+    "spearman_rho_tier3_game": 0.64,
+    "spearman_rho_tier4_game": 0.58,
+    "proxy_speedup_factor": 18.5,
+    "proxy_decision": "accepted"
+  },
+  "blockers": [],
+  "completion_date": "2026-03-04",
+  "notes": "CIFAR-100 proxy accepted. Correlation above 0.6 for Tier 2 and Tier 3 games. Tier 4 correlation at 0.58 (marginal) -- noted as caveat. 18.5x speedup over direct game evaluation justifies the proxy approach."
+}

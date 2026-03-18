@@ -1,0 +1,34 @@
+{
+  "methods": [
+    { "name": "Random Search",       "family": "random",     "enabled": true },
+    { "name": "DARTS",               "family": "gradient",   "enabled": true },
+    { "name": "AdamW",               "family": "gradient",   "enabled": true },
+    { "name": "AugMax",              "family": "augmented",  "enabled": true },
+    { "name": "established_method_1", "family": "established", "enabled": true },
+    { "name": "established_method_2", "family": "established", "enabled": true },
+    { "name": "proposed_approach",    "family": "proposed",   "enabled": true },
+    { "name": "proposed_variant",     "family": "proposed",   "enabled": true }
+  ],
+  "hyperparameters": {
+    "time_budget_seconds": 1800,
+    "seeds": [42, 123, 456, 789, 1024],
+    "graph_iterations": 26,
+    "random_search_candidates": 40,
+    "darts_steps": 22,
+    "adamw_steps": 64,
+    "augmax_steps": 58,
+    "bootstrap_samples": 1000,
+    "calibration_success_threshold": 0.72,
+    "degenerate_tolerance": 1e-06
+  },
+  "abstraction": {
+    "strategy": "card_isomorphism",
+    "bucket_count": 200,
+    "opponent_model": "average_strategy"
+  },
+  "scoring": {
+    "primary_metric": "architecture_ranking_accuracy",
+    "secondary_metric": "convergence_rate",
+    "proxy_dataset": "CIFAR-100"
+  }
+}

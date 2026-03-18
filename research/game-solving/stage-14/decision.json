@@ -1,0 +1,54 @@
+{
+  "stage": 14,
+  "title": "Cross-Game Validation",
+  "decisions": [
+    {
+      "id": "D14-01",
+      "question": "Should cross-game validation require new experiments or reuse existing data?",
+      "chosen": "Reuse existing per-game data from stages 10 and 13, re-aggregated under different game subsets",
+      "rationale": "The stage 10 and 13 experiments already evaluated all methods on all 20 games. Cross-game validation only requires re-partitioning the per-game metrics into training/held-out subsets. No new architecture search or evaluation runs are needed, making this stage computationally cheap and fast.",
+      "alternatives": [
+        {
+          "option": "Run new experiments where the architecture search only sees the training game subset",
+          "reason_rejected": "Would require 5-10 new full experiment campaigns (one per split). This would be the gold standard for transfer evaluation but is prohibitively expensive. The reanalysis approach provides a strong approximation."
+        },
+        {
+          "option": "Use only the proxy task (CIFAR-100) rankings for transfer analysis",
+          "reason_rejected": "Proxy-to-game transfer was already evaluated in stage 7. Cross-game validation specifically tests game-to-game transfer, which requires per-game results."
+        }
+      ]
+    },
+    {
+      "id": "D14-02",
+      "question": "How many random splits should be used?",
+      "chosen": "Five random 50/50 splits",
+      "rationale": "Five splits provide a reasonable estimate of the average transfer correlation while keeping the analysis tractable. With 20 games split 50/50, there are C(20,10) = 184,756 possible splits. Five random samples give a stable estimate of the mean rho (standard error of the mean rho ~ 0.04 based on pilot analysis).",
+      "alternatives": [
+        {
+          "option": "Full leave-one-game-out cross-validation (20 folds)",
+          "reason_rejected": "Leave-one-out produces 20 folds but each held-out set has only 1 game, making per-fold correlation impossible. The analysis would reduce to comparing each game's performance against the average of the other 19, which is less informative than the 50/50 split."
+        },
+        {
+          "option": "Two splits (to save analysis time)",
+          "reason_rejected": "Too few to estimate the variability of transfer correlation across different game subsets. A lucky split could show high correlation while the true average is lower."
+        }
+      ]
+    },
+    {
+      "id": "D14-03",
+      "question": "What Spearman's rho threshold indicates acceptable transfer?",
+      "chosen": "rho >= 0.7 for random splits, rho >= 0.5 for leave-one-tier-out",
+      "rationale": "A rho of 0.7 means the training-set rankings explain ~50% of the variance in held-out rankings (R^2 ~ 0.49). This is strong enough to be practically useful -- an architecture that ranks in the top 3 on training games will likely rank in the top 5 on held-out games. The lower threshold for leave-one-tier-out (0.5) accounts for the greater difficulty of cross-tier prediction.",
+      "alternatives": [
+        {
+          "option": "rho >= 0.9 (very strong transfer required)",
+          "reason_rejected": "Unrealistic for cross-game transfer in imperfect-information games. Different games have different structural requirements. A 0.9 threshold would likely be unachievable and would not reflect practical utility."
+        },
+        {
+          "option": "rho >= 0.3 (weak transfer acceptable)",
+          "reason_rejected": "A rho of 0.3 explains only 9% of ranking variance. This would mean knowing an architecture's performance on training games provides almost no information about held-out performance. The architecture search would not be generalizable."
+        }
+      ]
+    }
+  ]
+}

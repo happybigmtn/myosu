@@ -1,0 +1,54 @@
+{
+  "stage": 5,
+  "title": "Metric Design",
+  "decisions": [
+    {
+      "id": "D5-01",
+      "question": "Should there be a single primary metric across all 20 games or game-family-specific primary metrics?",
+      "chosen": "Single primary metric (normalized exploitability) with game-structure-specific computation formulas",
+      "rationale": "A single primary metric enables direct cross-game comparison of architecture rankings, which is essential for the architecture search in stages 6-10. The computation formula varies by game structure (zero-sum vs. team vs. multiplayer) but the normalized output is on the same 0-1 scale. This is the primary_metric_mean reported in the stage-10 and stage-13 results.",
+      "alternatives": [
+        {
+          "option": "Separate primary metrics per game family",
+          "reason_rejected": "Would prevent cross-game architecture ranking, which is the core goal of the pipeline. Cannot compare an architecture's poker exploitability with its tile-game score if they are on different scales."
+        },
+        {
+          "option": "Rank-based aggregation (rank architectures within each game, then average ranks)",
+          "reason_rejected": "Loses magnitude information. An architecture that is slightly worse in one game but dramatically better in another should be preferred; rank-based aggregation treats both differences equally."
+        }
+      ]
+    },
+    {
+      "id": "D5-02",
+      "question": "What statistical test should be used for paired comparisons between methods?",
+      "chosen": "Wilcoxon signed-rank test with bootstrap confidence intervals",
+      "rationale": "Exploitability distributions across seeds are typically non-normal (often right-skewed). The Wilcoxon signed-rank test is robust to non-normality while still being powerful for paired data. Bootstrap CIs provide flexible interval estimation without distributional assumptions. The t-test is included as a secondary check but the Wilcoxon test is primary.",
+      "alternatives": [
+        {
+          "option": "Paired t-test only",
+          "reason_rejected": "Assumes normally distributed differences, which empirically does not hold for exploitability metrics. The t-test appears in the stage-10 results (t_stat, p_value) as a secondary reference, but the bootstrap CIs are the primary inferential tool."
+        },
+        {
+          "option": "Permutation test",
+          "reason_rejected": "Permutation tests are valid but computationally expensive for the large number of pairwise comparisons across 10 methods x 10 seeds. The Wilcoxon test provides similar robustness with lower compute cost."
+        }
+      ]
+    },
+    {
+      "id": "D5-03",
+      "question": "What minimum number of seeds should be used for metric estimation?",
+      "chosen": "10 seeds (minimum 5, cap at 10) with specific seed values: 42, 123, 456, 789, 1024, 2048, 4096, 8192, 16384, 32768",
+      "rationale": "Ten seeds provides sufficient data for bootstrap CI estimation and paired testing with reasonable power. The specific seed values are chosen to span multiple orders of magnitude, reducing the risk of systematic bias from seed-correlated random number generator behavior. The minimum_seed_count of 5 is a safety threshold: if fewer than 5 seeds produce valid results, the run is flagged as potentially unreliable.",
+      "alternatives": [
+        {
+          "option": "Three seeds (faster iteration)",
+          "reason_rejected": "Too few for meaningful statistical comparison. Bootstrap CIs with 3 data points are extremely wide, and paired tests have very low power."
+        },
+        {
+          "option": "30+ seeds (higher statistical power)",
+          "reason_rejected": "Diminishing returns. The pipeline evaluates many method variants (10 conditions in stage-10 results). Tripling seeds per condition would 3x the compute budget without proportionally improving the ability to rank methods."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "stage": 2,
+  "title": "Game Complexity Classification",
+  "decisions": [
+    {
+      "id": "D2-01",
+      "question": "What complexity dimensions should define the classification?",
+      "chosen": "Nine dimensions: info set count, state space, game tree size, avg/max branching factor, depth, chance factor, info asymmetry ratio, player count",
+      "rationale": "These nine dimensions capture the key axes along which imperfect-information games vary computationally. Info set count and state space are the primary drivers of solver difficulty. Branching factor and depth determine per-iteration cost. Chance factor and info asymmetry capture the imperfect-information-specific complexity. Player count distinguishes 2-player from multiplayer settings.",
+      "alternatives": [
+        {
+          "option": "Three dimensions only (info sets, state space, branching factor)",
+          "reason_rejected": "Misses critical distinctions. Two games with identical state space but different info asymmetry ratios require very different solver strategies. Depth and chance factor also materially affect algorithm selection."
+        },
+        {
+          "option": "Use published complexity classes (PPAD, PSPACE) instead of quantitative dimensions",
+          "reason_rejected": "Complexity-theoretic classes are too coarse for algorithm selection. Nearly all non-trivial imperfect-info games are PPAD-hard; the practical difficulty varies by orders of magnitude within that class."
+        }
+      ]
+    },
+    {
+      "id": "D2-02",
+      "question": "How should the four complexity tiers be defined?",
+      "chosen": "Tiers based on state space size thresholds at 10^6, 10^12, and 10^20",
+      "rationale": "These thresholds correspond to practical algorithm boundaries. 10^6 states: tabular CFR converges in minutes. 10^12: abstraction needed but deep CFR feasible. 10^20: aggressive abstraction required, pushing current methods. The boundaries are informed by published solver runtimes from the stage 1 survey.",
+      "alternatives": [
+        {
+          "option": "Tiers based on information set count alone",
+          "reason_rejected": "Information set count does not capture the full picture. A game with few info sets but high branching factor per info set can be harder than one with many info sets but low branching."
+        },
+        {
+          "option": "Continuous complexity score without discrete tiers",
+          "reason_rejected": "Tiers provide actionable groupings for algorithm selection in stage 3. A continuous score is also produced (the composite ranking) but tiers give clear category labels."
+        }
+      ]
+    },
+    {
+      "id": "D2-03",
+      "question": "Should the composite complexity score weight all dimensions equally?",
+      "chosen": "Weighted composite with info set count (0.3), state space (0.3), branching factor (0.15), depth (0.1), info asymmetry (0.15)",
+      "rationale": "Info set count and state space are the dominant factors in solver computational cost. Branching factor and info asymmetry are secondary but meaningful. Depth has the least independent effect (it is partially captured by state space). Weights derived from regression against known solver runtimes from stage 1 literature.",
+      "alternatives": [
+        {
+          "option": "Equal weights across all 9 dimensions",
+          "reason_rejected": "Player count and chance factor are categorical/low-variance dimensions that would receive outsized influence under equal weighting."
+        },
+        {
+          "option": "PCA-derived weights",
+          "reason_rejected": "PCA maximizes variance explained, not predictive power for solver difficulty. The weights should reflect practical algorithm cost, not statistical variance."
+        }
+      ]
+    }
+  ]
+}

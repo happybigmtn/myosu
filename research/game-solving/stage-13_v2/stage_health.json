@@ -1,0 +1,18 @@
+{
+  "stage": "13_v2",
+  "title": "Refinement -- Second Iteration",
+  "status": "completed",
+  "metrics": {
+    "sandbox_variants_run": 12,
+    "total_experiment_runs": 1200,
+    "successful_runs": 1200,
+    "best_variant_proposed_primary_mean": 0.103,
+    "determinism_noise_scale_recommended": 0.0005,
+    "bootstrap_samples_exploration": 256,
+    "bootstrap_samples_final": 1000,
+    "determinism_mean_range": [0.9999, 1.0]
+  },
+  "blockers": [],
+  "completion_date": "2026-03-15",
+  "notes": "Twelve sandbox variants completed across the v2 exploration. Best configuration identified with determinism_noise_scale=0.0005. Established_method_1 and simplified_version show notably different behavior in v2 settings, suggesting hyperparameter-method interaction effects. Results inform the final configuration for stage 14 cross-game validation."
+}

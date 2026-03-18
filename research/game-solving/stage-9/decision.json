@@ -1,0 +1,54 @@
+{
+  "stage": 9,
+  "title": "Established Methods",
+  "decisions": [
+    {
+      "id": "D9-01",
+      "question": "Which established methods should serve as the state-of-the-art comparison?",
+      "chosen": "One CFR-based method (Deep CFR variant) and one RL-based method (LSTM policy gradient)",
+      "rationale": "CFR-based and RL-based methods are the two dominant paradigms for imperfect-information game solving. Including one of each ensures the comparison captures both paradigms. More than two established methods would increase compute cost without qualitatively expanding the comparison (other CFR variants would perform similarly to established_method_1, and other RL variants similarly to established_method_2).",
+      "alternatives": [
+        {
+          "option": "Three methods (add MCTS-based approach)",
+          "reason_rejected": "MCTS-based approaches (IS-MCTS, POMCP) are less competitive on the game types in the 20-game set based on stage 3 analysis. Including a third method that is expected to underperform would not strengthen the comparison."
+        },
+        {
+          "option": "Single method (best-performing from literature)",
+          "reason_rejected": "No single method is best across all game types. CFR-based methods excel on 2-player zero-sum; RL-based methods are more general. A single method would leave a blind spot."
+        }
+      ]
+    },
+    {
+      "id": "D9-02",
+      "question": "Should established methods use the same compute budget as baselines (1800 seconds)?",
+      "chosen": "Yes -- identical 1800-second budget per seed per condition",
+      "rationale": "Fair comparison requires equal compute budget. Established methods typically converge faster than architecture search methods (since they skip the search phase), so they have a slight advantage within this budget -- more time is spent on solver training rather than architecture exploration. This is the intended comparison: does search-found architecture quality overcome the time spent searching?",
+      "alternatives": [
+        {
+          "option": "Give established methods less time (since they skip architecture search)",
+          "reason_rejected": "Complicates the comparison. Users of established methods in practice would use all available compute for training, not stop early because they did not need to search."
+        },
+        {
+          "option": "Give established methods more time (to show their ceiling)",
+          "reason_rejected": "Unfair to the proposed approach. The comparison should answer 'given fixed compute, what performs better?' not 'given unlimited compute, what is each method's ceiling?'"
+        }
+      ]
+    },
+    {
+      "id": "D9-03",
+      "question": "Should established method architectures be fixed exactly to published specifications or adapted to the search space?",
+      "chosen": "Fixed to published specifications, not constrained to the search space",
+      "rationale": "The goal is to compare against the best known architectures, not against architectures artificially constrained to the search space. If an established method uses an architectural feature outside the search space (e.g., a specific residual pattern), that is its advantage. The proposed approach in stage 10 must compete with unconstrained expert design.",
+      "alternatives": [
+        {
+          "option": "Constrain established methods to the stage 6 search space",
+          "reason_rejected": "Would handicap established methods by forcing them into a space designed for architecture search. The comparison would not reflect real-world practice where experts design architectures freely."
+        },
+        {
+          "option": "Use the original paper's hyperparameters as well",
+          "reason_rejected": "Partially adopted. The architecture is fixed to published specifications, but training hyperparameters (learning rate, batch size) are adapted to the 1800-second budget and 10-seed evaluation protocol for consistency."
+        }
+      ]
+    }
+  ]
+}

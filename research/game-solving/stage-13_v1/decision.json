@@ -1,0 +1,54 @@
+{
+  "stage": "13_v1",
+  "title": "Refinement -- First Iteration",
+  "decisions": [
+    {
+      "id": "D13v1-01",
+      "question": "Which hyperparameters should be adjusted in the first refinement?",
+      "chosen": "Graph iterations (24->26), random search candidates (36->40), DARTS steps (20->22), AdamW steps (60->64), AugMax steps (55->58)",
+      "rationale": "Modest increases across all search budget parameters, guided by the stage 10 observation that some methods were still improving when the budget expired. The increases are small (5-10%) to avoid overshooting and to maintain comparability with stage 10 results.",
+      "alternatives": [
+        {
+          "option": "Increase only graph_iterations",
+          "reason_rejected": "Would improve the proposed approach's search but not the baselines, making the comparison asymmetric. All methods should benefit from the additional budget to maintain fairness."
+        },
+        {
+          "option": "Increase time_budget from 1800 to 2400 seconds",
+          "reason_rejected": "Changing the time budget makes the v1 results incomparable with stage 10. Adjusting per-method parameters within the same time budget maintains comparability."
+        }
+      ]
+    },
+    {
+      "id": "D13v1-02",
+      "question": "How should issues discovered during the v1 run be handled?",
+      "chosen": "Diagnose, fix, and re-run as refine_sandbox_v1_fix while preserving the original v1 results",
+      "rationale": "Preserving the original (potentially buggy) v1 results alongside the fixed version maintains transparency. The fix can be clearly identified and its impact measured. Overwriting the original would lose the diagnostic trail.",
+      "alternatives": [
+        {
+          "option": "Overwrite v1 with the fixed version",
+          "reason_rejected": "Loses the diagnostic information. If the fix is later found to be incorrect, the original v1 data is gone."
+        },
+        {
+          "option": "Discard v1 entirely and start fresh as v2",
+          "reason_rejected": "The fix may be minor. A separate v2 is warranted only when the refinement direction changes, not for bug fixes within the same direction."
+        }
+      ]
+    },
+    {
+      "id": "D13v1-03",
+      "question": "How many sandbox variants should be explored in v1?",
+      "chosen": "Three: refine_sandbox_v1, refine_sandbox_v1_fix, refine_sandbox_v4",
+      "rationale": "Three variants provide enough exploration to identify the sensitivity landscape without exhaustive search. The v1 and v1_fix pair handles the bug/fix cycle. The v4 variant explores a different point in hyperparameter space based on v1/v1_fix observations. Intermediate variants (v2, v3) were considered but skipped as the hyperparameter changes were too similar to v1 to warrant separate runs.",
+      "alternatives": [
+        {
+          "option": "Single variant only",
+          "reason_rejected": "Insufficient exploration. A single hyperparameter setting may be locally suboptimal. At least 2-3 variants are needed to understand the sensitivity."
+        },
+        {
+          "option": "Ten or more variants (grid search over hyperparameters)",
+          "reason_rejected": "Each variant requires 100 runs (10 conditions x 10 seeds). Ten variants would be 1000 runs, exceeding the refinement compute budget. Three variants (300 runs) is a practical balance."
+        }
+      ]
+    }
+  ]
+}

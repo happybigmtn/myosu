@@ -1,0 +1,54 @@
+{
+  "stage": 7,
+  "title": "Proxy Task Selection",
+  "decisions": [
+    {
+      "id": "D7-01",
+      "question": "Which dataset should serve as the proxy task?",
+      "chosen": "CIFAR-100",
+      "rationale": "CIFAR-100 offers the right difficulty level for discriminating architectures. CIFAR-10 is too easy (most architectures achieve similar accuracy, poor discrimination). ImageNet is too expensive (defeats the purpose of a cheap proxy). CIFAR-100's 100-class structure also maps loosely to the action space sizes in Tier 2-3 games. The NAS literature has extensively validated CIFAR-100 as an architecture proxy.",
+      "alternatives": [
+        {
+          "option": "CIFAR-10",
+          "reason_rejected": "Insufficient difficulty to discriminate architectures. Most architectures in the search space would achieve 90%+ accuracy, providing little ranking signal."
+        },
+        {
+          "option": "A small game (e.g., Kuhn Poker) as proxy for larger games",
+          "reason_rejected": "Game-specific proxy would bias the search toward game-specific features rather than general representation capacity. Also, a Tier 1 game proxy may not correlate with Tier 3-4 game performance because the computational challenges are qualitatively different."
+        }
+      ]
+    },
+    {
+      "id": "D7-02",
+      "question": "How many architectures should be used for the correlation validation?",
+      "chosen": "36 architectures (matching random_search_candidates in the experiment harness)",
+      "rationale": "36 data points provide sufficient power to detect a rank correlation of 0.6 at p < 0.01. The number also matches the random_search_candidates parameter used in the stage-10 experiment harness, ensuring consistency between the proxy validation and the actual search. Using fewer would reduce statistical power; using more would increase the compute cost of the game-training phase.",
+      "alternatives": [
+        {
+          "option": "15 architectures",
+          "reason_rejected": "Insufficient for robust correlation estimation. With 15 points, a Spearman's rho of 0.6 is only marginally significant (p ~ 0.02), leaving uncertainty about the proxy's validity."
+        },
+        {
+          "option": "100 architectures",
+          "reason_rejected": "The bottleneck is game training, not proxy evaluation. Training 100 architectures on 3 games would require ~3000 GPU-hours, exceeding the budget allocated to this validation stage."
+        }
+      ]
+    },
+    {
+      "id": "D7-03",
+      "question": "Should architecture-specific hyperparameter tuning be allowed during proxy evaluation?",
+      "chosen": "No -- fixed hyperparameters for all architectures in both proxy and game evaluation",
+      "rationale": "Architecture-specific tuning conflates architecture quality with tuning quality. The goal is to measure the intrinsic capacity of the processing architecture, not the best achievable performance with unlimited tuning. Fixed hyperparameters ensure the ranking reflects architecture design, matching how the architecture search in stages 8-10 will operate (fixed training protocol, varying architecture).",
+      "alternatives": [
+        {
+          "option": "Allow per-architecture learning rate tuning",
+          "reason_rejected": "Different architectures have different optimal learning rates. Allowing LR tuning would make the proxy evaluation 5-10x more expensive and introduce tuning quality as a confound."
+        },
+        {
+          "option": "Use a small hyperparameter sweep per architecture",
+          "reason_rejected": "Makes the proxy task nearly as expensive as direct game evaluation, defeating the purpose of having a cheap proxy."
+        }
+      ]
+    }
+  ]
+}
