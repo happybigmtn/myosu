@@ -241,214 +241,91 @@ Myosu remains in stage 0 until ALL of the following are true:
 
 | priority | source | controls |
 |----------|--------|----------|
-| 1 | `specs/`, `ralph/SPEC.md` | what system must become |
+| 1 | `SPEC.md`, `specs/`, `plans/`, `fabro/programs/` | what system must become and how current lanes are supervised |
 | 2 | `INVARIANTS.md` | what must never be violated |
 | 3 | `OS.md` | how the system decides |
-| 4 | `ops/kpi_registry.yaml`, `ops/scorecard.md` | what is green/yellow/red |
-| 5 | `ops/risk_register.md`, `ops/decision_log.md` | context for decisions |
-| 6 | `state/` | whether the kernel is behaving |
+| 4 | `outputs/`, `ops/` | durable lane artifacts plus risk and operating context |
+| 5 | `specsarchive/`, `ralph/IMPLEMENT.md` | historical context only; not the active control plane |
+| 6 | `.raspberry/`, Fabro run state | runtime truth and local supervisory state |
 
-## malinka platform capabilities
+## Fabro/Raspberry Execution Model
 
-Malinka is the autonomous development kernel executing this plan. Binary at
-`~/.local/bin/malinka`, source at `~/coding/malinka`.
+Fabro is the execution substrate. Raspberry is the control plane.
 
-### task dispatch
+Execution plane:
+- checked-in workflow graphs live under `fabro/workflows/`
+- checked-in run configs live under `fabro/run-configs/`
+- checked-in prompts live under `fabro/prompts/`
+- proof and readiness helpers live under `fabro/checks/`
 
-- Parses `ralph/IMPLEMENT.md` into a dependency DAG
-- `Depends on:` field → tasks only dispatch when all deps are `[x]`
-- `Conflicts with:` field → mutually exclusive tasks never run simultaneously
-- `Affinity:` field → workspace reuse for related tasks
-- `Priority:` field → explicit priority override (lower = higher priority)
-- `Tags:` field → workflow routing and filtering
-- Repair-pending tasks get priority over new dispatch
-- Section order is tiebreaker when priorities are equal
+Control plane:
+- program manifests live under `fabro/programs/`
+- the current bootstrap entrypoint is `fabro/programs/myosu-bootstrap.yaml`
+- curated lane deliverables live under `outputs/`
+- lane readiness, blockage, proof posture, and operational state should be
+  derived from Raspberry manifests plus Fabro run truth
 
-### IMPLEMENT.md fields (all optional except Where + Tests)
+Historical-only surfaces:
+- `ralph/IMPLEMENT.md`
+- `specsarchive/`
 
-```
-- [ ] **TASK-ID** — Title
-  - Where: `path/to/files`
-  - Depends on: `DEP-01`, `DEP-02`
-  - Conflicts with: `OTHER-01`
-  - Tests: `cargo check -p crate-name`
-  - Tags: `chain`, `critical`
-  - Priority: `0`
-  - Affinity: `chain-scaffold`
-  - Blocking: why this matters
-  - Verify: acceptance criteria
-  - Integration: `Trigger=X; Callsite=Y; State=Z; Persistence=W; Signal=V`
-  - Rollback: what could go wrong
-  - Spec path: `specs/031626-01.md`
-  - Blocked by: `lineage-ref`
-  - Quality gate: `approved`
-```
+Deleted Malinka-only surfaces:
+- `project.yaml`
+- `WORKFLOW.md`
 
-### proof system
+Do not recreate deleted Malinka control files. New execution work should land
+as Fabro assets plus Raspberry program updates.
 
-- `Tests:` field in IMPLEMENT.md = per-task proof commands
-- Proof gate runs AFTER worker produces `RESULT:` line
-- Pass → trunk integrator lands the work
-- `ZeroTestsMatched` → `proof_contract_repair` (re-dispatch)
-- `CommandFailed` → `rejected` (task marked failed)
-- For greenfield crates: use `cargo check -p <crate>` not specific test names
-- `Requires services:` field can start devnet/DB before proof runs
+## Current Operator Loop
 
-### trunk integrator
-
-- On proof pass: commits workspace diff to trunk automatically
-- Commit message: `AC-{TASK_ID}: {title}`
-- Worker does NOT create commits — malinka handles it
-- Workspace changes are uncommitted diffs that malinka applies
-
-### engine: kimi adapter
-
-```yaml
-engine:
-  adapter: kimi
-  model: kimi-code/kimi-for-coding
-  reasoning: high
-  command: kimi --yolo --thinking
-  timeout_secs: 3600
-```
-
-Ensure kimi is authenticated before running: `kimi login` (one-time setup).
-
-Previous claude configuration hit rate limits; all tasks now use kimi.
-
-### recurring lanes
-
-| lane | role | cadence | what it does |
-|------|------|---------|-------------|
-| strategy | steering | 24h | reads doctrine, produces generated_work items for the plan |
-| security | auditing | 24h | scans audit_scopes, produces findings + remediation_packets |
-| operations | monitoring | 15m | checks runtime health, diagnoses failures |
-| learning | improving | 6h | identifies patterns, proposes process improvements |
-
-Each lane writes `state/tasks/<lane>/source-output.json`.
-Strategy can generate new plan entries. Security can create remediation tasks.
-Operations has `pre_authorized_action_classes: [inspect, status_check, log_read]`.
-
-### workspace model
-
-- Each task gets a git worktree clone at `~/coding/myosu-workspaces/<task-id>/`
-- Worker operates in isolation — no interference with other workers
-- On success: trunk integrator applies diff to trunk
-- On failure: workspace preserved for debugging (configurable)
-- `workspace.max_drift_commits: 20` — max divergence from trunk before rebase
-
-### company OS doctrine
-
-```
-OS.md frontmatter:
-  domain_overlay: platform | world_simulation | decentralized_casino | other
-  company_stage: stage_0_bootstrap | stage_1_pmf | stage_2_early_scale | ...
-```
-
-Controls deployment freezes, no-ship gates, error budgets, allowed exceptions.
-
-### health monitoring
-
-| Command | Shows |
-|---------|-------|
-| `malinka health` | Workers, recurring status, execution metrics |
-| `malinka queue` | Admitted queue, selected tasks, priorities |
-| `malinka list` | All tasks grouped by section |
-| `malinka status` | Counts + next ready task |
-| `malinka monitor` | Current task runtime state |
-
-**Key state files:**
-| File | Purpose |
-|------|---------|
-| `state/health.json` | Machine-readable health snapshot |
-| `state/session.json` | Failed tasks, retry counts, provider cooldowns |
-| `state/queue.json` | Admitted queue state |
-| `state/workspaces/*.json` | Per-task workspace status |
-
-**Troubleshooting:**
-
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| `git exited with code -1` | Git credential prompt without stdin | `export GIT_TERMINAL_PROMPT=0` |
-| `patch does not apply` | Stale workspace patches | `rm state/workspaces/*.patch` and restart |
-| Task stuck retrying | High retry count blocking dispatch | Clear from `state/session.json` failed_tasks/retrying_tasks |
-| No tasks selected | All workers busy or tasks blocked | Check `malinka queue` for blocked status |
-
-### session state + retry
-
-- `state/session.json` — running tasks, failed tasks, retry counts
-- Exponential backoff on failure: `max_retry_backoff_ms: 300000`
-- `proof_contract_repair` tasks get re-dispatched with priority
-- Hot-reload: config changes in `project.yaml` picked up within one poll cycle (30s)
-
-**Clear a stuck task:**
-```python
-import json
-with open('state/session.json', 'r') as f: d = json.load(f)
-d['failed_tasks'] = [t for t in d['failed_tasks'] if t['task_id'] != 'TASK-ID']
-d['retrying_tasks'] = [t for t in d['retrying_tasks'] if t['task_id'] != 'TASK-ID']
-with open('state/session.json', 'w') as f: json.dump(d, f)
-```
-
-### semantic adapters (recurring source validation)
-
-Bounded vocabulary for recurring lane outputs:
-- `response_class`: page | ticket | log | freeze | other (PR1 fix)
-- `evidence_freshness`: fresh | stale | missing
-- `severity`: s0 | s1 | s2 | s3
-- `lane`: platform | world_simulation | decentralized_casino | other (PR1 fix)
-- `arbitration_status`: approved_with_conditions | challenged | blocked
-
-### commands
+Primary local commands:
 
 ```bash
-# Start supervisor
-export GIT_TERMINAL_PROMPT=0   # Required: prevents git credential hangs
-malinka run --native           # Foreground mode (good for debugging)
-malinka run --native --task X  # Run single task
+fabro run fabro/run-configs/bootstrap/game-traits.toml
+fabro run fabro/run-configs/bootstrap/tui-shell.toml
+fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
+fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
 
-# Monitoring
-malinka status                 # Task counts, next ready, completion stats
-malinka queue                  # Admitted queue, selected tasks, priorities
-malinka health                 # Live workers, recurring status, metrics
-malinka monitor                # Current task runtime state
-malinka list                   # All tasks grouped by section
-
-# Maintenance
-malinka soak --turns N         # Bounded N-turn run
-malinka daemon                 # Background daemon mode
-malinka set-status TASK done   # Manually mark task complete
+raspberry plan --manifest fabro/programs/myosu-bootstrap.yaml
+raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
+raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml
 ```
 
-### key config (project.yaml)
+Preferred runtime truth sources:
+- Fabro inspect surfaces and stable run metadata
+- Raspberry program state under `.raspberry/`
 
-```yaml
-agent:
-  max_concurrent_agents: 8     # total worker slots
-polling:
-  interval_ms: 30000           # config hot-reload interval
-health:
-  heartbeat_stale_after: 90s
-  result_stale_after: 30m
-workspace:
-  root: ~/coding/myosu-workspaces
-  max_drift_commits: 20
-```
+Avoid building control-plane logic around raw Fabro run-directory layout unless
+there is no stable inspection surface available yet.
 
-## manual prerequisites (before malinka can execute)
+## Bootstrap Lanes
 
-| # | work | who | est. |
-|---|------|-----|------|
-| 1 | Fork robopoker v1.0.0 to happybigmtn/robopoker | human | 1h |
-| 2 | RF-01: add serde feature (~12 types, 4 crates) | human/malinka | 1-2d |
-| 3 | RF-02: add from_map/from_file/from_dir to NlheEncoder | human/malinka | 1d |
-| 4 | RF-03: expose clustering APIs from rbp-clustering | human/malinka | 1d |
-| 5 | RF-04: file-based checkpoint save/load | human/malinka | 1d |
-| 6 | Copy subtensor into myosu workspace | human | 1h |
-| 7 | CF-07: strip drand/crowdloan supertraits (first commit) | human | 2h |
-| 8 | CF-06: SwapInterface no-op stub | human/malinka | 1d |
-| 9 | CF-08..11: remaining stubs and primitive ports | malinka | 2-3d |
+The current bootstrap program intentionally stays narrow:
 
-After these, malinka executes CF-01..05 → GT-01..05 → PE-01..04 → GS-01..10
-→ CC-01 → MN-01..05 → VO-01..07 → GP-01..04 → MG-01..04 → TU-01..07
-→ AP-01..03 → LI-01..06 → AX-01..06 autonomously.
+- `games:traits` — trusted leaf crate, continue
+- `tui:shell` — trusted leaf crate, continue
+- `chain:runtime` — restart lane
+- `chain:pallet` — restart lane, blocked on runtime review
+
+Do not widen the bootstrap manifest until:
+- doctrine cutover is complete
+- the trusted lanes have produced curated `spec.md` and `review.md` artifacts
+- the Fabro-to-Raspberry run-truth bridge is more stable
+
+## Current Expectations
+
+When adding or changing active supervisory work:
+
+- add or update a workflow graph in `fabro/workflows/`
+- add or update a run config in `fabro/run-configs/`
+- add or update prompt files in `fabro/prompts/` if the workflow needs them
+- add or update the Raspberry program manifest in `fabro/programs/`
+- add or update curated artifact roots in `outputs/`
+
+When evaluating whether something is "done":
+
+- code changes alone are not enough
+- the lane should produce curated artifacts under `outputs/`
+- proof should be executable from Fabro/Raspberry entrypoints
+- stale references to Malinka-era infrastructure should be removed rather than
+  normalized

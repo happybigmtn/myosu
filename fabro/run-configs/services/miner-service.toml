@@ -1,0 +1,31 @@
+version = 1
+graph = "../../workflows/services/miner-service.fabro"
+goal = """
+Bootstrap the Myosu `miner:service` lane for Fabro and Raspberry.
+
+Scope:
+- inspect `specsarchive/031626-04a-miner-binary.md`
+- inspect `specsarchive/031626-08-abstraction-pipeline.md`
+- inspect `crates/` for any existing miner-related code or missing directories
+- inspect `outputs/chain/runtime/` and `outputs/chain/pallet/` if they exist
+
+Required curated artifacts:
+- `outputs/miner/service/spec.md`
+- `outputs/miner/service/review.md`
+
+The `spec.md` must define:
+- service purpose and operator-visible outcome
+- readiness conditions before honest bringup
+- expected health surfaces once running
+- the smallest next implementation slices
+
+The `review.md` must make the keep/reopen/reset judgment explicit for the
+service lane and identify the first proof and health checks to add later.
+"""
+directory = "../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

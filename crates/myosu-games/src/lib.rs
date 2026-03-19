@@ -11,6 +11,6 @@ pub mod traits;
 
 // Re-export commonly used types for convenience
 pub use traits::{
-    CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Profile,
-    Probability, StrategyQuery, StrategyResponse, Utility,
+    CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Probability,
+    Profile, StrategyQuery, StrategyResponse, Utility,
 };

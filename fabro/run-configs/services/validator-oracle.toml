@@ -1,0 +1,31 @@
+version = 1
+graph = "../../workflows/services/validator-oracle.fabro"
+goal = """
+Bootstrap the Myosu `validator:oracle` lane for Fabro and Raspberry.
+
+Scope:
+- inspect `specsarchive/031626-04b-validator-oracle.md`
+- inspect `specsarchive/031626-18-operational-rpcs.md`
+- inspect `crates/` for any existing validator-related code or missing directories
+- inspect `outputs/chain/runtime/` and `outputs/chain/pallet/` if they exist
+
+Required curated artifacts:
+- `outputs/validator/oracle/spec.md`
+- `outputs/validator/oracle/review.md`
+
+The `spec.md` must define:
+- oracle purpose and operator-visible outcome
+- readiness conditions before honest bringup
+- expected health and determinism surfaces once running
+- the smallest next implementation slices
+
+The `review.md` must make the keep/reopen/reset judgment explicit for the
+oracle lane and identify the first proof and health checks to add later.
+"""
+directory = "../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

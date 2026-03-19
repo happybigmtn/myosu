@@ -2184,6 +2184,7 @@ dependencies = [
 [[package]]
 name = "rbp-core"
 version = "1.0.0"
+source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
 dependencies = [
  "serde",
  "uuid",
@@ -2192,6 +2193,7 @@ dependencies = [
 [[package]]
 name = "rbp-mccfr"
 version = "1.0.0"
+source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
 dependencies = [
  "paste",
  "petgraph",
@@ -2203,6 +2205,7 @@ dependencies = [
 [[package]]
 name = "rbp-transport"
 version = "1.0.0"
+source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
 dependencies = [
  "rbp-core",
 ]

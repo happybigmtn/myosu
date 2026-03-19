@@ -1,0 +1,63 @@
+version: 1
+program: myosu-services
+target_repo: ../..
+state_path: ../../.raspberry/myosu-services-state.json
+max_parallel: 2
+units:
+  - id: miner
+    title: Miner Service
+    output_root: ../../outputs/miner/service
+    artifacts:
+      - id: spec
+        path: spec.md
+      - id: review
+        path: review.md
+    milestones:
+      - id: reviewed
+        requires: [spec, review]
+    lanes:
+      - id: service
+        kind: service
+        title: Miner Service Lane
+        run_config: ../run-configs/services/miner-service.toml
+        managed_milestone: reviewed
+        proof_profile: miner_service_bootstrap
+        checks:
+          - label: chain_runtime_review_ready
+            kind: precondition
+            type: file_exists
+            path: ../../outputs/chain/runtime/review.md
+          - label: chain_pallet_review_ready
+            kind: precondition
+            type: file_exists
+            path: ../../outputs/chain/pallet/review.md
+        produces: [spec, review]
+
+  - id: validator
+    title: Validator Oracle
+    output_root: ../../outputs/validator/oracle
+    artifacts:
+      - id: spec
+        path: spec.md
+      - id: review
+        path: review.md
+    milestones:
+      - id: reviewed
+        requires: [spec, review]
+    lanes:
+      - id: oracle
+        kind: service
+        title: Validator Oracle Lane
+        run_config: ../run-configs/services/validator-oracle.toml
+        managed_milestone: reviewed
+        proof_profile: validator_oracle_bootstrap
+        checks:
+          - label: chain_runtime_review_ready
+            kind: precondition
+            type: file_exists
+            path: ../../outputs/chain/runtime/review.md
+          - label: chain_pallet_review_ready
+            kind: precondition
+            type: file_exists
+            path: ../../outputs/chain/pallet/review.md
+        produces: [spec, review]

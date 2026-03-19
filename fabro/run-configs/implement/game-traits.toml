@@ -1,0 +1,46 @@
+version = 1
+graph = "../../workflows/implement/game-traits.fabro"
+goal = """
+Implement the next approved `games:traits` slice for Myosu.
+
+Inputs:
+- `outputs/games/traits/spec.md`
+- `outputs/games/traits/review.md`
+
+Scope:
+- work primarily inside `crates/myosu-games/`
+- implement only the smallest approved next slice described by the curated lane
+  artifacts
+- keep portability fixes in scope only when they are part of the chosen slice
+
+Required curated artifacts:
+- `outputs/games/traits/implementation.md`
+- `outputs/games/traits/verification.md`
+
+The implementation artifact must say what changed, which files changed, what
+proof this lane expects, and what remains. The verification artifact must say
+which proof commands passed, what risks remain, and what the next slice should
+be.
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[sandbox.env]
+ANTHROPIC_BASE_URL = "https://api.minimax.io/anthropic"
+ANTHROPIC_AUTH_TOKEN = "${env.MINIMAX_API_KEY}"
+API_TIMEOUT_MS = "3000000"
+CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
+ANTHROPIC_MODEL = "MiniMax-M2.7-highspeed"
+ANTHROPIC_SMALL_FAST_MODEL = "MiniMax-M2.7-highspeed"
+ANTHROPIC_DEFAULT_SONNET_MODEL = "MiniMax-M2.7-highspeed"
+ANTHROPIC_DEFAULT_OPUS_MODEL = "MiniMax-M2.7-highspeed"
+ANTHROPIC_DEFAULT_HAIKU_MODEL = "MiniMax-M2.7-highspeed"

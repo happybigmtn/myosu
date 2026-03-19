@@ -87,9 +87,7 @@ impl GameType {
             b"liars_dice" => Some(Self::LiarsDice),
             _ => {
                 // Try to parse as UTF-8 string for custom types
-                String::from_utf8(bytes.to_vec())
-                    .ok()
-                    .map(Self::Custom)
+                String::from_utf8(bytes.to_vec()).ok().map(Self::Custom)
             }
         }
     }
@@ -258,8 +256,14 @@ mod tests {
 
     #[test]
     fn game_type_from_bytes_known() {
-        assert_eq!(GameType::from_bytes(b"nlhe_hu"), Some(GameType::NlheHeadsUp));
-        assert_eq!(GameType::from_bytes(b"nlhe_6max"), Some(GameType::NlheSixMax));
+        assert_eq!(
+            GameType::from_bytes(b"nlhe_hu"),
+            Some(GameType::NlheHeadsUp)
+        );
+        assert_eq!(
+            GameType::from_bytes(b"nlhe_6max"),
+            Some(GameType::NlheSixMax)
+        );
         assert_eq!(
             GameType::from_bytes(b"liars_dice"),
             Some(GameType::LiarsDice)

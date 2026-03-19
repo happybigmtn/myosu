@@ -1,0 +1,17 @@
+digraph BootstrapMinerService {
+    graph [goal="Bootstrap the Myosu miner service lane contract and review surface."]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    inventory      [label="Inventory", prompt="@../../prompts/services/service-inventory.md", reasoning_effort="high"]
+    verify_spec    [label="Verify Spec", shape=parallelogram, script="test -f outputs/miner/service/spec.md", max_retries=0]
+    review         [label="Review Service", prompt="@../../prompts/services/service-review.md", reasoning_effort="high"]
+    verify_outputs [label="Verify Outputs", shape=parallelogram, script="test -f outputs/miner/service/spec.md && test -f outputs/miner/service/review.md", goal_gate=true, max_retries=0]
+
+    start -> inventory -> verify_spec
+    verify_spec -> review [condition="outcome=success"]
+    verify_spec -> inventory
+    review -> verify_outputs -> exit
+}

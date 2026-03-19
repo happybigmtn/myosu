@@ -4,6 +4,7 @@
 
 # State (runtime, not source-controlled)
 state/
+.raspberry/
 
 # Cache
 .malinka-cache/

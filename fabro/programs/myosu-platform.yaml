@@ -1,0 +1,70 @@
+version: 1
+program: myosu-platform
+target_repo: ../..
+state_path: ../../.raspberry/myosu-platform-state.json
+max_parallel: 2
+units:
+  - id: games
+    title: Platform Game Surfaces
+    output_root: ../../outputs/games
+    artifacts:
+      - id: poker_engine_spec
+        path: poker-engine/spec.md
+      - id: poker_engine_review
+        path: poker-engine/review.md
+      - id: multi_game_spec
+        path: multi-game/spec.md
+      - id: multi_game_review
+        path: multi-game/review.md
+    milestones:
+      - id: poker_engine_reviewed
+        requires: [poker_engine_spec, poker_engine_review]
+      - id: multi_game_reviewed
+        requires: [multi_game_spec, multi_game_review]
+    lanes:
+      - id: poker-engine
+        kind: platform
+        title: Poker Engine Lane
+        run_config: ../run-configs/platform/poker-engine.toml
+        managed_milestone: poker_engine_reviewed
+        proof_profile: poker_engine_bootstrap
+        checks:
+          - label: game_traits_review_ready
+            kind: precondition
+            type: file_exists
+            path: ../../outputs/games/traits/review.md
+        produces: [poker_engine_spec, poker_engine_review]
+
+      - id: multi-game
+        kind: platform
+        title: Multi-Game Lane
+        run_config: ../run-configs/platform/multi-game.toml
+        managed_milestone: multi_game_reviewed
+        proof_profile: multi_game_bootstrap
+        depends_on:
+          - unit: games
+            milestone: poker_engine_reviewed
+        produces: [multi_game_spec, multi_game_review]
+
+  - id: sdk
+    title: SDK Core
+    output_root: ../../outputs/sdk/core
+    artifacts:
+      - id: spec
+        path: spec.md
+      - id: review
+        path: review.md
+    milestones:
+      - id: reviewed
+        requires: [spec, review]
+    lanes:
+      - id: core
+        kind: platform
+        title: SDK Core Lane
+        run_config: ../run-configs/platform/sdk-core.toml
+        managed_milestone: reviewed
+        proof_profile: sdk_core_bootstrap
+        depends_on:
+          - unit: games
+            milestone: multi_game_reviewed
+        produces: [spec, review]

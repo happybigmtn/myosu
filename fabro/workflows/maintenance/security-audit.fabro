@@ -1,0 +1,17 @@
+digraph BootstrapSecurityAudit {
+    graph [goal="Bootstrap the Myosu security:audit recurring lane and produce curated lane artifacts."]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    inventory      [label="Inventory", prompt="@../../prompts/maintenance/recurring-inventory.md", reasoning_effort="high"]
+    verify_spec    [label="Verify Spec", shape=parallelogram, script="test -f outputs/security/audit/spec.md", max_retries=0]
+    review         [label="Review Lane", prompt="@../../prompts/maintenance/recurring-review.md", reasoning_effort="high"]
+    verify_outputs [label="Verify Outputs", shape=parallelogram, script="test -f outputs/security/audit/spec.md && test -f outputs/security/audit/review.md", goal_gate=true, max_retries=0]
+
+    start -> inventory -> verify_spec
+    verify_spec -> review [condition="outcome=success"]
+    verify_spec -> inventory
+    review -> verify_outputs -> exit
+}

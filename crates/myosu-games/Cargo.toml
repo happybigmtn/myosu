@@ -5,16 +5,18 @@ edition.workspace = true
 license.workspace = true
 description = "Game engine trait abstraction and implementations for the myosu game-solving chain"
 
+[lib]
+crate-type = ["lib"]
+
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 rand = { workspace = true }
 
-# Robopoker dependencies - local path during fork development
-# TODO: Switch to git dependency once happybigmtn/robopoker fork is published
-rbp-core = { path = "/home/r/coding/robopoker/crates/util" }
-rbp-mccfr = { path = "/home/r/coding/robopoker/crates/mccfr" }
+# Robopoker dependencies
+rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

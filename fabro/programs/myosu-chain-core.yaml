@@ -1,0 +1,59 @@
+version: 1
+program: myosu-chain-core
+target_repo: ../..
+state_path: ../../.raspberry/myosu-chain-core-state.json
+max_parallel: 1
+units:
+  - id: chain
+    title: Chain Core
+    output_root: ../../outputs/chain
+    artifacts:
+      - id: runtime_spec
+        path: runtime/spec.md
+      - id: runtime_review
+        path: runtime/review.md
+      - id: pallet_spec
+        path: pallet/spec.md
+      - id: pallet_review
+        path: pallet/review.md
+    milestones:
+      - id: runtime_reviewed
+        requires: [runtime_spec, runtime_review]
+      - id: pallet_reviewed
+        requires: [pallet_spec, pallet_review]
+    lanes:
+      - id: runtime
+        kind: platform
+        title: Runtime Restart Lane
+        run_config: ../run-configs/bootstrap/chain-runtime-restart.toml
+        managed_milestone: runtime_reviewed
+        proof_profile: chain_runtime_restart
+        checks:
+          - label: runtime_tree_present
+            kind: precondition
+            type: file_exists
+            path: ../../crates/myosu-chain/runtime/src/lib.rs
+          - label: runtime_restart_surface_present
+            kind: proof
+            type: command_succeeds
+            command: ./fabro/checks/chain-runtime-reset.sh
+        produces: [runtime_spec, runtime_review]
+      - id: pallet
+        kind: platform
+        title: Pallet Restart Lane
+        run_config: ../run-configs/bootstrap/chain-pallet-restart.toml
+        managed_milestone: pallet_reviewed
+        proof_profile: chain_pallet_restart
+        depends_on:
+          - unit: chain
+            milestone: runtime_reviewed
+        checks:
+          - label: pallet_tree_present
+            kind: precondition
+            type: file_exists
+            path: ../../crates/myosu-chain/pallets/game-solver/src/lib.rs
+          - label: pallet_restart_surface_present
+            kind: proof
+            type: command_succeeds
+            command: ./fabro/checks/chain-pallet-reset.sh
+        produces: [pallet_spec, pallet_review]

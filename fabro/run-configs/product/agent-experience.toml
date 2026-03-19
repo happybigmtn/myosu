@@ -1,0 +1,33 @@
+version = 1
+graph = "../../workflows/bootstrap/agent-experience.fabro"
+goal = """
+Bootstrap the Myosu `agent:experience` lane for Fabro and Raspberry.
+
+Scope:
+- inspect `specsarchive/031626-10-agent-experience.md`
+- inspect `specsarchive/031626-17-spectator-protocol.md`
+- inspect `docs/api/game-state.json`
+- inspect `crates/myosu-tui/src/schema.rs`
+- inspect `outputs/play/tui/` if it exists
+
+Required curated artifacts:
+- `outputs/agent/experience/spec.md`
+- `outputs/agent/experience/review.md`
+
+The `spec.md` must define:
+- the machine-readable and agent-facing surfaces this lane owns
+- how pipe mode, JSON schema, future HTTP/WS APIs, and narration fit together
+- the smallest honest next implementation slices
+
+The `review.md` must:
+- make the keep/reopen/reset judgment explicit for the lane
+- identify proof expectations and remaining blockers
+- state whether the lane is ready for an implementation-family workflow next
+"""
+directory = "../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

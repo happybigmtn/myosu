@@ -1,0 +1,27 @@
+digraph ImplementGameTraits {
+    graph [
+        goal="Implement the next approved myosu-games traits slice and produce durable implementation artifacts.",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: api; model: gpt-5.4; provider: openai; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    preflight [label="Preflight", shape=parallelogram, script="./fabro/checks/games-traits-implement.sh 2>&1 || true", max_retries=0]
+    implement [label="Implement", prompt="@../../prompts/implement/games-traits-implement.md", reasoning_effort="high"]
+    fmt       [label="Format", shape=parallelogram, script="cargo fmt -p myosu-games 2>&1", max_retries=0]
+    verify    [label="Verify", shape=parallelogram, script="./fabro/checks/games-traits-implement.sh 2>&1", goal_gate=true, retry_target="fixup"]
+    fixup     [label="Fixup", prompt="@../../prompts/implement/games-traits-fix.md", reasoning_effort="high", max_visits=3]
+    review    [label="Review", prompt="@../../prompts/implement/games-traits-review.md", reasoning_effort="medium"]
+    audit     [label="Audit Artifacts", shape=parallelogram, script="test -f outputs/games/traits/implementation.md && test -f outputs/games/traits/verification.md", goal_gate=true, max_retries=0]
+
+    start -> preflight -> implement -> fmt -> verify
+    verify -> review [condition="outcome=success"]
+    verify -> fixup
+    fixup -> fmt
+    review -> audit -> exit
+}

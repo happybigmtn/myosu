@@ -1,0 +1,18 @@
+digraph RestartChainRuntime {
+    graph [goal="Phase and review the Myosu chain runtime restart lane."]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    surface_check [label="Surface Check", shape=parallelogram, script="./fabro/checks/chain-runtime-reset.sh 2>&1", max_retries=0]
+    inventory     [label="Inventory", prompt="@../../prompts/restart/chain-runtime-inventory.md", reasoning_effort="high"]
+    verify_spec   [label="Verify Spec", shape=parallelogram, script="test -f outputs/chain/runtime/spec.md", max_retries=0]
+    review        [label="Review Restart", prompt="@../../prompts/restart/chain-runtime-review.md", reasoning_effort="high"]
+    verify_outputs [label="Verify Outputs", shape=parallelogram, script="test -f outputs/chain/runtime/spec.md && test -f outputs/chain/runtime/review.md", goal_gate=true, max_retries=0]
+
+    start -> surface_check -> inventory -> verify_spec
+    verify_spec -> review [condition="outcome=success"]
+    verify_spec -> inventory
+    review -> verify_outputs -> exit
+}

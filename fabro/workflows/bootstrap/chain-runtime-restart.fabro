@@ -1,0 +1,14 @@
+digraph BootstrapChainRuntimeRestart {
+    graph [goal="Bootstrap the chain runtime restart lane and produce curated restart artifacts."]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/bootstrap/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/bootstrap/implement.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/bootstrap/review.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f outputs/chain/runtime/spec.md && test -f outputs/chain/runtime/review.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

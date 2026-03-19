@@ -1,0 +1,121 @@
+version: 1
+program: myosu-bootstrap
+target_repo: ../..
+state_path: ../../.raspberry/myosu-bootstrap-state.json
+max_parallel: 2
+units:
+  - id: games
+    title: Game Traits
+    output_root: ../../outputs/games/traits
+    artifacts:
+      - id: spec
+        path: spec.md
+      - id: review
+        path: review.md
+    milestones:
+      - id: specified
+        requires: [spec]
+      - id: reviewed
+        requires: [spec, review]
+    lanes:
+      - id: traits
+        kind: platform
+        title: Traits Lane
+        run_config: ../run-configs/bootstrap/game-traits.toml
+        managed_milestone: reviewed
+        proof_profile: games_traits_checks
+        checks:
+          - label: traits_code_present
+            kind: precondition
+            type: file_exists
+            path: ../../crates/myosu-games/src/traits.rs
+          - label: traits_tests_pass
+            kind: proof
+            type: command_succeeds
+            command: ./fabro/checks/games-traits.sh
+        produces: [spec, review]
+
+  - id: tui
+    title: TUI Shell
+    output_root: ../../outputs/tui/shell
+    artifacts:
+      - id: spec
+        path: spec.md
+      - id: review
+        path: review.md
+    milestones:
+      - id: specified
+        requires: [spec]
+      - id: reviewed
+        requires: [spec, review]
+    lanes:
+      - id: shell
+        kind: interface
+        title: Shell Lane
+        run_config: ../run-configs/bootstrap/tui-shell.toml
+        managed_milestone: reviewed
+        proof_profile: tui_shell_checks
+        checks:
+          - label: tui_shell_code_present
+            kind: precondition
+            type: file_exists
+            path: ../../crates/myosu-tui/src/shell.rs
+          - label: tui_tests_pass
+            kind: proof
+            type: command_succeeds
+            command: ./fabro/checks/tui-shell.sh
+        produces: [spec, review]
+
+  - id: chain
+    title: Chain Restart
+    output_root: ../../outputs/chain
+    artifacts:
+      - id: runtime_spec
+        path: runtime/spec.md
+      - id: runtime_review
+        path: runtime/review.md
+      - id: pallet_spec
+        path: pallet/spec.md
+      - id: pallet_review
+        path: pallet/review.md
+    milestones:
+      - id: runtime_reviewed
+        requires: [runtime_spec, runtime_review]
+      - id: pallet_reviewed
+        requires: [pallet_spec, pallet_review]
+    lanes:
+      - id: runtime
+        kind: platform
+        title: Runtime Restart Lane
+        run_config: ../run-configs/bootstrap/chain-runtime-restart.toml
+        managed_milestone: runtime_reviewed
+        proof_profile: chain_runtime_restart
+        checks:
+          - label: runtime_tree_present
+            kind: precondition
+            type: file_exists
+            path: ../../crates/myosu-chain/runtime/src/lib.rs
+          - label: runtime_restart_surface_present
+            kind: proof
+            type: command_succeeds
+            command: ./fabro/checks/chain-runtime-reset.sh
+        produces: [runtime_spec, runtime_review]
+      - id: pallet
+        kind: platform
+        title: Pallet Restart Lane
+        run_config: ../run-configs/bootstrap/chain-pallet-restart.toml
+        managed_milestone: pallet_reviewed
+        proof_profile: chain_pallet_restart
+        depends_on:
+          - unit: chain
+            milestone: runtime_reviewed
+        checks:
+          - label: pallet_tree_present
+            kind: precondition
+            type: file_exists
+            path: ../../crates/myosu-chain/pallets/game-solver/src/lib.rs
+          - label: pallet_restart_surface_present
+            kind: proof
+            type: command_succeeds
+            command: ./fabro/checks/chain-pallet-reset.sh
+        produces: [pallet_spec, pallet_review]

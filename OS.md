@@ -203,11 +203,22 @@ happybigmtn/robopoker (fork)       happybigmtn/myosu
 
 ### Autonomous Development
 
-Malinka drives the build loop from `ralph/IMPLEMENT.md`. Enhancement spec
-at `specs/031626-99-malinka-enhancements.md` defines 9 capabilities malinka
-needs for end-to-end autonomy (service management, proof timeouts, prompt
-enrichment). Manual prerequisites: robopoker fork (RF-01..02) and
-subtensor copy (CF-01..02) must be done by hand before malinka takes over.
+Fabro is now the execution substrate for Myosu. Checked-in workflow assets live
+under `fabro/`, starting with bootstrap workflows and run configs in
+`fabro/workflows/bootstrap/` and `fabro/run-configs/bootstrap/`.
+
+Raspberry is the control plane layered on top of Fabro. The current bootstrap
+program manifest is `fabro/programs/myosu-bootstrap.yaml`. It supervises lane
+readiness, blockage, and execution over curated deliverables in `outputs/`.
+
+Current bootstrap lanes:
+- `games:traits`
+- `tui:shell`
+- `chain:runtime`
+- `chain:pallet`
+
+`ralph/IMPLEMENT.md` and `specsarchive/` remain historical reference surfaces.
+They are not the active execution loop.
 
 ## Revenue Model (Planned)
 
@@ -423,12 +434,12 @@ Operational meaning:
 
 ## Doctrine Hierarchy
 
-1. Mission doctrine — `specs/`, `ralph/SPEC.md`
+1. Mission doctrine — `SPEC.md`, `specs/`, `plans/`, `fabro/programs/`
 2. Hard invariants — `INVARIANTS.md`
 3. Company operating system — `OS.md`
 4. KPI registry and scorecard — `ops/kpi_registry.yaml`, `ops/scorecard.md`
-5. Reference context — `ops/risk_register.md`, `ops/decision_log.md`
-6. Runtime truth — `state/`
+5. Reference context — `ops/risk_register.md`, `ops/decision_log.md`, `specsarchive/`, `ralph/IMPLEMENT.md`
+6. Runtime truth — `outputs/`, `.raspberry/`, Fabro run state
 
 ## North Star
 
@@ -575,7 +586,8 @@ Do not advertise a capability as ready if:
 ## Human-Management Guidance
 
 Dormant at zero humans. This operating system is for an unattended software
-kernel augmented by malinka's autonomous development loop. When humans join:
+kernel augmented by Fabro's execution substrate and Raspberry's supervisory
+control plane. When humans join:
 - First hire: Substrate engineer (accelerates chain fork)
 - Second hire: Poker domain expert (validates solver quality)
 - Third hire: Growth (community building, game partnerships)

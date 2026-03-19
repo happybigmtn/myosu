@@ -1,0 +1,62 @@
+version: 1
+program: myosu-product
+target_repo: ../..
+state_path: ../../.raspberry/myosu-product-state.json
+max_parallel: 2
+units:
+  - id: play
+    title: Gameplay TUI
+    output_root: ../../outputs/play/tui
+    artifacts:
+      - id: spec
+        path: spec.md
+      - id: review
+        path: review.md
+    milestones:
+      - id: reviewed
+        requires: [spec, review]
+    lanes:
+      - id: tui
+        kind: interface
+        title: Gameplay TUI Lane
+        run_config: ../run-configs/product/play-tui.toml
+        managed_milestone: reviewed
+        proof_profile: play_tui_bootstrap
+        checks:
+          - label: game_traits_review_ready
+            kind: precondition
+            type: file_exists
+            path: ../../outputs/games/traits/review.md
+          - label: tui_shell_review_ready
+            kind: precondition
+            type: file_exists
+            path: ../../outputs/tui/shell/review.md
+        produces: [spec, review]
+
+  - id: agent
+    title: Agent Experience
+    output_root: ../../outputs/agent/experience
+    artifacts:
+      - id: spec
+        path: spec.md
+      - id: review
+        path: review.md
+    milestones:
+      - id: reviewed
+        requires: [spec, review]
+    lanes:
+      - id: experience
+        kind: interface
+        title: Agent Experience Lane
+        run_config: ../run-configs/product/agent-experience.toml
+        managed_milestone: reviewed
+        proof_profile: agent_experience_bootstrap
+        depends_on:
+          - unit: play
+            milestone: reviewed
+        checks:
+          - label: game_state_schema_present
+            kind: precondition
+            type: file_exists
+            path: ../../docs/api/game-state.json
+        produces: [spec, review]

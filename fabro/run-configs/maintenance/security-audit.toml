@@ -1,0 +1,32 @@
+version = 1
+graph = "../../workflows/maintenance/security-audit.fabro"
+goal = """
+Bootstrap the Myosu `security:audit` recurring lane for Fabro and Raspberry.
+
+Scope:
+- inspect `INVARIANTS.md`
+- inspect `ops/risk_register.md`
+- inspect `fabro/programs/`
+- inspect chain and service output roots if they exist
+
+Required curated artifacts:
+- `outputs/security/audit/spec.md`
+- `outputs/security/audit/review.md`
+
+The `spec.md` must define:
+- what security audit should read as source truth
+- what proof or attestation outputs it should eventually produce
+- what healthy recurring security auditing would look like
+
+The `review.md` must:
+- identify trustworthy security surfaces that already exist
+- identify stale or missing audit surfaces
+- state the next honest recurring implementation slice
+"""
+directory = "../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

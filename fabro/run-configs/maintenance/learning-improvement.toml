@@ -1,0 +1,32 @@
+version = 1
+graph = "../../workflows/maintenance/learning-improvement.fabro"
+goal = """
+Bootstrap the Myosu `learning:improvement` recurring lane for Fabro and Raspberry.
+
+Scope:
+- inspect `plans/`
+- inspect `specs/`
+- inspect `fabro/programs/`
+- inspect `outputs/`
+
+Required curated artifacts:
+- `outputs/learning/improvement/spec.md`
+- `outputs/learning/improvement/review.md`
+
+The `spec.md` must define:
+- what the learning lane should read as retrospective input
+- what kinds of improvements it should eventually propose
+- what healthy recurring learning behavior would look like
+
+The `review.md` must:
+- identify trustworthy learning surfaces that already exist
+- identify stale or missing retrospective surfaces
+- state the next honest recurring implementation slice
+"""
+directory = "../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
