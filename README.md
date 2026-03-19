@@ -14,8 +14,8 @@ Current doctrine and execution entrypoints:
   canonical doctrine index
 - [plans/031826-bootstrap-fabro-primary-executor-surface.md](plans/031826-bootstrap-fabro-primary-executor-surface.md)
   for the current Fabro/Raspberry cutover slice
-- [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml) as
-  the current Raspberry control-plane entrypoint
+- [fabro/programs/myosu.yaml](fabro/programs/myosu.yaml) as the repo-wide
+  Raspberry control-plane entrypoint
 
 Execution plane:
 
@@ -79,9 +79,10 @@ fabro run fabro/run-configs/bootstrap/tui-shell.toml
 fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
 fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
 
-raspberry plan --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml
+cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
+cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
+cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- autodev --manifest fabro/programs/myosu.yaml
+cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
 ```
 
 Useful proof commands:

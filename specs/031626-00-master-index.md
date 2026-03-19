@@ -22,10 +22,16 @@ in `plans/`.
   decision that makes Fabro the primary execution framework for Myosu.
 - `specs/031826-myosu-fabro-primary-executor-migration.md` defines the target
   architecture for the doctrine and execution-surface migration.
+- the Raspberry observer TUI capability and implementation are now owned by the
+  companion Fabro repository, not by Myosu-local doctrine.
 - `plans/031826-clean-up-myosu-for-fabro-primary-executor.md` captures the
   cleanup slice that created this structure.
-- `plans/031826-bootstrap-fabro-primary-executor-surface.md` defines the next
-  slice that retargets the remaining doctrine and operational entrypoints.
+- `plans/031826-bootstrap-fabro-primary-executor-surface.md` tracks the top-
+  level Fabro/Raspberry buildout status.
+- `plans/031926-design-myosu-fabro-workflow-library.md` tracks workflow-family
+  design.
+- `plans/031926-decompose-myosu-into-raspberry-programs.md` tracks the
+  program-of-programs decomposition.
 
 ## Whole-System Goal
 

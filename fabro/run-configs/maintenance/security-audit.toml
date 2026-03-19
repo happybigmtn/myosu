@@ -23,7 +23,7 @@ The `review.md` must:
 - identify stale or missing audit surfaces
 - state the next honest recurring implementation slice
 """
-directory = "../.."
+directory = "../../.."
 
 [sandbox]
 provider = "local"

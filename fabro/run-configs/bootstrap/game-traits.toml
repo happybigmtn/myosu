@@ -35,24 +35,3 @@ The combined output should be strong enough that the implementation-shaped lane
 can consume these artifacts without re-deriving the lane contract from scratch.
 """
 directory = "../../.."
-
-[sandbox]
-provider = "local"
-
-[sandbox.local]
-worktree_mode = "clean"
-
-[llm]
-provider = "anthropic"
-model = "MiniMax-M2.7-highspeed"
-
-[sandbox.env]
-ANTHROPIC_BASE_URL = "https://api.minimax.io/anthropic"
-ANTHROPIC_AUTH_TOKEN = "${env.MINIMAX_API_KEY}"
-API_TIMEOUT_MS = "3000000"
-CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
-ANTHROPIC_MODEL = "MiniMax-M2.7-highspeed"
-ANTHROPIC_SMALL_FAST_MODEL = "MiniMax-M2.7-highspeed"
-ANTHROPIC_DEFAULT_SONNET_MODEL = "MiniMax-M2.7-highspeed"
-ANTHROPIC_DEFAULT_OPUS_MODEL = "MiniMax-M2.7-highspeed"
-ANTHROPIC_DEFAULT_HAIKU_MODEL = "MiniMax-M2.7-highspeed"

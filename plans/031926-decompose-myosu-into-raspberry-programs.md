@@ -48,6 +48,8 @@ multiple coherent control-plane frontiers.
 - [x] (2026-03-19 05:19Z) Seeded `myosu-recurring.yaml` as the recurring
   oversight frontier, using contract-first recurring lanes for strategy,
   security, operations, and learning.
+- [x] (2026-03-19 15:40Z) Added a top-level `myosu.yaml` portfolio manifest
+  that supervises the seeded frontier manifests as child Raspberry programs.
 
 ## Surprises & Discoveries
 
@@ -120,6 +122,14 @@ This plan now has concrete outputs:
 The next step after this slice is no longer frontier seeding. It is choosing
 which seeded frontier should be executed next and how the first real
 cross-program dependencies should be exercised.
+
+That higher-level control plane now exists too:
+
+- `fabro/programs/myosu.yaml`
+
+The new top-level manifest does not replace the frontier manifests. It wraps
+them so Raspberry can supervise the full repo as a program-of-programs while
+preserving each frontier's own lane-level execution semantics.
 
 ## Context and Orientation
 

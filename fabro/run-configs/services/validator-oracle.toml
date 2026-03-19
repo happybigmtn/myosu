@@ -22,7 +22,7 @@ The `spec.md` must define:
 The `review.md` must make the keep/reopen/reset judgment explicit for the
 oracle lane and identify the first proof and health checks to add later.
 """
-directory = "../.."
+directory = "../../.."
 
 [sandbox]
 provider = "local"

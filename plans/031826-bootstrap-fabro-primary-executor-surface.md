@@ -82,6 +82,17 @@ workstreams.
 - [x] (2026-03-19 05:19Z) Ran the first real `games:traits` implementation
   lane through Fabro, producing `outputs/games/traits/implementation.md` and
   `outputs/games/traits/verification.md`, with Slice 1 completed.
+- [x] (2026-03-19 05:34Z) Seeded the first non-bootstrap frontier manifests:
+  `myosu-chain-core.yaml`, `myosu-services.yaml`, `myosu-product.yaml`,
+  `myosu-platform.yaml`, and `myosu-recurring.yaml`.
+- [x] (2026-03-19 05:34Z) Seeded the matching workflow-family surfaces needed
+  for those frontiers: `restart/`, `services/`, and `maintenance/`, plus the
+  next bootstrap contract lanes for product and platform work.
+- [x] (2026-03-19 05:34Z) Completed the two follow-on planning tracks:
+  workflow-library design and full Raspberry program decomposition.
+- [x] (2026-03-19 05:34Z) Rehomed the Raspberry observer TUI capability spec
+  and implementation plan into the companion Fabro repository, so Myosu no
+  longer carries Fabro-owned implementation docs locally.
 
 ## Surprises & Discoveries
 
@@ -191,6 +202,15 @@ workstreams.
   configs, one program manifest, shared prompts, and minimal proof scripts,
   while `outputs/` only seeds the trusted and restart lanes we actually have
   judgments for.
+
+- Observation: the full Raspberry frontier stack was easier to seed by using
+  contract-first artifact lanes than by waiting for implementation-ready code
+  in every area.
+  Evidence: `myosu-services.yaml`, `myosu-product.yaml`,
+  `myosu-platform.yaml`, and `myosu-recurring.yaml` could all be checked in
+  honestly once their lanes were framed as `spec.md`/`review.md` contract work
+  over stable output roots, even though most of those areas are not yet ready
+  for implementation-family workflows.
 
 - Observation: the biggest remaining Raspberry gap inside Fabro is not manifest
   shape anymore; it is the stability of the lane-to-run-truth bridge.
@@ -327,6 +347,12 @@ workstreams.
   watch/status/execute core is stabilized would harden the wrong abstractions.
   Date/Author: 2026-03-19 / Codex
 
+- Decision: seed all major frontiers as contract-first Raspberry programs
+  before deepening execution semantics inside each one.
+  Rationale: this gives Myosu a complete, legible program-of-programs control
+  plane now, while still letting execution maturity grow frontier by frontier.
+  Date/Author: 2026-03-19 / Codex
+
 - Decision: keep `ralph/IMPLEMENT.md` and `ops/malinka-capabilities.md` only as
   archival redirect files, with detailed legacy content moved alongside them.
   Rationale: this preserves historical context without allowing the old files to
@@ -343,10 +369,13 @@ produced a concrete keep-vs-reset result:
 - reset the current chain fork effort to a smaller, Fabro-first restart plan
 - do not preserve Malinka-era operational files by default
 
-The next step is to translate that judgment into repo structure: retarget the
-doctrine entrypoints, remove stale references to deleted Malinka files, and
-define the first Fabro-native operational skeleton around the trusted code
-surfaces rather than around the broken chain transplant.
+That translation is now largely done. The repo now has:
+
+- retargeted doctrine entrypoints
+- archived Malinka-only control files
+- a seeded Fabro execution tree
+- a seeded Raspberry program-of-programs stack
+- one real implementation lane already proven (`games:traits`)
 
 The docs review also made the target shape much clearer. Myosu does not need to
 invent a new execution contract to satisfy Fabro. It needs to check in the
@@ -371,6 +400,16 @@ The initial checked-in skeleton for that shape now exists:
 - `outputs/chain/runtime/`
 - `outputs/chain/pallet/`
 
+That skeleton has now expanded into a fuller Raspberry stack:
+
+- `fabro/programs/myosu-bootstrap.yaml`
+- `fabro/programs/myosu-chain-core.yaml`
+- `fabro/programs/myosu-services.yaml`
+- `fabro/programs/myosu-product.yaml`
+- `fabro/programs/myosu-platform.yaml`
+- `fabro/programs/myosu-recurring.yaml`
+- `fabro/programs/myosu-games-traits-implementation.yaml`
+
 And the root newcomer path is now explicit in `README.md`, which points first
 to:
 
@@ -380,32 +419,31 @@ to:
 - `plans/031826-bootstrap-fabro-primary-executor-surface.md`
 - `fabro/programs/myosu-bootstrap.yaml`
 
-The Fabro-side prioritization is now clearer too. The highest-value next steps
-for Raspberry inside Fabro are:
+The highest-value next steps are now execution-oriented rather than structure-
+oriented:
 
-1. Replace the remaining bootstrap `status` / `watch` surfaces with the ported
-   semantics so there is only one control-plane behavior to extend.
-2. Introduce a stable run-truth adapter between Fabro and Raspberry, replacing
-   direct dependence on raw run-directory scanning.
-3. Tighten `execute` so lane dispatch and lane runtime records are bound to
-   authoritative Fabro run identifiers instead of best-effort matching.
-4. Only then add the first recurring/trust-plane slice.
+1. Execute the ready bootstrap contract lanes so more frontiers gain reviewed
+   artifacts under `outputs/`.
+2. Promote the next honest implementation lane after `games:traits`; the most
+   likely candidates are `tui:shell` or a runtime restart phase.
+3. Replace the remaining bootstrap `status` / `watch` behavior in Raspberry
+   with the ported semantics so there is one control-plane behavior to extend.
+4. Introduce a stable Fabro↔Raspberry run-truth adapter and bind `execute` to
+   authoritative Fabro run ids.
+5. Only after the run-truth bridge is stable, deepen recurring/trust-plane
+   execution beyond contract-first recurring lanes.
 
 ## Context and Orientation
 
-The previous slice created the new `specs/`, `plans/`, and `specsarchive/`
-directories plus root `SPEC.md` and `PLANS.md`. That established the new
-planning model, but several important repo entrypoints still describe the older
-Malinka-first flow:
+The earlier cutover slices created the new `specs/`, `plans/`, and
+`specsarchive/` directories plus root `SPEC.md` and `PLANS.md`, rewrote the
+active doctrine files, and deleted the old Malinka-only control files.
 
-- `OS.md` still names `specs/` and `ralph/SPEC.md` in the doctrine hierarchy
-- `AGENTS.md` still contains extensive Malinka-oriented execution guidance
+This plan is no longer about cutover uncertainty. It is now the top-level
+status document for the seeded Fabro execution tree and Raspberry program
+stack.
 
-`project.yaml` and `WORKFLOW.md` have now been deleted, so this slice is no
-longer about migrating those files. It is about changing the remaining
-entrypoints from stale Malinka references into explicit Fabro-first surfaces.
-
-This slice now also includes a bootstrap trust review of the code that already
+This plan also records the bootstrap trust review of the code that already
 exists. That review established three categories:
 
 - trusted enough to keep: `crates/myosu-games/`, `crates/myosu-tui/`, and the

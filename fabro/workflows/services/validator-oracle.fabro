@@ -1,5 +1,11 @@
 digraph BootstrapValidatorOracle {
-    graph [goal="Bootstrap the Myosu validator oracle lane contract and review surface."]
+    graph [
+        goal="Bootstrap the Myosu validator oracle lane contract and review surface.",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: api; model: gpt-5.4; provider: openai; }
+        "
+    ]
     rankdir=LR
 
     start [shape=Mdiamond, label="Start"]

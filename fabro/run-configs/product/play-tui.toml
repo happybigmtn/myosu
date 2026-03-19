@@ -24,7 +24,7 @@ The `review.md` must:
 - identify proof expectations and remaining blockers
 - state whether the lane is ready for an implementation-family workflow next
 """
-directory = "../.."
+directory = "../../.."
 
 [sandbox]
 provider = "local"

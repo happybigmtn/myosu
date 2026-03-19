@@ -1,5 +1,11 @@
 digraph RestartChainRuntime {
-    graph [goal="Phase and review the Myosu chain runtime restart lane."]
+    graph [
+        goal="Phase and review the Myosu chain runtime restart lane.",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: api; model: gpt-5.4; provider: openai; }
+        "
+    ]
     rankdir=LR
 
     start [shape=Mdiamond, label="Start"]

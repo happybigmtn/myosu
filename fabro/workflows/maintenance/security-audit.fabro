@@ -1,5 +1,11 @@
 digraph BootstrapSecurityAudit {
-    graph [goal="Bootstrap the Myosu security:audit recurring lane and produce curated lane artifacts."]
+    graph [
+        goal="Bootstrap the Myosu security:audit recurring lane and produce curated lane artifacts.",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: api; model: gpt-5.4; provider: openai; }
+        "
+    ]
     rankdir=LR
 
     start [shape=Mdiamond, label="Start"]
