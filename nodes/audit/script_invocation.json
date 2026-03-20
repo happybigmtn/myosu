@@ -1,0 +1,5 @@
+{
+  "command": "test -f outputs/sdk/core/implementation.md && test -f outputs/sdk/core/verification.md && test -f outputs/sdk/core/quality.md && test -f outputs/sdk/core/promotion.md",
+  "language": "shell",
+  "timeout_ms": null
+}
