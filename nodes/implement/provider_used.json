@@ -1,0 +1,11 @@
+{
+  "mode": "cli",
+  "requested_provider": "anthropic",
+  "requested_model": "MiniMax-M2.7-highspeed",
+  "provider": "anthropic",
+  "model": "MiniMax-M2.7-highspeed",
+  "served_model": "MiniMax-M2.7-highspeed",
+  "fallback_reason": null,
+  "codex_slot": null,
+  "command": "cat /tmp/fabro_cli_42930105-b3cd-4e56-8ef7-9b8e73950c67_prompt.txt | CLAUDECODE= claude -p --verbose --output-format stream-json --dangerously-skip-permissions --model MiniMax-M2.7-highspeed"
+}
