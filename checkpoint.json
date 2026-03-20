@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-03-20T23:42:36.194101566Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "internal.thread_id": "start",
+    "failure_class": "",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6SXA8QR5AWHVVYJC4QSY1J/worktree",
+    "internal.fidelity": "compact",
+    "current_node": "specify",
+    "thread.start.current_node": "specify",
+    "response.specify": "**Lane complete.** Both artifacts created:\n\n- **`outputs/agent-integration/agent-adapter.md`** (12,332 bytes) — Integration reference documenting how an agent harness connects to `agent:experience` surfaces: pipe protocol game loop, context file management, reflection coordination, narration mode, lobby selection, and spectator relay observation. Defines 7 reference adapter slices.\n\n- **`outputs/agent-integration/review.md`** (5,373 bytes) — Decision record with **PROCEED** judgment: begin implementation-family workflow for `agent:experience` now. Slices 1-2 (agent_context.rs, journal.rs) can start immediately since they depend only on trusted `tui:shell`. Robopoker git migration is tracked as critical-path dependency for Phase 2+.\n\n`★ Insight ─────────────────────────────────────`\n1. **Separation of concerns**: `agent:experience` owns the presentation layer (what agents see — pipe mode, narration, context, journal). The adapter is NOT a Myosu crate — it's the harness code agent developers write to connect their LLM/bot logic to those surfaces. This boundary is correct.\n\n2. **Parallelization opportunity**: The two HIGH blockers (robopoker git migration, missing `myosu-play` binary) are owned by other lanes (`games:traits` and `play:tui`). The product frontier can begin implementation on Slices 1-4 immediately while those resolve in parallel.\n\n3. **Honest first slice**: The 7 adapter slices in `agent-adapter.md` are reference implementation targets for how an agent harness should work, not Myosu crate deliverables. The first honest slice of this lane was the decision document itself — \"proceed with implementation-family\" — not more code.\n`─────────────────────────────────────────────────`",
+    "last_response": "**Lane complete.** Both artifacts created:\n\n- **`outputs/agent-integration/agent-adapter.md`** (12,332 bytes) — Integration reference documenting how an agent harness connects to `agent:experience` ",
+    "internal.retry_count.start": 1,
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "outcome": "success",
+    "graph.rankdir": "LR",
+    "internal.run_id": "01KM6SXA8QR5AWHVVYJC4QSY1J",
+    "internal.node_visit_count": 1,
+    "failure_signature": "",
+    "last_stage": "specify",
+    "internal.retry_count.specify": 1,
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_response": "**Lane complete.** Both artifacts created:\n\n- **`outputs/agent-integration/agent-adapter.md`** (12,332 bytes) — Integration reference documenting how an agent harness connects to `agent:experience` ",
+        "response.specify": "**Lane complete.** Both artifacts created:\n\n- **`outputs/agent-integration/agent-adapter.md`** (12,332 bytes) — Integration reference documenting how an agent harness connects to `agent:experience` surfaces: pipe protocol game loop, context file management, reflection coordination, narration mode, lobby selection, and spectator relay observation. Defines 7 reference adapter slices.\n\n- **`outputs/agent-integration/review.md`** (5,373 bytes) — Decision record with **PROCEED** judgment: begin implementation-family workflow for `agent:experience` now. Slices 1-2 (agent_context.rs, journal.rs) can start immediately since they depend only on trusted `tui:shell`. Robopoker git migration is tracked as critical-path dependency for Phase 2+.\n\n`★ Insight ─────────────────────────────────────`\n1. **Separation of concerns**: `agent:experience` owns the presentation layer (what agents see — pipe mode, narration, context, journal). The adapter is NOT a Myosu crate — it's the harness code agent developers write to connect their LLM/bot logic to those surfaces. This boundary is correct.\n\n2. **Parallelization opportunity**: The two HIGH blockers (robopoker git migration, missing `myosu-play` binary) are owned by other lanes (`games:traits` and `play:tui`). The product frontier can begin implementation on Slices 1-4 immediately while those resolve in parallel.\n\n3. **Honest first slice**: The 7 adapter slices in `agent-adapter.md` are reference implementation targets for how an agent harness should work, not Myosu crate deliverables. The first honest slice of this lane was the decision document itself — \"proceed with implementation-family\" — not more code.\n`─────────────────────────────────────────────────`",
+        "last_stage": "specify"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 605596,
+        "output_tokens": 9186
+      },
+      "files_written": [
+        "outputs/agent-integration/.gitkeep",
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/.gitkeep",
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 160617
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}

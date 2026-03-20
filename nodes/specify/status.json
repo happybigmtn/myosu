@@ -1,0 +1,29 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "**Lane complete.** Both artifacts created:\n\n- **`outputs/agent-integration/agent-adapter.md`** (12,332 bytes) — Integration reference documenting how an agent harness connects to `agent:experience` ",
+    "response.specify": "**Lane complete.** Both artifacts created:\n\n- **`outputs/agent-integration/agent-adapter.md`** (12,332 bytes) — Integration reference documenting how an agent harness connects to `agent:experience` surfaces: pipe protocol game loop, context file management, reflection coordination, narration mode, lobby selection, and spectator relay observation. Defines 7 reference adapter slices.\n\n- **`outputs/agent-integration/review.md`** (5,373 bytes) — Decision record with **PROCEED** judgment: begin implementation-family workflow for `agent:experience` now. Slices 1-2 (agent_context.rs, journal.rs) can start immediately since they depend only on trusted `tui:shell`. Robopoker git migration is tracked as critical-path dependency for Phase 2+.\n\n`★ Insight ─────────────────────────────────────`\n1. **Separation of concerns**: `agent:experience` owns the presentation layer (what agents see — pipe mode, narration, context, journal). The adapter is NOT a Myosu crate — it's the harness code agent developers write to connect their LLM/bot logic to those surfaces. This boundary is correct.\n\n2. **Parallelization opportunity**: The two HIGH blockers (robopoker git migration, missing `myosu-play` binary) are owned by other lanes (`games:traits` and `play:tui`). The product frontier can begin implementation on Slices 1-4 immediately while those resolve in parallel.\n\n3. **Honest first slice**: The 7 adapter slices in `agent-adapter.md` are reference implementation targets for how an agent harness should work, not Myosu crate deliverables. The first honest slice of this lane was the decision document itself — \"proceed with implementation-family\" — not more code.\n`─────────────────────────────────────────────────`",
+    "last_stage": "specify"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 605596,
+    "output_tokens": 9186
+  },
+  "files_written": [
+    "outputs/agent-integration/.gitkeep",
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/.gitkeep",
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 160617,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:42:36.193491926+00:00",
+  "updated_at": "2026-03-20T23:42:36.193497151+00:00"
+}
