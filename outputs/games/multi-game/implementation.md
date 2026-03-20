@@ -4,6 +4,16 @@
 
 **COMPLETED** — Slice 1: Create `myosu-games-liars-dice` Crate Skeleton
 
+## Fixup Note
+
+**Issue**: The verification script inherited a broad test scope from the preflight, including
+`cargo test -p myosu-play` and `cargo test -p myosu-games-poker` — packages that do not
+exist in the workspace. Preflight passed (due to `set +e`) but `verify` failed.
+
+**Fix**: Created `fabro/checks/multi-game-slice1.sh` scoped to only packages that exist in
+the workspace: `myosu-games-liars-dice`, `myosu-games`, and `myosu-tui`. Updated
+`verification.md` accordingly.
+
 ## Touched Files/Modules
 
 ### Created
