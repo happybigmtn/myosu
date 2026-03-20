@@ -1,0 +1,23 @@
+[package]
+name = "myosu-play"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Myosu gameplay TUI — interactive NLHE poker training"
+
+[[bin]]
+name = "myosu-play"
+path = "src/main.rs"
+
+[dependencies]
+myosu-tui = { path = "../myosu-tui" }
+clap = { workspace = true }
+tokio = { workspace = true }
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
