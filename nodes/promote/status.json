@@ -1,0 +1,42 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "promote",
+    "last_response": "Implemented the encoder artifact ingress slice for poker engine. [solver.rs](/home/r/.fabro/runs/20260320-01KM4XW4EPWKGT5TC5ATPE8TGD/worktree/crates/myosu-games-poker/src/solver.rs), [training.rs](/ho",
+    "response.promote": "Implemented the encoder artifact ingress slice for poker engine. [solver.rs](/home/r/.fabro/runs/20260320-01KM4XW4EPWKGT5TC5ATPE8TGD/worktree/crates/myosu-games-poker/src/solver.rs), [training.rs](/home/r/.fabro/runs/20260320-01KM4XW4EPWKGT5TC5ATPE8TGD/worktree/crates/myosu-games-poker/src/training.rs), and [test_support.rs](/home/r/.fabro/runs/20260320-01KM4XW4EPWKGT5TC5ATPE8TGD/worktree/crates/myosu-games-poker/src/test_support.rs) now let poker-engine ingest serialized or file-backed `NlheEncoder` artifacts through owned APIs, with a preflop-valid fixture covering all 169 canonical preflop isomorphisms for proof.\n\nVerification passed with `CARGO_TARGET_DIR=/tmp/myosu-games-poker-target cargo build -p myosu-games-poker` and `CARGO_TARGET_DIR=/tmp/myosu-games-poker-target cargo test -p myosu-games-poker`; the crate finished cleanly with 22 unit tests passing and 1 doc test ignored. I refreshed [implementation.md](/home/r/.fabro/runs/20260320-01KM4XW4EPWKGT5TC5ATPE8TGD/worktree/outputs/games/poker-engine/implementation.md), [verification.md](/home/r/.fabro/runs/20260320-01KM4XW4EPWKGT5TC5ATPE8TGD/worktree/outputs/games/poker-engine/verification.md), and [promotion.md](/home/r/.fabro/runs/20260320-01KM4XW4EPWKGT5TC5ATPE8TGD/worktree/outputs/games/poker-engine/promotion.md); this slice is marked `merge_ready: yes`.\n\nThe remaining blocker is unchanged: positive encoder-backed training or exploitability proof still needs a deterministic/full NLHE abstraction artifact, because upstream `Game::root()` is randomized and this lane does not own that behavior."
+  },
+  "notes": "Stage completed: promote",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 5123488,
+    "output_tokens": 38618,
+    "cost": 13.38799
+  },
+  "files_written": [
+    "Cargo.lock",
+    "crates/myosu-games-poker/Cargo.toml",
+    "crates/myosu-games-poker/src/lib.rs",
+    "crates/myosu-games-poker/src/solver.rs",
+    "crates/myosu-games-poker/src/test_support.rs",
+    "crates/myosu-games-poker/src/training.rs",
+    "outputs/games/poker-engine/implementation.md",
+    "outputs/games/poker-engine/promotion.md",
+    "outputs/games/poker-engine/verification.md"
+  ],
+  "files_touched": [
+    "Cargo.lock",
+    "crates/myosu-games-poker/Cargo.toml",
+    "crates/myosu-games-poker/src/lib.rs",
+    "crates/myosu-games-poker/src/solver.rs",
+    "crates/myosu-games-poker/src/test_support.rs",
+    "crates/myosu-games-poker/src/training.rs",
+    "outputs/games/poker-engine/implementation.md",
+    "outputs/games/poker-engine/promotion.md",
+    "outputs/games/poker-engine/verification.md"
+  ],
+  "duration_ms": 936115,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T08:23:09.540236067+00:00",
+  "updated_at": "2026-03-20T08:23:09.540242081+00:00"
+}

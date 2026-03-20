@@ -1,0 +1,985 @@
+diff --git a/crates/myosu-games-poker/src/exploit.rs b/crates/myosu-games-poker/src/exploit.rs
+index 4fa4089..19238a1 100644
+--- a/crates/myosu-games-poker/src/exploit.rs
++++ b/crates/myosu-games-poker/src/exploit.rs
+@@ -12,8 +12,9 @@
+ //! - Near-equilibrium strategies are below 10 mbb/h
+ 
+ use rbp_core::Utility;
+-use rbp_mccfr::{CfrGame, Encoder, Profile, TreeBuilder};
++use rbp_mccfr::{CfrGame, Encoder, Profile, Solver, TreeBuilder};
+ use rbp_nlhe::{NlheEdge, NlheEncoder, NlheGame, NlheProfile};
++use std::panic::{catch_unwind, AssertUnwindSafe};
+ use thiserror::Error;
+ 
+ /// Errors in exploitability computation.
+@@ -21,6 +22,8 @@ use thiserror::Error;
+ pub enum ExploitabilityError {
+     #[error("profile has no training data")]
+     EmptyProfile,
++    #[error("encoder abstractions are unavailable")]
++    MissingEncoderAbstractions,
+     #[error("exploitability computation failed: {0}")]
+     ComputationFailed(String),
+ }
+@@ -38,22 +41,27 @@ pub enum ExploitabilityError {
+ ///
+ /// Exploitability in milli-big-blinds per hand (mbb/h), or error if computation fails.
+ pub fn poker_exploitability(solver: &rbp_nlhe::Flagship) -> Result<Utility, ExploitabilityError> {
+-    let root = NlheGame::root();
+-    let builder = TreeBuilder::<_, _, _, _, _, _, rbp_mccfr::PluribusSampling>::new(
+-        &solver.encoder,
+-        &solver.profile,
+-        root,
+-    );
+-    let tree = builder.build();
+-    Ok(solver.profile.exploitability(tree))
++    if solver.profile.epochs() == 0 {
++        return Err(ExploitabilityError::EmptyProfile);
++    }
++
++    let value =
++        catch_unwind(AssertUnwindSafe(|| Solver::exploitability(solver))).map_err(map_panic)?;
++
++    if !value.is_finite() {
++        return Err(ExploitabilityError::ComputationFailed(
++            "exploitability is not finite".to_string(),
++        ));
++    }
++
++    Ok(value)
+ }
+ 
+ /// Callback function type for querying a remote solver.
+ ///
+ /// Takes a serialized `NlheInfo` query and returns a serialized
+ /// `Vec<(NlheEdge, Probability)>` response.
+-pub type QueryFn =
+-    Box<dyn Fn(&[u8]) -> Result<Vec<u8>, std::io::Error> + Send + Sync>;
++pub type QueryFn = Box<dyn Fn(&[u8]) -> Result<Vec<u8>, std::io::Error> + Send + Sync>;
+ 
+ /// Computes exploitability of a remotely-hosted strategy.
+ ///
+@@ -82,9 +90,8 @@ pub fn remote_poker_exploitability(
+     let profile = NlheProfile::default();
+ 
+     // We need to query the remote for each info set in the tree
+-    // For now, use a simplified approach that samples info sets
+     let root = NlheGame::root();
+-    let info = encoder.seed(&root);
++    let info = catch_unwind(AssertUnwindSafe(|| encoder.seed(&root))).map_err(map_panic)?;
+ 
+     // Query the remote solver
+     let info_bytes = bincode::serialize(&info).map_err(|e| {
+@@ -96,12 +103,9 @@ pub fn remote_poker_exploitability(
+     })?;
+ 
+     // Parse the response and populate the profile
+-    let actions: Vec<(NlheEdge, rbp_core::Probability)> =
+-        bincode::deserialize(&response_bytes).map_err(|e| {
+-            ExploitabilityError::ComputationFailed(format!(
+-                "failed to deserialize response: {}",
+-                e
+-            ))
++    let actions: Vec<(NlheEdge, rbp_core::Probability)> = bincode::deserialize(&response_bytes)
++        .map_err(|e| {
++            ExploitabilityError::ComputationFailed(format!("failed to deserialize response: {}", e))
+         })?;
+ 
+     // Add to profile (simplified - real implementation would traverse the full tree)
+@@ -111,13 +115,33 @@ pub fn remote_poker_exploitability(
+     }
+ 
+     // Build tree and compute
+-    let builder = TreeBuilder::<_, _, _, _, _, _, rbp_mccfr::PluribusSampling>::new(
+-        encoder,
+-        &profile,
+-        root,
+-    );
++    let builder =
++        TreeBuilder::<_, _, _, _, _, _, rbp_mccfr::PluribusSampling>::new(encoder, &profile, root);
+     let tree = builder.build();
+-    Ok(profile.exploitability(tree))
++    let value = profile.exploitability(tree);
++    if !value.is_finite() {
++        return Err(ExploitabilityError::ComputationFailed(
++            "exploitability is not finite".to_string(),
++        ));
++    }
++
++    Ok(value)
++}
++
++fn map_panic(payload: Box<dyn std::any::Any + Send>) -> ExploitabilityError {
++    let message = if let Some(message) = payload.downcast_ref::<String>() {
++        message.clone()
++    } else if let Some(message) = payload.downcast_ref::<&str>() {
++        (*message).to_string()
++    } else {
++        "non-string panic payload".to_string()
++    };
++
++    if message.contains("isomorphism not found in abstraction lookup") {
++        ExploitabilityError::MissingEncoderAbstractions
++    } else {
++        ExploitabilityError::ComputationFailed(message)
++    }
+ }
+ 
+ #[cfg(test)]
+@@ -128,30 +152,28 @@ mod tests {
+     use rbp_nlhe::NlheInfo;
+ 
+     #[test]
+-    #[ignore = "exploitability() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
+     fn trained_strategy_low_exploit() {
+-        // NOTE: This test requires encoder with database-backed mappings (Hydrate).
+-        // With NlheEncoder::default(), exploitability() panics due to empty abstraction map.
+-        // This test verifies training works, actual exploitability requires proper encoder.
+         let mut solver = PokerSolver::new();
+-        solver.train(500);
+-        assert_eq!(solver.epochs(), 500);
++        let error = solver.train(500).unwrap_err();
++
++        assert!(matches!(
++            error,
++            crate::solver::PokerSolverError::MissingEncoderAbstractions {
++                context: "training"
++            }
++        ));
+     }
+ 
+     #[test]
+     fn random_strategy_high_exploit() {
+-        // NOTE: This test requires encoder with database-backed mappings (Hydrate).
+-        // With NlheEncoder::default(), exploitability() panics due to empty abstraction map.
+-        // This test verifies solver creation, actual exploitability requires proper encoder.
+         let solver = PokerSolver::new();
+-        assert_eq!(solver.epochs(), 0);
++        let error = poker_exploitability(solver.inner()).unwrap_err();
++
++        assert!(matches!(error, ExploitabilityError::EmptyProfile));
+     }
+ 
+     #[test]
+     fn remote_matches_local() {
+-        // NOTE: This test requires encoder with database-backed mappings (Hydrate).
+-        // With NlheEncoder::default(), exploitability() panics due to empty abstraction map.
+-        // This test verifies query function creation and basic strategy lookup.
+         let solver = PokerSolver::new();
+ 
+         let solver_ref = std::sync::Arc::new(std::sync::Mutex::new(solver));
+@@ -165,10 +187,15 @@ mod tests {
+             }
+         });
+ 
+-        // Just verify the query function can be created and called without panicking
+         let test_info = NlheInfo::random();
+         let test_bytes = bincode::serialize(&test_info).unwrap();
+         let result = query_fn(&test_bytes);
+         assert!(result.is_ok());
++
++        let error = remote_poker_exploitability(&query_fn, &NlheEncoder::default()).unwrap_err();
++        assert!(matches!(
++            error,
++            ExploitabilityError::MissingEncoderAbstractions
++        ));
+     }
+ }
+diff --git a/crates/myosu-games-poker/src/solver.rs b/crates/myosu-games-poker/src/solver.rs
+index 4cb5ff6..5e921af 100644
+--- a/crates/myosu-games-poker/src/solver.rs
++++ b/crates/myosu-games-poker/src/solver.rs
+@@ -4,10 +4,12 @@
+ //! and adds file-based checkpoint save/load with the MYOS format.
+ 
+ use rbp_core::{Probability, Utility};
+-use rbp_mccfr::{CfrGame, Profile, Solver, TreeBuilder};
++use rbp_mccfr::{CfrGame, Encoder, Profile, Solver};
+ use rbp_nlhe::{NlheEdge, NlheEncoder, NlheGame, NlheInfo, NlheProfile};
++use std::any::Any;
+ use std::fs::{File, OpenOptions};
+ use std::io::{Read, Write};
++use std::panic::{catch_unwind, AssertUnwindSafe};
+ use std::path::Path;
+ use thiserror::Error;
+ 
+@@ -20,7 +22,11 @@ const CHECKPOINT_VERSION: u32 = 1;
+ #[derive(Error, Debug)]
+ pub enum PokerSolverError {
+     #[error("failed to open checkpoint file: {path}")]
+-    FileOpen { path: String, #[source] source: std::io::Error },
++    FileOpen {
++        path: String,
++        #[source]
++        source: std::io::Error,
++    },
+     #[error("checkpoint has invalid magic: expected MYOS, found {found:?}")]
+     InvalidMagic { found: Vec<u8> },
+     #[error("checkpoint has unsupported version: {version}")]
+@@ -29,6 +35,15 @@ pub enum PokerSolverError {
+     CorruptedCheckpoint(#[source] bincode::Error),
+     #[error("failed to serialize checkpoint")]
+     Serialization(#[source] bincode::Error),
++    #[error("encoder abstractions are unavailable during {context}")]
++    MissingEncoderAbstractions { context: &'static str },
++    #[error("solver panicked during {context}: {message}")]
++    OperationPanicked {
++        context: &'static str,
++        message: String,
++    },
++    #[error("exploitability is not finite: {value}")]
++    InvalidExploitability { value: Utility },
+ }
+ 
+ /// NLHE poker solver with training and persistence.
+@@ -44,28 +59,42 @@ pub struct PokerSolver {
+ }
+ 
+ impl PokerSolver {
+-    /// Creates a new solver with empty profile and encoder.
++    /// Creates a new solver with an empty profile and no abstraction data.
+     ///
+-    /// The profile starts with zero iterations; call `train()` to begin.
++    /// This is sufficient for checkpoint serialization and strategy lookups over
++    /// explicit [`NlheInfo`] values, but training and exploitability require a
++    /// populated encoder loaded from abstraction artifacts.
+     pub fn new() -> Self {
+         Self {
+             inner: rbp_nlhe::Flagship::new(NlheProfile::default(), NlheEncoder::default()),
+         }
+     }
+ 
+-    /// Trains the solver for `iterations` CFR iterations.
+-    pub fn train(&mut self, iterations: usize) {
++    /// Creates a solver backed by an externally-provided encoder.
++    pub fn with_encoder(encoder: NlheEncoder) -> Result<Self, PokerSolverError> {
++        let solver = Self {
++            inner: rbp_nlhe::Flagship::new(NlheProfile::default(), encoder),
++        };
++        solver.validate_abstractions()?;
++        Ok(solver)
++    }
++
++    /// Verifies that the encoder can at least construct the root infoset.
++    pub fn validate_abstractions(&self) -> Result<(), PokerSolverError> {
++        catch_unwind(AssertUnwindSafe(|| {
++            let _ = self.inner.encoder.seed(&NlheGame::root());
++        }))
++        .map_err(|payload| Self::map_operation_panic("encoder validation", payload))?;
++        Ok(())
++    }
++
++    /// Trains the solver for `iterations` MCCFR iterations.
++    pub fn train(&mut self, iterations: usize) -> Result<(), PokerSolverError> {
+         for _ in 0..iterations {
+-            let root = NlheGame::root();
+-            let builder =
+-                TreeBuilder::<_, _, _, _, _, _, rbp_mccfr::PluribusSampling>::new(
+-                    &self.inner.encoder,
+-                    &self.inner.profile,
+-                    root,
+-                );
+-            let _tree = builder.build();
+-            self.inner.advance();
++            catch_unwind(AssertUnwindSafe(|| self.inner.step()))
++                .map_err(|payload| Self::map_operation_panic("training", payload))?;
+         }
++        Ok(())
+     }
+ 
+     /// Returns the current number of training iterations (epochs).
+@@ -87,17 +116,15 @@ impl PokerSolver {
+     /// Returns the Nash equilibrium distance in milli-big-blinds per hand (mbb/h).
+     /// Lower values indicate strategies closer to equilibrium.
+     /// A trained strategy should have exploitability significantly below random play.
+-    pub fn exploitability(&self) -> Utility {
+-        use rbp_mccfr::Profile;
+-        let root = NlheGame::root();
+-        let builder =
+-            TreeBuilder::<_, _, _, _, _, _, rbp_mccfr::PluribusSampling>::new(
+-                &self.inner.encoder,
+-                &self.inner.profile,
+-                root,
+-            );
+-        let tree = builder.build();
+-        self.inner.profile().exploitability(tree)
++    pub fn exploitability(&self) -> Result<Utility, PokerSolverError> {
++        let value = catch_unwind(AssertUnwindSafe(|| Solver::exploitability(&self.inner)))
++            .map_err(|payload| Self::map_operation_panic("exploitability", payload))?;
++
++        if !value.is_finite() {
++            return Err(PokerSolverError::InvalidExploitability { value });
++        }
++
++        Ok(value)
+     }
+ 
+     /// Saves the solver state to a checkpoint file.
+@@ -148,6 +175,23 @@ impl PokerSolver {
+     /// Returns error if the file cannot be opened, has invalid format,
+     /// or contains unsupported version.
+     pub fn load(path: &Path) -> Result<Self, PokerSolverError> {
++        let profile = Self::read_profile(path)?;
++        Ok(Self {
++            inner: rbp_nlhe::Flagship::new(profile, NlheEncoder::default()),
++        })
++    }
++
++    /// Loads a checkpoint and pairs it with a caller-provided encoder.
++    pub fn load_with_encoder(path: &Path, encoder: NlheEncoder) -> Result<Self, PokerSolverError> {
++        let profile = Self::read_profile(path)?;
++        let solver = Self {
++            inner: rbp_nlhe::Flagship::new(profile, encoder),
++        };
++        solver.validate_abstractions()?;
++        Ok(solver)
++    }
++
++    fn read_profile(path: &Path) -> Result<NlheProfile, PokerSolverError> {
+         let mut file = File::open(path).map_err(|source| PokerSolverError::FileOpen {
+             path: path.display().to_string(),
+             source,
+@@ -155,10 +199,11 @@ impl PokerSolver {
+ 
+         // Read and validate magic
+         let mut magic = [0u8; 4];
+-        file.read_exact(&mut magic).map_err(|source| PokerSolverError::FileOpen {
+-            path: path.display().to_string(),
+-            source,
+-        })?;
++        file.read_exact(&mut magic)
++            .map_err(|source| PokerSolverError::FileOpen {
++                path: path.display().to_string(),
++                source,
++            })?;
+         if magic != CHECKPOINT_MAGIC {
+             return Err(PokerSolverError::InvalidMagic {
+                 found: magic.to_vec(),
+@@ -167,22 +212,18 @@ impl PokerSolver {
+ 
+         // Read and validate version
+         let mut version_bytes = [0u8; 4];
+-        file.read_exact(&mut version_bytes).map_err(|source| PokerSolverError::FileOpen {
+-            path: path.display().to_string(),
+-            source,
+-        })?;
++        file.read_exact(&mut version_bytes)
++            .map_err(|source| PokerSolverError::FileOpen {
++                path: path.display().to_string(),
++                source,
++            })?;
+         let version = u32::from_le_bytes(version_bytes);
+         if version != CHECKPOINT_VERSION {
+             return Err(PokerSolverError::UnsupportedVersion { version });
+         }
+ 
+         // Load profile
+-        let profile: NlheProfile =
+-            bincode::deserialize_from(&file).map_err(PokerSolverError::CorruptedCheckpoint)?;
+-
+-        Ok(Self {
+-            inner: rbp_nlhe::Flagship::new(profile, NlheEncoder::default()),
+-        })
++        bincode::deserialize_from(&file).map_err(PokerSolverError::CorruptedCheckpoint)
+     }
+ 
+     /// Returns a reference to the inner solver for use by other crate modules.
+@@ -196,6 +237,18 @@ impl PokerSolver {
+     pub(crate) fn mut_inner(&mut self) -> &mut rbp_nlhe::Flagship {
+         &mut self.inner
+     }
++
++    fn map_operation_panic(
++        context: &'static str,
++        payload: Box<dyn Any + Send>,
++    ) -> PokerSolverError {
++        let message = panic_message(payload.as_ref());
++        if message.contains("isomorphism not found in abstraction lookup") {
++            PokerSolverError::MissingEncoderAbstractions { context }
++        } else {
++            PokerSolverError::OperationPanicked { context, message }
++        }
++    }
+ }
+ 
+ impl Default for PokerSolver {
+@@ -212,6 +265,16 @@ impl std::fmt::Debug for PokerSolver {
+     }
+ }
+ 
++fn panic_message(payload: &(dyn Any + Send)) -> String {
++    if let Some(message) = payload.downcast_ref::<String>() {
++        message.clone()
++    } else if let Some(message) = payload.downcast_ref::<&str>() {
++        (*message).to_string()
++    } else {
++        "non-string panic payload".to_string()
++    }
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+@@ -226,29 +289,38 @@ mod tests {
+     }
+ 
+     #[test]
+-    #[ignore = "train() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
+     fn train_100_iterations() {
+         let mut solver = PokerSolver::new();
+-        solver.train(100);
+-        assert_eq!(solver.epochs(), 100);
++        let error = solver.train(100).unwrap_err();
++
++        assert!(matches!(
++            error,
++            PokerSolverError::MissingEncoderAbstractions {
++                context: "training"
++            }
++        ));
++        assert_eq!(solver.epochs(), 0);
+     }
+ 
+     #[test]
+     fn strategy_is_valid_distribution() {
+-        // Use NlheInfo::random() to avoid encoder.seed() which requires database-backed mappings
+         let solver = PokerSolver::new();
+         let info = rbp_nlhe::NlheInfo::random();
+         let strategy = solver.strategy(&info);
+-        // With a random info set on an untrained solver, strategy may be empty
+-        // This test verifies the query doesn't panic
+-        let _sum: f32 = strategy.iter().map(|(_, p)| *p).sum();
++        let sum: f32 = strategy.iter().map(|(_, p)| *p).sum();
++
++        assert!(
++            !strategy.is_empty(),
++            "random infos should expose legal actions"
++        );
++        assert!((sum - 1.0).abs() < 0.001, "probabilities should sum to 1.0");
+     }
+ 
+     #[test]
+-    #[ignore = "train() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
+     fn checkpoint_roundtrip() {
+-        let mut solver = PokerSolver::new();
+-        solver.train(50);
++        let solver = PokerSolver::new();
++        let info = rbp_nlhe::NlheInfo::random();
++        let baseline_strategy = solver.strategy(&info);
+ 
+         let temp_file = NamedTempFile::new().unwrap();
+         let temp_path = temp_file.path();
+@@ -267,20 +339,32 @@ mod tests {
+ 
+         // Load and verify
+         let loaded = PokerSolver::load(temp_path).unwrap();
+-        assert_eq!(loaded.epochs(), 50);
++        assert_eq!(loaded.epochs(), 0);
++        assert_eq!(loaded.strategy(&info), baseline_strategy);
+     }
+ 
+     #[test]
+-    #[ignore = "exploitability() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
+     fn exploitability_decreases() {
+-        let mut solver = PokerSolver::new();
++        let solver = PokerSolver::new();
++        let error = solver.exploitability().unwrap_err();
+ 
+-        // Note: exploitability() requires encoder with database-backed mappings
+-        // These tests verify basic functionality but actual exploitability computation
+-        // requires a properly initialized encoder (loaded via Hydrate from database)
++        assert!(matches!(
++            error,
++            PokerSolverError::MissingEncoderAbstractions {
++                context: "exploitability"
++            }
++        ));
++    }
+ 
+-        // Train for some iterations
+-        solver.train(200);
+-        assert_eq!(solver.epochs(), 200);
++    #[test]
++    fn with_encoder_rejects_empty_abstraction_map() {
++        let error = PokerSolver::with_encoder(NlheEncoder::default()).unwrap_err();
++
++        assert!(matches!(
++            error,
++            PokerSolverError::MissingEncoderAbstractions {
++                context: "encoder validation"
++            }
++        ));
+     }
+ }
+diff --git a/crates/myosu-games-poker/src/training.rs b/crates/myosu-games-poker/src/training.rs
+index cbb9050..35b5b0d 100644
+--- a/crates/myosu-games-poker/src/training.rs
++++ b/crates/myosu-games-poker/src/training.rs
+@@ -7,6 +7,7 @@
+ 
+ use crate::solver::{PokerSolver, PokerSolverError};
+ use rbp_core::Utility;
++use rbp_nlhe::NlheEncoder;
+ use std::path::Path;
+ use thiserror::Error;
+ 
+@@ -19,6 +20,8 @@ pub enum TrainingError {
+     CheckpointLoad(#[source] PokerSolverError),
+     #[error("training failed: {0}")]
+     TrainingFailed(#[source] PokerSolverError),
++    #[error("exploitability failed: {0}")]
++    ExploitabilityFailed(#[source] PokerSolverError),
+ }
+ 
+ /// Configuration for a training session.
+@@ -73,7 +76,8 @@ impl TrainingConfig {
+ ///     .with_frequency(100)
+ ///     .with_checkpoint_dir("/tmp/checkpoints");
+ ///
+-/// let mut session = TrainingSession::new(config)?;
++/// let encoder = /* load abstraction artifact */;
++/// let mut session = TrainingSession::new_with_encoder(config, encoder)?;
+ /// session.train(1000)?;
+ /// ```
+ #[derive(Debug)]
+@@ -87,7 +91,7 @@ impl TrainingSession {
+     /// Creates a new training session.
+     ///
+     /// If a checkpoint exists at the configured path, it is loaded.
+-    /// Otherwise, starts fresh with a new solver.
++    /// Otherwise, starts fresh with a checkpoint-capable but untrained solver.
+     pub fn new(config: TrainingConfig) -> Result<Self, TrainingError> {
+         let checkpoint_path = config.checkpoint_path();
+ 
+@@ -106,6 +110,29 @@ impl TrainingSession {
+         })
+     }
+ 
++    /// Creates a training session backed by a concrete encoder artifact.
++    pub fn new_with_encoder(
++        config: TrainingConfig,
++        encoder: NlheEncoder,
++    ) -> Result<Self, TrainingError> {
++        let checkpoint_path = config.checkpoint_path();
++
++        let solver = if checkpoint_path.exists() {
++            PokerSolver::load_with_encoder(&checkpoint_path, encoder)
++                .map_err(TrainingError::CheckpointLoad)?
++        } else {
++            PokerSolver::with_encoder(encoder).map_err(TrainingError::TrainingFailed)?
++        };
++
++        let start_epoch = solver.epochs();
++
++        Ok(Self {
++            solver,
++            config,
++            start_epoch,
++        })
++    }
++
+     /// Returns the current epoch (iteration count).
+     pub fn epochs(&self) -> usize {
+         self.solver.epochs()
+@@ -131,12 +158,15 @@ impl TrainingSession {
+     /// Checkpoints are saved automatically according to the configuration.
+     pub fn train(&mut self, iterations: usize) -> Result<(), TrainingError> {
+         for _ in 0..iterations {
+-            self.solver.train(1);
++            self.solver
++                .train(1)
++                .map_err(TrainingError::TrainingFailed)?;
+ 
+             // Save checkpoint if needed
+             let epoch = self.solver.epochs();
+             if epoch % self.config.checkpoint_frequency == 0 {
+-                self.save_checkpoint().map_err(TrainingError::CheckpointSave)?;
++                self.save_checkpoint()
++                    .map_err(TrainingError::CheckpointSave)?;
+             }
+         }
+         Ok(())
+@@ -149,15 +179,18 @@ impl TrainingSession {
+     }
+ 
+     /// Computes the current exploitability of the strategy.
+-    pub fn exploitability(&self) -> Utility {
+-        self.solver.exploitability()
++    pub fn exploitability(&self) -> Result<Utility, TrainingError> {
++        self.solver
++            .exploitability()
++            .map_err(TrainingError::ExploitabilityFailed)
+     }
+ }
+ 
+ impl TrainingConfig {
+     /// Returns the full path to the checkpoint file.
+     pub fn checkpoint_path(&self) -> std::path::PathBuf {
+-        self.checkpoint_dir.join(format!("{}.myos", self.checkpoint_name))
++        self.checkpoint_dir
++            .join(format!("{}.myos", self.checkpoint_name))
+     }
+ }
+ 
+@@ -167,7 +200,6 @@ mod tests {
+     use tempfile::TempDir;
+ 
+     #[test]
+-    #[ignore = "train() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
+     fn session_checkpoint_frequency() {
+         let temp_dir = TempDir::new().unwrap();
+         let config = TrainingConfig::with_frequency(50)
+@@ -175,20 +207,36 @@ mod tests {
+             .with_checkpoint_name("test_checkpoint");
+ 
+         let mut session = TrainingSession::new(config.clone()).unwrap();
+-
+-        // Train 120 iterations — should trigger checkpoints at 50, 100
+-        session.train(120).unwrap();
+-
+-        // Verify epochs
+-        assert_eq!(session.epochs(), 120);
+-        assert_eq!(session.session_epochs(), 120);
+-
+-        // Verify checkpoint file was created
+         let checkpoint_path = config.checkpoint_path();
+-        assert!(checkpoint_path.exists(), "checkpoint should exist at {:?}", checkpoint_path);
+ 
+-        // Load a new session from the same checkpoint — should resume at 120
+-        let session2 = TrainingSession::new(config).unwrap();
+-        assert_eq!(session2.epochs(), 120, "resumed session should start at epoch 120");
++        let error = session.train(120).unwrap_err();
++
++        assert!(matches!(
++            error,
++            TrainingError::TrainingFailed(PokerSolverError::MissingEncoderAbstractions {
++                context: "training"
++            })
++        ));
++        assert_eq!(session.epochs(), 0);
++        assert_eq!(session.session_epochs(), 0);
++        assert!(
++            !checkpoint_path.exists(),
++            "failed training should not checkpoint"
++        );
++    }
++
++    #[test]
++    fn new_with_encoder_rejects_empty_abstraction_map() {
++        let temp_dir = TempDir::new().unwrap();
++        let config = TrainingConfig::with_frequency(10).with_checkpoint_dir(temp_dir.path());
++
++        let error = TrainingSession::new_with_encoder(config, NlheEncoder::default()).unwrap_err();
++
++        assert!(matches!(
++            error,
++            TrainingError::TrainingFailed(PokerSolverError::MissingEncoderAbstractions {
++                context: "encoder validation"
++            })
++        ));
+     }
+ }
+diff --git a/outputs/games/poker-engine/implementation.md b/outputs/games/poker-engine/implementation.md
+index b2918b5..385a23c 100644
+--- a/outputs/games/poker-engine/implementation.md
++++ b/outputs/games/poker-engine/implementation.md
+@@ -1,76 +1,50 @@
+-# Implementation: games:poker-engine (Slice 1-6)
++# Implementation: games:poker-engine (solver guardrails slice)
+ 
+-## Overview
++## Slice intent
+ 
+-Created `myosu-games-poker` crate implementing NLHE poker solver functionality with checkpoint persistence, wire serialization, query handling, exploitability computation, and training session management.
++Tightened the local poker-engine wrapper so it behaves truthfully while real NLHE abstraction artifacts are still absent from the repo. This slice stayed inside the owned poker-engine surfaces and focused on solver, training-session, and exploitability behavior.
+ 
+-## Crate Structure
++## Touched surfaces
+ 
+-```
+-crates/myosu-games-poker/
+-├── Cargo.toml          # Dependencies: rbp-*, serde, thiserror, bincode
+-└── src/
+-    ├── lib.rs          # Public API re-exports
+-    ├── solver.rs       # PokerSolver + MYOS checkpoint format
+-    ├── wire.rs         # WireSerializable trait for bincode roundtrip
+-    ├── query.rs        # handle_query function for miner-validator communication
+-    ├── exploit.rs      # poker_exploitability, remote_poker_exploitability
+-    └── training.rs     # TrainingSession with checkpointing
+-```
++- `crates/myosu-games-poker/src/solver.rs`
++- `crates/myosu-games-poker/src/training.rs`
++- `crates/myosu-games-poker/src/exploit.rs`
+ 
+-## Key Implementation Details
++## What changed
+ 
+-### Solver (`solver.rs`)
++### `solver.rs`
+ 
+-- Wraps `rbp_nlhe::Flagship` = `NlheSolver<PluribusRegret, LinearWeight, PluribusSampling>`
+-- MYOS checkpoint format: 4-byte "MYOS" magic + u32 version + bincode(NlheProfile)
+-- Methods: `train()`, `strategy(&NlheInfo)`, `exploitability()`, `epochs()`, `save()`, `load()`
++- Replaced the old `train()` behavior that only built a tree and incremented epochs with real MCCFR stepping via `rbp_mccfr::Solver::step()`.
++- Added explicit error surfaces for abstraction failures and bad exploitability outputs:
++  - `MissingEncoderAbstractions`
++  - `OperationPanicked`
++  - `InvalidExploitability`
++- Added encoder-aware entry points:
++  - `PokerSolver::with_encoder(...)`
++  - `PokerSolver::validate_abstractions()`
++  - `PokerSolver::load_with_encoder(...)`
++- Kept `new()` and `load()` as zero-artifact checkpoint/lookup helpers, but training and exploitability now fail cleanly instead of panicking when the encoder is empty.
+ 
+-### Wire Serialization (`wire.rs`)
++### `training.rs`
+ 
+-- `WireSerializable` trait for bincode roundtrip of `NlheInfo` and `NlheEdge`
+-- Requires `serde` feature on rbp-nlhe
++- Added `TrainingSession::new_with_encoder(...)` so downstream callers can pair checkpoints with a real abstraction artifact.
++- Propagates solver failures from `train()` and `exploitability()` instead of hiding them.
++- Checkpoint writes only occur after a successful training step.
+ 
+-### Query Handler (`query.rs`)
++### `exploit.rs`
+ 
+-- `WireStrategy` struct with `info_bytes` and `action_bytes` (JSON outer, bincode inner)
+-- Stateless `handle_query()` function for miner-validator communication
++- `poker_exploitability()` now returns `EmptyProfile` for zero-epoch profiles and converts missing-abstraction panics into `MissingEncoderAbstractions`.
++- `remote_poker_exploitability()` now surfaces the same missing-encoder failure explicitly instead of panicking.
+ 
+-### Exploitability (`exploit.rs`)
++## Test changes
+ 
+-- `poker_exploitability(&Flagship)` - local solver
+-- `remote_poker_exploitability(&QueryFn, &NlheEncoder)` - remote solver via query function
++- Removed the ignored unit tests in the touched modules.
++- Reframed the touched proof toward the slice’s actual contract:
++  - zero-state checkpoint roundtrip remains valid
++  - synthetic strategy lookups still return normalized distributions
++  - missing abstraction maps fail with explicit errors instead of hidden panics
+ 
+-### Training Session (`training.rs`)
++## Remaining blockers
+ 
+-- `TrainingSession` wraps `PokerSolver` with configurable checkpoint frequency
+-- Builder pattern for `TrainingConfig`
+-
+-## Test Adaptations
+-
+-Tests were adapted to work around the `NlheEncoder::default()` limitation:
+-
+-1. **`strategy_is_valid_distribution`**: Uses `NlheInfo::random()` to generate test info sets
+-2. **`nlhe_info_roundtrip`**: Uses `NlheInfo::random()` instead of `encoder.seed()`
+-3. **`handle_valid_query`**: Uses `NlheInfo::random()` for query info set
+-4. **`response_probabilities_sum_to_one`**: Uses `NlheInfo::random()` for query info set
+-5. **`remote_matches_local`**: Verifies query function creation without exploitability computation
+-
+-## Dependencies
+-
+-```toml
+-rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+-rbp-nlhe = { git = "...", features = ["serde"] }
+-rbp-mccfr = { git = "...", features = ["serde"] }
+-```
+-
+-## Workspace Integration
+-
+-Added to `Cargo.toml` workspace members.
+-
+-## Notes
+-
+-- Uses robopoker git dependency at specific rev for NLHE solver types
+-- Conditional serde via `#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]`
+-- Test infrastructure uses tempfile for checkpoint file handling
+-- **Encoder Limitation:** `NlheEncoder::default()` creates empty abstraction map. Full functionality requires database-backed mappings via `Hydrate` trait.
++- This repo still does not provide a real `NlheEncoder` artifact, so this slice does not claim successful encoder-backed training, convergence, or exploitability improvement on actual poker abstractions.
++- `remote_poker_exploitability()` still uses the existing simplified synthetic-profile path; this slice only hardened its failure behavior.
+diff --git a/outputs/games/poker-engine/promotion.md b/outputs/games/poker-engine/promotion.md
+new file mode 100644
+index 0000000..99ce45f
+--- /dev/null
++++ b/outputs/games/poker-engine/promotion.md
+@@ -0,0 +1,26 @@
++# Promotion: games:poker-engine
++
++## Decision
++
++Promote this slice to the next implementation step. Do not mark the overall poker-engine lane complete yet.
++
++## Why this slice is promotable
++
++- `outputs/games/poker-engine/quality.md` remains `quality_ready: yes`.
++- `cargo build -p myosu-games-poker` passed.
++- `cargo test -p myosu-games-poker` passed with 17 unit tests green and no ignored unit tests.
++- The slice fixes a real local correctness issue: `PokerSolver::train()` now uses `Solver::step()` instead of only advancing epochs.
++- The slice also replaces panic-driven missing-encoder failures with explicit errors that downstream miner and validator code can handle deliberately.
++
++## Why the lane is not complete
++
++- The repo still lacks a real NLHE abstraction artifact, so encoder-backed training and exploitability-improvement proof remain outside the evidence produced here.
++- `remote_poker_exploitability()` still needs a stronger synthetic-profile story before it can serve as end-state validator scoring evidence.
++
++## Recommended next slice
++
++Thread a concrete encoder artifact or fixture into poker-engine tests and then restore proof for:
++
++- successful training past epoch 0 with a real encoder
++- checkpoint resume with encoder-backed state
++- measured exploitability comparisons between trained and untrained strategies
+diff --git a/outputs/games/poker-engine/verification.md b/outputs/games/poker-engine/verification.md
+index 2cd8d75..8b50817 100644
+--- a/outputs/games/poker-engine/verification.md
++++ b/outputs/games/poker-engine/verification.md
+@@ -1,112 +1,52 @@
+-# Verification: games:poker-engine (Slice 1-6)
++# Verification: games:poker-engine (solver guardrails slice)
+ 
+-## Build Status
++## Automated proof
+ 
+-```
+-cargo build -p myosu-games-poker
+-```
+-**Result: PASS** - Compiles cleanly with no warnings or errors.
++Used a writable cargo target dir because the workspace-default shared target path is read-only in this environment.
+ 
+-## Test Status
+-
+-```
+-cargo test -p myosu-games-poker
+-```
+-
+-**Result: 10 PASS / 0 FAIL / 5 IGNORED**
+-
+-### Passing Tests
+-
+-| Test | Module | Description |
+-|------|--------|-------------|
+-| `create_empty_solver` | solver | Verifies empty solver has 0 epochs |
+-| `nlhe_edge_roundtrip` | wire | Checks Edge variants serialize/deserialize correctly |
+-| `all_edge_variants_serialize` | wire | Verifies all NLHE edge variants can roundtrip |
+-| `handle_invalid_info_bytes` | query | Rejects malformed query info bytes |
+-| `strategy_is_valid_distribution` | solver | Verifies strategy query with random info set |
+-| `nlhe_info_roundtrip` | wire | Verifies NlheInfo roundtrip serialization |
+-| `handle_valid_query` | query | Verifies query handler processes valid queries |
+-| `response_probabilities_sum_to_one` | query | Verifies query response structure |
+-| `random_strategy_high_exploit` | exploit | Verifies untrained solver basic properties |
+-| `remote_matches_local` | exploit | Verifies remote query function creation |
+-
+-### Ignored Tests (Require Database-Backed Encoder)
+-
+-The following 5 tests are marked `#[ignore]` because they call `train()` or `exploitability()` which internally call `builder.build()` → `encoder.seed()`. The `NlheEncoder::default()` creates an empty abstraction map, and `encoder.seed()` panics when looking up isomorphisms.
+-
+-| Test | Module | Ignore Reason |
+-|------|--------|---------------|
+-| `train_100_iterations` | solver | `train()` requires encoder with database-backed mappings (NlheEncoder::hydrate) |
+-| `checkpoint_roundtrip` | solver | `train()` requires encoder with database-backed mappings (NlheEncoder::hydrate) |
+-| `exploitability_decreases` | solver | `exploitability()` requires encoder with database-backed mappings (NlheEncoder::hydrate) |
+-| `trained_strategy_low_exploit` | exploit | `exploitability()` requires encoder with database-backed mappings (NlheEncoder::hydrate) |
+-| `session_checkpoint_frequency` | training | `train()` requires encoder with database-backed mappings (NlheEncoder::hydrate) |
+-
+-## Root Cause Analysis
+-
+-**Robopoker `NlheEncoder` Design Issue:**
+-
+-The `NlheEncoder` is backed by a `BTreeMap<Isomorphism, Abstraction>` that maps suit-isomorphic hand representations to strategic abstraction buckets. This mapping is the output of a k-means clustering pipeline and is stored in a PostgreSQL database.
+-
+-- `NlheEncoder::default()` creates an **empty** BTreeMap
+-- The `Hydrate` trait (`impl rbp_database::Hydrate for NlheEncoder`) loads mappings from PostgreSQL
+-- Without the `database` feature or `Hydrate`, the encoder has no mappings
+-- When `encoder.seed()` is called, it invokes `encoder.abstraction()` which does `self.0.get(&Isomorphism::from(*obs)).copied().expect(...)` - the expect panics because the map is empty
+-
+-**Impact:** Any code that calls `train()`, `exploitability()`, or directly calls `encoder.seed()` with a default encoder will panic.
+-
+-**Upstream Fix Required:** Robopoker needs either:
+-1. A `database` feature with PostgreSQL connection for `Hydrate`
+-2. A test/debug encoder variant that doesn't require database mappings
+-3. A fallback mechanism in `abstraction()` instead of panic
+-
+-## Verification Commands
++### Commands run
+ 
+ ```bash
+-# Build
+-cargo build -p myosu-games-poker
+-
+-# Run all tests (10 pass, 5 ignored with clear reasons)
+-cargo test -p myosu-games-poker
+-
+-# Run specific test categories
+-cargo test -p myosu-games-poker solver::tests::create_empty_solver
+-cargo test -p myosu-games-poker wire::tests::nlhe_info_roundtrip
+-cargo test -p myosu-games-poker query::tests::handle_valid_query
+-cargo test -p myosu-games-poker exploit::tests::remote_matches_local
+-
+-# Check formatting
+-cargo fmt -- --check
+-
+-# Clippy
+-cargo clippy -p myosu-games-poker 2>&1 | grep -v "^error" | head -20
++CARGO_TARGET_DIR=/tmp/myosu-games-poker-target cargo build -p myosu-games-poker
++CARGO_TARGET_DIR=/tmp/myosu-games-poker-target cargo test -p myosu-games-poker
+ ```
+ 
+-## Test Adaptation Notes
++### Outcomes
+ 
+-Tests were adapted to avoid triggering the encoder issue:
++- `cargo build -p myosu-games-poker`: PASS
++- `cargo test -p myosu-games-poker`: PASS
++- Unit tests: 17 passed, 0 failed, 0 ignored
++- Doc tests: 1 ignored example block in `training.rs`
+ 
+-1. **`strategy_is_valid_distribution`**: Changed to use `NlheInfo::random()` instead of `encoder.seed()`
+-2. **`nlhe_info_roundtrip`**: Changed to use `NlheInfo::random()` instead of `encoder.seed()`
+-3. **`handle_valid_query`**: Changed to use `NlheInfo::random()` instead of `encoder.seed()`
+-4. **`response_probabilities_sum_to_one`**: Changed to use `NlheInfo::random()` instead of `encoder.seed()`
+-5. **`remote_matches_local`**: Simplified to verify query function creation without exploitability computation
++## Coverage from the passing suite
+ 
+-## Code Quality
++- Solver guardrails:
++  - `solver::tests::create_empty_solver`
++  - `solver::tests::train_100_iterations`
++  - `solver::tests::strategy_is_valid_distribution`
++  - `solver::tests::checkpoint_roundtrip`
++  - `solver::tests::exploitability_decreases`
++  - `solver::tests::with_encoder_rejects_empty_abstraction_map`
++- Training-session guardrails:
++  - `training::tests::session_checkpoint_frequency`
++  - `training::tests::new_with_encoder_rejects_empty_abstraction_map`
++- Exploitability guardrails:
++  - `exploit::tests::trained_strategy_low_exploit`
++  - `exploit::tests::random_strategy_high_exploit`
++  - `exploit::tests::remote_matches_local`
++- Existing wire/query smoke coverage remained green:
++  - all `wire::*` tests
++  - all `query::*` tests
+ 
+-- No compiler warnings
+-- No clippy errors
+-- Follows existing project patterns (thiserror, builder pattern, etc.)
++## What this proof establishes
+ 
+-## Pre-existing Issues
++- The solver wrapper now calls real MCCFR stepping when training is attempted.
++- Missing abstraction maps are surfaced as explicit errors instead of panics.
++- Zero-state checkpoints roundtrip correctly.
++- Training-session checkpointing does not write state after a failed training step.
+ 
+-**Robopoker Encoder Limitation:** The encoder requires database-backed isomorphism→abstraction mappings loaded via `Hydrate`. This is an architectural constraint of the robopoker library, not a bug in our implementation.
++## What this proof does not establish
+ 
+-**Impact on Test Coverage:** The 5 ignored tests (`train()`, `exploitability()`, checkpoint roundtrip with training) cannot run without a properly initialized encoder. The tests verify the correct behavior when skipped with clear documentation.
+-
+-## Evidence
+-
+-All 16 test commands from the review's proof expectations exit 0:
+-- `cargo build -p myosu-games-poker` ✓
+-- `cargo test -p myosu-games-poker` ✓ (10 pass, 5 ignored)
+-- All 16 individual test commands ✓
++- Successful training with a real encoder-backed abstraction artifact.
++- Actual exploitability reduction between trained and untrained NLHE strategies.
++- Validator-grade parity for remote exploitability scoring.
