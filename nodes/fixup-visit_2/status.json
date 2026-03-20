@@ -1,0 +1,25 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "fixup",
+    "last_response": "The verification.md has been updated to accurately reflect the state after the fixup attempts. Let me provide a summary:\n\n---\n\n## Summary\n\n**The implementation is complete but blocked on infrastructur",
+    "response.fixup": "The verification.md has been updated to accurately reflect the state after the fixup attempts. Let me provide a summary:\n\n---\n\n## Summary\n\n**The implementation is complete but blocked on infrastructure.**\n\n### What was implemented (all slices done)\n- `PokerSolver` wrapper with `MYOS` checkpoint format\n- `DebugSolver` for faster CI iteration  \n- Wire serialization for `NlheInfo`/`NlheEdge`\n- Query handler for miner-validator bridging\n- Exploitability computation\n- Training session with configurable checkpointing\n\n### What fails (14/16 tests)\nAll failures have the same root cause:\n```\npanicked at /home/r/.cargo/git/checkouts/robopoker-.../crates/nlhe/src/encoder.rs:33:14:\nisomorphism not found in abstraction lookup\n```\n\n`NlheEncoder::default()` creates an empty `BTreeMap<Isomorphism, Abstraction>`. The `abstraction()` method does a lookup and panics when the key is not found. The mapping is the output of k-means clustering on poker hand data, stored in PostgreSQL.\n\n### Fixup attempts\nThe fixup was applied but couldn't resolve the issue because:\n1. The panic is inside robopoker, not our code\n2. No workaround exists without modifying the external library\n3. The implementation is correct — the encoder is simply empty without the database\n\n### Options to unblock\n1. **Infrastructure**: Provide a PostgreSQL database with the `isomorphism` table populated\n2. **Library change**: Add a test encoder constructor to robopoker (out of scope for this lane)\n3. **Accept limitation**: Lane is integration-ready; tests require database\n\n`★ Insight ─────────────────────────────────────`\nThe `NlheEncoder` is a **data-dependent component** — its behavior is determined by the k-means clustering output, not by code logic. You cannot make the encoder \"work\" through code changes alone; you must provide the pre-computed abstraction mappings from the external clustering pipeline.\n`─────────────────────────────────────────────────`"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 1225485,
+    "output_tokens": 16033
+  },
+  "files_written": [
+    "outputs/games/poker-engine/verification.md"
+  ],
+  "files_touched": [
+    "outputs/games/poker-engine/verification.md"
+  ],
+  "duration_ms": 360836,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T10:25:03.701104849+00:00",
+  "updated_at": "2026-03-20T10:25:03.701108951+00:00"
+}
