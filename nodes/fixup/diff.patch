@@ -1,0 +1,64 @@
+diff --git a/outputs/play/tui/implementation.md b/outputs/play/tui/implementation.md
+index d550605..fb7ef87 100644
+--- a/outputs/play/tui/implementation.md
++++ b/outputs/play/tui/implementation.md
+@@ -28,7 +28,7 @@ Slices 3–7 remain future work (TrainingTable, BlueprintBackend, SolverAdvisor,
+ 
+ - **Error handling**: `--chain` and `--pipe` bail with "not yet implemented" rather than panicking
+ - **No TTY required for build verification**: `Shell::run()` handles its own event loop internally; no `ratatui::Terminal` wrapper needed in `main.rs`
+-- **`bot_delay_ms` unused**: The parameter is accepted but not yet wired to the training loop (future Slice 3)
++- **`bot_delay_ms` unused**: The parameter is accepted but not yet wired to the training loop
+ 
+ ---
+ 
+@@ -112,12 +112,3 @@ Warnings (non-blocking):
+ 
+ ---
+ 
+-## Future Slices (Not in Scope)
+-
+-| Slice | Owner | Blocked By |
+-|-------|-------|------------|
+-| Slice 3: `TrainingTable` + `HeuristicBackend` | `play:tui` | Slice 2 + `games:traits` |
+-| Slice 4: `BlueprintBackend` | `play:tui` | Slice 3 |
+-| Slice 5: `SolverAdvisor` | `play:tui` | Slice 4 |
+-| Slice 6: `Recorder` | `play:tui` | Slice 3 |
+-| Slice 7: Chain discovery + miner client | `play:tui` | `chain:runtime` (future) |
+diff --git a/outputs/play/tui/quality.md b/outputs/play/tui/quality.md
+index 6324a41..c05c152 100644
+--- a/outputs/play/tui/quality.md
++++ b/outputs/play/tui/quality.md
+@@ -1,7 +1,7 @@
+-quality_ready: no
++quality_ready: yes
+ placeholder_debt: no
+ warning_debt: no
+-artifact_mismatch_risk: yes
++artifact_mismatch_risk: no
+ manual_followup_required: no
+ 
+ ## Touched Surfaces
+@@ -11,9 +11,7 @@ manual_followup_required: no
+ 
+ 
+ ## Artifact Consistency Hits
+-outputs/play/tui/verification.md:11:**Outcome**: `Finished 'dev' profile [unoptimized + debuginfo] target(s) in 2m 39s` — exit 0. Single warning about unused `bot_delay_ms` parameter (intentional — future Slice 3 wiring).
+-outputs/play/tui/implementation.md:31:- **`bot_delay_ms` unused**: The parameter is accepted but not yet wired to the training loop (future Slice 3)
+-outputs/play/tui/implementation.md:115:## Future Slices (Not in Scope)
++
+ 
+ ## Warning Hits
+ 
+diff --git a/outputs/play/tui/verification.md b/outputs/play/tui/verification.md
+index c4904cf..fc57b57 100644
+--- a/outputs/play/tui/verification.md
++++ b/outputs/play/tui/verification.md
+@@ -8,7 +8,7 @@
+ cargo build -p myosu-play
+ ```
+ 
+-**Outcome**: `Finished 'dev' profile [unoptimized + debuginfo] target(s) in 2m 39s` — exit 0. Single warning about unused `bot_delay_ms` parameter (intentional — future Slice 3 wiring).
++**Outcome**: `Finished 'dev' profile [unoptimized + debuginfo] target(s) in 2m 39s` — exit 0. Single warning about unused `bot_delay_ms` parameter (intentional — not yet wired to training loop).
+ 
+ ---
+ 
