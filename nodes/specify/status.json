@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "The artifacts are complete. Let me provide a summary of what was produced and the key decision.\n\n---\n\n## Agent Integration Lane — Summary\n\n**Decision: PROCEED to implementation-family next**\n\n### Wh",
+    "response.specify": "The artifacts are complete. Let me provide a summary of what was produced and the key decision.\n\n---\n\n## Agent Integration Lane — Summary\n\n**Decision: PROCEED to implementation-family next**\n\n### What was produced\n\n| Artifact | Path | Lines |\n|----------|------|-------|\n| Adapter | `outputs/agent-integration/agent-adapter.md` | 223 |\n| Review | `outputs/agent-integration/review.md` | 149 |\n\n### How the decision was made\n\nThe `agent:experience` lane review (`outputs/agent/experience/review.md`) already passed with **KEEP — proceed to implementation-family workflow**. The `agent:integration` review synthesizes that judgment against the actual blocker map:\n\n**Can proceed immediately**: Slices 1–2 (`agent_context.rs`, `journal.rs`) depend only on `tui:shell` (82 tests, trusted). No upstream blockers.\n\n**Can proceed as soon as `play:tui` binary dispatch exists**: Slices 3–4 (`--context` wiring, `reflect>` prompt) — the `play:tui` lane owns this, not a reason to wait.\n\n**Must wait for `robopoker` git migration**: Slices 5–9 (narration, lobby, spectator relay) need integration testing. This is owned by `games:traits` lane and should be tracked there.\n\n**Bottom line**: implementation-family can begin with Phase 1 immediately. The upstream blockers are real but owned elsewhere.\n\n`★ Insight ─────────────────────────────────────`\nThe blocker map reveals a dependency ordering that wasn't explicit before:\n`robopoker` git migration → enables `games:traits` integration → enables `play:tui` binary dispatch → enables `agent:experience` Slices 3+. This means `agent:experience` Slices 1–2 are on the critical path and should be started immediately, because everything else flows from completing them first.\n`─────────────────────────────────────────────────`",
+    "last_stage": "specify"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 629628,
+    "output_tokens": 9542
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 175617,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T21:32:16.088206532+00:00",
+  "updated_at": "2026-03-20T21:32:16.088216462+00:00"
+}
