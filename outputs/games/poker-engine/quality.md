@@ -1,19 +1,21 @@
 quality_ready: no
 placeholder_debt: no
 warning_debt: no
-artifact_mismatch_risk: no
-manual_followup_required: yes
+artifact_mismatch_risk: yes
+manual_followup_required: no
 
 ## Touched Surfaces
-- crates/myosu-games-poker/src/lib.rs
-- crates/myosu-games-poker/src/solver.rs
-- outputs/games/poker-engine/implementation.md
-- outputs/games/poker-engine/verification.md
-- outputs/games/poker-engine/quality.md
-- outputs/games/poker-engine/promotion.md
+- crates/myosu-games-poker/Cargo.toml
 
-## Quality Notes
-- `cargo build -p myosu-games-poker` completed without compiler warnings on the active Slice 2 surface.
-- The compiled Slice 2 code path does not contain active `unimplemented!`, stub, or placeholder branches.
-- Artifact text now matches the real code and proof posture.
-- Follow-up is still required because honest MCCFR training/exploitability proof depends on the missing encoder loading/artifact prerequisite (`RF-02`).
+## Placeholder Hits
+
+
+## Artifact Consistency Hits
+outputs/games/poker-engine/implementation.md:20:2. `solver.rs` now matches the reviewed Slice 2 direction instead of the prior placeholder/stub state:
+outputs/games/poker-engine/implementation.md:41:- Future slices (`query.rs`, `wire.rs`, `exploit.rs`, `training.rs`) remain on disk but are intentionally outside the compiled Slice 2 surface.
+
+## Warning Hits
+
+
+## Manual Followup Hits
+
