@@ -2,15 +2,17 @@
 //!
 //! Entry point for the myosu poker gameplay experience:
 //! - `myosu-play --train` — local practice against heuristic/blueprint bot
-//! - `myosu-play --chain ws://...` — miner-connected play (future slice)
-//! - `myosu-play --pipe` — plain-text agent protocol
+//! - `myosu-play --chain ws://...` — miner-connected play once chain integration lands
+//! - `myosu-play --pipe` — plain-text agent protocol once pipe wiring lands
 
 use clap::Parser;
-use myosu_games_poker::NlheRenderer;
 use myosu_tui::shell::Shell;
 use std::time::Duration;
+use training::{HeuristicBackend, TrainingTable, bot_delay_from_env};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
+
+mod training;
 
 #[derive(Parser, Debug)]
 #[command(name = "myosu-play")]
@@ -44,39 +46,38 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     if args.chain.is_some() {
-        anyhow::bail!("--chain mode is not yet implemented (Slice 7)");
+        anyhow::bail!("--chain mode is pending chain integration work (Slice 7)");
     }
 
     if args.pipe {
-        anyhow::bail!("--pipe mode is not yet implemented (future slice)");
+        anyhow::bail!("--pipe mode is pending pipe integration work");
     }
 
     if !args.train {
-        anyhow::bail!("myosu-play requires --train flag for now. Run: myosu-play --train");
+        anyhow::bail!("myosu-play currently expects --train. Run: myosu-play --train");
     }
 
     run_training_mode(args.bot_delay_ms).await
 }
 
 /// Run training mode: heads-up NLHE practice against a local bot.
-async fn run_training_mode(_bot_delay_ms: u64) -> anyhow::Result<()> {
+async fn run_training_mode(bot_delay_ms: u64) -> anyhow::Result<()> {
     info!("Starting training mode");
 
-    // Create the poker renderer with initial preflop state
-    let renderer = NlheRenderer::preflop(1);
+    let bot_delay_ms = bot_delay_from_env(bot_delay_ms);
+    let backend = std::sync::Arc::new(HeuristicBackend);
+    let mut table = TrainingTable::with_backend_and_delay(backend, bot_delay_ms);
+    table.advance_until_hero_or_terminal().await?;
+    let renderer = table.renderer();
 
-    // Create and configure the shell
     let mut shell = Shell::new();
+    shell.log(format!("~ {}", table.strategy_status()));
+    shell.log(format!("practice chips {}", table.practice_chips()));
 
-    // Update completions from the renderer
     shell.update_completions(&renderer);
 
-    // Use a tick rate of ~60fps
     let tick_rate = Duration::from_millis(16);
 
-    // Run the shell event loop
-    // Note: in a full implementation, this would be wrapped in a ratatui Terminal
-    // For Slice 1, we verify the binary builds by running the shell with the renderer
     shell.run(&renderer, tick_rate).await?;
 
     info!("Training session ended");

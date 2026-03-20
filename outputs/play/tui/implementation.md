@@ -2,113 +2,70 @@
 
 ## Slice Coverage
 
-This implementation delivers **Slices 1 and 2** of the `play:tui` lane:
+This run implemented the next approved `play:tui` slice:
 
-| Slice | Module | Status | Files |
-|-------|--------|--------|-------|
-| Slice 1 | `myosu-play` binary skeleton | **Done** | `crates/myosu-play/`, `crates/myosu-play/src/main.rs` |
-| Slice 2 | `NlheRenderer` + truth stream | **Done** | `crates/myosu-games-poker/` |
+| Slice | Surface | Status | Files |
+|-------|---------|--------|-------|
+| Slice 3 | `TrainingTable` + `HeuristicBackend` | Done with one explicit command constraint | `crates/myosu-play/src/training.rs`, `crates/myosu-play/src/main.rs`, `crates/myosu-play/Cargo.toml`, `Cargo.lock` |
 
-Slices 3–7 remain future work (TrainingTable, BlueprintBackend, SolverAdvisor, Recorder, chain integration).
+Slices 1 and 2 remain in place from the earlier lane run. Blueprint loading, advisor wiring, recorder work, and chain-backed play remain outside this implementation.
 
----
+## What Landed
 
-## Slice 1: `myosu-play` Binary Skeleton
+### `crates/myosu-play/src/training.rs`
 
-### What Was Built
+Added a real training engine on top of robopoker gameplay types:
 
-- **Crate**: `crates/myosu-play/` — workspace member binary
-- **Entry point**: `crates/myosu-play/src/main.rs` with `#[tokio::main]` async runtime
-- **CLI flags**: `--train` (local practice), `--chain` (future miner-connected), `--pipe` (future agent protocol)
-- **Bot delay**: `--bot-delay-ms` flag (default 300ms)
-- **Shell wiring**: `Shell::new()` from `myosu-tui::shell`; `shell.update_completions(&renderer)`; `shell.run(&renderer, tick_rate)` event loop
-- **Tick rate**: 60fps (`Duration::from_millis(16)`)
+- `TrainingTable` now owns the current `Game`, hand root, action history, practice chip balance, hand number, pending training commands, board script, and bot backend.
+- `SessionRecall` implements `rbp_gameplay::Recall` against the actual hand root plus applied action history, so the bot sees the same state the table is advancing.
+- `BotBackend` is now the slice contract for local training bots: `strategy_name`, `action_distribution`, and `select_action`.
+- `HeuristicBackend` produces legal weighted action distributions from live game state. It uses a simple preflop hand score plus postflop strength buckets to choose among fold, check, call, raise, and shove.
+- `TrainingTable::renderer()` converts live table state into the existing `NlheRenderer` state model so the training slice can feed the already-approved TUI surfaces.
+- `bot_delay_from_env()` reads `MYOSU_BOT_DELAY_MS`, and the async training advance path uses `tokio::time::sleep` before bot actions instead of a blocking pause.
 
-### Design Decisions
+### Training Commands
 
-- **Error handling**: `--chain` and `--pipe` bail with "not yet implemented" rather than panicking
-- **No TTY required for build verification**: `Shell::run()` handles its own event loop internally; no `ratatui::Terminal` wrapper needed in `main.rs`
-- **`bot_delay_ms` unused**: The parameter is accepted but not yet wired to the training loop
+The slice now supports the commands that fit the current public robopoker API:
 
----
+- `/deal A♠ K♥` sets hero hole cards for the next hand.
+- `/board Q♥ J♥ 9♦` scripts the next hand’s community cards as streets are revealed.
+- `/showdown` forces a passive runout so the hand resolves without more aggressive betting.
 
-## Slice 2: `NlheRenderer` + Truth Stream
+The command parser normalizes Unicode suit input to robopoker’s ASCII parser, so the spec examples work as written.
 
-### What Was Built
+### One Explicit Constraint Inside This Slice
 
-#### `crates/myosu-games-poker/` Crate
+`/stack` and `/bot-stack` are wired as clear runtime errors instead of silent no-ops. The current `rbp_gameplay::Game` API exposes no public stack setters, so this slice stops at the honest boundary rather than faking support.
 
-```
-src/
-├── lib.rs              # pub mod renderer, pub mod truth_stream, pub use NlheRenderer
-├── renderer.rs         # NlheRenderer (GameRenderer impl) + NlheState enum + tests
-└── truth_stream.rs    # TruthStreamEmitter + LogLine + LogLineType + tests
-```
+### `crates/myosu-play/src/main.rs`
 
-#### `NlheRenderer` (`renderer.rs`)
+`myosu-play --train` now constructs a `TrainingTable`, resolves bot delay through the environment-aware helper, advances the table to the first hero decision, snapshots the renderer from live table state, and logs the current bot strategy plus practice chip balance into the shell transcript before the shell loop starts.
 
-- **`NlheState` enum** with variants: `Idle`, `Preflop { to_call, has_decision }`, `Flop { to_call, has_decision }`, `BotThinking`, `Showdown { hero_wins }`
-- **`has_decision` field**: Added to `Preflop` and `Flop` to distinguish "awaiting hero decision" from "awaiting bot action"
-- **`context_label` caching**: `&str` return to satisfy `GameRenderer::context_label` trait bound; updated on `new()`, `preflop()`, `flop()`, `set_state()`
-- **Constructors**: `NlheRenderer::preflop(hand_num)` and `NlheRenderer::flop(hand_num)` both set `has_decision: true`
-- **`GameRenderer` trait**: All 7 required methods implemented — `game_label`, `context_label`, `symbol`, `completions`, `parse_input`, `pipe_output`, `render`, `desired_height`, `declaration`
-- **`desired_height`**: Returns 4 when state is `Preflop`/`Flop`/`BotThinking`/`Showdown`, 0 when `Idle`
-- **Completions**: Non-empty when `has_decision` is true; empty when `Idle` or `BotThinking`
-- **Declaration**: `THE SYSTEM AWAITS YOUR DECISION` (preflop/flop with decision), `BOT THINKING...` (bot turn), `SHOWDOWN` (showdown), `IDLE` (idle)
-- **`parse_input`**: Accepts `f`/`fold`, `c`/`call`, `r`/`raise` + optional amount, `x`/`check`
-- **`pipe_output`**: Structured text format with `board:`, `hero:`, `solver:`, `pot:` fields
+This keeps the entrypoint aligned with Slice 3 without reaching into blueprint, advisor, recorder, or chain work.
 
-#### `TruthStreamEmitter` (`truth_stream.rs`)
+### Dependency Surface
 
-- **`LogLineType` enum**: `Action`, `Fold`, `StreetTransition`, `Showdown`, `Result`, `Error`, `Fallback`, `Blank`
-- **`LogLine` struct**: `text: String`, `line_type: LogLineType`, `pot_at_line: u32`
-- **`LogLine::formatted_line(terminal_width)`**: Right-aligns pot with spaces between text and `pot N`
-- **`LogLine::style()`**: Returns `Style` with `Color::Rgb` — dim gray for Fold/Fallback, lighter for Result, red for Error, street gray
-- **`TruthStreamEmitter`**: Collects `Vec<LogLine>`; tracks `current_pot` and `current_street`; `reset()` clears lines and resets pot/street
+`crates/myosu-play/Cargo.toml` and `Cargo.lock` now carry the direct training dependencies required by the slice:
 
-### Design Decisions
+- `rbp-cards`
+- `rbp-gameplay`
+- `rand`
 
-- **`has_decision` binding**: The combined match arm `NlheState::Preflop { .. } | NlheState::Flop { has_decision, .. }` failed at compile time because `has_decision` isn't bound in the first arm. Split into separate match arms to fix.
-- **`context_label` as cached `String`**: The trait requires `&str` but the state enum doesn't carry a hand number string. Solved by adding `context_label: String` field to `NlheRenderer` and updating it on every state transition.
-- **Suit constants unused**: `SUIT_SPADES`, `SUIT_HEARTS`, `SUIT_DIAMONDS`, `SUIT_CLUBS` are defined but unused — helpers for future card rendering, not removed to avoid churn.
-- **`emit_action` verb format**: `LogLine::action` appends `to {amount}bb` to the verb, so test verbs use "raises" (not "raises to") to produce correct output `raises to 6bb`.
+## Automated Coverage Added in This Slice
 
-### Workspace Changes
+`training.rs` now carries six focused unit tests:
 
-- **Root `Cargo.toml`**: Added `crates/myosu-games-poker` and `crates/myosu-play` to `members` array
-- **`myosu-games-poker/Cargo.toml`**: Package `myosu-games-poker`; depends on `myosu-tui`, `ratatui`, `serde`, `thiserror`, `rbp-core` (git)
-- **`myosu-play/Cargo.toml`**: Binary `myosu-play`; depends on `myosu-tui`, `myosu-games-poker`, `ratatui`, `crossterm`, `rbp-core` (git), standard workspace deps
+- `hand_completes_fold`
+- `hand_completes_showdown`
+- `deal_command_sets_cards`
+- `bot_backend_fallback`
+- `practice_chips_update`
+- `alternating_button`
 
-### robopoker Dependency Note
+These cover the minimum proof the lane spec asked for, plus the additional slice-specific behaviors that were straightforward to prove automatically.
 
-`rbp-core` is pulled via git from `https://github.com/happybigmtn/robopoker` at rev `04716310143094ab41ec7172e6cea5a2a66744ef`. This is a temporary git dependency. The review correctly notes this should eventually be migrated to a proper crate registry version once the robopoker repo is cleaned up.
+## Remaining Blockers Before the Next `play:tui` Slice
 
----
-
-## Test Results
-
-```
-cargo test -p myosu-games-poker
-  22 passed; 0 failed; 0 ignored
-
-cargo build -p myosu-play
-  Finished 'dev' profile [unoptimized + debuginfo] target(s) in 2m 39s
-```
-
-Warnings (non-blocking):
-- `unused variable: label` in `render_declaration` — helper variable for future label styling
-- `unused constants SUIT_*` and `unused function render_card/render_hidden/render_slot` — scaffold helpers
-- `unused variable: emitter` in two truth_stream tests — emitters constructed for future use
-
----
-
-## Upstream Contracts Maintained
-
-| Contract | Source | Status |
-|----------|-------|--------|
-| `GameRenderer` trait | `myosu-tui` (82 tests pass) | Satisfied — all 7 methods implemented |
-| `Shell` API | `myosu-tui::shell` | Satisfied — `Shell::new()`, `update_completions`, `run` |
-| `crate` workspace membership | root `Cargo.toml` | Satisfied — both crates in `members` |
-
----
-
+- Stack override commands need either upstream public setters in `rbp_gameplay::Game` or a local wrapper that can rebuild stack-sized hand roots safely.
+- The current shell still renders a snapshot renderer created at training startup; live in-shell state mutation belongs to the next round of TUI/game-loop plumbing.
+- Blueprint-backed bot play, advisor rendering, recorder output, and chain discovery are still untouched by this run.
