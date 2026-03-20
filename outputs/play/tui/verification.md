@@ -8,7 +8,7 @@
 cargo build -p myosu-play
 ```
 
-**Outcome**: `Finished 'dev' profile [unoptimized + debuginfo] target(s) in 2m 39s` — exit 0. Single warning about unused `bot_delay_ms` parameter (intentional — future Slice 3 wiring).
+**Outcome**: `Finished 'dev' profile [unoptimized + debuginfo] target(s) in 2m 39s` — exit 0. Single warning about unused `bot_delay_ms` parameter (intentional — not yet wired to training loop).
 
 ---
 

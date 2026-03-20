@@ -28,7 +28,7 @@ Slices 3–7 remain future work (TrainingTable, BlueprintBackend, SolverAdvisor,
 
 - **Error handling**: `--chain` and `--pipe` bail with "not yet implemented" rather than panicking
 - **No TTY required for build verification**: `Shell::run()` handles its own event loop internally; no `ratatui::Terminal` wrapper needed in `main.rs`
-- **`bot_delay_ms` unused**: The parameter is accepted but not yet wired to the training loop (future Slice 3)
+- **`bot_delay_ms` unused**: The parameter is accepted but not yet wired to the training loop
 
 ---
 
@@ -112,12 +112,3 @@ Warnings (non-blocking):
 
 ---
 
-## Future Slices (Not in Scope)
-
-| Slice | Owner | Blocked By |
-|-------|-------|------------|
-| Slice 3: `TrainingTable` + `HeuristicBackend` | `play:tui` | Slice 2 + `games:traits` |
-| Slice 4: `BlueprintBackend` | `play:tui` | Slice 3 |
-| Slice 5: `SolverAdvisor` | `play:tui` | Slice 4 |
-| Slice 6: `Recorder` | `play:tui` | Slice 3 |
-| Slice 7: Chain discovery + miner client | `play:tui` | `chain:runtime` (future) |
