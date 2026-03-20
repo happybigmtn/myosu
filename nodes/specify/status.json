@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "specify",
+    "last_response": "Both required artifacts are produced. Here is the honest summary of this integration lane:\n\n---\n\n## What Was Done\n\n**Executed `agent:experience`** — the last ready product lane. Its `spec.md` and `r",
+    "response.specify": "Both required artifacts are produced. Here is the honest summary of this integration lane:\n\n---\n\n## What Was Done\n\n**Executed `agent:experience`** — the last ready product lane. Its `spec.md` and `review.md` (`outputs/agent/experience/`) were produced in a prior session and are sound. I read them, audited the upstream dependencies (`tui:shell` 82 tests, `games:traits` 14 tests, `schema.rs` 16 tests), and synthesized the integration decision.\n\n**Produced `outputs/agent-integration/agent-adapter.md`**\n- Documents the integration contract: what `agent:experience` requires from upstream and what it provides to the product\n- Maps the 9 implementation slices into three dependency tiers (immediate / requires binary / requires chain)\n- Establishes the data directory convention (`~/.myosu/agents/<name>/`, `~/.myosu/spectate/`)\n- Records four product-level adapter decisions\n\n**Produced `outputs/agent-integration/review.md`**\n- Judgment: **PROCEED** — implementation-family workflow\n- Core argument: Slices 1–4 depend only on trusted `tui:shell` + `games:traits` — no reason to wait. `play:tui` binary (sequential blocker) continues in parallel. No new upstream unblock lane needed.\n- Documents three remaining blockers with ownership (`play:tui` owns the binary; `games:traits` already resolved robopoker git migration; the `game_state_schema_present` path in the manifest is a false positive — the file exists)\n\n**The decision**: The product frontier needs an **implementation-family workflow next**, not another upstream unblock. Start `agent:experience` Slices 1–4 now; start `play:tui` Slice 1 concurrently."
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 695556,
+    "output_tokens": 8958
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 160953,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T21:35:29.046838766+00:00",
+  "updated_at": "2026-03-20T21:35:29.046843231+00:00"
+}
