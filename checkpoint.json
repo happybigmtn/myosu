@@ -1,42 +1,48 @@
 {
-  "timestamp": "2026-03-20T22:57:56.062484068Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-20T22:57:57.771719711Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
     "start": 1,
     "review": 1,
+    "verify": 1,
     "specify": 1,
     "polish": 1
   },
   "context_values": {
     "internal.retry_count.specify": 1,
-    "outcome": "fail",
+    "outcome": "success",
     "last_stage": "specify",
     "internal.retry_count.polish": 1,
     "graph.rankdir": "LR",
+    "thread.polish.current_node": "verify",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "internal.fidelity": "compact",
-    "failure_class": "deterministic",
+    "failure_class": "",
     "thread.start.current_node": "specify",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
     "response.specify": "Both required artifacts have been produced.\n\n`★ Insight ─────────────────────────────────────`\n- The key decision embedded in `review.md`: **implementation-family workflow next, parallel upstream unblocks** — this is a \"start now with tracked blockers\" judgment, not a \"wait until everything is clear\" judgment\n- The `agent-adapter.md` uses a **slice-by-slice upstream requirement table** rather than a simple dependency list — this is more useful for the control plane because it shows exactly which slice can start given current upstream state\n- The `depends_on: unit: play, milestone: reviewed` in `myosu-product.yaml` is a **milestone gate**, not an implementation gate — the review distinguishes between these, allowing implementation to proceed before the milestone is reached\n`─────────────────────────────────────────────────`\n\n---\n\n## Summary\n\n**Lane executed**: `agent:experience` (last remaining ready product lane)\n\n**Decision**: Proceed to implementation-family workflow next, with parallel upstream unblocks\n\n### Artifacts Produced\n\n| File | Purpose |\n|------|---------|\n| `outputs/agent-integration/agent-adapter.md` | Interface contract documenting what `agent:experience` consumes from each upstream lane, slice-by-slice |\n| `outputs/agent-integration/review.md` | Decision synthesis: judgment + rationale + upstream unblock tracking + control plane recommendations |\n\n### Key Findings from `agent:experience` Review\n\n- **KEEP** judgment: lane spec is sound, upstream is trusted, 9 slices are sequential with minimal coupling\n- **Slices 1–2 can start immediately** — depend only on trusted `tui:shell` and `games:traits`\n- **Critical path blockers** (owned elsewhere):\n  - `robopoker` git migration → `games:traits` lane\n  - `myosu-play` binary skeleton → `play:tui` lane\n- **The `depends_on` in `myosu-product.yaml` is a milestone gate**, not an implementation gate — implementation can proceed in parallel\n\n### Next Step\n\nThe control plane should add `agent:experience` to the active implementation track and execute Slice 1 (`agent_context.rs`). The `robopoker` and `play:tui` lanes should proceed concurrently, with their completion unblocking Slices 3–9.",
+    "command.output": "",
+    "command.stderr": "",
     "thread.specify.current_node": "review",
     "internal.retry_count.review": 1,
     "internal.run_id": "01KM6QC01NSXXXEK2PQB7RZQ6P",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6QC01NSXXXEK2PQB7RZQ6P/worktree",
-    "internal.thread_id": "review",
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "internal.thread_id": "polish",
+    "failure_signature": "",
+    "internal.retry_count.verify": 1,
     "internal.retry_count.start": 1,
     "last_response": "Both required artifacts have been produced.\n\n`★ Insight ─────────────────────────────────────`\n- The key decision embedded i",
     "thread.review.current_node": "polish",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 386.6k tokens in / 6.6k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 386.6k tokens in / 6.6k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
     "internal.node_visit_count": 1,
-    "current_node": "polish"
+    "current_node": "verify"
   },
   "logs": [],
   "node_outcomes": {
@@ -57,6 +63,15 @@
         "failure_signature": "api_deterministic|openai|not_found"
       },
       "duration_ms": 14514
+    },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": ""
+      },
+      "notes": "Script completed: test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md",
+      "duration_ms": 2
     },
     "start": {
       "status": "success",
@@ -86,12 +101,13 @@
       "duration_ms": 115464
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "review|deterministic|api_deterministic|openai|not_found": 1,
     "polish|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
+    "verify": 1,
     "review": 1,
     "specify": 1,
     "start": 1,
