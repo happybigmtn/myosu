@@ -1,0 +1,353 @@
+diff --git a/fabro/programs/myosu-product.yaml b/fabro/programs/myosu-product.yaml
+index dfaad83..b4b06c3 100644
+--- a/fabro/programs/myosu-product.yaml
++++ b/fabro/programs/myosu-product.yaml
+@@ -60,3 +60,14 @@ units:
+             type: file_exists
+             path: ../../docs/api/game-state.json
+         produces: [spec, review]
++
++      - id: integration
++        kind: implementation
++        title: Agent Integration Lane
++        run_config: ../run-configs/product/agent-integration.toml
++        managed_milestone: reviewed
++        depends_on:
++          - unit: agent
++            lane: experience
++            milestone: reviewed
++        produces: [adapter, review]
+diff --git a/fabro/run-configs/product/agent-integration.toml b/fabro/run-configs/product/agent-integration.toml
+new file mode 100644
+index 0000000..f16f33c
+--- /dev/null
++++ b/fabro/run-configs/product/agent-integration.toml
+@@ -0,0 +1,35 @@
++version = 1
++graph = "../../workflows/bootstrap/agent-integration.fabro"
++goal = """
++Bootstrap the Myosu `agent:integration` lane for Fabro and Raspberry.
++
++Scope:
++- inspect `outputs/agent/experience/spec.md`
++- inspect `outputs/agent/experience/review.md`
++- inspect `outputs/tui/shell/spec.md` and `outputs/tui/shell/review.md`
++- inspect `outputs/games/traits/spec.md` and `outputs/games/traits/review.md`
++- inspect `fabro/programs/myosu-product.yaml`
++
++Required curated artifacts:
++- `outputs/agent-integration/agent-adapter.md`
++- `outputs/agent-integration/review.md`
++
++The `agent-adapter.md` must define:
++- the integration surface between agent:experience and upstream crates (tui:shell, games:traits)
++- the current state inventory of integration paths (Phase 1–4)
++- which slices have upstream blockers and which can proceed immediately
++- the integration decision record with rationale
++
++The `review.md` must:
++- make the keep/reopen/reset judgment explicit for the lane
++- state the decision: implementation family next OR another upstream unblock
++- identify which slices can proceed without upstream blockers
++- note cross-lane dependencies and their owners
++"""
++directory = "../../.."
++
++[sandbox]
++provider = "local"
++
++[sandbox.local]
++worktree_mode = "clean"
+diff --git a/fabro/workflows/bootstrap/agent-integration.fabro b/fabro/workflows/bootstrap/agent-integration.fabro
+new file mode 100644
+index 0000000..59eb895
+--- /dev/null
++++ b/fabro/workflows/bootstrap/agent-integration.fabro
+@@ -0,0 +1,22 @@
++digraph BootstrapAgentIntegration {
++    graph [
++        goal="Bootstrap the Myosu agent:integration lane and produce curated lane artifacts.",
++        model_stylesheet="
++            *       { backend: cli; }
++            #review { backend: api; model: gpt-5.4; provider: openai; }
++            #polish { backend: api; model: gpt-5.4; provider: openai; }
++        "
++    ]
++    rankdir=LR
++
++    start [shape=Mdiamond, label="Start"]
++    exit  [shape=Msquare, label="Exit"]
++
++    check   [label="Check", shape=parallelogram, script="test -f outputs/agent/experience/spec.md && test -f outputs/agent/experience/review.md", max_retries=0]
++    adapter [label="Adapter", prompt="@../../prompts/bootstrap/plan.md", reasoning_effort="high"]
++    review  [label="Review", prompt="@../../prompts/bootstrap/implement.md", reasoning_effort="high"]
++    polish  [label="Polish", prompt="@../../prompts/bootstrap/review.md", reasoning_effort="medium"]
++    verify  [label="Verify", shape=parallelogram, script="test -f outputs/agent-integration/agent-adapter.md && test -f outputs/agent-integration/review.md", goal_gate=true, max_retries=0]
++
++    start -> check -> adapter -> review -> polish -> verify -> exit
++}
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..630bdac
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,173 @@
++# Agent Integration Lane Adapter
++
++**Lane**: `agent:integration`
++**Date**: 2026-03-20
++**Status**: Bootstrap
++
++---
++
++## Purpose
++
++This lane owns the **integration surface** between the agent-facing surfaces defined in `agent:experience` and the underlying game engine, miner, and validator infrastructure. Where `agent:experience` defines what the agent sees, this lane ensures the integration paths from the agent-facing presentation layer down to `games:traits`, `tui:shell`, and eventually the miner/validator service layer are coherent and non-blocking.
++
++This lane is the **last unstarted product lane** after `agent:experience` achieved reviewed status. It synthesizes the `agent:experience` spec and review with the actual upstream readiness of the surfaces it depends on.
++
++---
++
++## Lane Boundary
++
++```
++                    agent:integration (THIS LANE)
++                    ┌─────────────────────────────────────────────────────────────┐
++upstream             │                                                              │
++agent:experience ──► │  Synthesizes: schema.rs + pipe_output() + narration       │
++  (reviewed, KEEP)  │  + agent_context.rs + journal.rs + SpectatorRelay         │
++                     │                                                              │
++upstream             │  Integration paths:                                          │
++tui:shell ─────────► │  pipe.rs → Shell → GameRenderer → PipeMode                │
++  (82 tests, trusted)                                                              │
++                     │  agent_context.rs → load/save JSON → disk                  │
++                     │  journal.rs → append-only markdown → disk                 │
++                     │  narration.rs → GameState → prose                         │
++                     │  SpectatorRelay → Unix socket → spectator TUI              │
++                     │                                                              │
++upstream             │  Phase 2 integration paths:                                │
++games:traits ──────► │  GameType, GameConfig, StrategyQuery/Response             │
++  (14 tests, trusted)                                                              │
++                     │                                                              │
++upstream             │  Phase 3 integration paths (blocked on chain:runtime):     │
++chain:runtime ─────► │  lobby → miner axon HTTP → subnet list                    │
++                     │  spectate → miner axon WS → live game events             │
++                     │                                                              │
++upstream             │  Phase 4 integration paths (blocked on miner/validator):  │
++miner service ─────► │  StrategyQuery → miner HTTP → StrategyResponse            │
++                     │  exploitability oracle → validator → weight submission     │
++                     └─────────────────────────────────────────────────────────────┘
++```
++
++**This lane does NOT own**:
++- The `tui:shell` implementation (trusted upstream)
++- The `games:traits` implementation (trusted upstream)
++- The `chain:runtime` implementation (restart lane, upstream)
++- The `play:tui` binary skeleton (owns `myosu-play` binary)
++- The `miner:service` implementation (future lane)
++
++**This lane DOES own**:
++- The integration wiring between agent:experience surfaces and upstream crates
++- The `--context` and `--narrate` flag wiring into `myosu-play` CLI (once binary exists)
++- The lobby stub for Phase 0 (hardcoded subnet list)
++- The SpectatorRelay integration with the relay socket
++- The decision record on which implementation slices can proceed without upstream blockers
++
++---
++
++## Integration State Inventory
++
++### Phase 1 — Agent Identity (depends only on tui:shell)
++
++| Surface | Status | Integration Path |
++|---------|--------|-----------------|
++| `agent_context.rs` | MISSING | `crates/myosu-tui/src/agent_context.rs` — loads/saves JSON; wired to `PipeMode` |
++| `journal.rs` | MISSING | `crates/myosu-tui/src/journal.rs` — append-only markdown; called after each hand in pipe mode |
++| `--context` flag wiring | MISSING | `PipeMode` struct needs `context_path: Option<PathBuf>` field |
++| `reflect>` prompt | MISSING | After `HAND COMPLETE` in pipe mode, block stdin; append to journal |
++| `narration.rs` | MISSING | `crates/myosu-tui/src/narration.rs` — `NarrationEngine::narrate(&GameState) -> String` |
++| `--narrate` flag wiring | MISSING | `PipeMode` struct needs `narrate: bool` field; use `NarrationEngine` when true |
++| Schema (`schema.rs`) | **TRUSTED** | `crates/myosu-tui/src/schema.rs` — fully implemented, 16 tests pass |
++
++### Phase 2 — Narration + Lobby (depends on Phase 1 + tui:shell)
++
++| Surface | Status | Integration Path |
++|---------|--------|-----------------|
++| Lobby in pipe mode | MISSING | When no `--subnet`, render hardcoded lobby (Phase 0 stub) |
++| Game selection | MISSING | `info <id>` command; subnet selection starts game |
++
++### Phase 3 — Spectator (depends on play:tui binary)
++
++| Surface | Status | Integration Path |
++|---------|--------|-----------------|
++| `SpectatorRelay` | MISSING | `crates/myosu-play/src/spectate.rs` — Unix socket at `~/.myosu/spectate/<session_id>.sock` |
++| `SpectateScreen` | MISSING | `crates/myosu-tui/src/screens/spectate.rs` — fog-of-war rendering |
++
++### Phase 4 — Chain-Connected (blocked on chain:runtime)
++
++| Surface | Status | Integration Path |
++|---------|--------|-----------------|
++| Lobby chain query | BLOCKED | Stub with hardcoded data for Phase 0; real query blocked on `chain:runtime` |
++| Spectator WS upgrade | BLOCKED | Blocked on miner axon WS endpoint |
++
++---
++
++## Integration Decision Record
++
++### Decision: Phase 1 slices 1-4 can proceed immediately without upstream unblock
++
++**Rationale**: Slices 1–4 (`agent_context.rs`, `journal.rs`, `--context` wiring, `reflect>` prompt) depend only on `tui:shell` which is already trusted with 82 passing tests. The `PipeMode` driver exists and compiles. These slices can begin implementation immediately.
++
++**Evidence**: `agent:experience/review.md` explicitly states: "This lane can begin with Slices 1–2 (`agent_context.rs` and `journal.rs`) immediately, as they depend only on `tui:shell` which is already trusted."
++
++### Decision: Slice 5 (`narration.rs`) can proceed immediately but is independent
++
++**Rationale**: `narration.rs` depends on `games:traits` (trusted, 14 tests) and the `GameState` type from `schema.rs` (trusted). It does not require the `--context` flag wiring. It can be implemented in isolation.
++
++**Evidence**: `NarrationEngine::narrate(&GameState)` takes a `GameState` reference — the schema is already trusted and stable.
++
++### Decision: Slice 6 (`--narrate` wiring) is blocked on Slice 3 (`--context` wiring)
++
++**Rationale**: Both `--narrate` and `--context` require modification to `PipeMode` struct initialization in `myosu-play`'s `main.rs`. Slice 6 depends on the same CLI wiring that Slice 3 introduces.
++
++**Evidence**: `agent:experience/spec.md` Slice 6 description: "wire `--narrate` flag to CLI" — same vehicle as Slice 3.
++
++### Decision: Slice 7 (lobby) is blocked on `play:tui` binary + Phase 0 stub
++
++**Rationale**: The lobby rendering in pipe mode requires the `myosu-play` binary to exist. For Phase 0, the lobby can be stubbed with hardcoded subnet data. Real chain-connected lobby is Phase 4 (blocked on `chain:runtime`).
++
++**Resolution for Slice 7**: Use hardcoded lobby data for Phase 0. No chain query needed yet.
++
++### Decision: Slices 8–9 (spectator) are blocked on `play:tui` binary
++
++**Rationale**: `SpectatorRelay` is a `crates/myosu-play/src/spectate.rs` file — it lives in the `myosu-play` binary crate, which does not exist yet.
++
++**Evidence**: `agent:experience/review.md`: "The `myosu-play` binary is defined in `play:tui`'s spec and is the vehicle through which all `--pipe`, `--context`, `--narrate`, and `--spectate` flags are exposed."
++
++---
++
++## Summary of Immediate Work (No Upstream Unblock Required)
++
++The following can proceed immediately under `agent:integration`:
++
++1. **Slice 1**: `agent_context.rs` — `AgentContext` struct with load/save/default; serde JSON
++2. **Slice 2**: `journal.rs` — append-only markdown writer; hand entry formatter
++3. **Slice 5**: `narration.rs` — `NarrationEngine::narrate(&GameState)`; board texture analysis
++4. **Slice 7 Phase 0**: Lobby with hardcoded subnet data
++
++The following are **blocked** and should not be attempted until the blocker is resolved:
++
++| Slice | Blocker | Blocker Owner |
++|-------|---------|--------------|
++| Slice 3 (`--context` wiring) | `myosu-play` binary missing | `play:tui` |
++| Slice 4 (`reflect>` prompt) | `myosu-play` binary missing | `play:tui` |
++| Slice 6 (`--narrate` wiring) | Slice 3 dependency | `play:tui` |
++| Slice 8 (`SpectatorRelay`) | `myosu-play` binary missing | `play:tui` |
++| Slice 9 (`SpectateScreen`) | `play:tui` binary + SpectatorRelay | `play:tui` |
++| Phase 4 lobby (real chain query) | `chain:runtime` restart | `chain:runtime` |
++| Phase 4 spectator WS | `chain:runtime` + miner service | `chain:runtime`, `miner:service` |
++
++---
++
++## Phase Ordering Recommendation
++
++```
++Phase 1 (no upstream unblock required):
++  Slice 1 → Slice 2 → Slice 5
++
++Phase 2 (blocked on play:tui binary):
++  Slice 3 → Slice 4 → Slice 6
++
++Phase 3 (blocked on play:tui binary):
++  Slice 7 (lobby, Phase 0 stub)
++
++Phase 4 (blocked on chain:runtime + miner:service):
++  Slice 7 (lobby, chain-connected)
++  Slice 8 → Slice 9 (spectator WS upgrade)
++```
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..f828f26
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,80 @@
++# `agent:integration` Lane Review
++
++## Judgment: **KEEP** — proceed to implementation family (Phase 1 slices 1, 2, 5)
++
++The product does **not** need another upstream unblock. The `agent:experience` lane has been reviewed and is READY. The immediate implementation slices can proceed without any upstream dependency resolution. The remaining slices are blocked on `play:tui` binary, which is owned by a separate lane.
++
++---
++
++## Decision: Implementation Family Next
++
++After reviewing the `agent:experience` lane artifacts (`spec.md` and `review.md`), the decision is:
++
++**Proceed to implementation of Phase 1 slices that have no upstream blockers.**
++
++| Slice | What | Upstream Blocker | Can Proceed |
++|-------|------|-----------------|-------------|
++| Slice 1: `agent_context.rs` | `AgentContext` load/save/default | `tui:shell` (trusted) | **YES** |
++| Slice 2: `journal.rs` | Append-only markdown writer | `tui:shell` (trusted) | **YES** |
++| Slice 5: `narration.rs` | `NarrationEngine::narrate(&GameState)` | `games:traits` (trusted) + `schema.rs` (trusted) | **YES** |
++| Slice 3: `--context` wiring | CLI flag → `PipeMode` | `myosu-play` binary missing | NO |
++| Slice 4: `reflect>` prompt | stdin block after hand | `myosu-play` binary missing | NO |
++| Slice 6: `--narrate` wiring | CLI flag → `PipeMode` | Slice 3 dependency | NO |
++| Slice 7: Lobby (Phase 0) | Hardcoded subnet list | `myosu-play` binary missing | NO |
++| Slice 8: `SpectatorRelay` | Unix socket relay | `myosu-play` binary missing | NO |
++| Slice 9: `SpectateScreen` | Fog-of-war TUI | `myosu-play` binary + Slice 8 | NO |
++
++**The `play:tui` lane owns the `myosu-play` binary skeleton (Slice 1 of `play:tui`).** Until that binary exists, Slices 3–4 and 6–9 cannot be wired. This is a cross-lane dependency, not an upstream unblock within the product frontier.
++
++---
++
++## Rationale
++
++### Why not another upstream unblock?
++
++The remaining blockers (`myosu-play` binary, `chain:runtime`, `miner:service`) are **not owned by this lane**. They are owned by `play:tui`, `chain:runtime`, and `miner:service` respectively. This lane cannot unblock them — only the owning lanes can.
++
++The correct response to a blocker you don't own is **not** to wait, but to work on the slices that don't depend on the blocker. Three slices (1, 2, 5) have no upstream unblock required.
++
++### Why not wait for `play:tui`?
++
++`play:tui` is a separate lane with its own milestones. This lane can make independent progress on `agent_context.rs`, `journal.rs`, and `narration.rs` — all of which are pure Rust library code in `crates/myosu-tui/src/` that does not require the `myosu-play` binary to exist to be implemented and tested.
++
++### Why these three slices specifically?
++
++- **Slice 1 (`agent_context.rs`)**: Pure `serde_json` + `AgentContext` struct. Can be developed against the `tui:shell` trusted interfaces. Tests can mock the `PipeMode` interaction.
++- **Slice 2 (`journal.rs`)**: Pure file I/O + markdown formatting. Same situation — no binary required to develop or test.
++- **Slice 5 (`narration.rs`)**: Pure `GameState → String` transformation. The `GameState` type is fully defined and trusted in `schema.rs`. No binary required.
++
++---
++
++## Cross-Lane Dependency Notes
++
++| Blocker | Owner | Impact on This Lane | Recommended Action |
++|---------|-------|---------------------|-------------------|
++| `myosu-play` binary missing | `play:tui` | Slices 3–4, 6–9 cannot be wired | Monitor `play:tui` lane; begin these slices as soon as binary exists |
++| `robopoker` git migration | `games:traits` | Affects `tui:shell` and `games:traits` which this lane depends on | Monitor; no action needed until integration testing phase |
++| `chain:runtime` restart | `chain:runtime` | Phase 4 lobby and spectator WS blocked | Monitor; no action needed until Phase 4 |
++
++---
++
++## Lane Readiness Assessment
++
++| Dimension | Status | Notes |
++|-----------|--------|-------|
++| Source spec (`agent:experience`) | **READY** | KEEP judgment; 9 slices defined; upstream trusted |
++| Immediate implementation surfaces | **READY** | Slices 1, 2, 5 have no upstream blockers |
++| Cross-lane dependency (`play:tui`) | **BLOCKED** | Slices 3–4, 6–9 blocked; owned externally |
++| Phase 4 surfaces | **BLOCKED** | Blocked on `chain:runtime` and `miner:service` |
++| Integration test path | **DEFINED** | Phase 1 can use `cargo test -p myosu-tui` with mocked binary |
++| Proof gates | **DEFINED** | Each slice has a specific `cargo test` command in `agent:experience/spec.md` |
++
++---
++
++## Recommendation
++
++Begin implementation of Slices 1, 2, and 5 immediately under this lane. These are self-contained, can be developed and tested against the trusted upstream surfaces, and do not require the `play:tui` binary to exist.
++
++Track `play:tui` lane progress separately. As soon as the `myosu-play` binary skeleton exists, Slices 3–4 and 6–9 can proceed in rapid succession.
++
++Do **not** treat the `play:tui` blocker as a reason to pause — the three unblocked slices represent real, valuable progress on the agent-facing surfaces.
