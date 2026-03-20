@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "**Foundations lane artifacts produced:**\n\n```\noutputs/foundations/\n├── foundation-plan.md   (7.2K)\n└── review.md           (7.4K)\n```\n\n**`foundation-plan.md`** frames the lane mission, lan",
+    "response.specify": "**Foundations lane artifacts produced:**\n\n```\noutputs/foundations/\n├── foundation-plan.md   (7.2K)\n└── review.md           (7.4K)\n```\n\n**`foundation-plan.md`** frames the lane mission, lane boundary, honest submit\ncriteria, and three implementation slices:\n\n| Slice | Action | Gate |\n|-------|--------|------|\n| 1 | Repair `games:multi-game` false submit | Lane produces trustworthy structured outcome |\n| 2 | Document lane trust posture honestly | `outputs/foundations/lane-trust.md` exists |\n| 3 | Harden `execute/status/watch` truth | 3 consecutive runs agree on lane state |\n\n**`review.md`** delivers the honest trust posture of every active bootstrap lane:\n\n- **`games:traits`**: KEEP — fully trusted leaf crate, all tests pass\n- **`tui:shell`**: KEEP (3 modules REOPEN) — artifacts honest, proof gaps documented\n- **`chain:runtime`**: KEEP (RESTART) — honest non-existence, no Cargo.toml yet\n- **`chain:pallet`**: KEEP (RESTART) — honest blocked state, depends on runtime\n- **`games:multi-game`**: RESET — false submit, INV-001 + INV-002 violations\n- **`execute/status/watch`**: UNTRUSTWORTHY — no evidence of run-to-run agreement\n\nThe core finding is that the `games:multi-game` false submit is an **S0 invariant\nviolation** (INV-001 structured closure honesty + INV-002 proof honesty) and must\nbe repaired before any downstream milestone decisions treat it as valid.",
+    "last_stage": "specify"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 393124,
+    "output_tokens": 6467
+  },
+  "files_written": [
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md"
+  ],
+  "files_touched": [
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md"
+  ],
+  "duration_ms": 120638,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T22:37:03.132827440+00:00",
+  "updated_at": "2026-03-20T22:37:03.132836667+00:00"
+}

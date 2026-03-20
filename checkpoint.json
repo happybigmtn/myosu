@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T22:37:03.133869147Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "specify": 1,
+    "start": 1
+  },
+  "context_values": {
+    "current_node": "specify",
+    "internal.retry_count.specify": 1,
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6P6GEQ6A8FHJTZW2H0EC4X/worktree",
+    "thread.start.current_node": "specify",
+    "last_response": "**Foundations lane artifacts produced:**\n\n```\noutputs/foundations/\n├── foundation-plan.md   (7.2K)\n└── review.md           (7.4K)\n```\n\n**`foundation-plan.md`** frames the lane mission, lan",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n",
+    "response.specify": "**Foundations lane artifacts produced:**\n\n```\noutputs/foundations/\n├── foundation-plan.md   (7.2K)\n└── review.md           (7.4K)\n```\n\n**`foundation-plan.md`** frames the lane mission, lane boundary, honest submit\ncriteria, and three implementation slices:\n\n| Slice | Action | Gate |\n|-------|--------|------|\n| 1 | Repair `games:multi-game` false submit | Lane produces trustworthy structured outcome |\n| 2 | Document lane trust posture honestly | `outputs/foundations/lane-trust.md` exists |\n| 3 | Harden `execute/status/watch` truth | 3 consecutive runs agree on lane state |\n\n**`review.md`** delivers the honest trust posture of every active bootstrap lane:\n\n- **`games:traits`**: KEEP — fully trusted leaf crate, all tests pass\n- **`tui:shell`**: KEEP (3 modules REOPEN) — artifacts honest, proof gaps documented\n- **`chain:runtime`**: KEEP (RESTART) — honest non-existence, no Cargo.toml yet\n- **`chain:pallet`**: KEEP (RESTART) — honest blocked state, depends on runtime\n- **`games:multi-game`**: RESET — false submit, INV-001 + INV-002 violations\n- **`execute/status/watch`**: UNTRUSTWORTHY — no evidence of run-to-run agreement\n\nThe core finding is that the `games:multi-game` false submit is an **S0 invariant\nviolation** (INV-001 structured closure honesty + INV-002 proof honesty) and must\nbe repaired before any downstream milestone decisions treat it as valid.",
+    "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
+    "internal.run_id": "01KM6P6GEQ6A8FHJTZW2H0EC4X",
+    "failure_signature": "",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "last_stage": "specify",
+    "internal.thread_id": "start",
+    "failure_class": "",
+    "internal.node_visit_count": 1,
+    "graph.rankdir": "LR",
+    "outcome": "success",
+    "internal.retry_count.start": 1,
+    "internal.fidelity": "compact"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_response": "**Foundations lane artifacts produced:**\n\n```\noutputs/foundations/\n├── foundation-plan.md   (7.2K)\n└── review.md           (7.4K)\n```\n\n**`foundation-plan.md`** frames the lane mission, lan",
+        "response.specify": "**Foundations lane artifacts produced:**\n\n```\noutputs/foundations/\n├── foundation-plan.md   (7.2K)\n└── review.md           (7.4K)\n```\n\n**`foundation-plan.md`** frames the lane mission, lane boundary, honest submit\ncriteria, and three implementation slices:\n\n| Slice | Action | Gate |\n|-------|--------|------|\n| 1 | Repair `games:multi-game` false submit | Lane produces trustworthy structured outcome |\n| 2 | Document lane trust posture honestly | `outputs/foundations/lane-trust.md` exists |\n| 3 | Harden `execute/status/watch` truth | 3 consecutive runs agree on lane state |\n\n**`review.md`** delivers the honest trust posture of every active bootstrap lane:\n\n- **`games:traits`**: KEEP — fully trusted leaf crate, all tests pass\n- **`tui:shell`**: KEEP (3 modules REOPEN) — artifacts honest, proof gaps documented\n- **`chain:runtime`**: KEEP (RESTART) — honest non-existence, no Cargo.toml yet\n- **`chain:pallet`**: KEEP (RESTART) — honest blocked state, depends on runtime\n- **`games:multi-game`**: RESET — false submit, INV-001 + INV-002 violations\n- **`execute/status/watch`**: UNTRUSTWORTHY — no evidence of run-to-run agreement\n\nThe core finding is that the `games:multi-game` false submit is an **S0 invariant\nviolation** (INV-001 structured closure honesty + INV-002 proof honesty) and must\nbe repaired before any downstream milestone decisions treat it as valid.",
+        "last_stage": "specify"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 393124,
+        "output_tokens": 6467
+      },
+      "files_written": [
+        "outputs/foundations/foundation-plan.md",
+        "outputs/foundations/review.md"
+      ],
+      "files_touched": [
+        "outputs/foundations/foundation-plan.md",
+        "outputs/foundations/review.md"
+      ],
+      "duration_ms": 120638
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "specify": 1,
+    "start": 1
+  }
+}
