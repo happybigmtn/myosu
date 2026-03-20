@@ -1,0 +1,19 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.fixup": "Already processed — the final verification confirmed `ok. 7 passed; 0 failed; 8 ignored`. Fixup is complete.",
+    "last_stage": "fixup",
+    "last_response": "Already processed — the final verification confirmed `ok. 7 passed; 0 failed; 8 ignored`. Fixup is complete."
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 145,
+    "output_tokens": 46
+  },
+  "duration_ms": 1314587,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:35:43.377149268+00:00",
+  "updated_at": "2026-03-20T23:35:43.377162405+00:00"
+}
