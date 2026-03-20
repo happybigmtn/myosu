@@ -22,12 +22,12 @@ pub struct NlheInfoCodec;
 
 impl NlheInfoCodec {
     /// Serialize `NlheInfo` to bytes.
-    pub fn encode(info: &NlheInfo) -> std::io::Result<Vec<u8>> {
+    pub fn encode(_info: &NlheInfo) -> std::io::Result<Vec<u8>> {
         unimplemented!("Slice 3")
     }
 
     /// Deserialize bytes to `NlheInfo`.
-    pub fn decode(bytes: &[u8]) -> std::io::Result<NlheInfo> {
+    pub fn decode(_bytes: &[u8]) -> std::io::Result<NlheInfo> {
         unimplemented!("Slice 3")
     }
 }
@@ -37,12 +37,12 @@ pub struct NlheEdgeCodec;
 
 impl NlheEdgeCodec {
     /// Serialize `NlheEdge` to bytes.
-    pub fn encode(edge: &NlheEdge) -> std::io::Result<Vec<u8>> {
+    pub fn encode(_edge: &NlheEdge) -> std::io::Result<Vec<u8>> {
         unimplemented!("Slice 3")
     }
 
     /// Deserialize bytes to `NlheEdge`.
-    pub fn decode(bytes: &[u8]) -> std::io::Result<NlheEdge> {
+    pub fn decode(_bytes: &[u8]) -> std::io::Result<NlheEdge> {
         unimplemented!("Slice 3")
     }
 }

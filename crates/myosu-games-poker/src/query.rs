@@ -3,7 +3,6 @@
 //! Transforms wire-format strategy queries into solver responses.
 
 use crate::wire::WireStrategy;
-use myosu_games::StrategyResponse;
 
 /// Handle a strategy query and return a response.
 ///

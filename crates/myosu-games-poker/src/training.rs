@@ -21,7 +21,7 @@ impl TrainingSession {
     }
 
     /// Run training for `iterations`, checkpointing periodically.
-    pub fn train(&mut self, iterations: u64, checkpoint_dir: &Path) -> std::io::Result<u64> {
+    pub fn train(&mut self, _iterations: u64, _checkpoint_dir: &Path) -> std::io::Result<u64> {
         unimplemented!("Slice 6")
     }
 
