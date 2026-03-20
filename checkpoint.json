@@ -1,21 +1,24 @@
 {
-  "timestamp": "2026-03-20T22:18:04.533166948Z",
-  "current_node": "specify",
+  "timestamp": "2026-03-20T22:18:12.346124388Z",
+  "current_node": "review",
   "completed_nodes": [
     "start",
-    "specify"
+    "specify",
+    "review"
   ],
   "node_retries": {
     "specify": 1,
+    "review": 1,
     "start": 1
   },
   "context_values": {
     "internal.node_visit_count": 1,
-    "outcome": "success",
+    "outcome": "fail",
     "last_stage": "specify",
-    "current_node": "specify",
-    "failure_class": "",
-    "internal.thread_id": "start",
+    "current_node": "review",
+    "failure_class": "deterministic",
+    "internal.thread_id": "specify",
+    "thread.specify.current_node": "review",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6N1N6CQZ0FG8CXZT1V4HV1/worktree",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
@@ -23,11 +26,12 @@
     "response.specify": "`★ Insight ─────────────────────────────────────`\n**`agent-integration` is an honest-honest bootstrap lane** — not an implementation lane, not a spec lane. Its job was to read the `agent:experience` spec and review, produce an integration adapter that wires the surfaces to the product binary, and render a GO/NO-GO judgment. It found GO with one critical-path upstream: the `games:traits` robopoker git migration.\n\n**The adapter pattern avoids a common failure mode**: trying to specify the integration *before* the surfaces are reviewed. By waiting for `agent:experience` to complete spec+review (KEEP), the adapter inherits a stable surface contract. This sequencing — spec first, integration adapter second — is the right order for a lane that depends on upstream surfaces being stable.\n\n**The decision to route through `games:traits` rather than creating another upstream-unblock analysis is deliberate**: the robopoker git migration is a known, small, achievable Slice 1 fix. Routing to `games:traits` as the next lane is not a guess — it is directly implied by the blocker table in `agent:experience/review.md`.\n`─────────────────────────────────────────────────`\n\nBoth required artifacts are produced:\n\n| Artifact | Path | Judgment |\n|----------|------|----------|\n| `agent-adapter.md` | `outputs/agent-integration/agent-adapter.md` | Documents integration architecture: 7 surfaces, CLI flag table, data flow, fog-of-war contract, blocker matrix |\n| `review.md` | `outputs/agent-integration/review.md` | **GO** — `games:traits` Slice 1 (robopoker git migration) is the critical next step |\n\n**Decision**: Product needs `games:traits` robopoker git migration next, not another upstream unblock. `agent:experience` Slices 1–2 can begin immediately (only depend on `tui:shell`, which is trusted). Slices 3–9 require the `myosu-play` binary scaffold from `play:tui` Slice 1, which itself requires the robopoker git migration to be clean-buildable.",
     "internal.retry_count.start": 1,
     "thread.start.current_node": "specify",
-    "failure_signature": "",
+    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
+    "internal.retry_count.review": 1,
     "internal.run_id": "01KM6N1N6CQZ0FG8CXZT1V4HV1",
     "graph.rankdir": "LR",
     "internal.fidelity": "compact",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 761.2k tokens in / 9.3k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n",
     "last_response": "`★ Insight ─────────────────────────────────────`\n**`agent-integration` is an honest-honest bootstrap lane** — not an impl"
   },
   "logs": [],
@@ -55,13 +59,26 @@
       ],
       "duration_ms": 170838
     },
+    "review": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_0c274da23f3b30fa0169bdc7a0bac88190a08950c550806bf8' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 6186
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
     }
   },
-  "next_node_id": "review",
+  "next_node_id": "polish",
+  "loop_failure_signatures": {
+    "review|deterministic|api_deterministic|openai|not_found": 1
+  },
   "node_visits": {
+    "review": 1,
     "start": 1,
     "specify": 1
   }
