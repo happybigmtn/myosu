@@ -1,0 +1,25 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.fixup": "## Fixup Complete\n\n**Created:** `outputs/games/poker-engine/integration.md`\n\n`★ Insight ─────────────────────────────────────`\n- The `integration.md` was not listed in the curated artifacts (implementation, verification, quality, promotion) but the audit gate required it — a spec/audit mismatch\n- `integration.md` documents cross-crate integration surfaces: how `myosu-games-poker` consumes `myosu-games` traits and wraps robopoker's `rbp-nlhe`/`rbp-mccfr` at a pinned git rev\n- The git rev pinning constraint (same rev `04716310143094ab41ec7172e6cea5a2a66744ef` across all robopoker consumers) prevents binary incompatibility between the game trait layer and the solver layer\n`─────────────────────────────────────────────────`\n\n**Current state:**\n- `cargo build -p myosu-games-poker` — passes\n- `cargo test -p myosu-games-poker` — 5 passed, 2 ignored (blocked on `RF-02` encoder loading)\n\n**Remaining audit failures (upstream blockers):**\n\n| Check | Current | Required | Root Cause |\n|---|---|---|---|\n| `merge_ready` | `no` | `yes` | RF-02 encoder loading missing from robopoker |\n| `manual_proof_pending` | `yes` | `no` | RF-02 encoder loading missing from robopoker |\n| `quality_ready` | `no` | `yes` | Depends on above |\n| `manual_followup_required` | `yes` | `no` | Depends on above |\n\nThese require the `RF-02` encoder loading path (`from_map`/`from_file`/`from_dir`) from robopoker at the pinned rev — not a code issue in `myosu-games-poker`. The lane is blocked on an upstream abstraction artifact.",
+    "last_stage": "fixup",
+    "last_response": "## Fixup Complete\n\n**Created:** `outputs/games/poker-engine/integration.md`\n\n`★ Insight ────────────────────────────────────"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 537848,
+    "output_tokens": 8876
+  },
+  "files_written": [
+    "outputs/games/poker-engine/integration.md"
+  ],
+  "files_touched": [
+    "outputs/games/poker-engine/integration.md"
+  ],
+  "duration_ms": 177214,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T14:48:06.515829448+00:00",
+  "updated_at": "2026-03-20T14:48:06.515833675+00:00"
+}
