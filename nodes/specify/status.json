@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.specify": "Both required artifacts are now in place:\n\n- **`outputs/agent-integration/agent-adapter.md`** (10.9 KB) — integration adapter mapping `agent:experience` surfaces to the broader product, including inbound/outbound integration contracts, phase ordering, and cross-lane dependencies\n- **`outputs/agent-integration/review.md`** (5.1 KB) — integration decision with judgment: **IMPLEMENTATION FAMILY NEXT**\n\n`★ Insight ─────────────────────────────────────`\n- The `agent:experience` lane was already **KEEP** in its own review, which explicitly recommended proceeding to implementation\n- The integration adapter maps a **terminal lane** (consumes trusted upstream, produces agent-facing capabilities) rather than a hub lane — important distinction for understanding dependency direction\n- The decision \"implementation family next\" means the cross-lane blockers (robopoker, `play:tui` binary) are **owned by other lanes** and tracked as risks here, not gatekeeping this lane's start\n`─────────────────────────────────────────────────`\n\n**Summary of findings:**\n\n| Question | Answer |\n|----------|--------|\n| Is `agent:experience` ready? | ✅ Yes — KEEP judgment in `outputs/agent/experience/review.md` |\n| Decision? | **Implementation family next** |\n| Phase 1 (Slices 1–2) blocked? | No — unblocked, `tui:shell` is trusted |\n| Phase 1 (Slices 3–4) blocked? | Yes — waiting on `play:tui` Slice 1 (binary skeleton) |\n| Cross-lane risk? | Robopoker git migration — owned by `games:traits` |\n| Recommended next step? | Create `agent:experience` implementation lane, begin Slices 1–2 immediately |",
+    "last_response": "Both required artifacts are now in place:\n\n- **`outputs/agent-integration/agent-adapter.md`** (10.9 KB) — integration adapter mapping `agent:experience` surfaces to the broader product, including in",
+    "last_stage": "specify"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 555172,
+    "output_tokens": 7479
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 410252,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T21:28:50.256354450+00:00",
+  "updated_at": "2026-03-20T21:28:50.256361800+00:00"
+}
