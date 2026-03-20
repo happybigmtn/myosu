@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-03-20T13:38:50.488957035Z",
+  "current_node": "preflight",
+  "completed_nodes": [
+    "start",
+    "preflight"
+  ],
+  "node_retries": {
+    "preflight": 1,
+    "start": 1
+  },
+  "context_values": {
+    "graph.goal": "Implement the next approved `games:poker-engine` slice.\n\nInputs:\n- `poker-engine/spec.md`\n- `poker-engine/review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `games:poker-engine`\n\nRequired curated artifacts:\n- `poker-engine/implementation.md`\n- `poker-engine/verification.md`\n- `poker-engine/quality.md`\n- `poker-engine/promotion.md`\n",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #settle { backend: cli; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.thread_id": "start",
+    "command.stderr": "    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n",
+    "internal.fidelity": "compact",
+    "current_node": "preflight",
+    "internal.run_id": "01KM5QG91K02QB0QHZB6DNGR88",
+    "command.output": "",
+    "graph.rankdir": "LR",
+    "current.preamble": "Goal: Implement the next approved `games:poker-engine` slice.\n\nInputs:\n- `poker-engine/spec.md`\n- `poker-engine/review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `games:poker-engine`\n\nRequired curated artifacts:\n- `poker-engine/implementation.md`\n- `poker-engine/verification.md`\n- `poker-engine/quality.md`\n- `poker-engine/promotion.md`\n\n",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM5QG91K02QB0QHZB6DNGR88/worktree",
+    "internal.retry_count.start": 1,
+    "failure_class": "",
+    "thread.start.current_node": "preflight",
+    "outcome": "success",
+    "internal.retry_count.preflight": 1,
+    "internal.node_visit_count": 1,
+    "failure_signature": ""
+  },
+  "logs": [],
+  "node_outcomes": {
+    "preflight": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": "    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n"
+      },
+      "notes": "Script completed: set +e\ncargo build -p myosu-games-poker\ncargo test -p myosu-games-poker\ncargo test -p myosu-games-poker solver::tests::create_empty_solver\ncargo test -p myosu-games-poker solver::tests::train_100_iterations\ncargo test -p myosu-games-poker solver::tests::strategy_is_valid_distribution\ncargo test -p myosu-games-poker solver::tests::checkpoint_roundtrip\ncargo test -p myosu-games-poker solver::tests::exploitability_decreases\ncargo test -p myosu-games-poker wire::tests::nlhe_info_roundtrip\ncargo test -p myosu-games-poker wire::tests::nlhe_edge_roundtrip\ncargo test -p myosu-games-poker wire::tests::all_edge_variants_serialize\ncargo test -p myosu-games-poker query::tests::handle_valid_query\ncargo test -p myosu-games-poker query::tests::handle_invalid_info_bytes\ncargo test -p myosu-games-poker query::tests::response_probabilities_sum_to_one\ncargo test -p myosu-games-poker exploit::tests::trained_strategy_low_exploit\ncargo test -p myosu-games-poker exploit::tests::random_strategy_high_exploit\ncargo test -p myosu-games-poker exploit::tests::remote_matches_local\ncargo test -p myosu-games-poker training::tests::session_checkpoint_frequency\ntrue",
+      "duration_ms": 13538
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "implement",
+  "node_visits": {
+    "start": 1,
+    "preflight": 1
+  }
+}
