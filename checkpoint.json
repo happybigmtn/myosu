@@ -1,37 +1,50 @@
 {
-  "timestamp": "2026-03-20T22:11:10.990694574Z",
-  "current_node": "specify",
+  "timestamp": "2026-03-20T22:11:25.939782453Z",
+  "current_node": "review",
   "completed_nodes": [
     "start",
-    "specify"
+    "specify",
+    "review"
   ],
   "node_retries": {
+    "review": 1,
     "specify": 1,
     "start": 1
   },
   "context_values": {
-    "failure_signature": "",
-    "internal.thread_id": "start",
-    "current_node": "specify",
+    "thread.specify.current_node": "review",
+    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
+    "internal.thread_id": "specify",
+    "current_node": "review",
     "internal.retry_count.start": 1,
+    "internal.retry_count.review": 1,
     "thread.start.current_node": "specify",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "last_stage": "specify",
     "internal.node_visit_count": 1,
     "internal.fidelity": "compact",
-    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 404.1k tokens in / 8.4k out\n  - Files: outputs/foundations/foundation-plan.md, outputs/foundations/review.md\n",
     "internal.run_id": "01KM6MNAFC386KVV2G4K2P0Q11",
     "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
     "internal.retry_count.specify": 1,
     "graph.rankdir": "LR",
-    "failure_class": "",
+    "failure_class": "deterministic",
     "response.specify": "Both required artifacts are created. Here's the summary:\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**Why `games:multi-game` is a false-submit, not a pending lane:**\nThe `outputs/games/multi-game/` artifacts (spec.md, review.md) were written speculatively — describing what *should* happen — but the lane was never dispatched. The smoking gun: `fabro/programs/myosu-bootstrap.yaml` has no `games:multi-game` unit, and `crates/myosu-games-liars-dice/` does not exist. A Fabro dispatch requires a run-config AND a lane entry in the program manifest. Neither exists for multi-game.\n\n**Why `.raspberry/` not existing is critical:**\nThe manifest declares `state_path: ../../.raspberry/myosu-state.json`, but this directory has never been created. This means zero Fabro runs have ever written cross-run supervisory state. The entire execution truth surface is ephemeral — nothing survives to inform `raspberry status`.\n`─────────────────────────────────────────────────`\n\n---\n\n**Artifacts created:**\n\n- **`outputs/foundations/foundation-plan.md`** (10.5KB) — Lane spec defining:\n  - Lane boundary (owns supervisory infrastructure, no product crates)\n  - Current execution truth state table (what's proven vs. speculative)\n  - The `games:multi-game` false-submit problem with resolution options\n  - 5 ordered slices: Raspberry state dir → annotate multi-game → manifest entry → honest dispatch → verify status truth\n\n- **`outputs/foundations/review.md`** (10.8KB) — Trust assessment with:\n  - Judgment: KEEP (with blocking defects)\n  - Defect catalog: `.raspberry/` never created, multi-game false-submit, no foundations unit in manifest, unknown status of tui/chain lanes\n  - Frontend task mapping: defect fixes triggered by real execution, multi-game resolution path\n  - Decision log for 3 key decisions\n\n**Key finding**: Only `games:traits` has honest execution proof. All other lanes (tui:shell, chain:runtime, chain:pallet, games:multi-game) have artifacts but no confirmed Fabro dispatch record.",
     "last_response": "Both required artifacts are created. Here's the summary:\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**Why `game",
-    "outcome": "success",
+    "outcome": "fail",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6MNAFC386KVV2G4K2P0Q11/worktree"
   },
   "logs": [],
   "node_outcomes": {
+    "review": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_0076b5f2ca11baf00169bdc6026a188193b5944026d5b31875' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 12635
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
@@ -60,9 +73,13 @@
       "duration_ms": 180018
     }
   },
-  "next_node_id": "review",
+  "next_node_id": "polish",
+  "loop_failure_signatures": {
+    "review|deterministic|api_deterministic|openai|not_found": 1
+  },
   "node_visits": {
     "start": 1,
+    "review": 1,
     "specify": 1
   }
 }
