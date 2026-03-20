@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "specify",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\n**What the agent-integration lane does:** It sits between the `agent:experience` spec/review artifacts and the actual implementation work. Its job is to honestly assess which implementation slices can proceed and which are blocked on upstream dependencies.\n\n**Key insight from the analysis:** The 9 `agent:experience` implementation slices split cleanly into:\n- **3 that can start now** (slices 1, 2, 5) — depend only on trusted `tui:shell`\n- **6 that must wait** — blocked on `play:tui` binary, chain runtime, or sequential dependencies\n\nThis is a classic \"partially unblocked\" scenario where the honest answer is \"start implementation for what you can, track the rest.\"\n`─────────────────────────────────────────────────`\n\n## Completed: `agent-integration` Lane Bootstrap\n\n**Artifacts produced:**\n\n- **`outputs/agent-integration/agent-adapter.md`** (8.3KB) — Documents the integration contract between external agents and Myosu across 4 surfaces: pipe mode, agent context, narration mode, and spectator relay. Includes protocol formats, schema, fog-of-war enforcement, and a go/no-go table for each slice.\n\n- **`outputs/agent-integration/review.md`** (5.0KB) — Honest judgment: **KEEP — Proceed with Partial Implementation Family**. Maps all 9 slices by dependency and readiness. Recommends starting slices 1, 2, 5 immediately; tracking remaining slices as blocked.\n\n**Key decision from review:**\n\n| Slices | Status | Action |\n|--------|--------|--------|\n| 1, 2, 5 | **READY** | Start implementation now |\n| 3, 4, 6, 7, 8, 9 | **BLOCKED** | Wait for `play:tui` binary or `chain:runtime` |\n\nThe `agent:experience` artifacts are sound. Product needs an implementation family next, but it's partially unblocked — start with the 3 slices that have no upstream dependencies.",
+    "last_response": "`★ Insight ─────────────────────────────────────`\n**What the agent-integration lane does:** It sits between the `agent:exper"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 526037,
+    "output_tokens": 8149
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 145482,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:38:33.681567377+00:00",
+  "updated_at": "2026-03-20T23:38:33.681571534+00:00"
+}
