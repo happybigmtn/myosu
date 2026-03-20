@@ -95,6 +95,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires database-hydrated NlheEncoder"]
     fn response_probabilities_sum_to_one() {
         let mut solver = crate::PokerSolver::new().unwrap();
         solver.train(100).unwrap();

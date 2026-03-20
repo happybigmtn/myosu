@@ -123,6 +123,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore = "requires database-hydrated NlheEncoder"]
     fn session_checkpoint_frequency() {
         let temp_dir = std::env::temp_dir().join("poker_training_test");
         std::fs::create_dir_all(&temp_dir).ok();
