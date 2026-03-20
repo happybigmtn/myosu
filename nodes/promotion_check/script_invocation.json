@@ -1,0 +1,5 @@
+{
+  "command": "grep -Eq '^merge_ready: yes$' outputs/games/poker-engine/promotion.md && grep -Eq '^manual_proof_pending: no$' outputs/games/poker-engine/promotion.md && grep -Eq '^quality_ready: yes$' outputs/games/poker-engine/quality.md && grep -Eq '^placeholder_debt: no$' outputs/games/poker-engine/quality.md && grep -Eq '^warning_debt: no$' outputs/games/poker-engine/quality.md && grep -Eq '^artifact_mismatch_risk: no$' outputs/games/poker-engine/quality.md && grep -Eq '^manual_followup_required: no$' outputs/games/poker-engine/quality.md",
+  "language": "shell",
+  "timeout_ms": null
+}

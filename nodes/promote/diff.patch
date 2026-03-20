@@ -1,0 +1,480 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 2fc6217..9d893b6 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1751,6 +1751,7 @@ dependencies = [
+  "bincode",
+  "myosu-games",
+  "rand 0.8.5",
++ "rbp-cards",
+  "rbp-core",
+  "rbp-gameplay",
+  "rbp-mccfr",
+diff --git a/crates/myosu-games-poker/Cargo.toml b/crates/myosu-games-poker/Cargo.toml
+index 2be32ff..e2cd17d 100644
+--- a/crates/myosu-games-poker/Cargo.toml
++++ b/crates/myosu-games-poker/Cargo.toml
+@@ -26,3 +26,4 @@ myosu-games = { path = "../myosu-games" }
+ [dev-dependencies]
+ tokio-test = { workspace = true }
+ tempfile = "3"
++rbp-cards = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
+diff --git a/crates/myosu-games-poker/src/lib.rs b/crates/myosu-games-poker/src/lib.rs
+index 45d2605..256bf0e 100644
+--- a/crates/myosu-games-poker/src/lib.rs
++++ b/crates/myosu-games-poker/src/lib.rs
+@@ -19,6 +19,8 @@ pub mod query;
+ pub mod wire;
+ pub mod exploit;
+ pub mod training;
++#[cfg(test)]
++pub(crate) mod test_support;
+ 
+ // Re-exports from myosu-games for convenience
+ pub use myosu_games::{
+diff --git a/crates/myosu-games-poker/src/solver.rs b/crates/myosu-games-poker/src/solver.rs
+index 5e921af..68ebd8e 100644
+--- a/crates/myosu-games-poker/src/solver.rs
++++ b/crates/myosu-games-poker/src/solver.rs
+@@ -35,6 +35,14 @@ pub enum PokerSolverError {
+     CorruptedCheckpoint(#[source] bincode::Error),
+     #[error("failed to serialize checkpoint")]
+     Serialization(#[source] bincode::Error),
++    #[error("failed to read encoder artifact: {path}")]
++    EncoderArtifactRead {
++        path: String,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to decode encoder artifact")]
++    EncoderArtifactDecode(#[source] bincode::Error),
+     #[error("encoder abstractions are unavailable during {context}")]
+     MissingEncoderAbstractions { context: &'static str },
+     #[error("solver panicked during {context}: {message}")]
+@@ -79,6 +87,17 @@ impl PokerSolver {
+         Ok(solver)
+     }
+ 
++    /// Creates a solver backed by a bincode-serialized encoder artifact.
++    pub fn with_encoder_bytes(bytes: &[u8]) -> Result<Self, PokerSolverError> {
++        Self::with_encoder(Self::decode_encoder(bytes)?)
++    }
++
++    /// Creates a solver backed by a file-based encoder artifact.
++    pub fn with_encoder_file(path: &Path) -> Result<Self, PokerSolverError> {
++        let bytes = Self::read_encoder_artifact(path)?;
++        Self::with_encoder_bytes(&bytes)
++    }
++
+     /// Verifies that the encoder can at least construct the root infoset.
+     pub fn validate_abstractions(&self) -> Result<(), PokerSolverError> {
+         catch_unwind(AssertUnwindSafe(|| {
+@@ -191,6 +210,23 @@ impl PokerSolver {
+         Ok(solver)
+     }
+ 
++    /// Loads a checkpoint and pairs it with a serialized encoder artifact.
++    pub fn load_with_encoder_bytes(
++        path: &Path,
++        encoder_bytes: &[u8],
++    ) -> Result<Self, PokerSolverError> {
++        Self::load_with_encoder(path, Self::decode_encoder(encoder_bytes)?)
++    }
++
++    /// Loads a checkpoint and pairs it with an encoder artifact from disk.
++    pub fn load_with_encoder_file(
++        path: &Path,
++        encoder_path: &Path,
++    ) -> Result<Self, PokerSolverError> {
++        let bytes = Self::read_encoder_artifact(encoder_path)?;
++        Self::load_with_encoder_bytes(path, &bytes)
++    }
++
+     fn read_profile(path: &Path) -> Result<NlheProfile, PokerSolverError> {
+         let mut file = File::open(path).map_err(|source| PokerSolverError::FileOpen {
+             path: path.display().to_string(),
+@@ -226,6 +262,17 @@ impl PokerSolver {
+         bincode::deserialize_from(&file).map_err(PokerSolverError::CorruptedCheckpoint)
+     }
+ 
++    fn decode_encoder(bytes: &[u8]) -> Result<NlheEncoder, PokerSolverError> {
++        bincode::deserialize(bytes).map_err(PokerSolverError::EncoderArtifactDecode)
++    }
++
++    fn read_encoder_artifact(path: &Path) -> Result<Vec<u8>, PokerSolverError> {
++        std::fs::read(path).map_err(|source| PokerSolverError::EncoderArtifactRead {
++            path: path.display().to_string(),
++            source,
++        })
++    }
++
+     /// Returns a reference to the inner solver for use by other crate modules.
+     #[allow(dead_code)]
+     pub(crate) fn inner(&self) -> &rbp_nlhe::Flagship {
+@@ -278,7 +325,9 @@ fn panic_message(payload: &(dyn Any + Send)) -> String {
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    use crate::test_support::root_encoder_bytes;
+     use rbp_core::Arbitrary;
++    use std::fs;
+     use std::io::Read;
+     use tempfile::NamedTempFile;
+ 
+@@ -367,4 +416,32 @@ mod tests {
+             }
+         ));
+     }
++
++    #[test]
++    fn with_encoder_bytes_accepts_root_artifact() {
++        let solver = PokerSolver::with_encoder_bytes(root_encoder_bytes()).unwrap();
++        assert_eq!(solver.epochs(), 0);
++    }
++
++    #[test]
++    fn with_encoder_file_accepts_root_artifact() {
++        let temp_file = NamedTempFile::new().unwrap();
++        fs::write(temp_file.path(), root_encoder_bytes()).unwrap();
++
++        let solver = PokerSolver::with_encoder_file(temp_file.path()).unwrap();
++
++        assert_eq!(solver.epochs(), 0);
++    }
++
++    #[test]
++    fn checkpoint_roundtrip_with_encoder_artifact_preserves_epoch() {
++        let solver = PokerSolver::with_encoder_bytes(root_encoder_bytes()).unwrap();
++
++        let temp_file = NamedTempFile::new().unwrap();
++        solver.save(temp_file.path()).unwrap();
++
++        let loaded = PokerSolver::load_with_encoder_bytes(temp_file.path(), root_encoder_bytes())
++            .unwrap();
++        assert_eq!(loaded.epochs(), 0);
++    }
+ }
+diff --git a/crates/myosu-games-poker/src/test_support.rs b/crates/myosu-games-poker/src/test_support.rs
+new file mode 100644
+index 0000000..b25a71d
+--- /dev/null
++++ b/crates/myosu-games-poker/src/test_support.rs
+@@ -0,0 +1,20 @@
++use rbp_cards::{Isomorphism, IsomorphismIterator, Street};
++use rbp_gameplay::Abstraction;
++use serde::{Deserialize, Serialize};
++use std::collections::BTreeMap;
++use std::sync::OnceLock;
++
++#[derive(Serialize, Deserialize)]
++struct CompatEncoder(BTreeMap<Isomorphism, Abstraction>);
++
++pub(crate) fn root_encoder_bytes() -> &'static [u8] {
++    static BYTES: OnceLock<Vec<u8>> = OnceLock::new();
++    BYTES
++        .get_or_init(|| {
++            let map = IsomorphismIterator::from(Street::Pref)
++                .map(|isomorphism| (isomorphism, Abstraction::from((Street::Pref, 0))))
++                .collect::<BTreeMap<Isomorphism, Abstraction>>();
++            bincode::serialize(&CompatEncoder(map)).unwrap()
++        })
++        .as_slice()
++}
+diff --git a/crates/myosu-games-poker/src/training.rs b/crates/myosu-games-poker/src/training.rs
+index 35b5b0d..54f383c 100644
+--- a/crates/myosu-games-poker/src/training.rs
++++ b/crates/myosu-games-poker/src/training.rs
+@@ -14,6 +14,8 @@ use thiserror::Error;
+ /// Errors in training session management.
+ #[derive(Error, Debug)]
+ pub enum TrainingError {
++    #[error("encoder artifact load failed: {0}")]
++    EncoderLoad(#[source] PokerSolverError),
+     #[error("checkpoint save failed: {0}")]
+     CheckpointSave(#[source] PokerSolverError),
+     #[error("checkpoint load failed: {0}")]
+@@ -133,6 +135,53 @@ impl TrainingSession {
+         })
+     }
+ 
++    /// Creates a training session backed by a serialized encoder artifact.
++    pub fn new_with_encoder_bytes(
++        config: TrainingConfig,
++        encoder_bytes: &[u8],
++    ) -> Result<Self, TrainingError> {
++        let checkpoint_path = config.checkpoint_path();
++
++        let solver = if checkpoint_path.exists() {
++            PokerSolver::load_with_encoder_bytes(&checkpoint_path, encoder_bytes)
++                .map_err(TrainingError::CheckpointLoad)?
++        } else {
++            PokerSolver::with_encoder_bytes(encoder_bytes).map_err(TrainingError::EncoderLoad)?
++        };
++
++        let start_epoch = solver.epochs();
++
++        Ok(Self {
++            solver,
++            config,
++            start_epoch,
++        })
++    }
++
++    /// Creates a training session backed by an encoder artifact on disk.
++    pub fn new_with_encoder_file(
++        config: TrainingConfig,
++        encoder_path: impl AsRef<Path>,
++    ) -> Result<Self, TrainingError> {
++        let checkpoint_path = config.checkpoint_path();
++        let encoder_path = encoder_path.as_ref();
++
++        let solver = if checkpoint_path.exists() {
++            PokerSolver::load_with_encoder_file(&checkpoint_path, encoder_path)
++                .map_err(TrainingError::CheckpointLoad)?
++        } else {
++            PokerSolver::with_encoder_file(encoder_path).map_err(TrainingError::EncoderLoad)?
++        };
++
++        let start_epoch = solver.epochs();
++
++        Ok(Self {
++            solver,
++            config,
++            start_epoch,
++        })
++    }
++
+     /// Returns the current epoch (iteration count).
+     pub fn epochs(&self) -> usize {
+         self.solver.epochs()
+@@ -197,6 +246,8 @@ impl TrainingConfig {
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    use crate::test_support::root_encoder_bytes;
++    use std::fs;
+     use tempfile::TempDir;
+ 
+     #[test]
+@@ -239,4 +290,36 @@ mod tests {
+             })
+         ));
+     }
++
++    #[test]
++    fn new_with_encoder_bytes_accepts_root_artifact() {
++        let temp_dir = TempDir::new().unwrap();
++        let config = TrainingConfig::with_frequency(10).with_checkpoint_dir(temp_dir.path());
++
++        let session = TrainingSession::new_with_encoder_bytes(config, root_encoder_bytes()).unwrap();
++
++        assert_eq!(session.epochs(), 0);
++    }
++
++    #[test]
++    fn new_with_encoder_file_resumes_checkpointed_solver() {
++        let temp_dir = TempDir::new().unwrap();
++        let encoder_path = temp_dir.path().join("fixture.encoder");
++        fs::write(&encoder_path, root_encoder_bytes()).unwrap();
++
++        let config = TrainingConfig::with_frequency(1)
++            .with_checkpoint_dir(temp_dir.path())
++            .with_checkpoint_name("resume_checkpoint");
++
++        {
++            let session = TrainingSession::new_with_encoder_file(config.clone(), &encoder_path).unwrap();
++            session.save_checkpoint().unwrap();
++            assert_eq!(session.epochs(), 0);
++        }
++
++        let resumed =
++            TrainingSession::new_with_encoder_file(config, &encoder_path).unwrap();
++        assert_eq!(resumed.epochs(), 0);
++        assert_eq!(resumed.session_epochs(), 0);
++    }
+ }
+diff --git a/outputs/games/poker-engine/implementation.md b/outputs/games/poker-engine/implementation.md
+index 385a23c..2592391 100644
+--- a/outputs/games/poker-engine/implementation.md
++++ b/outputs/games/poker-engine/implementation.md
+@@ -1,50 +1,51 @@
+-# Implementation: games:poker-engine (solver guardrails slice)
++# Implementation: games:poker-engine (encoder artifact ingress slice)
+ 
+ ## Slice intent
+ 
+-Tightened the local poker-engine wrapper so it behaves truthfully while real NLHE abstraction artifacts are still absent from the repo. This slice stayed inside the owned poker-engine surfaces and focused on solver, training-session, and exploitability behavior.
++This slice makes the poker-engine crate capable of accepting a concrete serialized `NlheEncoder` artifact through owned poker-engine APIs. The work stays inside `myosu-games-poker` and focuses on the next honest step after the guardrail slice: artifact ingress and checkpoint pairing, not simulated end-state training claims.
+ 
+ ## Touched surfaces
+ 
++- `crates/myosu-games-poker/Cargo.toml`
++- `crates/myosu-games-poker/src/lib.rs`
+ - `crates/myosu-games-poker/src/solver.rs`
+ - `crates/myosu-games-poker/src/training.rs`
+-- `crates/myosu-games-poker/src/exploit.rs`
++- `crates/myosu-games-poker/src/test_support.rs`
+ 
+ ## What changed
+ 
+ ### `solver.rs`
+ 
+-- Replaced the old `train()` behavior that only built a tree and incremented epochs with real MCCFR stepping via `rbp_mccfr::Solver::step()`.
+-- Added explicit error surfaces for abstraction failures and bad exploitability outputs:
+-  - `MissingEncoderAbstractions`
+-  - `OperationPanicked`
+-  - `InvalidExploitability`
+-- Added encoder-aware entry points:
+-  - `PokerSolver::with_encoder(...)`
+-  - `PokerSolver::validate_abstractions()`
+-  - `PokerSolver::load_with_encoder(...)`
+-- Kept `new()` and `load()` as zero-artifact checkpoint/lookup helpers, but training and exploitability now fail cleanly instead of panicking when the encoder is empty.
++- Added encoder artifact ingress on the owned `PokerSolver` surface:
++  - `PokerSolver::with_encoder_bytes(...)`
++  - `PokerSolver::with_encoder_file(...)`
++  - `PokerSolver::load_with_encoder_bytes(...)`
++  - `PokerSolver::load_with_encoder_file(...)`
++- Added explicit artifact error cases:
++  - `EncoderArtifactRead`
++  - `EncoderArtifactDecode`
++- Kept validation centralized in `validate_abstractions()` so byte/file-backed constructors reject unusable encoder artifacts with the same error surface as direct `with_encoder(...)`.
+ 
+ ### `training.rs`
+ 
+-- Added `TrainingSession::new_with_encoder(...)` so downstream callers can pair checkpoints with a real abstraction artifact.
+-- Propagates solver failures from `train()` and `exploitability()` instead of hiding them.
+-- Checkpoint writes only occur after a successful training step.
++- Added artifact-backed `TrainingSession` constructors:
++  - `TrainingSession::new_with_encoder_bytes(...)`
++  - `TrainingSession::new_with_encoder_file(...)`
++- Added `TrainingError::EncoderLoad` so callers can distinguish artifact ingress failures from checkpoint load/save failures.
++- Verified the zero-state checkpoint resume path works when the session is paired with a concrete encoder artifact.
+ 
+-### `exploit.rs`
++### `test_support.rs`
+ 
+-- `poker_exploitability()` now returns `EmptyProfile` for zero-epoch profiles and converts missing-abstraction panics into `MissingEncoderAbstractions`.
+-- `remote_poker_exploitability()` now surfaces the same missing-encoder failure explicitly instead of panicking.
++- Added a poker-engine-owned test fixture that produces a real serialized `NlheEncoder` artifact for preflop validation.
++- The fixture materializes all 169 canonical preflop isomorphisms and assigns them to a deterministic preflop abstraction bucket, which is enough to prove root-level encoder validation and zero-state checkpoint pairing without pretending to cover full NLHE training.
+ 
+-## Test changes
++## Why this is the smallest honest next slice
+ 
+-- Removed the ignored unit tests in the touched modules.
+-- Reframed the touched proof toward the slice’s actual contract:
+-  - zero-state checkpoint roundtrip remains valid
+-  - synthetic strategy lookups still return normalized distributions
+-  - missing abstraction maps fail with explicit errors instead of hidden panics
++- The previous slice established clean failure behavior when abstraction data is missing.
++- Downstream miner and validator code still had no poker-engine-owned way to ingest a concrete encoder artifact without reaching into robopoker internals.
++- This slice closes that gap and proves the byte/file-backed path works end-to-end on the owned surfaces.
+ 
+ ## Remaining blockers
+ 
+-- This repo still does not provide a real `NlheEncoder` artifact, so this slice does not claim successful encoder-backed training, convergence, or exploitability improvement on actual poker abstractions.
+-- `remote_poker_exploitability()` still uses the existing simplified synthetic-profile path; this slice only hardened its failure behavior.
++- Positive encoder-backed training past epoch 0 is still blocked by upstream randomized `Game::root()` generation plus the absence of a full NLHE abstraction artifact in this repo. A preflop-only fixture cannot honestly prove replayable training across random roots.
++- Positive exploitability improvement proof remains blocked for the same reason: `exploitability()` builds a broader tree than the preflop fixture covers.
+diff --git a/outputs/games/poker-engine/promotion.md b/outputs/games/poker-engine/promotion.md
+index 99ce45f..5ecb98d 100644
+--- a/outputs/games/poker-engine/promotion.md
++++ b/outputs/games/poker-engine/promotion.md
+@@ -1,26 +1,4 @@
+-# Promotion: games:poker-engine
+-
+-## Decision
+-
+-Promote this slice to the next implementation step. Do not mark the overall poker-engine lane complete yet.
+-
+-## Why this slice is promotable
+-
+-- `outputs/games/poker-engine/quality.md` remains `quality_ready: yes`.
+-- `cargo build -p myosu-games-poker` passed.
+-- `cargo test -p myosu-games-poker` passed with 17 unit tests green and no ignored unit tests.
+-- The slice fixes a real local correctness issue: `PokerSolver::train()` now uses `Solver::step()` instead of only advancing epochs.
+-- The slice also replaces panic-driven missing-encoder failures with explicit errors that downstream miner and validator code can handle deliberately.
+-
+-## Why the lane is not complete
+-
+-- The repo still lacks a real NLHE abstraction artifact, so encoder-backed training and exploitability-improvement proof remain outside the evidence produced here.
+-- `remote_poker_exploitability()` still needs a stronger synthetic-profile story before it can serve as end-state validator scoring evidence.
+-
+-## Recommended next slice
+-
+-Thread a concrete encoder artifact or fixture into poker-engine tests and then restore proof for:
+-
+-- successful training past epoch 0 with a real encoder
+-- checkpoint resume with encoder-backed state
+-- measured exploitability comparisons between trained and untrained strategies
++merge_ready: yes
++manual_proof_pending: no
++reason: Poker-engine now ingests real preflop-valid encoder artifacts from bytes or files, zero-state checkpoint pairing is covered by passing tests, and the full crate suite passes cleanly.
++next_action: Upstream or stage a deterministic full NLHE abstraction artifact before attempting positive encoder-backed training or exploitability proofs.
+diff --git a/outputs/games/poker-engine/verification.md b/outputs/games/poker-engine/verification.md
+index 8b50817..19a02c7 100644
+--- a/outputs/games/poker-engine/verification.md
++++ b/outputs/games/poker-engine/verification.md
+@@ -1,4 +1,4 @@
+-# Verification: games:poker-engine (solver guardrails slice)
++# Verification: games:poker-engine (encoder artifact ingress slice)
+ 
+ ## Automated proof
+ 
+@@ -15,10 +15,19 @@ CARGO_TARGET_DIR=/tmp/myosu-games-poker-target cargo test -p myosu-games-poker
+ 
+ - `cargo build -p myosu-games-poker`: PASS
+ - `cargo test -p myosu-games-poker`: PASS
+-- Unit tests: 17 passed, 0 failed, 0 ignored
++- Unit tests: 22 passed, 0 failed, 0 ignored
+ - Doc tests: 1 ignored example block in `training.rs`
++- No compiler warnings were emitted by the successful proof commands
+ 
+-## Coverage from the passing suite
++## Newly-covered artifact ingress proofs
++
++- `solver::tests::with_encoder_bytes_accepts_root_artifact`
++- `solver::tests::with_encoder_file_accepts_root_artifact`
++- `solver::tests::checkpoint_roundtrip_with_encoder_artifact_preserves_epoch`
++- `training::tests::new_with_encoder_bytes_accepts_root_artifact`
++- `training::tests::new_with_encoder_file_resumes_checkpointed_solver`
++
++## Existing coverage that remained green
+ 
+ - Solver guardrails:
+   - `solver::tests::create_empty_solver`
+@@ -30,23 +39,21 @@ CARGO_TARGET_DIR=/tmp/myosu-games-poker-target cargo test -p myosu-games-poker
+ - Training-session guardrails:
+   - `training::tests::session_checkpoint_frequency`
+   - `training::tests::new_with_encoder_rejects_empty_abstraction_map`
+-- Exploitability guardrails:
+-  - `exploit::tests::trained_strategy_low_exploit`
+-  - `exploit::tests::random_strategy_high_exploit`
+-  - `exploit::tests::remote_matches_local`
+-- Existing wire/query smoke coverage remained green:
+-  - all `wire::*` tests
++- Existing query/wire/exploit smoke coverage:
+   - all `query::*` tests
++  - all `wire::*` tests
++  - all `exploit::*` tests
+ 
+ ## What this proof establishes
+ 
+-- The solver wrapper now calls real MCCFR stepping when training is attempted.
+-- Missing abstraction maps are surfaced as explicit errors instead of panics.
+-- Zero-state checkpoints roundtrip correctly.
+-- Training-session checkpointing does not write state after a failed training step.
++- Poker-engine can ingest a real serialized `NlheEncoder` artifact from bytes or disk through owned `PokerSolver` APIs.
++- `TrainingSession` can use the same artifact-backed path and resume a zero-state checkpoint without reaching into robopoker internals.
++- The preflop artifact fixture is large enough to satisfy root-level encoder validation because it covers all 169 canonical preflop isomorphisms.
+ 
+ ## What this proof does not establish
+ 
+-- Successful training with a real encoder-backed abstraction artifact.
+-- Actual exploitability reduction between trained and untrained NLHE strategies.
+-- Validator-grade parity for remote exploitability scoring.
++- Positive encoder-backed training past epoch 0.
++- Positive exploitability reduction between trained and untrained NLHE strategies.
++- Validator-grade remote exploitability scoring against a full abstraction artifact.
++
++Those proofs remain blocked by upstream randomized `Game::root()` generation and the absence of a full NLHE abstraction artifact in this repo.
