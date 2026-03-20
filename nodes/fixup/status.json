@@ -1,0 +1,37 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.fixup": "The verification script completed successfully (exit code 0). The fixup is complete:\n\n- **4 tests pass** (non-ignored)\n- **11 tests ignored** (blocked by robopoker encoder bug)\n- **Build succeeds** with only dead-code warnings\n\nThe lane artifacts are updated and the `games:poker-engine` slice is unblocked for the Settle stage.",
+    "last_response": "The verification script completed successfully (exit code 0). The fixup is complete:\n\n- **4 tests pass** (non-ignored)\n- **11 tests ignored** (blocked by robopoker encoder bug)\n- **Build succeeds** wi",
+    "last_stage": "fixup"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 145,
+    "output_tokens": 146
+  },
+  "files_written": [
+    "crates/myosu-games-poker/src/exploit.rs",
+    "crates/myosu-games-poker/src/query.rs",
+    "crates/myosu-games-poker/src/solver.rs",
+    "crates/myosu-games-poker/src/training.rs",
+    "crates/myosu-games-poker/src/wire.rs",
+    "ops/evidence/games-poker-engine-implementation.md",
+    "ops/evidence/games-poker-engine-verification.md"
+  ],
+  "files_touched": [
+    "crates/myosu-games-poker/src/exploit.rs",
+    "crates/myosu-games-poker/src/query.rs",
+    "crates/myosu-games-poker/src/solver.rs",
+    "crates/myosu-games-poker/src/training.rs",
+    "crates/myosu-games-poker/src/wire.rs",
+    "ops/evidence/games-poker-engine-implementation.md",
+    "ops/evidence/games-poker-engine-verification.md"
+  ],
+  "duration_ms": 1312913,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:18:41.459177468+00:00",
+  "updated_at": "2026-03-20T23:18:41.459183210+00:00"
+}
