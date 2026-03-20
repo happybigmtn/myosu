@@ -1,0 +1,25 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "fixup",
+    "response.fixup": "Already handled — that background task was from earlier in the session. The fixup is complete and verification artifact is updated.",
+    "last_response": "Already handled — that background task was from earlier in the session. The fixup is complete and verification artifact is updated."
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 145,
+    "output_tokens": 64
+  },
+  "files_written": [
+    "ops/evidence/games-poker-engine-verification.md"
+  ],
+  "files_touched": [
+    "ops/evidence/games-poker-engine-verification.md"
+  ],
+  "duration_ms": 590381,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:32:23.169165776+00:00",
+  "updated_at": "2026-03-20T23:32:23.169173711+00:00"
+}

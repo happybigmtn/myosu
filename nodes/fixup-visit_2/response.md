@@ -1,0 +1,1 @@
+Already handled — that background task was from earlier in the session. The fixup is complete and verification artifact is updated.
