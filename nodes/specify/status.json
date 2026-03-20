@@ -1,0 +1,33 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.specify": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that synthesizes existing reviewed artifacts, the adapter document serves as the integration boundary map — it answers \"what connects to what\" without re-stating what each upstream lane already owns. This keeps the adapter focused on integration decisions, not duplicated spec content.\n\n**Decision framing**: The keep/reopen/reset judgment was straightforward because `agent:experience` is already READY (KEEP). The more interesting question was \"proceed or wait?\" — and the answer was to proceed with the 3 unblocked slices rather than treating an external cross-lane dependency (`play:tui` binary) as a reason to pause this lane entirely.\n`─────────────────────────────────────────────────`\n\n## Summary\n\nBootstrapped the `agent:integration` lane — the last remaining ready product lane. Created:\n\n**Required artifacts** (both done):\n- `outputs/agent-integration/agent-adapter.md` — integration boundary map, Phase 1–4 state inventory, decision records\n- `outputs/agent-integration/review.md` — judgment: **KEEP**, decision: **implementation family next**\n\n**Decision**: The product does **not** need another upstream unblock. Slices 1 (`agent_context.rs`), 2 (`journal.rs`), and 5 (`narration.rs`) can proceed immediately — they depend only on already-trusted upstream surfaces (`tui:shell`, `games:traits`, `schema.rs`). The remaining slices are blocked on the `myosu-play` binary owned by `play:tui` lane.\n\n**Also updated**:\n- `fabro/programs/myosu-product.yaml` — added `agent:integration` lane under the `agent` unit\n- `fabro/run-configs/product/agent-integration.toml` — run config for the lane\n- `fabro/workflows/bootstrap/agent-integration.fabro` — workflow graph",
+    "last_stage": "specify",
+    "last_response": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that sy"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 1014810,
+    "output_tokens": 10391
+  },
+  "files_written": [
+    "fabro/programs/myosu-product.yaml",
+    "fabro/run-configs/product/agent-integration.toml",
+    "fabro/workflows/bootstrap/agent-integration.fabro",
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "fabro/programs/myosu-product.yaml",
+    "fabro/run-configs/product/agent-integration.toml",
+    "fabro/workflows/bootstrap/agent-integration.fabro",
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 178831,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T22:28:14.059071982+00:00",
+  "updated_at": "2026-03-20T22:28:14.059078576+00:00"
+}

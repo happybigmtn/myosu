@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-03-20T22:28:14.059912821Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "internal.retry_count.start": 1,
+    "thread.start.current_node": "specify",
+    "failure_signature": "",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "graph.rankdir": "LR",
+    "internal.run_id": "01KM6NMJTWV4EFFYYFF2K0ZZVZ",
+    "failure_class": "",
+    "last_response": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that sy",
+    "internal.thread_id": "start",
+    "internal.fidelity": "compact",
+    "outcome": "success",
+    "last_stage": "specify",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6NMJTWV4EFFYYFF2K0ZZVZ/worktree",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that synthesizes existing reviewed artifacts, the adapter document serves as the integration boundary map — it answers \"what connects to what\" without re-stating what each upstream lane already owns. This keeps the adapter focused on integration decisions, not duplicated spec content.\n\n**Decision framing**: The keep/reopen/reset judgment was straightforward because `agent:experience` is already READY (KEEP). The more interesting question was \"proceed or wait?\" — and the answer was to proceed with the 3 unblocked slices rather than treating an external cross-lane dependency (`play:tui` binary) as a reason to pause this lane entirely.\n`─────────────────────────────────────────────────`\n\n## Summary\n\nBootstrapped the `agent:integration` lane — the last remaining ready product lane. Created:\n\n**Required artifacts** (both done):\n- `outputs/agent-integration/agent-adapter.md` — integration boundary map, Phase 1–4 state inventory, decision records\n- `outputs/agent-integration/review.md` — judgment: **KEEP**, decision: **implementation family next**\n\n**Decision**: The product does **not** need another upstream unblock. Slices 1 (`agent_context.rs`), 2 (`journal.rs`), and 5 (`narration.rs`) can proceed immediately — they depend only on already-trusted upstream surfaces (`tui:shell`, `games:traits`, `schema.rs`). The remaining slices are blocked on the `myosu-play` binary owned by `play:tui` lane.\n\n**Also updated**:\n- `fabro/programs/myosu-product.yaml` — added `agent:integration` lane under the `agent` unit\n- `fabro/run-configs/product/agent-integration.toml` — run config for the lane\n- `fabro/workflows/bootstrap/agent-integration.fabro` — workflow graph",
+    "internal.node_visit_count": 1,
+    "current_node": "specify",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "internal.retry_count.specify": 1,
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "response.specify": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that synthesizes existing reviewed artifacts, the adapter document serves as the integration boundary map — it answers \"what connects to what\" without re-stating what each upstream lane already owns. This keeps the adapter focused on integration decisions, not duplicated spec content.\n\n**Decision framing**: The keep/reopen/reset judgment was straightforward because `agent:experience` is already READY (KEEP). The more interesting question was \"proceed or wait?\" — and the answer was to proceed with the 3 unblocked slices rather than treating an external cross-lane dependency (`play:tui` binary) as a reason to pause this lane entirely.\n`─────────────────────────────────────────────────`\n\n## Summary\n\nBootstrapped the `agent:integration` lane — the last remaining ready product lane. Created:\n\n**Required artifacts** (both done):\n- `outputs/agent-integration/agent-adapter.md` — integration boundary map, Phase 1–4 state inventory, decision records\n- `outputs/agent-integration/review.md` — judgment: **KEEP**, decision: **implementation family next**\n\n**Decision**: The product does **not** need another upstream unblock. Slices 1 (`agent_context.rs`), 2 (`journal.rs`), and 5 (`narration.rs`) can proceed immediately — they depend only on already-trusted upstream surfaces (`tui:shell`, `games:traits`, `schema.rs`). The remaining slices are blocked on the `myosu-play` binary owned by `play:tui` lane.\n\n**Also updated**:\n- `fabro/programs/myosu-product.yaml` — added `agent:integration` lane under the `agent` unit\n- `fabro/run-configs/product/agent-integration.toml` — run config for the lane\n- `fabro/workflows/bootstrap/agent-integration.fabro` — workflow graph",
+        "last_stage": "specify",
+        "last_response": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that sy"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 1014810,
+        "output_tokens": 10391
+      },
+      "files_written": [
+        "fabro/programs/myosu-product.yaml",
+        "fabro/run-configs/product/agent-integration.toml",
+        "fabro/workflows/bootstrap/agent-integration.fabro",
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "fabro/programs/myosu-product.yaml",
+        "fabro/run-configs/product/agent-integration.toml",
+        "fabro/workflows/bootstrap/agent-integration.fabro",
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 178831
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}
