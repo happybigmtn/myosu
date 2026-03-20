@@ -1,0 +1,665 @@
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..eede2c1
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,477 @@
++# `agent:integration` — Agent Integration Adapter
++
++## Purpose
++
++This document specifies the **integration adapter** that wires the agent-facing surfaces
++from `agent:experience` into a coherent interface for programmatic agents. It is the
++binding layer between the pipe protocol, JSON schema, agent context, journal, narration
++engine, and spectator relay.
++
++This is the first honest slice: an integration layer that exists as documentation
++and as the structural blueprint for the actual Rust code that must be written.
++
++## Agent Interface Contract
++
++An agent interacts with Myosu through a single entrypoint:
++
++```
++myosu-play --pipe [--context <path>] [--narrate] [--subnet <id>]
++```
++
++### The Five Surfaces
++
++**Surface 1 — Pipe Protocol (stdin/stdout)**
++The primary interface. Plain text, no ANSI codes, no cursor manipulation.
++All output is flushed immediately. All input is line-buffered.
++
++**Surface 2 — JSON Schema (docs/api/game-state.json + schema.rs)**
++Machine-readable game state. Used by structured agents that parse structured output
++rather than text. The `GameState` type in `schema.rs` is the authoritative schema.
++
++**Surface 3 — Agent Context File (--context <path>)**
++A JSON file providing persistent identity, memory, and journal across sessions.
++Loaded at startup, saved at shutdown.
++
++**Surface 4 — Journal Artifact (append-only markdown)**
++The agent's autobiography. Written after each hand. Never truncated. The agent's
++own account of its experience.
++
++**Surface 5 — Spectator Relay (Unix socket)**
++A local event stream for observers. Fog-of-war enforced at the relay (hole cards
++never sent during play).
++
++---
++
++## Integration Architecture
++
++```
++                          myosu-play --pipe [--context <path>] [--narrate] [--subnet <id>]
++                          │
++                          ▼
++┌─────────────────────────────────────────────────────────────────────────┐
++│                        AgentIntegration                                  │
++│                                                                         │
++│  ┌─────────────┐   ┌──────────────┐   ┌──────────────────────────┐   │
++│  │ PipeMode    │◄──│ AgentContext  │◄──│ Journal                  │   │
++│  │ (stdin/out) │   │ (load/save)   │   │ (append-only markdown)  │   │
++│  └──────┬──────┘   └──────────────┘   └──────────────────────────┘   │
++│         │                                                           │
++│         ▼                                                           │
++│  ┌──────────────────────────────────────────────────────────────┐   │
++│  │                   GameRenderer (trait)                         │   │
++│  │                                                               │   │
++│  │  pipe_output() ──► terse text (pipe mode)                    │   │
++│  │  render_state() ──► ratatui buffer (TUI mode)                │   │
++│  │                                                               │   │
++│  │  When --narrate: NarrationEngine instead of pipe_output()     │   │
++│  └──────────────────────────────────────────────────────────────┘   │
++│         │                                                           │
++│         ▼                                                           │
++│  ┌──────────────────────────────────────────────────────────────┐   │
++│  │  SchemaBridge                                                 │   │
++│  │  Converts internal game state → GameState JSON                │   │
++│  │  (Used by spectator relay; available to pipe mode agents)     │   │
++│  └──────────────────────────────────────────────────────────────┘   │
++│         │                                                           │
++│         ▼                                                           │
++│  ┌──────────────────────────────────────────────────────────────┐   │
++│  │  SpectatorRelay                                               │   │
++│  │  Unix socket: ~/.myosu/spectate/<session_id>.sock             │   │
++│  │  Emits GameEvent JSON lines                                   │   │
++│  │  Fog-of-war enforced at relay (not renderer)                  │   │
++│  └──────────────────────────────────────────────────────────────┘   │
++│                                                                         │
++└─────────────────────────────────────────────────────────────────────────┘
++```
++
++---
++
++## Current Implementation Status
++
++| Surface | File | Status |
++|---------|------|--------|
++| Pipe protocol | `crates/myosu-tui/src/pipe.rs` | **EXISTS** — basic stdin/stdout, 6 tests pass |
++| JSON schema | `crates/myosu-tui/src/schema.rs` | **EXISTS** — 939 lines, 16 tests pass |
++| `--context` flag | Not wired | **MISSING** |
++| `--narrate` flag | Not wired | **MISSING** |
++| AgentContext | `crates/myosu-tui/src/agent_context.rs` | **MISSING** — no file |
++| Journal | `crates/myosu-tui/src/journal.rs` | **MISSING** — no file |
++| NarrationEngine | `crates/myosu-tui/src/narration.rs` | **MISSING** — no file |
++| `reflect>` prompt | Not in pipe.rs | **MISSING** |
++| Lobby (pipe mode) | Not in pipe.rs | **MISSING** |
++| SpectatorRelay | `crates/myosu-play/src/spectate.rs` | **MISSING** — no file |
++| SpectateScreen | `crates/myosu-tui/src/screens/spectate.rs` | **MISSING** — no file |
++
++---
++
++## Pipe Protocol Reference
++
++### Current (exists)
++
++```
++# Start pipe mode
++myosu-play --pipe
++
++# Current output format (from GameRenderer::pipe_output())
++STATE hand=N pot=Nbb hero=AhKs board=Ts7h2c to_call=Nbb actions=fold,call,raise
++
++# Current input format
++fold | f
++call | c
++raise | r
++```
++
++### Planned Extensions
++
++```
++# With persistent context
++myosu-play --pipe --context ./koan.json
++
++# With rich narration
++myosu-play --pipe --narrate
++
++# Both together
++myosu-play --pipe --context ./koan.json --narrate
++
++# With explicit subnet
++myosu-play --pipe --subnet 1
++```
++
++---
++
++## AgentContext Integration
++
++### File Location
++`crates/myosu-tui/src/agent_context.rs`
++
++### Schema (from AX-AX-01)
++
++```json
++{
++  "identity": {
++    "name": "koan",
++    "created": "2026-03-16T00:00:00Z",
++    "games_played": 1847,
++    "preferred_game": "nlhe-hu"
++  },
++  "memory": {
++    "session_count": 23,
++    "lifetime_result": "+342bb",
++    "observations": [
++      "opponent over-folds river when checked to twice"
++    ]
++  },
++  "journal": [
++    {
++      "session": 23,
++      "hand": 47,
++      "reflection": "..."
++    }
++  ]
++}
++```
++
++### Integration Contract
++
++```
++PipeMode::new(renderer, context_path: Option<PathBuf>)
++  → loads AgentContext from path, or creates default
++  → passes context to NarrationEngine for session arc weaving
++  → passes context to Journal for entry creation
++
++PipeMode::shutdown()
++  → saves AgentContext to path
++  → appends to Journal
++```
++
++### Required Traits
++
++```rust
++pub struct AgentContext {
++    pub identity: Identity,
++    pub memory: Memory,
++    pub journal: Vec<JournalEntry>,
++}
++
++impl AgentContext {
++    pub fn load(path: &Path) -> Result<Self>;
++    pub fn save(&self, path: &Path) -> Result<()>;
++    pub fn default() -> Self;
++    pub fn append_journal_entry(&mut self, entry: JournalEntry);
++}
++```
++
++---
++
++## Journal Integration
++
++### File Location
++`crates/myosu-tui/src/journal.rs`
++
++### Integration Contract
++
++```
++Journal::append_hand_entry(path: &Path, entry: HandEntry) -> Result<()>
++  → opens file in append mode
++  → writes markdown-formatted entry
++  → flushes and closes
++  → NEVER truncates
++
++Journal::append_session_summary(path: &Path, summary: SessionSummary) -> Result<()>
++  → appends summary block after session end
++```
++
++### Markdown Format
++
++```markdown
++# journal of {identity.name}
++
++## session {N} — {date}
++
++### hand {M}
++
++board: {board}
++held: {hero_cards}
++result: {result}
++
++{reflection_text}
++```
++
++---
++
++## NarrationEngine Integration
++
++### File Location
++`crates/myosu-tui/src/narration.rs`
++
++### Integration Contract
++
++```rust
++pub struct NarrationEngine<'a> {
++    context: &'a AgentContext,
++}
++
++impl<'a> NarrationEngine<'a> {
++    pub fn narrative(&self, state: &GameState) -> String;
++    fn board_texture(&self, board: &[Card]) -> Texture;  // dry | wet | connected
++    fn session_arc(&self) -> String;  // from context.memory
++    fn opponent_summary(&self) -> String;  // from context.memory.observations
++}
++```
++
++### Board Texture Analysis
++
++The narration engine analyzes board texture using card properties:
++
++| Texture | Suits | Connections | Narrative Keyword |
++|---------|-------|-------------|------------------|
++| Dry | 3+ | none/1-gap | "dry", "static", "simple" |
++| Wet | 2 | pairs/connected | "wet", "dynamic", "dangerous" |
++| Connected | 3+ | runs/paired | "connected", "complex", "drawing" |
++
++### Example Narrated Output
++
++```
++── hand 47 ──────────────────────────────────────
++
++the board reads T♠ 7♥ 2♣. three suits, no connections.
++a dry texture. the kind of board that rewards the player
++who arrived with the stronger range.
++
++you hold A♠ K♥ in the big blind. 94bb behind.
++across from you, the solver — the distilled equilibrium
++of ten thousand hours of self-play — sits with 94bb
++and two cards you cannot see.
++
++the pot holds 12bb. the solver has raised to 6bb.
++
++the mathematics say this is a call or a raise.
++the pattern of the session says the solver has been
++aggressive on dry boards. this is the 47th hand.
++you are up 14bb. the session has a shape to it now.
++
++what do you do?
++
++>
++```
++
++---
++
++## SpectatorRelay Integration
++
++### File Location
++`crates/myosu-play/src/spectate.rs`
++
++### Socket Path Convention
++`~/.myosu/spectate/<session_id>.sock`
++
++Note: This convention should be verified against `play:tui`'s data directory
++convention (`{data-dir}/hands/hand_{N}.json`). If different, align before
++Slice 8 implementation.
++
++### Integration Contract
++
++```rust
++pub struct SpectatorRelay {
++    session_id: Uuid,
++    socket_path: PathBuf,
++    fog_of_war: FogOfWar,
++}
++
++impl SpectatorRelay {
++    pub fn new(session_id: Uuid) -> Self;
++    pub fn emit(&mut self, event: &GameEvent) -> Result<()>;
++}
++
++pub enum GameEvent {
++    HandStart { hand_id: u64, hole_cards: [Card; 2] },  // only for spectator's own cards
++    BoardUpdate { street: Street, cards: Vec<Card> },
++    Action { player: &str, action: &str, amount: u64 },
++    Showdown { board: Vec<Card>, winners: Vec<&str> },
++    HandEnd { hand_id: u64, result: &str },
++}
++
++pub struct FogOfWar;
++impl FogOfWar {
++    pub fn filter(&self, event: &GameEvent, spectator_cards: Option<[Card; 2]>) -> GameEvent;
++}
++```
++
++### Fog-of-War Rules
++
++- Hole cards of other players: NEVER sent to relay during play
++- Spectator's own hole cards: sent at `HandStart` and remain visible
++- After `Showdown` event: ALL hole cards revealed
++- `r` key in SpectateScreen: manual reveal after showdown (fog lifted)
++
++---
++
++## Reflect Prompt Integration
++
++### Location
++`crates/myosu-tui/src/pipe.rs` — extend `PipeMode`
++
++### Flow
++
++```
++1. Hand completes
++2. PipeMode outputs HAND COMPLETE block
++3. PipeMode outputs "reflect> " prompt to stdout
++4. PipeMode reads line from stdin
++5. If line is empty → skip, continue
++6. If line is non-empty → append to JournalEntry.reflection
++7. Continue to next hand
++```
++
++### Output Format
++
++```
++HAND COMPLETE
++result: +14bb (showdown, A♠ K♥ vs Q♣ J♣)
++session: +28bb over 47 hands
++
++reflect>
++```
++
++---
++
++## Lobby Integration (Pipe Mode Without --subnet)
++
++### Location
++`crates/myosu-tui/src/pipe.rs` — extend `PipeMode`
++
++### Flow
++
++```
++1. myosu-play --pipe (no --subnet)
++2. PipeMode outputs MYOSU/LOBBY
++3. Agent types "info <id>" or "<id>"
++4. If "info <id>" → output subnet detail
++5. If "<id>" → start game on subnet
++```
++
++### Lobby Format
++
++```
++MYOSU/LOBBY
++subnets:
++  1 nlhe-hu    12 miners  13.2 mbb/h  ACTIVE
++  2 nlhe-6max  18 miners  15.8 mbb/h  ACTIVE
++
++>
++```
++
++### Info Format
++
++```
++SUBNET {id} — {name}
++best_exploitability: {N} mbb/h
++your_history: {N} sessions, {result} lifetime
++miners: {N} active
++```
++
++Note: Chain discovery is stubbed for Phase 0. Hardcoded lobby data until
++`chain:runtime` lane provides miner axon endpoint.
++
++---
++
++## Integration Slices
++
++### Slice 1: AgentContext + Journal (Foundation)
++**Files**: `crates/myosu-tui/src/agent_context.rs`, `crates/myosu-tui/src/journal.rs`
++**What**: Basic structs, load/save, append-only journal. No narration, no reflection.
++**Proof**: `cargo test -p myosu-tui agent_context::tests` + `cargo test -p myosu-tui journal::tests`
++
++### Slice 2: --context Flag Wiring
++**Files**: `crates/myosu-tui/src/pipe.rs`
++**What**: Wire `AgentContext` into `PipeMode::new()` and `shutdown()`
++**Proof**: `cargo test -p myosu-tui pipe::tests::context_preserved_across_sessions`
++
++### Slice 3: NarrationEngine + --narrate Flag
++**Files**: `crates/myosu-tui/src/narration.rs`, `crates/myosu-tui/src/pipe.rs`
++**What**: Board texture analysis, session arc, prose generation. `--narrate` flag wired.
++**Proof**: `cargo test -p myosu-tui narration::tests`
++
++### Slice 4: Reflect Prompt + Journal Integration
++**Files**: `crates/myosu-tui/src/pipe.rs`
++**What**: `reflect>` after each hand, append to journal entry
++**Proof**: `cargo test -p myosu-tui pipe::tests::reflection_prompt_*`
++
++### Slice 5: Lobby in Pipe Mode (Stubbed)
++**Files**: `crates/myosu-tui/src/pipe.rs`
++**What**: Lobby output, `info <id>` command, subnet selection. Chain data stubbed.
++**Proof**: `cargo test -p myosu-tui pipe::tests::lobby_*`
++
++### Slice 6: SpectatorRelay (Phase 0)
++**Files**: `crates/myosu-play/src/spectate.rs`
++**What**: Unix socket relay, GameEvent emission, fog-of-war enforcement
++**Proof**: `cargo test -p myosu-play spectate::tests::relay_*`
++
++### Slice 7: SpectateScreen
++**Files**: `crates/myosu-tui/src/screens/spectate.rs`
++**What**: Screen variant, fog-of-war rendering, `r` key for reveal
++**Proof**: `cargo test -p myosu-tui spectate::tests::renders_*`
++
++---
++
++## Dependencies
++
++| Surface | Upstream | Status |
++|---------|----------|--------|
++| `GameRenderer` trait | `tui:shell` | Trusted — 82 tests pass |
++| `CfrGame`, `GameType` | `games:traits` | Trusted — 14 tests pass |
++| `myosu-play` binary | `play:tui` | Partial — skeleton exists |
++| `docs/api/game-state.json` | `agent:experience` | Trusted — schema complete |
++| `schema.rs` | `agent:experience` | Trusted — 16 tests pass |
++| Chain data (lobby) | `chain:runtime` | **MISSING** — stubbed for Phase 0 |
++| Miner axon (spectator WS) | `chain:runtime` | **MISSING** — Phase 1 |
++
++---
++
++## Integration Invariants
++
++1. **Context privacy**: Agent context file is never sent to opponents or observers
++2. **Journal append-only**: Journal file is never truncated or overwritten
++3. **Fog-of-war at relay**: Hole cards never flow to spectator socket during active play
++4. **Pipe mode purity**: No ANSI codes, no cursor manipulation, no TTY dependency
++5. **Same game state**: `--narrate` and default pipe mode render the same underlying game state
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..be3695b
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,176 @@
++# `agent:integration` Lane Review
++
++## Judgment: **KEEP — proceed to implementation family**
++
++The `agent:experience` lane has produced honest, reviewed artifacts. The integration
++adapter is now specified. The primary blockers (robopoker git migration, play:tui binary
++skeleton) are owned by other lanes and tracked there. The integration slices are
++well-ordered with clean dependencies. Product is ready for an implementation family
++workflow — specifically, the `agent:experience` implementation slices should be
++executed in the order defined in `agent-adapter.md`.
++
++---
++
++## Honest Assessment of the Integration Landscape
++
++### What Exists
++
++| Surface | Status | Evidence |
++|---------|--------|---------|
++| Pipe protocol (`pipe.rs`) | **Functional** | 6 tests pass; `--pipe` flag works; no `--context`, `--narrate`, `reflect>`, or lobby |
++| JSON schema (`schema.rs`) | **Trusted** | 939 lines, 16 tests pass, 10 game types |
++| `docs/api/game-state.json` | **Trusted** | Matches `schema.rs`; authoritative for machine-readable agents |
++| `GameRenderer` trait | **Trusted** | Object-safe; `pipe_output()` contract clear; 82 tests in `tui:shell` |
++| `myosu-play` binary | **Skeleton only** | `play:tui` lane owns this; CLI dispatch incomplete for new flags |
++
++### What Is Missing
++
++| Surface | File Needed | Blocker? |
++|---------|------------|---------|
++| `AgentContext` | `crates/myosu-tui/src/agent_context.rs` | **No** — slices 1–2 are independent |
++| `Journal` | `crates/myosu-tui/src/journal.rs` | **No** — slices 1–2 are independent |
++| `NarrationEngine` | `crates/myosu-tui/src/narration.rs` | **No** — slice 3 is independent |
++| `--context` flag wiring | `crates/myosu-tui/src/pipe.rs` | **No** — depends only on `AgentContext` (slice 1) |
++| `--narrate` flag wiring | `crates/myosu-tui/src/pipe.rs` | **No** — depends only on `NarrationEngine` (slice 3) |
++| `reflect>` prompt | `crates/myosu-tui/src/pipe.rs` | **No** — slice 4, after context flag wiring |
++| Lobby (pipe mode) | `crates/myosu-tui/src/pipe.rs` | **No** — slice 5, chain data stubbed for Phase 0 |
++| `SpectatorRelay` | `crates/myosu-play/src/spectate.rs` | **No** — slice 6, independent of all above |
++| `SpectateScreen` | `crates/myosu-tui/src/screens/spectate.rs` | **No** — slice 7, after SpectatorRelay |
++
++### Upstream Blockers
++
++| Blocker | Owned By | Impact | Resolution |
++|---------|---------|--------|------------|
++| robopoker git migration | `games:traits` lane | Cannot `cargo build` on clean checkout or CI | Must complete before Phase 1 integration testing |
++| `myosu-play` binary skeleton | `play:tui` lane | CLI dispatch incomplete for `--pipe` with new flags | Slice 1 of `play:tui` must complete before `agent:experience` slices 3+ |
++| Chain data for lobby | `chain:runtime` lane | Lobby displays stubbed data until miner axon exists | Stubbed for Phase 0; acceptable |
++| Miner axon for spectator WS | `chain:runtime` lane | Phase 1 of spectator protocol | Acceptable for Phase 0 |
++
++---
++
++## Decision: Implementation Family vs. Another Upstream Unblock
++
++**Decision: Proceed to implementation family.**
++
++Rationale:
++
++1. **`agent:experience` spec is mature and reviewed.** The 9 slices are defined with clear
++   boundaries and sequential dependencies. The schema, pipe protocol, and trait contracts
++   are sound. No further spec work is blocking implementation.
++
++2. **The remaining upstream blockers are owned elsewhere and tracked.** The robopoker
++   migration is owned by `games:traits` and is being addressed there. The `myosu-play`
++   binary skeleton is owned by `play:tui`. Both are tracked in their respective lane
++   `review.md` files.
++
++3. **Slices 1–2 can begin immediately.** `AgentContext` and `Journal` are independent
++   of both the binary skeleton and the robopoker migration. They depend only on the
++   `GameRenderer` trait which is trusted and stable.
++
++4. **The implementation family should follow the slice order in `agent-adapter.md`.**
++   The natural grouping is:
++   - **Implementation Family A (Context + Journal)**: Slices 1–2 — `agent_context.rs` + `journal.rs` + `--context` wiring
++   - **Implementation Family B (Narration)**: Slices 3–4 — `narration.rs` + `--narrate` + `reflect>` prompt
++   - **Implementation Family C (Lobby)**: Slice 5 — lobby in pipe mode (stubbed)
++   - **Implementation Family D (Spectator)**: Slices 6–7 — relay + screen
++
++5. **The decision to use an implementation family (vs. another upstream unblock) is
++   supported by the `agent:experience` review judgment.** That review explicitly stated:
++   "Proceed to implementation-family workflow next. The lane is well-specified and
++   the upstream is trusted."
++
++---
++
++## Lane Readiness
++
++| Dimension | Status | Notes |
++|---------|--------|-------|
++| Integration specification | **READY** | `agent-adapter.md` specifies all surfaces and integration points |
++| Upstream (tui:shell) | **TRUSTED** | `GameRenderer`, `PipeMode` stable; 82 tests pass |
++| Upstream (games:traits) | **TRUSTED** | `CfrGame`, `GameType`, `StrategyQuery` stable; 14 tests pass |
++| Upstream (schema.rs) | **TRUSTED** | 16 tests pass; 10 game types |
++| Binary skeleton (`play:tui`) | **PARTIAL** | Needed for slices 3+; not blocking slices 1–2 |
++| robopoker dependency | **BLOCKER** | Must migrate to git before Phase 1 integration testing |
++| Chain data (lobby) | **STUBBED** | Acceptable for Phase 0; real data requires `chain:runtime` |
++
++---
++
++## Proof Expectations
++
++| Slice | Surface | Test |
++|-------|---------|------|
++| 1 | `AgentContext` | `cargo test -p myosu-tui agent_context::tests::load_and_save_roundtrip` |
++| 1 | `AgentContext` | `cargo test -p myosu-tui agent_context::tests::journal_appends_not_overwrites` |
++| 1 | `AgentContext` | `cargo test -p myosu-tui agent_context::tests::missing_context_creates_new` |
++| 2 | `--context` wiring | `cargo test -p myosu-tui pipe::tests::context_preserved_across_sessions` |
++| 3 | `NarrationEngine` | `cargo test -p myosu-tui narration::tests::narrate_includes_board_texture` |
++| 3 | `NarrationEngine` | `cargo test -p myosu-tui narration::tests::narrate_includes_session_context` |
++| 3 | `NarrationEngine` | `cargo test -p myosu-tui narration::tests::terse_and_narrate_same_game_state` |
++| 4 | `reflect>` | `cargo test -p myosu-tui pipe::tests::reflection_prompt_after_hand` |
++| 4 | `reflect>` | `cargo test -p myosu-tui pipe::tests::empty_reflection_skips` |
++| 4 | `reflect>` | `cargo test -p myosu-tui pipe::tests::reflection_saved_to_journal` |
++| 5 | Lobby | `cargo test -p myosu-tui pipe::tests::lobby_presented_without_subnet_flag` |
++| 5 | Lobby | `cargo test -p myosu-tui pipe::tests::info_command_in_lobby` |
++| 5 | Lobby | `cargo test -p myosu-tui pipe::tests::selection_starts_game` |
++| 6 | `SpectatorRelay` | `cargo test -p myosu-play spectate::tests::relay_emits_events` |
++| 6 | `SpectatorRelay` | `cargo test -p myosu-play spectate::tests::relay_handles_disconnected_listener` |
++| 6 | `SpectatorRelay` | `cargo test -p myosu-play spectate::tests::events_are_valid_json` |
++| 7 | `SpectateScreen` | `cargo test -p myosu-tui spectate::tests::renders_fog_of_war` |
++| 7 | `SpectateScreen` | `cargo test -p myosu-tui spectate::tests::reveal_shows_hole_cards_after_showdown` |
++| 7 | `SpectateScreen` | `cargo test -p myosu-tui spectate::tests::reveal_blocked_during_play` |
++
++---
++
++## Integration Risks
++
++### Risk 1: Socket Path Convention Not Aligned
++**Status**: LOW — needs verification before Slice 6
++
++The `SpectatorRelay` uses `~/.myosu/spectate/<session_id>.sock`. The `play:tui`
++lane uses `{data-dir}/hands/hand_{N}.json`. If these conventions diverge in the base
++path, the spectator socket path must align.
++
++**Action**: Verify `play:tui` data directory convention before Slice 6 implementation.
++
++### Risk 2: robopoker Path Dependency Blocks Integration Testing
++**Status**: HIGH — blocks Phase 1 testing
++
++The absolute path dependencies in `games:traits` prevent clean checkout builds.
++Until `cargo fetch` succeeds without local robopoker, no integration testing
++can occur in CI or on fresh checkouts.
++
++**Action**: `games:traits` lane must complete Slice 1 before Phase 1 testing.
++
++### Risk 3: `--narrate` Dual Rendering Divergence
++**Status**: LOW — testable in slice 3
++
++The same `GameState` must render identically in both `--narrate` and default pipe
++mode (same game state, different rendering layer). The `NarrationEngine` must not
++introduce state changes or filtering.
++
++**Action**: `terse_and_narrate_same_game_state` test in slice 3.
++
++### Risk 4: Journal Append is Crash-Adjacent
++**Status**: MEDIUM — depends on error handling design
++
++The journal is opened in append mode and written after each hand. If the process
++crashes mid-write, the journal file may be in an incomplete state. Currently no
++journal fsync or write-ahead logging.
++
++**Action**: Document the crash behavior as acceptable for Phase 0; consider
++journal integrity for Phase 1.
++
++---
++
++## Recommendation
++
++**Proceed to `agent:experience` implementation family.** The integration is well-specified,
++the upstream is trusted, and the blockers are tracked and owned elsewhere.
++
++The first implementation family should execute Slices 1–2 (`AgentContext` + `Journal` +
++`--context` wiring) as a single atomic unit, since they share the same file (`agent_context.rs`)
++and the journal appends from within the context save path.
++
++After Slices 1–2 complete, update this `review.md` with the evidence of test passes
++and assess whether the next family (Slice 3 `NarrationEngine`) can proceed in parallel
++with other product lanes or should be sequenced after the robopoker migration is confirmed.
