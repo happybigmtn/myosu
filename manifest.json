@@ -1,0 +1,13 @@
+{
+  "run_id": "01KM51Q1STBCW7HMTKCR2A1G90",
+  "workflow_name": "PlayTui",
+  "goal": "Implement the next approved `play:tui` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `play:tui`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `promotion.md`\n",
+  "start_time": "2026-03-20T07:17:50.090809514Z",
+  "node_count": 12,
+  "edge_count": 16,
+  "run_branch": "fabro/run/01KM51Q1STBCW7HMTKCR2A1G90",
+  "base_sha": "6b547323ccdc1c2a06e82f6e47111495a7630ab2",
+  "base_branch": "autodev-live",
+  "workflow_slug": "implement",
+  "host_repo_path": "/home/r/coding/myosu/.worktrees/autodev-live"
+}
