@@ -1,0 +1,13 @@
+{
+  "run_id": "01KM6MW2ND9D0G8ZQXRV9SZA0M",
+  "workflow_name": "Foundations",
+  "goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
+  "start_time": "2026-03-20T22:11:52.628915120Z",
+  "node_count": 6,
+  "edge_count": 5,
+  "run_branch": "fabro/run/01KM6MW2ND9D0G8ZQXRV9SZA0M",
+  "base_sha": "6b547323ccdc1c2a06e82f6e47111495a7630ab2",
+  "base_branch": "autodev-live",
+  "workflow_slug": "bootstrap",
+  "host_repo_path": "/home/r/coding/myosu/.worktrees/autodev-live"
+}
