@@ -1,24 +1,26 @@
 {
-  "timestamp": "2026-03-20T23:42:50.639000843Z",
-  "current_node": "review",
+  "timestamp": "2026-03-20T23:43:03.742735235Z",
+  "current_node": "polish",
   "completed_nodes": [
     "start",
     "specify",
-    "review"
+    "review",
+    "polish"
   ],
   "node_retries": {
+    "polish": 1,
     "start": 1,
     "specify": 1,
     "review": 1
   },
   "context_values": {
-    "internal.thread_id": "specify",
+    "internal.thread_id": "review",
     "failure_class": "deterministic",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6SXA8QR5AWHVVYJC4QSY1J/worktree",
     "internal.fidelity": "compact",
     "internal.retry_count.review": 1,
-    "current_node": "review",
+    "current_node": "polish",
     "thread.start.current_node": "specify",
     "thread.specify.current_node": "review",
     "response.specify": "**Lane complete.** Both artifacts created:\n\n- **`outputs/agent-integration/agent-adapter.md`** (12,332 bytes) — Integration reference documenting how an agent harness connects to `agent:experience` surfaces: pipe protocol game loop, context file management, reflection coordination, narration mode, lobby selection, and spectator relay observation. Defines 7 reference adapter slices.\n\n- **`outputs/agent-integration/review.md`** (5,373 bytes) — Decision record with **PROCEED** judgment: begin implementation-family workflow for `agent:experience` now. Slices 1-2 (agent_context.rs, journal.rs) can start immediately since they depend only on trusted `tui:shell`. Robopoker git migration is tracked as critical-path dependency for Phase 2+.\n\n`★ Insight ─────────────────────────────────────`\n1. **Separation of concerns**: `agent:experience` owns the presentation layer (what agents see — pipe mode, narration, context, journal). The adapter is NOT a Myosu crate — it's the harness code agent developers write to connect their LLM/bot logic to those surfaces. This boundary is correct.\n\n2. **Parallelization opportunity**: The two HIGH blockers (robopoker git migration, missing `myosu-play` binary) are owned by other lanes (`games:traits` and `play:tui`). The product frontier can begin implementation on Slices 1-4 immediately while those resolve in parallel.\n\n3. **Honest first slice**: The 7 adapter slices in `agent-adapter.md` are reference implementation targets for how an agent harness should work, not Myosu crate deliverables. The first honest slice of this lane was the decision document itself — \"proceed with implementation-family\" — not more code.\n`─────────────────────────────────────────────────`",
@@ -27,15 +29,26 @@
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
     "outcome": "fail",
     "graph.rankdir": "LR",
+    "thread.review.current_node": "polish",
     "internal.run_id": "01KM6SXA8QR5AWHVVYJC4QSY1J",
     "internal.node_visit_count": 1,
-    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
+    "internal.retry_count.polish": 1,
+    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
     "last_stage": "specify",
     "internal.retry_count.specify": 1,
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 605.6k tokens in / 9.2k out\n  - Files: outputs/agent-integration/.gitkeep, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n"
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 605.6k tokens in / 9.2k out\n  - Files: outputs/agent-integration/.gitkeep, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n"
   },
   "logs": [],
   "node_outcomes": {
+    "polish": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_07eaa142f52c33170169bddb7ddeb88190b7686eec589ccb3f' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 10981
+    },
     "specify": {
       "status": "success",
       "context_updates": {
@@ -75,12 +88,14 @@
       "duration_ms": 0
     }
   },
-  "next_node_id": "polish",
+  "next_node_id": "verify",
   "loop_failure_signatures": {
-    "review|deterministic|api_deterministic|openai|not_found": 1
+    "review|deterministic|api_deterministic|openai|not_found": 1,
+    "polish|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
     "start": 1,
+    "polish": 1,
     "specify": 1,
     "review": 1
   }
