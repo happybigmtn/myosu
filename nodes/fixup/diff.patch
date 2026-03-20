@@ -1,0 +1,125 @@
+diff --git a/fabro/checks/multi-game-slice1.sh b/fabro/checks/multi-game-slice1.sh
+new file mode 100755
+index 0000000..6c52b97
+--- /dev/null
++++ b/fabro/checks/multi-game-slice1.sh
+@@ -0,0 +1,14 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++# Slice 1: Create myosu-games-liars-dice Crate Skeleton
++# Only tests packages that exist in the workspace.
++# Later slices add: myosu-play, myosu-games-poker
++
++# Bootstrap gate — crate skeleton integrity
++cargo build -p myosu-games-liars-dice
++cargo test -p myosu-games-liars-dice
++
++# Smoke test that existing workspace packages still pass
++cargo test -p myosu-games
++cargo test -p myosu-tui
+diff --git a/outputs/games/multi-game/implementation.md b/outputs/games/multi-game/implementation.md
+index 1ba7299..1e1c20b 100644
+--- a/outputs/games/multi-game/implementation.md
++++ b/outputs/games/multi-game/implementation.md
+@@ -4,6 +4,16 @@
+ 
+ **COMPLETED** — Slice 1: Create `myosu-games-liars-dice` Crate Skeleton
+ 
++## Fixup Note
++
++**Issue**: The verification script inherited a broad test scope from the preflight, including
++`cargo test -p myosu-play` and `cargo test -p myosu-games-poker` — packages that do not
++exist in the workspace. Preflight passed (due to `set +e`) but `verify` failed.
++
++**Fix**: Created `fabro/checks/multi-game-slice1.sh` scoped to only packages that exist in
++the workspace: `myosu-games-liars-dice`, `myosu-games`, and `myosu-tui`. Updated
++`verification.md` accordingly.
++
+ ## Touched Files/Modules
+ 
+ ### Created
+diff --git a/outputs/games/multi-game/verification.md b/outputs/games/multi-game/verification.md
+index 887d6ab..15828a5 100644
+--- a/outputs/games/multi-game/verification.md
++++ b/outputs/games/multi-game/verification.md
+@@ -1,22 +1,27 @@
+ # `games:multi-game` Verification — Slice 1: Crate Skeleton
+ 
+-## Bootstrap Gate Proof
++## Fixup Note
++
++**Root cause**: The verification script inherited the full preflight test suite, which
++includes `cargo test -p myosu-play` and `cargo test -p myosu-games-poker`. Those
++packages do not exist in the workspace — `myosu-play` is commented out in
++`Cargo.toml` and `myosu-games-poker` has never existed. The preflight passed
++because it used `set +e`; the `verify` stage failed because it uses `set -euo pipefail`.
++
++**Fix**: Created `fabro/checks/multi-game-slice1.sh` scoped to only packages that
++exist in the current workspace. Updated this artifact accordingly.
++
++## Bootstrap Gate Proof (Slice 1 Scoped)
+ 
+ ### `cargo build -p myosu-games-liars-dice`
+ 
+ **Result**: PASS
+ 
+ ```
+-warning: unused variable: `dice`
+-warning: unused variable: `game`
+-warning: unused variable: `player`
+-warning: unused variable: `info`
+-warning: unused variable: `index`
+-warning: `myosu-games-liars-dice` (lib) generated 5 warnings
+-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 30s
++Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.41s
+ ```
+ 
+-Note: Warnings were fixed in subsequent edits. Final build produces zero warnings.
++Zero warnings on the final build.
+ 
+ ### `cargo test -p myosu-games-liars-dice`
+ 
+@@ -33,6 +38,17 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
+ 
+ Note: No tests exist yet — test implementations belong to Slices 2 and 3.
+ 
++### Smoke: existing workspace packages
++
++**Result**: PASS
++
++```
++cargo test -p myosu-games       → 10 passed; 0 failed
++cargo test -p myosu-tui         → 82 passed; 2 ignored (require real TTY)
++```
++
++The new crate does not break any existing tests.
++
+ ## What the Bootstrap Gate Proved
+ 
+ 1. **Crate resolution** — The workspace correctly resolves `myosu-games-liars-dice` as a member
+@@ -40,13 +56,16 @@ Note: No tests exist yet — test implementations belong to Slices 2 and 3.
+ 3. **Local dependency** — `myosu-games` path dependency resolves correctly
+ 4. **Module exports** — All 6 public re-exports in `lib.rs` compile without errors
+ 5. **Library shape** — Produces a valid `libmyosu_games_liars_dice.rlib` artifact
++6. **No regression** — Existing `myosu-games` and `myosu-tui` tests still pass
+ 
+-## Proof Gate Completeness
++## Proof Gate Completeness (Slice 1 Scoped)
+ 
+ | Command | Expected | Actual | Status |
+ |---------|----------|--------|--------|
+ | `cargo build -p myosu-games-liars-dice` | exit 0 | exit 0 | PASS |
+ | `cargo test -p myosu-games-liars-dice` | exit 0 | exit 0 | PASS |
++| `cargo test -p myosu-games` | exit 0 | exit 0 | PASS |
++| `cargo test -p myosu-tui` | exit 0 | exit 0 | PASS |
+ 
+ ## Slice 1 Completeness Assessment
+ 
+@@ -66,3 +85,6 @@ The following commands are **blocked on later slices**:
+ | `cargo test -p myosu-play spectate::tests::*` | Slice 5 (SP-01) |
+ | `cargo test -p myosu-tui spectate::tests::*` | Slice 6 (SP-02) |
+ | `cargo test -p myosu-games-poker` | Slice 7 (MG-03) |
++
++Note: `myosu-play` is not yet a workspace member. `myosu-games-poker` does not exist
++in this repository.
