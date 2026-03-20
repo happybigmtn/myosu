@@ -5,7 +5,11 @@ artifact_mismatch_risk: no
 manual_followup_required: no
 
 ## Touched Surfaces
-- (none declared)
+- crates/myosu-sdk/Cargo.toml
+- crates/myosu-sdk/src/testing/mod.rs
+- crates/myosu-sdk/src/testing/game_valid.rs
+- crates/myosu-sdk/src/testing/convergence.rs
+- crates/myosu-sdk/src/testing/tests.rs
 
 ## Placeholder Hits
 

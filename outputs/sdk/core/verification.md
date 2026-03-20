@@ -3,124 +3,58 @@
 ## Lane
 `core-implement`
 
+## Slice
+Slice 2 — Trait Compliance Test Harness (`AC-SDK-03`)
+
 ## Automated Proof Commands
 
-All commands were run against the `myosu-sdk` crate.
+All commands were run from the workspace root with:
 
-### Slice 1: SDK Crate (SDK-01)
+```bash
+export CARGO_TARGET_DIR=/tmp/myosu-sdk-target
+```
+
+The local sandbox points Cargo at a read-only shared target directory by default, so the writable override above was required to get a valid proof run for this slice.
+
+### Slice 2 Proof
+
+```bash
+$ cargo test -p myosu-sdk testing::tests::rps_passes_all_compliance_checks
+```
+
+- Result: PASS
+- Evidence: the filter ran exactly 1 test, and that test passed after validating the RPS game checks and the convergence helper.
+
+```bash
+$ cargo test -p myosu-sdk testing::tests::broken_game_fails_zero_sum_check
+```
+
+- Result: PASS
+- Evidence: the filter ran exactly 1 test, and that test passed by observing the expected validation panic for a deliberately non-zero-sum terminal payoff.
+
+```bash
+$ cargo test -p myosu-sdk testing::tests::convergence_test_detects_non_convergence
+```
+
+- Result: PASS
+- Evidence: the filter ran exactly 1 test, and that test passed by observing the expected convergence failure for an undertrained solver.
+
+### Broader Sanity Check
 
 ```bash
 $ cargo build -p myosu-sdk
-   Compiling myosu-sdk v0.1.0
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.26s
-
 $ cargo test -p myosu-sdk
-    Running unittests src/lib.rs
-running 12 tests
-test register::tests::tests::connection_timeout_error ... ok
-test scaffold::tests::tests::accepts_valid_game_names ... ok
-test register::tests::tests::custom_exploit_values ... ok
-test scaffold::tests::tests::validates_game_name ... ok
-test register::tests::tests::default_exploit_values ... ok
-test register::tests::tests::register_help_output ... ok
-test testing::tests::tests::convergence_test_detects_non_convergence ... ok
-test testing::tests::tests::broken_game_fails_zero_sum_check ... ok
-test testing::tests::tests::rps_passes_all_compliance_checks ... ok
-test scaffold::tests::tests::generated_tests_fail_with_todo ... ok
-test scaffold::tests::tests::refuses_to_overwrite_existing_directory ... ok
-test scaffold::tests::tests::generates_compilable_crate ... ok
-test result: ok. 12 passed; 0 failed; 0 ignored
-
-$ cargo test -p myosu-sdk -- --include-ignored
-    Running unittests src/lib.rs
-running 12 tests
-test result: ok. 12 passed; 0 failed; 0 ignored
-
-    Doc-tests myosu_sdk
-running 3 tests
-test crates/myosu-sdk/src/scaffold/mod.rs - scaffold (line 9) ... ok
-test crates/myosu-sdk/src/testing/mod.rs - testing (line 15) ... ok
-test crates/myosu-sdk/src/lib.rs - (line 13) ... ok
-test result: ok. 3 passed; 0 failed; 0 ignored
 ```
 
-### Slice 2: Test Harness (SDK-03)
+- `cargo build -p myosu-sdk`: PASS
+- `cargo test -p myosu-sdk`: PASS
+  - 12 unit tests passed
+  - doctests: 1 passed, 2 ignored
 
-```bash
-$ cargo test -p myosu-sdk testing::tests::tests::rps_passes_all_compliance_checks
-    Running unittests src/lib.rs
-running 1 test
-test testing::tests::tests::rps_passes_all_compliance_checks ... ok
+## Residual Risks
+- The generic `assert_game_valid` helper currently relies on the reachable `turn()` value also providing the info-set action surface used during traversal. That matches the reviewed RPS proof target and keeps this slice grounded in the trusted trait surface already present in the repo.
+- Later lane slices still own the scaffold, registration, and documentation surfaces. This verification pass did not reopen or re-prove those areas.
 
-$ cargo test -p myosu-sdk testing::tests::tests::broken_game_fails_zero_sum_check
-    Running unittests src/lib.rs
-running 1 test
-test testing::tests::tests::broken_game_fails_zero_sum_check ... ok
+## Next Approved Slice
+- Slice 3 — Scaffold Tool (`AC-SDK-02`)
 
-$ cargo test -p myosu-sdk testing::tests::tests::convergence_test_detects_non_convergence
-    Running unittests src/lib.rs
-running 1 test
-test testing::tests::tests::convergence_test_detects_non_convergence ... ok
-```
-
-### Slice 3: Scaffold (SDK-02)
-
-```bash
-$ cargo test -p myosu-sdk scaffold::tests::tests::generates_compilable_crate
-    Running unittests src/lib.rs
-running 1 test
-test scaffold::tests::tests::generates_compilable_crate ... ok
-
-$ cargo test -p myosu-sdk scaffold::tests::tests::generated_tests_fail_with_todo
-    Running unittests src/lib.rs
-running 1 test
-test scaffold::tests::tests::generated_tests_fail_with_todo ... ok
-
-$ cargo test -p myosu-sdk scaffold::tests::tests::refuses_to_overwrite_existing_directory
-    Running unittests src/lib.rs
-running 1 test
-test scaffold::tests::tests::refuses_to_overwrite_existing_directory ... ok
-```
-
-### Slice 4: Registration CLI (SDK-04)
-
-```bash
-$ cargo test -p myosu-sdk register::tests::tests::register_help_output
-    Running unittests src/lib.rs
-running 1 test
-test register::tests::tests::register_help_output ... ok
-
-$ cargo test -p myosu-sdk register::tests::tests::connection_timeout_error
-    Running unittests src/lib.rs
-running 1 test
-test register::tests::tests::connection_timeout_error ... ok
-```
-
-### Slice 5: Documentation (SDK-05)
-
-```bash
-$ ls -la docs/sdk/
--rw-r--r-- quickstart.md       # 4.1 KB - Kuhn Poker quickstart guide
--rw-r--r-- trait-reference.md  # 3.2 KB - Trait documentation
--rw-r--r-- registration.md     # 2.8 KB - Chain registration guide
-```
-
-All documentation files are non-empty and contain substantive content.
-
-## Summary
-
-| Milestone | Tests | Status |
-|-----------|-------|--------|
-| SDK-01 (crate) | `cargo build -p myosu-sdk` | PASS |
-| SDK-01 (tests) | `cargo test -p myosu-sdk` | PASS (12 passed) |
-| SDK-02 (scaffold) | 3 scaffold tests | PASS |
-| SDK-03 (test harness) | 3 compliance tests | PASS |
-| SDK-04 (register) | 2 CLI tests | PASS |
-| SDK-05 (docs) | 3 doc files exist | PASS |
-
-**Total: All proof commands exit 0.**
-
-## Notes
-- The `testing::tests::rps_passes_all_compliance_checks` test uses `rbp-mccfr::RpsGame` as the reference implementation
-- The scaffold generator tests use `tempfile` for creating temporary directories
-- The registration CLI tests verify argument parsing only (chain integration is blocked on `chain:pallet`)

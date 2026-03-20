@@ -15,6 +15,7 @@ tui = ["myosu-tui"]
 [dependencies]
 myosu-games = { path = "../myosu-games" }
 myosu-tui = { path = "../myosu-tui", optional = true }
+rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
 clap = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true }
@@ -27,6 +28,3 @@ tracing-subscriber = { workspace = true }
 
 # External dependencies needed for test harness and scaffold
 tempfile = "3"
-
-[dev-dependencies]
-rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }

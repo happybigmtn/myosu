@@ -8,7 +8,7 @@
 //! - State transitions are valid
 //! - Terminal states have utility
 //! - Payoff is zero-sum
-//! - Information sets are distinct for different observations
+//! - Equal information sets expose equal action sets
 //!
 //! # Example
 //!
@@ -19,6 +19,11 @@
 //! assert_game_valid::<MyRockPaperScissors>();
 //! ```
 
-pub mod game_valid;
 pub mod convergence;
-pub mod tests;
+pub mod game_valid;
+
+pub use convergence::assert_solver_converges;
+pub use game_valid::assert_game_valid;
+
+#[cfg(test)]
+mod tests;
