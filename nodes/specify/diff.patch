@@ -1,0 +1,411 @@
+diff --git a/outputs/foundations/foundation-plan.md b/outputs/foundations/foundation-plan.md
+new file mode 100644
+index 0000000..b1a956d
+--- /dev/null
++++ b/outputs/foundations/foundation-plan.md
+@@ -0,0 +1,208 @@
++# Foundations Lane — Execution Infrastructure Honest Slice
++
++This document is the `foundations` lane's implementation plan. It is a living
++document and must be updated as defects are discovered, fixed, and re-verified.
++
++`PLANS.md` is checked into the repository root and this document is maintained
++in accordance with it. This lane depends on the Fabro primary executor decision
++recorded in `specs/031826-fabro-primary-executor-decision.md` and the
++bootstrap surface in `plans/031826-bootstrap-fabro-primary-executor-surface.md`.
++
++## Purpose / Big Picture
++
++The `foundations` lane does not ship code. It ships trustworthy execution
++infrastructure for every other lane. After this lane completes a cycle:
++
++- `fabro run` commands produce run records with truthful status (not
++  false-positives)
++- `raspberry execute` / `status` / `watch` commands report real lane health
++- Any Fabro-dispatched lane that fails does so honestly — failure is visible,
++  not hidden behind a false success artifact
++
++The immediate trigger is the `games:multi-game` false-submit: the lane's
++bootstrap workflow produced `spec.md` and `review.md` artifacts while none of the
++underlying code exists, none of the proof commands would pass, and the
++`multi-game.fabro` workflow graph uses the wrong prompt at the `polish` node.
++
++## Progress
++
++- [x] (2026-03-20) Created `outputs/foundations/` directory and this plan
++- [ ] Diagnose the `games:multi-game` false-submit root cause
++- [ ] Identify all Fabro workflow graphs that use incorrect prompt assignments
++- [ ] Fix the `multi-game.fabro` `polish` node prompt (replace `review.md`
++      with correct polish prompt or remove the node)
++- [ ] Re-run `games:multi-game` bootstrap lane with truthful prompts, producing
++      honest artifacts or honest failure
++- [ ] Audit `raspberry execute` / `status` / `watch` for truthfulness gaps
++- [ ] Fix identified Fabro/Raspberry defects discovered during re-execution
++- [ ] Re-verify the affected frontier until `execute/status/watch` truth is
++      trustworthy
++- [ ] Produce honest `review.md` confirming the foundations are trustworthy
++
++## Surprises & Discoveries
++
++- Observation: `fabro/workflows/bootstrap/multi-game.fabro` uses `review.md` (the
++    review prompt) as the `polish` node prompt, which is not a standard
++    bootstrap step and does not align with the bootstrap workflow family
++    Evidence: `multi-game.fabro` line 17: `polish [label="Polish", prompt="@../../prompts/bootstrap/review.md", ...]`
++
++- Observation: `fabro/run-configs/platform/multi-game.toml` is in `run-configs/platform/`
++    not `run-configs/bootstrap/`, meaning it is a platform lane, not a
++    bootstrap lane — yet the workflow graph uses the bootstrap prompt family
++    Evidence: `run-configs/platform/multi-game.toml` line 2: `graph = "../../workflows/bootstrap/multi-game.fabro"`
++
++- Observation: `outputs/games/multi-game/spec.md` and `outputs/games/multi-game/review.md`
++    exist and claim the lane is complete with KEEP judgment, but the review
++    itself lists zero proof commands that would actually pass today
++    Evidence: `outputs/games/multi-game/review.md` lines 15–56 list proof commands
++    that all require `myosu-games-liars-dice` to exist; the crate does not exist
++
++- Observation: `fabro/workflows/bootstrap/game-traits.fabro` uses the correct prompt
++    structure (`plan.md` → `implement.md` → `review.md` → verify), which is the
++    reference pattern for a correct bootstrap workflow
++    Evidence: `fabro/workflows/bootstrap/game-traits.fabro` (exists and passes)
++
++## Decision Log
++
++- Decision: the `games:multi-game` lane artifacts must be treated as invalid
++    until re-run with a correct workflow that produces truthful artifacts.
++    Rationale: the existing artifacts were produced by a misconfigured workflow
++    that used `review.md` as a production prompt, not as a review prompt.
++    Date/Author: 2026-03-20 / foundations lane
++
++- Decision: the `foundations` lane operates on the execution substrate itself,
++    not on any product crate.
++    Rationale: the trigger is a Fabro workflow misconfiguration, not a broken
++    myosu crate. The fix belongs in the workflow graph and prompt assignments,
++    not in any `crates/` directory.
++    Date/Author: 2026-03-20 / foundations lane
++
++- Decision: do not delete the existing `games:multi-game` artifacts until the
++    re-run produces new artifacts or honest failure.
++    Rationale: the artifacts serve as evidence of the false-submit. Removing
++    them before the re-run destroys the audit trail.
++    Date/Author: 2026-03-20 / foundations lane
++
++## Concrete Steps
++
++### Step 1 — Diagnose the false-submit root cause
++
++Inspect `fabro/workflows/bootstrap/multi-game.fabro`:
++
++```bash
++cat fabro/workflows/bootstrap/multi-game.fabro
++```
++
++Confirm that:
++- The `polish` node uses `review.md` which is not a production prompt
++- The `review` node uses `implement.md` which is wrong for a bootstrap lane
++- The correct bootstrap prompt sequence is `plan.md` → `review.md` → verify
++  (bootstrap lanes do not have a separate implement step)
++
++### Step 2 — Audit all workflow graphs for prompt misassignment
++
++```bash
++for graph in fabro/workflows/bootstrap/*.fabro; do
++  echo "=== $graph ==="
++  grep -E 'prompt="' "$graph"
++done
++```
++
++Compare each graph against its run-config category (`bootstrap/` vs `platform/`).
++Bootstrap graphs should use `plan.md` and `review.md` only. Platform or
++implement graphs should use `implement.md` and `review.md`.
++
++### Step 3 — Fix the `multi-game.fabro` workflow
++
++The `games:multi-game` lane is a platform lane (not a bootstrap lane), but
++its workflow lives in `workflows/bootstrap/`. There are two honest options:
++
++**Option A** (preferred): Move it to `workflows/platform/` and fix the
++prompt chain to `plan.md` → `implement.md` → `review.md` → verify.
++
++**Option B**: If it truly is a bootstrap lane, rewrite the graph to use
++`plan.md` → `review.md` → verify, and remove the `polish` node entirely.
++
++The re-run must produce either honest artifacts or honest failure. It must
++not produce artifacts through a misconfigured workflow.
++
++### Step 4 — Re-run the `games:multi-game` lane
++
++```bash
++fabro run fabro/run-configs/platform/multi-game.toml
++```
++
++Observe whether the lane produces truthful artifacts. If it fails, capture the
++failure evidence and update `review.md` with the honest failure mode.
++
++### Step 5 — Audit `raspberry execute / status / watch` truthfulness
++
++Run a Raspberry status command and compare its output against what `fabro
++inspect` would report for the same runs:
++
++```bash
++raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
++fabro inspect --help   # check available inspection commands
++```
++
++Identify any gaps where Raspberry reports healthy but Fabro shows failure, or
++vice versa.
++
++### Step 6 — Fix defects discovered during re-execution
++
++Any defect found during Step 4 or Step 5 that is in the Fabro/Raspberry
++layer (not in a product crate) is a foundations-lane fix. Fix it in place
++and document it in `review.md`.
++
++### Step 7 — Produce honest `outputs/foundations/review.md`
++
++Update the companion `review.md` with the honest assessment of what was fixed,
++what remains broken, and whether the execution substrate is now trustworthy.
++
++## Validation and Acceptance
++
++Acceptance for the foundations lane is not a single command exit code — it is
++a state of knowledge:
++
++- The `games:multi-game` false-submit is understood and either fixed or honestly
++  documented as a known defect
++- All Fabro workflow graphs in `fabro/workflows/` use prompts appropriate to
++  their lane category
++- `raspberry status` and `fabro inspect` agree on lane health for at least one
++  re-run cycle
++- No bootstrap lane can produce artifacts through a misconfigured workflow
++  without the defect being visible and documented
++- The foundations lane produces honest artifacts: success is real, failure is
++  visible
++
++## Context and Orientation
++
++The `foundations` lane is unique among Myosu lanes: it operates on the
++execution substrate (Fabro workflows, Raspberry supervision) rather than on
++product code (`crates/`). Its "customers" are all other lanes. If
++`foundations` produces false positives, every downstream lane is corrupted.
++
++The lane is triggered by the `games:multi-game` false-submit but its scope
++is wider: any Fabro/Raspberry defect discovered during real Myosu execution
++belongs to this lane until fixed.
++
++## Artifacts Produced by This Lane
++
++| Artifact | Path |
++|----------|------|
++| This plan | `outputs/foundations/foundation-plan.md` |
++| Review | `outputs/foundations/review.md` |
++| Fixed workflow graphs | `fabro/workflows/` |
++| Fixed run configs | `fabro/run-configs/` |
++
++## Interfaces and Dependencies
++
++The foundations lane depends on:
++
++- `fabro/` execution plane assets (workflows, run configs, prompts, checks)
++- `fabro/programs/myosu.yaml` and related manifests
++- `.raspberry/` state (Raspberry program state)
++- `outputs/games/multi-game/` (the false-submit evidence)
++
++The foundations lane does not own any `crates/` code. Any fix that belongs in
++`crates/` is a product lane fix, not a foundations fix.
+diff --git a/outputs/foundations/review.md b/outputs/foundations/review.md
+new file mode 100644
+index 0000000..9447ae7
+--- /dev/null
++++ b/outputs/foundations/review.md
+@@ -0,0 +1,191 @@
++# `foundations` Lane Review
++
++## Keep / Reopen / Reset Judgment
++
++**Judgment: KEEP — lane is open, work is in progress**
++
++The foundations lane is not a product lane. It is the execution infrastructure
++lane. Its artifacts are not `spec.md` and `review.md` for a crate — they are
++workflow fixes, run-config corrections, and confirmed truthfulness of the
++`execute/status/watch` pipeline.
++
++The lane is open because:
++1. The `games:multi-game` false-submit has been diagnosed but not yet re-run
++2. The `multi-game.fabro` workflow graph prompt misassignment has been
++   identified but not yet fixed
++3. No Raspberry-to-Fabro truthfulness audit has been performed yet
++
++---
++
++## Concrete Risks the Foundations Lane Must Preserve or Reduce
++
++### Risk 1: `games:multi-game` False-Submit Evidence Is Still in `outputs/`
++**Location**: `outputs/games/multi-game/spec.md`, `outputs/games/multi-game/review.md`
++
++These artifacts claim the lane is KEEP with zero blockers and 22 proof
++commands that would all fail. The `review.md` even says "Yes — with
++conditions" and lists prerequisites — but those prerequisites are not met,
++and the lane was marked KEEP anyway.
++
++**What must be preserved:**
++- The artifacts as evidence of the false-submit (do not delete before re-run)
++- The `review.md` judgment text as proof that the false-submit happened
++
++**What must be reduced:**
++- The artifacts must be replaced by honest ones from a correctly configured
++  re-run, or the existing artifacts must be annotated with a false-submit
++  warning header
++
++**Verification:**
++After re-run, `fabro run fabro/run-configs/platform/multi-game.toml` must
++produce new artifacts that are consistent with actual code state.
++
++### Risk 2: `multi-game.fabro` Uses `review.md` as a Polish Prompt
++**Location**: `fabro/workflows/bootstrap/multi-game.fabro` line 17
++
++```fabro
++polish  [label="Polish", prompt="@../../prompts/bootstrap/review.md", ...]
++```
++
++`review.md` is the prompt for reviewing already-produced artifacts. Using it as
++a production prompt at the `polish` node is a category error. This is the
++direct cause of the false-submit.
++
++**What must be preserved:**
++- Nothing — this is a misconfiguration, not a design choice
++
++**What must be reduced:**
++- The `polish` node must either be removed (if this is a bootstrap lane) or
++  must use a real production prompt (`implement.md` or equivalent)
++- The workflow graph must match the lane category: bootstrap lanes use
++  `plan.md` → `review.md` → verify; platform/implement lanes use
++  `plan.md` → `implement.md` → `review.md` → verify
++
++**Verification:**
++```bash
++grep -E 'prompt="' fabro/workflows/bootstrap/multi-game.fabro
++# Must not show review.md used as a production step
++```
++
++### Risk 3: `games:multi-game` Run-config Is in `platform/` But Workflow Is in `bootstrap/`
++**Location**: `fabro/run-configs/platform/multi-game.toml` line 2
++
++```toml
++graph = "../../workflows/bootstrap/multi-game.fabro"
++```
++
++A platform lane using a bootstrap workflow graph is a structural mismatch.
++Bootstrap graphs are for producing `spec.md` + `review.md` from existing code.
++Platform graphs are for producing implementation artifacts from a spec.
++
++**What must be preserved:**
++- Nothing — the mismatch itself is the risk
++
++**What must be reduced:**
++- Either move the workflow to `workflows/platform/` with correct prompt chain,
++  or reclassify the lane as bootstrap and fix the workflow graph
++
++**Verification:**
++After fix, `fabro run fabro/run-configs/platform/multi-game.toml` uses a
++workflow graph in `workflows/platform/`, not `workflows/bootstrap/`.
++
++### Risk 4: Raspberry `execute/status/watch` May Report Stale or False State
++**Location**: `fabro/programs/myosu.yaml`, `.raspberry/` state directory
++
++The false-submit of `games:multi-game` means Raspberry may have recorded a
++successful lane completion for a lane that never produced working code. This
++corrupts the lane state that `status` and `watch` report.
++
++**What must be preserved:**
++- The ability to query Fabro run truth directly via `fabro inspect`
++
++**What must be reduced:**
++- Any cached Raspberry state that reflects the false-submit
++- The gap between what Raspberry reports and what `fabro inspect` confirms
++
++**Verification:**
++```bash
++raspberry status --manifest fabro/programs/myosu.yaml
++fabro inspect <latest-run-id> --format json  # compare lane results
++# Both must agree; no false positives
++```
++
++### Risk 5: Other Workflow Graphs May Have the Same Prompt Misassignment
++**Location**: All `fabro/workflows/**/*.fabro` files
++
++If `multi-game.fabro` has this problem, other graphs may too.
++
++**What must be reduced:**
++- Audit all workflow graphs for prompt-to-node-category mismatches
++- Fix any graph that uses `review.md` as a production step
++
++**Verification:**
++```bash
++for graph in fabro/workflows/**/*.fabro; do
++  prompts=$(grep -oE 'prompt="@[^"]+"' "$graph" | sort -u)
++  echo "=== $graph ==="
++  echo "$prompts"
++done
++# Each graph's prompts must match its category (bootstrap vs platform vs implement)
++```
++
++---
++
++## Proof Commands
++
++These are the commands that validate the foundations lane is complete:
++
++| # | Context | Command | Expected |
++|---|---------|---------|----------|
++| 1 | False-submit re-run | `fabro run fabro/run-configs/platform/multi-game.toml` | Artifacts consistent with code state |
++| 2 | Workflow graph fix | `grep 'review.md' fabro/workflows/bootstrap/multi-game.fabro` | No production-step usage |
++| 3 | Category alignment | `grep 'workflows/bootstrap' fabro/run-configs/platform/*.toml` | Empty (no platform lanes using bootstrap graphs) |
++| 4 | Truth alignment | `raspberry status --manifest fabro/programs/myosu.yaml` | No false-positive lane completions |
++| 5 | Graph audit | All workflow graphs use prompts matching their lane category | Exit 0 |
++
++---
++
++## What Is Currently Broken (Unambiguous)
++
++| # | Item | Location | Status |
++|---|------|----------|--------|
++| 1 | `multi-game.fabro` `polish` node uses `review.md` | `fabro/workflows/bootstrap/multi-game.fabro:17` | BROKEN |
++| 2 | `games:multi-game` artifacts are false-positives | `outputs/games/multi-game/` | BROKEN |
++| 3 | Platform lane uses bootstrap workflow graph | `fabro/run-configs/platform/multi-game.toml:2` | BROKEN |
++| 4 | `games:multi-game` proof commands cannot pass | All 22 commands in `review.md` require missing crate | BROKEN |
++| 5 | Raspberry state may reflect false-submit | `.raspberry/` | SUSPECT |
++
++---
++
++## File Reference Index
++
++| File | Role |
++|------|------|
++| `fabro/workflows/bootstrap/multi-game.fabro` | Workflow graph with prompt misassignment |
++| `fabro/run-configs/platform/multi-game.toml` | Run config that uses wrong-category workflow |
++| `fabro/prompts/bootstrap/review.md` | Review prompt — correctly used at review step only |
++| `fabro/prompts/bootstrap/implement.md` | Implement prompt — misapplied to review step |
++| `outputs/games/multi-game/spec.md` | False-positive artifact (needs re-run) |
++| `outputs/games/multi-game/review.md` | False-positive artifact (needs re-run) |
++| `fabro/workflows/bootstrap/game-traits.fabro` | Reference: correct bootstrap workflow pattern |
++| `fabro/programs/myosu.yaml` | Raspberry program manifest (lane truth source) |
++| `.raspberry/` | Raspberry local state (may contain false-submit record) |
++
++---
++
++## Is the Execution Substrate Trustworthy?
++
++**No — not yet.**
++
++The `games:multi-game` false-submit is direct evidence that the Fabro workflow
++system can produce artifacts that claim success without any underlying code
++changes. Until the workflow graph is fixed and the re-run produces honest
++artifacts, no Fabro-dispatched lane result can be trusted without independent
++verification.
++
++The path to trustworthiness:
++1. Fix `multi-game.fabro` workflow graph prompt assignments
++2. Re-run `games:multi-game` with truthful prompts
++3. Audit all other workflow graphs for the same disease
++4. Confirm `raspberry status` and `fabro inspect` agree on lane results
++5. Only then: mark the foundations lane complete

@@ -1,40 +1,53 @@
 {
-  "timestamp": "2026-03-20T22:29:07.747952932Z",
-  "current_node": "specify",
+  "timestamp": "2026-03-20T22:29:23.093541258Z",
+  "current_node": "review",
   "completed_nodes": [
     "start",
-    "specify"
+    "specify",
+    "review"
   ],
   "node_retries": {
     "start": 1,
+    "review": 1,
     "specify": 1
   },
   "context_values": {
     "thread.start.current_node": "specify",
     "internal.retry_count.specify": 1,
     "response.specify": "Both artifacts are produced. Here is the honest summary of what the foundations lane found and documented:\n\n---\n\n**What was found (the false-submit root cause):**\n\n`fabro/workflows/bootstrap/multi-game.fabro` line 17 assigns `review.md` (the review prompt) to the `polish` node — using a *consumer* prompt as a *producer* prompt. This allowed the workflow to generate `spec.md` and `review.md` artifacts without any of the underlying code existing. The `review.md` artifacts themselves are internally consistent and cite 22 proof commands, but all 22 require `myosu-games-liars-dice` which doesn't exist.\n\nAdditionally, `fabro/run-configs/platform/multi-game.toml` is a *platform* lane (implementation) that uses a *bootstrap* workflow graph — a structural category mismatch that made the misconfiguration invisible.\n\n**The two required artifacts:**\n\n| Artifact | Path | What it contains |\n|----------|------|-----------------|\n| `foundation-plan.md` | `outputs/foundations/` | 7-step plan to diagnose, fix, and re-verify the false-submit; includes decision log and acceptance criteria |\n| `review.md` | `outputs/foundations/` | 5 concrete risks, 5 proof commands, unambiguous broken-items table, and honest \"not trustworthy yet\" judgment |\n\n`★ Insight ─────────────────────────────────────`\nThe false-submit is a workflow graph misconfiguration, not a Myosu product defect. The fix belongs in `fabro/workflows/` — specifically, `multi-game.fabro` needs its prompt chain corrected (bootstrap: `plan.md` → `review.md`; platform: `plan.md` → `implement.md` → `review.md`) and the category mismatch resolved before the re-run can be trusted.\n`─────────────────────────────────────────────────`",
-    "failure_class": "",
+    "failure_class": "deterministic",
     "last_stage": "specify",
-    "internal.thread_id": "start",
+    "internal.thread_id": "specify",
     "last_response": "Both artifacts are produced. Here is the honest summary of what the foundations lane found and documented:\n\n---\n\n**What was found (the false-submit root cause):**\n\n`fabro/workflows/bootstrap/multi-gam",
-    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n",
-    "outcome": "success",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 747.5k tokens in / 8.7k out\n  - Files: outputs/foundations/foundation-plan.md, outputs/foundations/review.md\n",
+    "outcome": "fail",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6NPS5AVVT2ZAH7EQKK16NJ/worktree",
+    "thread.specify.current_node": "review",
+    "internal.retry_count.review": 1,
     "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
     "internal.fidelity": "compact",
     "internal.run_id": "01KM6NPS5AVVT2ZAH7EQKK16NJ",
     "internal.node_visit_count": 1,
-    "failure_signature": "",
+    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
     "graph.rankdir": "LR",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "internal.retry_count.start": 1,
-    "current_node": "specify"
+    "current_node": "review"
   },
   "logs": [],
   "node_outcomes": {
     "start": {
       "status": "success",
       "duration_ms": 0
+    },
+    "review": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_0033ce08feaf15c30169bdca36c7e08194a4ad24ea5f5a77be' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 13195
     },
     "specify": {
       "status": "success",
@@ -60,9 +73,13 @@
       "duration_ms": 160560
     }
   },
-  "next_node_id": "review",
+  "next_node_id": "polish",
+  "loop_failure_signatures": {
+    "review|deterministic|api_deterministic|openai|not_found": 1
+  },
   "node_visits": {
     "start": 1,
+    "review": 1,
     "specify": 1
   }
 }
