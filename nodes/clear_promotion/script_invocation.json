@@ -1,0 +1,5 @@
+{
+  "command": "rm -f outputs/games/poker-engine/promotion.md",
+  "language": "shell",
+  "timeout_ms": null
+}

@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "duration_ms": 3,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-20T07:49:32.373228301+00:00",
+  "updated_at": "2026-03-20T07:49:32.373232085+00:00",
+  "notes": "Script completed: rm -f outputs/games/poker-engine/promotion.md"
+}
