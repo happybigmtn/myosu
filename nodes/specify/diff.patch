@@ -1,0 +1,290 @@
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..9b94ab0
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,113 @@
++# Agent Integration Adapter
++
++## Purpose
++
++This document is the integration surface for the `agent:experience` lane. It maps
++how the lane's surfaces fit into the broader Myosu product, resolves the
++implementation-family vs. upstream-unblock decision, and provides the concrete
++slice map for the next honest work unit.
++
++## What `agent:experience` Produces
++
++The lane owns the **agent-facing presentation layer** for Myosu — every surface
++through which programmatic agents (LLMs, bots, scripts) perceive and act upon the
++game world:
++
++| Surface | File | Status |
++|---------|------|--------|
++| `--pipe` mode driver | `crates/myosu-tui/src/pipe.rs` | Partial — foundation exists, needs `--context`, `--narrate`, `reflect>`, lobby |
++| `AgentContext` struct | `crates/myosu-tui/src/agent_context.rs` | **Missing** — Slice 1 |
++| `Journal` struct | `crates/myosu-tui/src/journal.rs` | **Missing** — Slice 2 |
++| `NarrationEngine` | `crates/myosu-tui/src/narration.rs` | **Missing** — Slice 5 |
++| `SpectatorRelay` | `crates/myosu-play/src/spectate.rs` | **Missing** — Slice 8 |
++| `SpectateScreen` | `crates/myosu-tui/src/screens/spectate.rs` | **Missing** — Slice 9 |
++| JSON schema | `crates/myosu-tui/src/schema.rs` | **Trusted** — fully implemented, 16 tests pass |
++| JSON schema docs | `docs/api/game-state.json` | **Trusted** — complete |
++
++## Slice Dependency Map
++
++The lane is organized into 9 slices across 3 phases. The critical distinction
++for scheduling is which slices have upstream dependencies and which are
++self-contained:
++
++```
++Phase 1 — Agent Identity (tui:shell only — TRUSTED)
++  Slice 1: agent_context.rs  ──► no external deps beyond tui:shell  [UNBLOCKED]
++  Slice 2: journal.rs        ──► no external deps beyond tui:shell  [UNBLOCKED]
++  Slice 3: --context wiring  ──► needs myosu-play binary skeleton       [BLOCKED: play:tui]
++  Slice 4: reflect> prompt   ──► needs Slice 3 + journal.rs             [BLOCKED: play:tui]
++
++Phase 2 — Narration + Pipe Mode (Phase 1 complete)
++  Slice 5: narration.rs      ──► no external deps beyond tui:shell  [UNBLOCKED]
++  Slice 6: --narrate wiring  ──► needs Slice 5 + play:tui binary      [BLOCKED: play:tui]
++  Slice 7: lobby + selection ──► needs play:tui binary + chain stub   [BLOCKED: play:tui, chain]
++
++Phase 3 — Spectator (play:tui binary + Phase 1)
++  Slice 8: SpectatorRelay    ──► needs myosu-play binary              [BLOCKED: play:tui]
++  Slice 9: SpectateScreen    ──► needs Slice 8 + spectate socket       [BLOCKED: play:tui]
++```
++
++## Upstream Dependency Status
++
++| Upstream | Status | Used By |
++|----------|--------|---------|
++| `tui:shell` | **TRUSTED** — 82 tests pass | All slices (GameRenderer, PipeMode, Shell, Theme) |
++| `games:traits` | **TRUSTED** — 14 tests pass | All slices (CfrGame, GameType, Profile) |
++| `play:tui` binary | **MISSING** — Slice 1 not executed | Slices 3, 4, 6, 7, 8, 9 |
++| `robopoker` git dep | **BLOCKER** — absolute path deps | All slices via games:traits |
++| `chain:runtime` | **RESTART** — not compiled | Slice 7 (lobby query, stubbed for Phase 0) |
++
++## Critical Path Item: `robopoker` Git Migration
++
++The highest-priority upstream unblock is **not owned by this lane**. The
++`games:traits` review identifies that all `robopoker` dependencies use absolute
++filesystem paths (`/home/r/coding/robopoker/crates/...`) instead of proper git
++dependencies. This blocks `cargo build` and `cargo test` on any clean checkout or
++CI environment.
++
++This is tracked under `games:traits` ownership. **This lane cannot proceed past
++Slice 4 without the robopoker resolution**, because Slices 5–9 require full
++integration testing that cannot run against absolute-path dependencies.
++
++## Decision: Implementation Family Next
++
++**Verdict: Proceed with `agent:experience` implementation-family slices 1–2 now.**
++
++Rationale:
++- Slices 1 (`agent_context.rs`) and 2 (`journal.rs`) depend **only** on
++  `tui:shell`, which is already trusted with 82 passing tests.
++- They have **no dependency** on the `myosu-play` binary skeleton, which is the
++  primary `play:tui` deliverable.
++- They have **no dependency** on `chain:runtime`.
++- They can be implemented, tested, and reviewed independently of all other lanes.
++- Slices 1–2 are the smallest honest first slice — they deliver a real,
++  verifiable capability (persistent agent context) without depending on any
++  untrusted or missing surfaces.
++
++**What to do next:**
++
++1. Start `agent:experience` implementation-family workflow targeting Slices 1–2.
++2. Simultaneously track `games:traits` robopoker resolution as the critical path
++   item.
++3. Monitor `play:tui` Slice 1 (binary skeleton) progress — once that completes,
++   Slices 3–4 unblock immediately.
++4. Slice 5 (`narration.rs`) can run in parallel with Slices 3–4 since it has no
++   `play:tui` dependency.
++5. Slices 6–9 remain blocked pending `play:tui` binary + robopoker resolution.
++
++## What `agent-adapter` Is Not
++
++This document does not re-state the full lane specification (see
++`outputs/agent/experience/spec.md`) or the full review judgment (see
++`outputs/agent/experience/review.md`). It is the **integration synthesis** —
++the bridge between the reviewed lane and the next action decision.
++
++## Phase Map Summary
++
++| Phase | Slices | Blocked By | Next Action |
++|-------|--------|------------|-------------|
++| Phase 1a | 1, 2 | nothing (tui:shell trusted) | **Start now** |
++| Phase 1b | 3, 4 | `play:tui` binary skeleton | Wait for play:tui Slice 1 |
++| Phase 2 | 5 | nothing (tui:shell trusted) | Run parallel to Phase 1b |
++| Phase 2 | 6, 7 | play:tui + chain stub | Wait |
++| Phase 3 | 8, 9 | play:tui + Phase 1 | Wait |
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..ea17e2c
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,137 @@
++# `agent-integration` Lane Review
++
++## Judgment: **GO** — implementation-family slices 1–2 are unblocked
++
++The `agent:experience` lane has a valid KEEP judgment from its bootstrap review.
++This integration review synthesizes the lane artifacts to answer the product-level
++question: **does Myosu product need an implementation-family workflow next, or
++does something upstream still need to unblock?**
++
++The answer is: **implementation-family slices 1–2 are ready to run now.** Slices
++1 (`agent_context.rs`) and 2 (`journal.rs`) have no upstream blockers beyond
++`tui:shell`, which is already trusted with 82 passing tests.
++
++---
++
++## Source Artifacts
++
++This review synthesizes:
++- `outputs/agent/experience/spec.md` — full lane specification
++- `outputs/agent/experience/review.md` — KEEP judgment, 2026-03-19
++- `fabro/programs/myosu-product.yaml` — program manifest lane structure
++- `fabro/run-configs/product/agent-experience.toml` — bootstrap run config
++
++---
++
++## What the Bootstrap Review Established
++
++The `agent:experience` bootstrap review (KEEP) found:
++
++1. **Spec quality is sound** — AX-01..05 and SP-01..03 are well-reasoned and
++   documented.
++2. **Upstream is trusted** — `tui:shell` (82 tests) and `games:traits` (14 tests)
++   are both in the trusted state.
++3. **Schema is production-ready** — `schema.rs` (939 lines, 16 tests pass) is the
++   strongest surface in the lane.
++4. **Slice dependency chain is clean** — Slices 1–4 have no external dependencies
++   beyond `tui:shell`. Slices 5–9 depend on slices 1–4 or on `play:tui`.
++5. **Scope is bounded** — agent-to-agent social interaction, system parameter
++   autonomy, and emotion/affect modeling are explicitly out of scope.
++
++---
++
++## What This Integration Review Resolves
++
++The bootstrap review left one question open: **given that the lane is KEEP, does
++product proceed to implementation or wait for something?**
++
++This review answers that by examining the actual dependency graph of each slice:
++
++| Slice | Content | External Dependencies | Status |
++|-------|---------|----------------------|--------|
++| 1 | `agent_context.rs` | `tui:shell` only | **UNBLOCKED** |
++| 2 | `journal.rs` | `tui:shell` only | **UNBLOCKED** |
++| 3 | `--context` wiring | `myosu-play` binary | BLOCKED: `play:tui` |
++| 4 | `reflect>` prompt | Slice 3 + `journal.rs` | BLOCKED: `play:tui` |
++| 5 | `narration.rs` | `tui:shell` only | **UNBLOCKED** |
++| 6 | `--narrate` wiring | Slice 5 + `play:tui` binary | BLOCKED: `play:tui` |
++| 7 | Lobby + selection | `play:tui` binary + chain stub | BLOCKED: `play:tui` |
++| 8 | `SpectatorRelay` | `myosu-play` binary | BLOCKED: `play:tui` |
++| 9 | `SpectateScreen` | Slice 8 + `play:tui` binary | BLOCKED: `play:tui` |
++
++**Slices 1, 2, and 5 are fully unblocked.** Slices 1–2 together form the
++smallest honest first implementation slice. Slice 5 can run in parallel since it
++has the same unblocked status.
++
++---
++
++## Critical Path Item (Not Owned by This Lane)
++
++The `robopoker` git migration is the highest-priority cross-lane dependency.
++All `robopoker` references use absolute filesystem paths instead of git
++dependencies. This blocks `cargo build` and `cargo test` in any clean environment.
++
++**Ownership**: `games:traits` lane.
++**Impact on this lane**: All slices that call into `games:traits` (which is all of
++them) cannot run full integration tests until `robopoker` is resolved. This
++affects Slices 5–9 most acutely, but Slices 1–4 also ultimately depend on it.
++
++**This lane should not proceed past Slice 4 without confirming `robopoker`
++resolution**, because Slices 5–9 require integration testing that cannot succeed
++with absolute-path dependencies.
++
++---
++
++## What Needs to Happen Next
++
++### Immediate (no blockers)
++
++1. **Start `agent:experience` implementation-family workflow** targeting Slices
++   1–2 (`agent_context.rs` + `journal.rs`).
++2. **Track `games:traits` robopoker resolution** as the critical path item.
++   This is not a reason to pause Slices 1–2, but it must be resolved before
++   Slice 5 integration testing can succeed.
++
++### Short-term (depends on `play:tui` Slice 1)
++
++3. Once `myosu-play` binary skeleton exists, **Slices 3–4 unblock immediately**.
++4. **Slice 5 (`narration.rs`) runs in parallel with Slices 3–4** — it has no
++   `play:tui` dependency.
++
++### Medium-term
++
++5. Slices 6–9 remain blocked pending `play:tui` binary + robopoker resolution.
++6. Slice 7 (lobby) needs a chain stub for Phase 0 — this is self-contained and
++   can be implemented once `play:tui` binary exists.
++
++---
++
++## Lane Readiness for Implementation
++
++| Dimension | Status | Notes |
++|-----------|--------|-------|
++| Specification | **READY** | `spec.md` defines 9 slices with clear boundaries |
++| Review judgment | **KEEP** | `review.md` 2026-03-19 |
++| Upstream: `tui:shell` | **TRUSTED** | 82 tests pass |
++| Upstream: `games:traits` | **TRUSTED** | 14 tests pass |
++| Upstream: `play:tui` | **MISSING** | Binary skeleton not yet built |
++| robopoker git dep | **BLOCKER** | Owned by `games:traits` lane |
++| Implementation slice 1 | **UNBLOCKED** | `agent_context.rs`, depends only on `tui:shell` |
++| Implementation slice 2 | **UNBLOCKED** | `journal.rs`, depends only on `tui:shell` |
++| Implementation slice 5 | **UNBLOCKED** | `narration.rs`, depends only on `tui:shell` |
++| Slices 3–4, 6–9 | **BLOCKED** | Need `play:tui` binary skeleton |
++
++---
++
++## Recommendation
++
++**GO for implementation-family slices 1–2.** The lane is well-specified, the
++upstream is trusted, and these two slices have zero external blockers beyond
++`tui:shell`. The critical path item (`robopoker` migration, owned by
++`games:traits`) should be tracked in parallel — it does not block Slices 1–2
++but must be resolved before Slice 5 integration testing.
++
++The honest next product action is to launch the implementation-family workflow
++for `agent:experience` targeting Slices 1 and 2, while monitoring
++`games:traits` for robopoker resolution and `play:tui` for binary skeleton
++completion.
+diff --git a/outputs/agent/experience/review.md b/outputs/agent/experience/review.md
+index a14a728..be4ec86 100644
+--- a/outputs/agent/experience/review.md
++++ b/outputs/agent/experience/review.md
+@@ -134,3 +134,23 @@ and reflect prompt) can proceed in parallel with continued work on Slice 5 (narr
+ 
+ The `review.md` should be updated after each slice completes to track proof
+ availability and remaining blockers.
++
++---
++
++## Integration Review (2026-03-20)
++
++**Verdict: GO — implementation-family slices 1–2 are unblocked.**
++
++Synthesized in `outputs/agent-integration/review.md`. Full integration analysis:
++
++- Slices 1 (`agent_context.rs`) and 2 (`journal.rs`) are fully unblocked —
++  only depend on `tui:shell`, which is already trusted (82 tests pass).
++- Slice 5 (`narration.rs`) is also unblocked and can run in parallel with
++  Slices 3–4.
++- Slices 3–4 and 6–9 are blocked pending `play:tui` binary skeleton (owned by
++  `play:tui` lane).
++- Critical path: `robopoker` git migration (owned by `games:traits` lane) must
++  resolve before Slices 5–9 integration testing can succeed.
++
++**Next action**: Launch `agent:experience` implementation-family workflow targeting
++Slices 1–2. Track `games:traits` robopoker resolution in parallel.
