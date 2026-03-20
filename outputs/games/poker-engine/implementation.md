@@ -102,7 +102,7 @@ All source files compile without errors. Some tests require database-hydrated en
 
 ## Limitations
 
-1. **Database dependency for full testing**: The `exploitability()` method requires a database-hydrated `NlheEncoder` with isomorphism→abstraction mappings. Without this, tests that call `exploitability()` will panic. This is consistent with robopoker's architecture.
+1. **Database dependency for full testing**: `train()`, `strategy()`, and `exploitability()` all require a database-hydrated `NlheEncoder` with isomorphism→abstraction mappings. Without this, these methods panic. This is fundamental to robopoker's design — the encoder is a read-only lookup populated by an external k-means clustering job.
 
 2. **Single variant only**: This implementation is for NLHE heads-up only (as specified). Extensions for 6-max, PLO, etc. belong to `games:variant-family`.
 
