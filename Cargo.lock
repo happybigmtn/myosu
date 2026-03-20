@@ -1718,6 +1718,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "myosu-games-liars-dice"
+version = "0.1.0"
+dependencies = [
+ "myosu-games",
+ "rand 0.8.5",
+ "rbp-core",
+ "rbp-mccfr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "myosu-tui"
 version = "0.1.0"
 dependencies = [
