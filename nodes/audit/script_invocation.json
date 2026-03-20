@@ -1,0 +1,5 @@
+{
+  "command": "test -f outputs/games/poker-engine/implementation.md && test -f outputs/games/poker-engine/verification.md && test -f outputs/games/poker-engine/quality.md && test -f outputs/games/poker-engine/promotion.md",
+  "language": "shell",
+  "timeout_ms": null
+}

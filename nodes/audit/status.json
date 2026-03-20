@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "duration_ms": 2,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-20T08:23:14.037111662+00:00",
+  "updated_at": "2026-03-20T08:23:14.037115903+00:00",
+  "notes": "Script completed: test -f outputs/games/poker-engine/implementation.md && test -f outputs/games/poker-engine/verification.md && test -f outputs/games/poker-engine/quality.md && test -f outputs/games/poker-engine/promotion.md"
+}
