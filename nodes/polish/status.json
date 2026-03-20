@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 11870,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T21:34:49.004370772+00:00",
+  "updated_at": "2026-03-20T21:34:49.004377117+00:00",
+  "failure_reason": "LLM error: Not found on openai: Item with id 'rs_05edd2f3e679f7f40169bdbd6ec20c8195a10f0e244454bce1' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input."
+}
