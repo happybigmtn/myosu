@@ -4,6 +4,7 @@
 //! - Re-exports of robopoker's game-agnostic CFR traits
 //! - `GameConfig` for typed game parameter configuration
 //! - `StrategyQuery`/`StrategyResponse` for miner-validator communication
+//! - `ExploitMetric` for cross-game scoring normalization
 
 pub use rbp_core::{Probability, Utility};
 pub use rbp_mccfr::{CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, Profile};
@@ -219,6 +220,83 @@ impl<E: Serialize> StrategyResponse<E> {
     }
 }
 
+/// Scale interpretation for exploitability metrics.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExploitScale {
+    /// Raw exploitability value. Lower is better. 0 = Nash.
+    /// Used for small games (Liar's Dice, Stratego).
+    Absolute,
+    /// Milli-units per hand/round. Lower is better. 0 = Nash.
+    /// Used for games with per-hand utility (poker, backgammon).
+    MilliPerHand,
+    /// Normalized to [0, 1] where 0 = Nash, 1 = random.
+    /// Used when absolute scale varies too much across configs.
+    Normalized,
+}
+
+/// Descriptor for a game's exploitability metric.
+///
+/// This struct allows the validator oracle to normalize exploitability
+/// values to u16 weights in a game-agnostic way, while keeping
+/// lobby display game-specific with proper units.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ExploitMetric {
+    /// Display unit string (e.g., "mbb/h", "mcpw", "exploit").
+    pub unit: &'static str,
+    /// How to interpret the raw number.
+    pub scale: ExploitScale,
+    /// Decimal places when formatting for display.
+    pub display_precision: u8,
+    /// Exploitability of a uniform random strategy.
+    pub random_baseline: f64,
+    /// Below this value = "good" solver.
+    pub good_threshold: f64,
+}
+
+/// Return the exploitability metric for a game type.
+pub fn exploit_metric_for(game_type: &GameType) -> Option<&ExploitMetric> {
+    match game_type {
+        GameType::NlheHeadsUp => Some(&NLHE_HU_METRIC),
+        GameType::NlheSixMax => Some(&NLHE_6MAX_METRIC),
+        GameType::LiarsDice => Some(&LIARS_DICE_METRIC),
+        GameType::Custom(_) => None,
+    }
+}
+
+/// NLHE heads-up exploitability metric.
+///
+/// Random baseline ~300 mbb/h, good threshold <15 mbb/h.
+const NLHE_HU_METRIC: ExploitMetric = ExploitMetric {
+    unit: "mbb/h",
+    scale: ExploitScale::MilliPerHand,
+    display_precision: 1,
+    random_baseline: 300.0,
+    good_threshold: 15.0,
+};
+
+/// NLHE 6-max exploitability metric.
+///
+/// Random baseline ~400 mbb/h, good threshold <25 mbb/h.
+const NLHE_6MAX_METRIC: ExploitMetric = ExploitMetric {
+    unit: "mbb/h",
+    scale: ExploitScale::MilliPerHand,
+    display_precision: 1,
+    random_baseline: 400.0,
+    good_threshold: 25.0,
+};
+
+/// Liar's Dice exploitability metric.
+///
+/// Random baseline = 1.0 (uniform random gives 50% win rate),
+/// good threshold < 0.01 (exploitability in [-1, 1] scale).
+const LIARS_DICE_METRIC: ExploitMetric = ExploitMetric {
+    unit: "exploit",
+    scale: ExploitScale::Absolute,
+    display_precision: 2,
+    random_baseline: 1.0,
+    good_threshold: 0.01,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -367,5 +445,44 @@ mod tests {
         assert_eq!(response.probability_for(&'b'), 0.3);
         assert_eq!(response.probability_for(&'c'), 0.2);
         assert_eq!(response.probability_for(&'z'), 0.0); // not present
+    }
+
+    #[test]
+    fn all_game_types_have_metrics() {
+        // Known game types should have metrics
+        assert!(exploit_metric_for(&GameType::NlheHeadsUp).is_some());
+        assert!(exploit_metric_for(&GameType::NlheSixMax).is_some());
+        assert!(exploit_metric_for(&GameType::LiarsDice).is_some());
+
+        // Custom game types should not have metrics
+        assert!(exploit_metric_for(&GameType::Custom("unknown_game".to_string())).is_none());
+    }
+
+    #[test]
+    fn random_baseline_positive() {
+        let metric = exploit_metric_for(&GameType::LiarsDice).expect("LiarsDice should have metric");
+        assert!(metric.random_baseline > 0.0, "random_baseline must be positive");
+
+        let nlhe_metric = exploit_metric_for(&GameType::NlheHeadsUp).expect("NLHE should have metric");
+        assert!(nlhe_metric.random_baseline > 0.0, "random_baseline must be positive");
+    }
+
+    #[test]
+    fn good_threshold_less_than_baseline() {
+        let metric = exploit_metric_for(&GameType::LiarsDice).expect("LiarsDice should have metric");
+        assert!(
+            metric.good_threshold < metric.random_baseline,
+            "good_threshold ({}) must be less than random_baseline ({})",
+            metric.good_threshold,
+            metric.random_baseline
+        );
+
+        let nlhe_metric = exploit_metric_for(&GameType::NlheHeadsUp).expect("NLHE should have metric");
+        assert!(
+            nlhe_metric.good_threshold < nlhe_metric.random_baseline,
+            "good_threshold ({}) must be less than random_baseline ({})",
+            nlhe_metric.good_threshold,
+            nlhe_metric.random_baseline
+        );
     }
 }
