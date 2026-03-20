@@ -73,7 +73,11 @@ impl LogLine {
 
     /// Create a street transition log line.
     pub fn street(street: &str, cards: &[String], pot: u32) -> Self {
-        let card_str = cards.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(" ");
+        let card_str = cards
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
         Self {
             text: format!("─── {}: {}", street, card_str),
             line_type: LogLineType::StreetTransition,
@@ -118,12 +122,8 @@ impl LogLine {
                 // Win = green, but we don't know direction here
                 Style::default().fg(Color::Rgb(192, 192, 192))
             }
-            LogLineType::StreetTransition => {
-                Style::default().fg(Color::Rgb(96, 96, 96))
-            }
-            LogLineType::Error => {
-                Style::default().fg(Color::Rgb(204, 51, 51))
-            }
+            LogLineType::StreetTransition => Style::default().fg(Color::Rgb(96, 96, 96)),
+            LogLineType::Error => Style::default().fg(Color::Rgb(204, 51, 51)),
             _ => Style::default().fg(Color::Rgb(192, 192, 192)),
         }
     }
@@ -254,8 +254,11 @@ mod tests {
 
     #[test]
     fn street_transition_format() {
-        let emitter = TruthStreamEmitter::new();
-        let line = LogLine::street("flop", &["T♠".to_string(), "7♥".to_string(), "2♣".to_string()], 12);
+        let line = LogLine::street(
+            "flop",
+            &["T♠".to_string(), "7♥".to_string(), "2♣".to_string()],
+            12,
+        );
         assert!(line.text.starts_with("─── flop:"));
         assert!(line.text.contains("T♠"));
     }
@@ -275,7 +278,10 @@ mod tests {
         let mut emitter = TruthStreamEmitter::new();
         emitter.emit_action("solver", "raises", Some(6));
         emitter.emit_action("hero", "calls", None);
-        emitter.emit_street("flop", &["T♠".to_string(), "7♥".to_string(), "2♣".to_string()]);
+        emitter.emit_street(
+            "flop",
+            &["T♠".to_string(), "7♥".to_string(), "2♣".to_string()],
+        );
         assert_eq!(emitter.lines.len(), 3);
     }
 
@@ -291,7 +297,6 @@ mod tests {
 
     #[test]
     fn blank_line() {
-        let emitter = TruthStreamEmitter::new();
         let line = LogLine::blank();
         assert_eq!(line.text, "");
         assert_eq!(line.line_type, LogLineType::Blank);

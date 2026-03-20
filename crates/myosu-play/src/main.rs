@@ -8,10 +8,11 @@
 use clap::Parser;
 use myosu_tui::shell::Shell;
 use std::time::Duration;
-use training::{HeuristicBackend, TrainingTable, bot_delay_from_env};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
+use training::{TrainingTable, bot_delay_from_env, resolve_training_backend};
 
+mod blueprint;
 mod training;
 
 #[derive(Parser, Debug)]
@@ -65,8 +66,9 @@ async fn run_training_mode(bot_delay_ms: u64) -> anyhow::Result<()> {
     info!("Starting training mode");
 
     let bot_delay_ms = bot_delay_from_env(bot_delay_ms);
-    let backend = std::sync::Arc::new(HeuristicBackend);
+    let (backend, strategy_status) = resolve_training_backend();
     let mut table = TrainingTable::with_backend_and_delay(backend, bot_delay_ms);
+    table.set_strategy_status(strategy_status);
     table.advance_until_hero_or_terminal().await?;
     let renderer = table.renderer();
 

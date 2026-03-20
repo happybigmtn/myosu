@@ -9,44 +9,6 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
 
-/// Suit symbols for card rendering.
-const SUIT_SPADES: &str = "♠";
-const SUIT_HEARTS: &str = "♥";
-const SUIT_DIAMONDS: &str = "♦";
-const SUIT_CLUBS: &str = "♣";
-
-/// Card rendering helpers.
-fn render_card(area: &Rect, buf: &mut Buffer, x: u16, y: u16, rank: &str, suit: &str, style: Style) {
-    let card_text = format!("{}{}", rank, suit);
-    for (i, ch) in card_text.chars().enumerate() {
-        let cx = x + i as u16;
-        if cx < area.right() {
-            buf[(cx, y)].set_char(ch);
-            buf[(cx, y)].set_style(style);
-        }
-    }
-}
-
-/// Render a hidden card indicator (opponent cards).
-fn render_hidden(area: &Rect, buf: &mut Buffer, x: u16, y: u16, style: Style) {
-    let hidden = "··";
-    for (i, ch) in hidden.chars().enumerate() {
-        let cx = x + i as u16;
-        if cx < area.right() {
-            buf[(cx, y)].set_char(ch);
-            buf[(cx, y)].set_style(style);
-        }
-    }
-}
-
-/// Render a board slot (empty card position).
-fn render_slot(area: &Rect, buf: &mut Buffer, x: u16, y: u16, style: Style) {
-    if x < area.right() {
-        buf[(x, y)].set_char('·');
-        buf[(x, y)].set_style(style);
-    }
-}
-
 /// Column-aligned field-label rendering style.
 fn label_style() -> Style {
     Style::default().fg(Color::Rgb(192, 192, 192))
@@ -106,9 +68,7 @@ pub enum NlheState {
         has_decision: bool,
     },
     /// Bot is thinking
-    BotThinking {
-        hand_num: u32,
-    },
+    BotThinking { hand_num: u32 },
     /// Hand complete / showdown
     Showdown {
         hand_num: u32,
@@ -132,7 +92,10 @@ impl NlheRenderer {
     /// Create a new renderer with the given state.
     pub fn new(state: NlheState) -> Self {
         let context_label = Self::context_label_for_state(&state);
-        Self { state, context_label }
+        Self {
+            state,
+            context_label,
+        }
     }
 
     /// Create a preflop stub state for testing.
@@ -149,7 +112,10 @@ impl NlheRenderer {
             has_decision: true,
         };
         let context_label = Self::context_label_for_state(&state);
-        Self { state, context_label }
+        Self {
+            state,
+            context_label,
+        }
     }
 
     /// Create a flop stub state for testing.
@@ -167,7 +133,10 @@ impl NlheRenderer {
             has_decision: true,
         };
         let context_label = Self::context_label_for_state(&state);
-        Self { state, context_label }
+        Self {
+            state,
+            context_label,
+        }
     }
 
     /// Update the renderer to a new state.
@@ -215,7 +184,9 @@ impl NlheRenderer {
     fn completions_for_state(state: &NlheState) -> Vec<String> {
         match state {
             NlheState::Idle => vec!["new".to_string(), "quit".to_string()],
-            NlheState::Preflop { has_decision: true, .. } => {
+            NlheState::Preflop {
+                has_decision: true, ..
+            } => {
                 vec![
                     "fold".to_string(),
                     "check".to_string(),
@@ -227,7 +198,9 @@ impl NlheRenderer {
                     "/advisor".to_string(),
                 ]
             }
-            NlheState::Flop { has_decision: true, .. } => {
+            NlheState::Flop {
+                has_decision: true, ..
+            } => {
                 vec![
                     "fold".to_string(),
                     "check".to_string(),
@@ -239,8 +212,14 @@ impl NlheRenderer {
                     "/advisor".to_string(),
                 ]
             }
-            NlheState::Preflop { has_decision: false, .. }
-            | NlheState::Flop { has_decision: false, .. }
+            NlheState::Preflop {
+                has_decision: false,
+                ..
+            }
+            | NlheState::Flop {
+                has_decision: false,
+                ..
+            }
             | NlheState::BotThinking { .. } => vec![],
             NlheState::Showdown { .. } => vec!["new".to_string(), "/quit".to_string()],
         }
@@ -283,8 +262,20 @@ impl NlheRenderer {
         let opp_stack_x = area.right().saturating_sub(opp_stack_text.len() as u16 + 1);
         write_at(buf, stack_x, y, &stack_text, &bright);
         write_at(buf, opp_stack_x, y, &opp_stack_text, &dim);
-        write_at(buf, area.right().saturating_sub(3), y, hero_position, &label);
-        write_at(buf, area.right().saturating_sub(6), y, opponent_position, &label);
+        write_at(
+            buf,
+            area.right().saturating_sub(3),
+            y,
+            hero_position,
+            &label,
+        );
+        write_at(
+            buf,
+            area.right().saturating_sub(6),
+            y,
+            opponent_position,
+            &label,
+        );
 
         // Line 3: pot + to_call
         let y = area.y + 2;
@@ -335,10 +326,34 @@ impl NlheRenderer {
         write_label_value(buf, area.x + 30, y, "solver", "·· ··", &dim, &dim);
         let stack_text = format!("{}bb", hero_stack);
         let opp_stack_text = format!("{}bb", opponent_stack);
-        write_at(buf, area.right().saturating_sub(stack_text.len() as u16 + 1), y, &stack_text, &bright);
-        write_at(buf, area.right().saturating_sub(opp_stack_text.len() as u16 + 1), y, &opp_stack_text, &dim);
-        write_at(buf, area.right().saturating_sub(3), y, hero_position, &label);
-        write_at(buf, area.right().saturating_sub(6), y, opponent_position, &label);
+        write_at(
+            buf,
+            area.right().saturating_sub(stack_text.len() as u16 + 1),
+            y,
+            &stack_text,
+            &bright,
+        );
+        write_at(
+            buf,
+            area.right().saturating_sub(opp_stack_text.len() as u16 + 1),
+            y,
+            &opp_stack_text,
+            &dim,
+        );
+        write_at(
+            buf,
+            area.right().saturating_sub(3),
+            y,
+            hero_position,
+            &label,
+        );
+        write_at(
+            buf,
+            area.right().saturating_sub(6),
+            y,
+            opponent_position,
+            &label,
+        );
 
         // Line 3: pot + decision context
         let y = area.y + 2;
@@ -370,8 +385,6 @@ impl NlheRenderer {
 
         let dim = dim_style();
         let bright = bright_style();
-        let label = label_style();
-
         // Line 1: board
         let y = area.y;
         let board_str = format!("{}  {}  {}  ·  ·", board[0], board[1], board[2]);
@@ -380,9 +393,23 @@ impl NlheRenderer {
         // Line 2: showdown results
         let y = area.y + 1;
         write_label_value(buf, area.x, y, "you", hero_hole.as_str(), &dim, &bright);
-        write_label_value(buf, area.x + 30, y, "solver", opponent_hole.as_str(), &dim, &dim);
+        write_label_value(
+            buf,
+            area.x + 30,
+            y,
+            "solver",
+            opponent_hole.as_str(),
+            &dim,
+            &dim,
+        );
         let pot_text = format!("{}bb", pot);
-        write_at(buf, area.right().saturating_sub(pot_text.len() as u16 + 1), y, &pot_text, &bright);
+        write_at(
+            buf,
+            area.right().saturating_sub(pot_text.len() as u16 + 1),
+            y,
+            &pot_text,
+            &bright,
+        );
 
         // Line 3: result
         let y = area.y + 2;
@@ -391,7 +418,15 @@ impl NlheRenderer {
 }
 
 /// Write a label: value pair at the given position.
-fn write_label_value(buf: &mut Buffer, x: u16, y: u16, label: &str, value: &str, label_style: &Style, value_style: &Style) {
+fn write_label_value(
+    buf: &mut Buffer,
+    x: u16,
+    y: u16,
+    label: &str,
+    value: &str,
+    label_style: &Style,
+    value_style: &Style,
+) {
     write_at(buf, x, y, label, label_style);
     write_at(buf, x + 8, y, value, value_style);
 }
@@ -461,10 +496,22 @@ impl GameRenderer for NlheRenderer {
     fn pipe_output(&self) -> String {
         match &self.state {
             NlheState::Idle => "STATE idle".to_string(),
-            NlheState::Preflop { hero_hole, pot, hand_num, .. } => {
+            NlheState::Preflop {
+                hero_hole,
+                pot,
+                hand_num,
+                ..
+            } => {
                 format!("STATE hand={} pot={} hero={}", hand_num, pot, hero_hole)
             }
-            NlheState::Flop { hero_hole, pot, hand_num, board, has_decision, .. } => {
+            NlheState::Flop {
+                hero_hole,
+                pot,
+                hand_num,
+                board,
+                has_decision,
+                ..
+            } => {
                 let board_str = format!("{} {} {}", board[0], board[1], board[2]);
                 format!(
                     "STATE hand={} pot={} hero={} board={} decision={}",
@@ -474,7 +521,14 @@ impl GameRenderer for NlheRenderer {
             NlheState::BotThinking { hand_num } => {
                 format!("STATE hand={} bot_thinking=true", hand_num)
             }
-            NlheState::Showdown { hand_num, hero_hole, opponent_hole, board, pot, result } => {
+            NlheState::Showdown {
+                hand_num,
+                hero_hole,
+                opponent_hole,
+                board,
+                pot,
+                result,
+            } => {
                 let board_str = format!("{} {} {} · ·", board[0], board[1], board[2]);
                 format!(
                     "STATE hand={} showdown=true hero={} opponent={} board={} pot={} result={}",
@@ -587,7 +641,13 @@ mod tests {
             hand_num: 1,
             hero_hole: "A♠ K♥".to_string(),
             opponent_hole: "Q♣ J♣".to_string(),
-            board: ["T♠".to_string(), "7♥".to_string(), "2♣".to_string(), "·".to_string(), "·".to_string()],
+            board: [
+                "T♠".to_string(),
+                "7♥".to_string(),
+                "2♣".to_string(),
+                "·".to_string(),
+                "·".to_string(),
+            ],
             pot: 100,
             result: "you win 14bb".to_string(),
         });

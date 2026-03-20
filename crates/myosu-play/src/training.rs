@@ -1,14 +1,15 @@
-#![cfg_attr(not(test), allow(dead_code))]
+#![allow(dead_code)]
 
+use crate::blueprint::BlueprintBackend;
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
-use myosu_games_poker::renderer::NlheState;
 use myosu_games_poker::NlheRenderer;
+use myosu_games_poker::renderer::NlheState;
 use rand::distributions::{Distribution, WeightedIndex};
-use rbp_cards::{Board, Card, Deck, Hand, Hole, Strength, Street};
+use rbp_cards::{Board, Card, Deck, Hand, Hole, Street, Strength};
 use rbp_core::Chips;
 use rbp_gameplay::{Action, Game, PositionName, Recall, Turn};
 
@@ -125,7 +126,10 @@ pub struct TrainingTable {
 
 impl TrainingTable {
     pub fn new() -> Self {
-        Self::with_backend_and_delay(Arc::new(HeuristicBackend), bot_delay_from_env(DEFAULT_BOT_DELAY_MS))
+        Self::with_backend_and_delay(
+            Arc::new(HeuristicBackend),
+            bot_delay_from_env(DEFAULT_BOT_DELAY_MS),
+        )
     }
 
     pub fn with_backend(bot_backend: Arc<dyn BotBackend>) -> Self {
@@ -169,6 +173,10 @@ impl TrainingTable {
 
     pub fn strategy_status(&self) -> &str {
         &self.strategy_status
+    }
+
+    pub fn set_strategy_status(&mut self, strategy_status: impl Into<String>) {
+        self.strategy_status = strategy_status.into();
     }
 
     pub fn bot_delay_ms(&self) -> u64 {
@@ -320,7 +328,10 @@ impl TrainingTable {
                     ensure_disjoint_hole_and_board(hole, board)?;
                 }
                 self.pending.hero_hole = Some(hole);
-                Ok(Some(format!("next hand hero hole cards set to {}", hole_text(hole))))
+                Ok(Some(format!(
+                    "next hand hero hole cards set to {}",
+                    hole_text(hole)
+                )))
             }
             "/board" => {
                 let cards = parse_board_cards(parts.collect::<Vec<_>>().join(" ").as_str())?;
@@ -328,7 +339,10 @@ impl TrainingTable {
                     ensure_disjoint_hole_and_board(hole, &cards)?;
                 }
                 self.pending.board_script = Some(cards.clone());
-                Ok(Some(format!("next hand board script set to {}", cards_text(&cards))))
+                Ok(Some(format!(
+                    "next hand board script set to {}",
+                    cards_text(&cards)
+                )))
             }
             "/stack" | "/bot-stack" => {
                 let amount = parts
@@ -425,10 +439,7 @@ impl TrainingTable {
             bail!("cannot start the next hand before the current hand is terminal");
         }
 
-        let next = self
-            .game
-            .continuation()
-            .unwrap_or_else(Game::root);
+        let next = self.game.continuation().unwrap_or_else(Game::root);
         let prepared = self.prepare_new_hand(next)?;
         self.hand_num += 1;
         self.hand_root = prepared;
@@ -505,7 +516,8 @@ impl TrainingTable {
 
         let prepared = if let Some(hero_hole) = hero_hole {
             let villain = sample_villain_hole(hero_hole, &board_script)?;
-            game.wipe(hero_hole).assume(Turn::Choice(self.hero_seat), villain)
+            game.wipe(hero_hole)
+                .assume(Turn::Choice(self.hero_seat), villain)
         } else {
             game
         };
@@ -541,7 +553,10 @@ impl TrainingTable {
             if self.game.is_allowed(&action) {
                 return Ok(action);
             }
-            bail!("board script produced an illegal draw for {}", street.label());
+            bail!(
+                "board script produced an illegal draw for {}",
+                street.label()
+            );
         }
 
         Ok(self.game.reveal())
@@ -582,6 +597,19 @@ impl TrainingTable {
 impl Default for TrainingTable {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub fn resolve_training_backend() -> (Arc<dyn BotBackend>, String) {
+    match BlueprintBackend::load_default() {
+        Ok(backend) => {
+            let strategy_status = backend.strategy_status();
+            (Arc::new(backend), strategy_status)
+        }
+        Err(error) => (
+            Arc::new(HeuristicBackend),
+            format!("bot strategy: heuristic · {}", error.fallback_reason()),
+        ),
     }
 }
 
@@ -850,7 +878,12 @@ mod tests {
         }
 
         fn action_distribution(&self, recall: &dyn Recall, _seat: usize) -> Vec<(Action, f64)> {
-            let fallback = recall.head().legal().first().copied().unwrap_or(Action::Check);
+            let fallback = recall
+                .head()
+                .legal()
+                .first()
+                .copied()
+                .unwrap_or(Action::Check);
             let action = self.actions.first().copied().unwrap_or(fallback);
             vec![(sanitize_action(&recall.head(), action), 1.0)]
         }
@@ -877,7 +910,9 @@ mod tests {
         let backend = Arc::new(ScriptedBackend::new(vec![Action::Check]));
         let mut table = TrainingTable::with_backend_and_delay(backend, 0);
 
-        table.apply_hero_action(Action::Fold).expect("fold should be legal");
+        table
+            .apply_hero_action(Action::Fold)
+            .expect("fold should be legal");
 
         assert!(table.is_terminal());
         assert_eq!(table.practice_chips(), DEFAULT_PRACTICE_CHIPS - 1);
@@ -900,7 +935,12 @@ mod tests {
         }
 
         assert!(table.last_result().expect("terminal result").showdown);
-        assert!(table.history().iter().any(|action| matches!(action, Action::Draw(_))));
+        assert!(
+            table
+                .history()
+                .iter()
+                .any(|action| matches!(action, Action::Draw(_)))
+        );
     }
 
     #[test]
@@ -922,7 +962,10 @@ mod tests {
     fn bot_backend_fallback() {
         let table = TrainingTable::with_fallback_reason("blueprint not found");
 
-        assert_eq!(table.strategy_status(), "bot strategy: heuristic · blueprint not found");
+        assert_eq!(
+            table.strategy_status(),
+            "bot strategy: heuristic · blueprint not found"
+        );
         assert_eq!(table.bot_backend.strategy_name(), "heuristic");
     }
 
@@ -943,7 +986,9 @@ mod tests {
         let mut table = TrainingTable::with_backend_and_delay(backend, 0);
 
         assert_eq!(table.hero_position_label(), "BTN");
-        table.apply_hero_action(Action::Fold).expect("finish first hand");
+        table
+            .apply_hero_action(Action::Fold)
+            .expect("finish first hand");
         table.start_next_hand().expect("next hand");
 
         assert_eq!(table.hero_position_label(), "BB");

@@ -6,12 +6,16 @@ manual_followup_required: no
 
 ## Touched Surfaces
 - Cargo.lock
+- crates/myosu-games-poker/src/renderer.rs
+- crates/myosu-games-poker/src/truth_stream.rs
 - crates/myosu-play/Cargo.toml
+- crates/myosu-play/src/blueprint.rs
 - crates/myosu-play/src/main.rs
 - crates/myosu-play/src/training.rs
 - outputs/play/tui/implementation.md
-- outputs/play/tui/verification.md
 - outputs/play/tui/promotion.md
+- outputs/play/tui/quality.md
+- outputs/play/tui/verification.md
 
 ## Placeholder Hits
 
@@ -23,4 +27,3 @@ manual_followup_required: no
 
 
 ## Manual Followup Hits
-

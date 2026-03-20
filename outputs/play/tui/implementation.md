@@ -6,66 +6,46 @@ This run implemented the next approved `play:tui` slice:
 
 | Slice | Surface | Status | Files |
 |-------|---------|--------|-------|
-| Slice 3 | `TrainingTable` + `HeuristicBackend` | Done with one explicit command constraint | `crates/myosu-play/src/training.rs`, `crates/myosu-play/src/main.rs`, `crates/myosu-play/Cargo.toml`, `Cargo.lock` |
-
-Slices 1 and 2 remain in place from the earlier lane run. Blueprint loading, advisor wiring, recorder work, and chain-backed play remain outside this implementation.
+| Slice 4 | `BlueprintBackend` with graceful fallback | Done | `crates/myosu-play/src/blueprint.rs`, `crates/myosu-play/src/main.rs`, `crates/myosu-play/src/training.rs`, `crates/myosu-play/Cargo.toml`, `Cargo.lock` |
 
 ## What Landed
 
-### `crates/myosu-play/src/training.rs`
+### `crates/myosu-play/src/blueprint.rs`
 
-Added a real training engine on top of robopoker gameplay types:
+Added the Slice 4 blueprint loading surface:
 
-- `TrainingTable` now owns the current `Game`, hand root, action history, practice chip balance, hand number, pending training commands, board script, and bot backend.
-- `SessionRecall` implements `rbp_gameplay::Recall` against the actual hand root plus applied action history, so the bot sees the same state the table is advancing.
-- `BotBackend` is now the slice contract for local training bots: `strategy_name`, `action_distribution`, and `select_action`.
-- `HeuristicBackend` produces legal weighted action distributions from live game state. It uses a simple preflop hand score plus postflop strength buckets to choose among fold, check, call, raise, and shove.
-- `TrainingTable::renderer()` converts live table state into the existing `NlheRenderer` state model so the training slice can feed the already-approved TUI surfaces.
-- `bot_delay_from_env()` reads `MYOSU_BOT_DELAY_MS`, and the async training advance path uses `tokio::time::sleep` before bot actions instead of a blocking pause.
+- `BlueprintManifest` now defines the schema-checked metadata contract for training artifacts.
+- `BlueprintBackend::load_default()` discovers artifacts in the approved order: `MYOSU_BLUEPRINT_DIR`, `MYOSU_DATA_DIR/.myosu/blueprints`, then `~/.myosu/blueprints`.
+- The loader validates schema version, abstraction hash, and profile hash before any strategy lookup is exposed.
+- `blueprint.keys.bin`, `blueprint.values.bin`, and `blueprint.isomorphism.bin` are opened as read-only mapped files so the runtime contract is backed by mapped bytes instead of eager file copies.
+- `BlueprintBackend` implements `BotBackend` and converts a live recall into a legal action distribution by matching a street-and-pressure bucket from the mapped isomorphism index.
 
-### Training Commands
+### Training Startup Wiring
 
-The slice now supports the commands that fit the current public robopoker API:
+- `resolve_training_backend()` in `training.rs` now tries `BlueprintBackend::load_default()` first.
+- On success, training mode surfaces `bot strategy: blueprint · exploit X mbb/h`.
+- On any load failure, training mode falls back to `HeuristicBackend` and exposes the loader error as the strategy status line.
+- `myosu-play --train` now picks up that backend selection automatically before entering the existing Slice 3 training flow.
 
-- `/deal A♠ K♥` sets hero hole cards for the next hand.
-- `/board Q♥ J♥ 9♦` scripts the next hand’s community cards as streets are revealed.
-- `/showdown` forces a passive runout so the hand resolves without more aggressive betting.
+### Owned-Surface Cleanup
 
-The command parser normalizes Unicode suit input to robopoker’s ASCII parser, so the spec examples work as written.
+- Removed dead renderer helpers in `crates/myosu-games-poker/src/renderer.rs`.
+- Removed two unused locals in `crates/myosu-games-poker/src/truth_stream.rs`.
 
-### One Explicit Constraint Inside This Slice
-
-`/stack` and `/bot-stack` are wired as clear runtime errors instead of silent no-ops. The current `rbp_gameplay::Game` API exposes no public stack setters, so this slice stops at the honest boundary rather than faking support.
-
-### `crates/myosu-play/src/main.rs`
-
-`myosu-play --train` now constructs a `TrainingTable`, resolves bot delay through the environment-aware helper, advances the table to the first hero decision, snapshots the renderer from live table state, and logs the current bot strategy plus practice chip balance into the shell transcript before the shell loop starts.
-
-This keeps the entrypoint aligned with Slice 3 without reaching into blueprint, advisor, recorder, or chain work.
-
-### Dependency Surface
-
-`crates/myosu-play/Cargo.toml` and `Cargo.lock` now carry the direct training dependencies required by the slice:
-
-- `rbp-cards`
-- `rbp-gameplay`
-- `rand`
+These were small warning-only corrections inside the same owned `play:tui` surface so the slice proof can stay clean.
 
 ## Automated Coverage Added in This Slice
 
-`training.rs` now carries six focused unit tests:
+`blueprint.rs` now carries six focused unit tests:
 
-- `hand_completes_fold`
-- `hand_completes_showdown`
-- `deal_command_sets_cards`
-- `bot_backend_fallback`
-- `practice_chips_update`
-- `alternating_button`
+- `blueprint::tests::load_valid_artifact`
+- `blueprint::tests::missing_dir_returns_error`
+- `blueprint::tests::schema_mismatch_returns_error`
+- `blueprint::tests::hash_mismatch_returns_error`
+- `blueprint::tests::lookup_returns_valid_distribution`
+- `blueprint::tests::distribution_sums_to_one`
 
-These cover the minimum proof the lane spec asked for, plus the additional slice-specific behaviors that were straightforward to prove automatically.
+## Slice Notes
 
-## Remaining Blockers Before the Next `play:tui` Slice
-
-- Stack override commands need either upstream public setters in `rbp_gameplay::Game` or a local wrapper that can rebuild stack-sized hand roots safely.
-- The current shell still renders a snapshot renderer created at training startup; live in-shell state mutation belongs to the next round of TUI/game-loop plumbing.
-- Blueprint-backed bot play, advisor rendering, recorder output, and chain discovery are still untouched by this run.
+- This slice proves the blueprint discovery, manifest validation, hash validation, mapped-file loading, and legal distribution lookup path end-to-end with the canonical artifact filenames.
+- Solver advisor, recorder output, and chain-backed play remain outside this slice.
