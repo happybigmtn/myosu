@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T22:12:44.504994818Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "specify": 1,
+    "start": 1
+  },
+  "context_values": {
+    "last_stage": "specify",
+    "thread.start.current_node": "specify",
+    "internal.retry_count.start": 1,
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "failure_signature": "",
+    "last_response": "Already handled — exit code 144 was a lock contention from the earlier parallel test attempt, not a test failure. Both artifacts are complete and verified. The `agent:experience` integration artifac",
+    "response.specify": "Already handled — exit code 144 was a lock contention from the earlier parallel test attempt, not a test failure. Both artifacts are complete and verified. The `agent:experience` integration artifacts are at:\n\n- **`outputs/agent-integration/agent-adapter.md`**\n- **`outputs/agent-integration/review.md`**",
+    "internal.run_id": "01KM6M51EB1AFBHY9SZEKN0BBA",
+    "current_node": "specify",
+    "failure_class": "",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.node_visit_count": 1,
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6M51EB1AFBHY9SZEKN0BBA/worktree",
+    "internal.thread_id": "start",
+    "graph.rankdir": "LR",
+    "internal.fidelity": "compact",
+    "outcome": "success",
+    "internal.retry_count.specify": 1
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_response": "Already handled — exit code 144 was a lock contention from the earlier parallel test attempt, not a test failure. Both artifacts are complete and verified. The `agent:experience` integration artifac",
+        "response.specify": "Already handled — exit code 144 was a lock contention from the earlier parallel test attempt, not a test failure. Both artifacts are complete and verified. The `agent:experience` integration artifacts are at:\n\n- **`outputs/agent-integration/agent-adapter.md`**\n- **`outputs/agent-integration/review.md`**",
+        "last_stage": "specify"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 145,
+        "output_tokens": 112
+      },
+      "files_written": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 807283
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}
