@@ -1,0 +1,339 @@
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..6ec632c
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,219 @@
++# `agent:integration` Lane Specification
++
++## Purpose and User-Visible Outcome
++
++`agent:integration` is the **adapter layer** that wires `agent:experience` surfaces to the rest of the Myosu product — specifically to chain discovery, miner serving, validator scoring, and gameplay binary delivery.
++
++The lane delivers:
++
++1. **JSON Schema as Universal Contract** — The `GameState` schema (`docs/api/game-state.json` + `crates/myosu-tui/src/schema.rs`) is the single vocabulary shared by pipe mode, narration engine, spectator relay, and future HTTP/WS APIs
++2. **Pipe Mode Adapter** — `PipeMode` driver (`crates/myosu-tui/src/pipe.rs`) bridges `games:traits` game state to stdin/stdout text protocol
++3. **Context File Adapter** — `AgentContext` (`crates/myosu-tui/src/agent_context.rs`) bridges JSON context files to the pipe mode session lifecycle
++4. **Narration Adapter** — `NarrationEngine` (`crates/myosu-tui/src/narration.rs`) bridges `GameState` to atmospheric prose
++5. **Journal Adapter** — `Journal` (`crates/myosu-tui/src/journal.rs`) bridges hand events to append-only markdown
++6. **Spectator Relay Adapter** — `SpectatorRelay` (`crates/myosu-play/src/spectate.rs`) bridges game events to Unix socket event stream
++7. **Binary Delivery** — `myosu-play` CLI (`crates/myosu-play/src/main.rs`) exposes `--pipe`, `--context`, `--narrate`, `--spectate` flags
++
++**User-visible behavior**: An agent can connect via `myosu-play --pipe --context ./koan.json --narrate` and interact with the game, with all surfaces (pipe protocol, narration, context persistence, journal, spectator) composing cleanly through shared types.
++
++---
++
++## Lane Boundary
++
++```
++                            agent:integration (THIS LANE)
++                            ┌──────────────────────────────────────────────────────────────┐
++upstream                         │                                                              │
++agent:experience ───────────────► │  JSON Schema (schema.rs) = universal contract             │
++  (spec.md, review.md)            │  ┌────────────────────────────────────────────────────┐ │
++                                 │  │ GameState + LegalAction + GamePhase + MetaInfo     │ │
++                                 │  └────────────────────────────────────────────────────┘ │
++                                 │                                                              │
++upstream                         │  ┌────────────────────────────────────────────────────┐ │
++games:traits ────────────────────► │  pipe.rs: PipeMode driver                             │ │
++  (CfrGame, Profile, GameConfig)  │  │   ↕                                                           │ │
++                                 │  │  stdin/stdout text protocol                           │ │
++                                 │  └────────────────────────────────────────────────────┘ │
++                                 │                                                              │
++untrusted                         │  ┌────────────────────────────────────────────────────┐ │
++robopoker ───────────────────────► │  games:traits wraps robopoker types                   │ │
++  (absolute path deps)            │  │   ↕                                                           │ │
++                                 │  │  GameRenderer trait normalizes to GameState            │ │
++                                 │  └────────────────────────────────────────────────────┘ │
++                                 │                                                              │
++downstream                        │  ┌────────────────────────────────────────────────────┐ │
++chain:runtime ──────────────────► │  Lobby queries miner axon (Phase 2)                    │ │
++  (miner serving)                 │  │  Spectator upgrades to WS via miner axon (Phase 2)   │ │
++                                 │  └────────────────────────────────────────────────────┘ │
++                                 │                                                              │
++downstream                        │  ┌────────────────────────────────────────────────────┐ │
++myosu-play ─────────────────────► │  CLI binary exposes --pipe --context --narrate         │ │
++  (binary delivery)              │  │  myosu-play --pipe --context ./koan.json --narrate  │ │
++                                 │  └────────────────────────────────────────────────────┘ │
++                                 └──────────────────────────────────────────────────────────────┘
++```
++
++**Trusted upstream inputs:**
++- `agent:experience` (spec.md, review.md) — specification only; defines surfaces
++- `games:traits` (14 tests pass) — `CfrGame`, `Profile`, `GameConfig`, `GameType`
++- `tui:shell` (82 tests pass) — `Shell`, `GameRenderer` trait, `PipeMode`
++
++**Untrusted inputs** (validated at use site):
++- Agent-supplied context JSON file (serde-validated before use)
++- Agent-supplied reflection text (free-form string; no parsing required)
++- Spectator relay socket events (fog-of-war enforced at relay)
++
++**Trusted downstream outputs:**
++- `myosu-play` binary with `--pipe`, `--context`, `--narrate`, `--spectate` flags
++- `SpectatorRelay` Unix socket event stream
++
++---
++
++## How the JSON Schema Acts as Universal Adapter
++
++The `GameState` JSON schema is the contract that enables all agent-facing surfaces to share the same vocabulary:
++
++```
++                    GameState JSON Schema
++                    (shared vocabulary)
++                           │
++           ┌───────────────┼───────────────┐
++           │               │               │
++           ▼               ▼               ▼
++    pipe_output()    narration.rs    SpectatorRelay
++    (text adapter)   (prose adapter)  (event adapter)
++           │               │               │
++           ▼               ▼               ▼
++      stdin/stdout     prose output    Unix socket
++```
++
++**The schema enables:**
++1. **Pipe mode** — `GameRenderer::pipe_output()` serializes `GameState` to terse key-value text
++2. **Narration** — `NarrationEngine::narrate(&GameState)` translates the same `GameState` to atmospheric prose
++3. **Spectator relay** — `GameEvent` reuses the same `GameState` types with fog-of-war filtering
++4. **Future HTTP/WS APIs** — Phase 2 miner axon endpoints serve the same `GameState` JSON
++
++**Key contract**: `legal_actions` is always exhaustive. An agent never needs to guess what's legal.
++
++---
++
++## Integration Points with Other Lanes
++
++| Lane | Integration Point | Direction |
++|------|------------------|-----------|
++| `games:traits` | `GameRenderer::pipe_output()` → `GameState` | upstream |
++| `tui:shell` | `PipeMode` driver + `GameRenderer` trait | upstream |
++| `agent:experience` | Spec defines surfaces; this lane wires them | upstream spec |
++| `play:tui` | `myosu-play` binary skeleton | downstream |
++| `chain:runtime` | Miner axon for lobby queries + WS spectator | downstream (Phase 2) |
++| `robopoker` | Absolute path deps; git migration needed before integration testing | upstream (blocked) |
++
++---
++
++## Broken or Missing Integration Points
++
++### 1. `robopoker` Absolute Path Deps — Integration Testing Blocked
++
++Both `games:traits` and `tui:shell` depend on `robopoker` via **absolute filesystem paths** (`/home/r/coding/robopoker/crates/...`). This prevents `cargo build` and `cargo test` from running on clean checkout or CI.
++
++**Impact**: Cannot verify integration between `agent:experience` surfaces and the actual game engine.
++**Resolution**: `games:traits` lane owns robopoker git migration (RF-01..04). Integration testing depends on that resolution.
++
++### 2. `myosu-play` Binary Skeleton Missing — CLI Delivery Blocked
++
++The `myosu-play` binary (`crates/myosu-play/src/main.rs`) does not exist. All `--pipe`, `--context`, `--narrate`, and `--spectate` flags require modifications to this binary's CLI dispatch.
++
++**Impact**: `agent:integration` surfaces cannot be delivered as a runnable binary.
++**Resolution**: `play:tui` lane owns the binary skeleton (Slice 1 of that lane).
++
++### 3. Chain Discovery Stubbed in Lobby — Phase 2 Only
++
++The lobby (AC-AX-05) requires querying the chain or miner for active subnet information. This is stubbed for Phase 0.
++
++**Impact**: Agents in pipe mode can only select from hardcoded subnet data.
++**Resolution**: Real chain integration is Phase 2 (depends on `chain:runtime`).
++
++### 4. Spectator Socket Path Convention Not Confirmed
++
++AC-SP-01 specifies `~/.myosu/spectate/<session_id>.sock` but `play:tui` uses `{data-dir}/hands/hand_{N}.json`. The spectator socket path convention should be confirmed against this.
++
++**Impact**: Potential mismatch between spectator relay socket path and data directory convention.
++**Resolution**: Verify `play:tui` data directory convention before Slice 8 implementation.
++
++---
++
++## Code Boundaries and Deliverables
++
++| File | Responsibility | Status |
++|------|---------------|--------|
++| `crates/myosu-tui/src/schema.rs` | `GameState`, `LegalAction`, `GamePhase`, `MetaInfo` types | **TRUSTED** |
++| `crates/myosu-tui/src/pipe.rs` | `PipeMode` driver; `--context`, `--narrate`, `reflect>` wiring | **PARTIAL** (no flags yet) |
++| `crates/myosu-tui/src/agent_context.rs` | `AgentContext` load/save; journal append | **MISSING** |
++| `crates/myosu-tui/src/narration.rs` | `NarrationEngine` prose generation | **MISSING** |
++| `crates/myosu-tui/src/journal.rs` | `Journal` append-only markdown | **MISSING** |
++| `crates/myosu-play/src/spectate.rs` | `SpectatorRelay` Unix socket | **MISSING** |
++| `crates/myosu-play/src/main.rs` | CLI dispatch for `--pipe`, `--context`, `--narrate` | **MISSING** |
++
++---
++
++## Phase Ordering for Integration
++
++```
++Phase 0 (Standalone — no chain):
++  1. robopoker git migration (games:traits owns this)
++  2. play:tui binary skeleton (play:tui owns this)
++  3. agent_context.rs + journal.rs + --context wiring (agent:experience Slices 1-3)
++  4. reflect> prompt (agent:experience Slice 4)
++  5. narration.rs + --narrate wiring (agent:experience Slices 5-6)
++  6. Lobby + game selection (agent:experience Slice 7)
++
++Phase 1 (Spectator — no chain):
++  7. SpectatorRelay Unix socket (agent:experience Slice 8)
++  8. SpectateScreen TUI (agent:experience Slice 9)
++
++Phase 2 (Chain-connected):
++  9. Lobby queries miner axon
++  10. Spectator upgrades to miner axon WS
++```
++
++---
++
++## Decision from `agent:experience` Review
++
++The `agent:experience` review (outputs/agent/experience/review.md) judged **KEEP — proceed to implementation-family workflow**. This `agent:integration` lane is the integration layer that delivers that implementation family.
++
++The review identified:
++- `games:traits` (robopoker git migration) as the primary blocker
++- `play:tui` (binary skeleton) as the secondary blocker
++- Both are owned by other lanes and do not block this lane from beginning its work
++
++**This lane should proceed with Phase 0 integration work while those blockers are resolved in parallel.**
++
++---
++
++## Next Implementation Slices
++
++### Slice INT-1: Verify `games:traits` + `robopoker` Integration Contract
++**What**: Confirm that `GameRenderer::pipe_output()` can consume `games:traits` types and produce valid `GameState` JSON
++**Blocker**: robopoker git migration (games:traits lane owns)
++**Proof gate**: `cargo test -p myosu-tui schema::tests` exits 0
++
++### Slice INT-2: Deliver `myosu-play` Binary Skeleton with `--pipe` Flag
++**What**: Create `crates/myosu-play/src/main.rs` with `--pipe` flag that instantiates `PipeMode`
++**Blocker**: play:tui lane owns binary skeleton
++**Proof gate**: `myosu-play --help` shows `--pipe` flag
++
++### Slice INT-3: Wire `--context` Flag to `PipeMode`
++**What**: Add `context_path: Option<PathBuf>` to `PipeMode`; load/save `AgentContext`
++**Depends on**: Slice INT-2 + agent:experience Slice 1
++**Proof gate**: Agent plays 10 hands, shuts down, restarts → memory preserved
++
++### Slice INT-4: Wire `--narrate` Flag to `PipeMode`
++**What**: Add `narrate: bool` to `PipeMode`; use `NarrationEngine` when true
++**Depends on**: Slice INT-3 + agent:experience Slice 5
++**Proof gate**: `--narrate` output contains board texture + session arc prose
++
++### Slice INT-5: Integrate `SpectatorRelay` with `PipeMode`
++**What**: `SpectatorRelay` emits events from active `PipeMode` session to Unix socket
++**Depends on**: Slice INT-2 + agent:experience Slice 8
++**Proof gate**: `cargo test -p myosu-play spectate::tests::relay_emits_events` exits 0
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..b066d0f
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,108 @@
++# `agent:integration` Lane Review
++
++## Judgment: **KEEP** — proceed to Phase 0 implementation slices
++
++This lane is the integration layer that delivers the `agent:experience` surfaces. The JSON schema (`schema.rs`) is the universal adapter that makes pipe mode, narration, spectator relay, and future HTTP/WS APIs composable. The `agent:experience` review judged KEEP and recommended proceeding to implementation-family workflow — this lane IS that implementation family.
++
++The primary blockers (robopoker git migration, play:tui binary skeleton) are owned by other lanes and should be resolved in parallel. This lane can begin Phase 0 work on surfaces that don't require those blockers.
++
++---
++
++## Rationale for KEEP
++
++1. **JSON Schema is the universal adapter**: `GameState` + `LegalAction` + `GamePhase` + `MetaInfo` types in `schema.rs` (939 lines, 16 tests passing) are the shared vocabulary that enables pipe mode, narration, spectator relay, and future HTTP/WS APIs to all compose cleanly. This is the strongest integration surface in the product.
++
++2. **Upstream surfaces are trusted**: `tui:shell` (82 tests pass) and `games:traits` (14 tests pass) are already in the trusted state. The `GameRenderer` trait and `PipeMode` driver exist and compile. The lane builds on proven infrastructure.
++
++3. **Decision from `agent:experience` review is clear**: The review explicitly states "proceed to implementation-family workflow next" and identifies this lane as the delivery vehicle for that workflow. No further deliberation needed.
++
++4. **Integration points are well-defined**: The lane has clear upstream dependencies (games:traits, tui:shell, agent:experience spec) and clear downstream deliverables (myosu-play binary with --pipe, --context, --narrate, --spectate flags). The integration surface is bounded.
++
++5. **Phase ordering is honest**: Phase 0 is standalone (no chain dependency). Phase 1 adds spectator. Phase 2 adds chain-connected features. Each phase is independently meaningful and deliverable.
++
++---
++
++## Proof Expectations
++
++To consider this lane **proven**, the following evidence must be available:
++
++| Proof | How to Verify |
++|-------|--------------|
++| Schema tests pass | `cargo test -p myosu-tui schema::tests` exits 0 |
++| Pipe mode outputs valid GameState text | `cargo test -p myosu-tui pipe::tests` exits 0 |
++| --context flag preserves memory across sessions | Play 10 hands → restart → memory preserved |
++| --narrate flag produces board texture prose | Narrated output contains "dry" or "wet" or "connected" |
++| Journal is append-only | Write 100 entries; file only grows; never truncates |
++| Spectator relay emits valid JSON events | `cargo test -p myosu-play spectate::tests` exits 0 |
++| Fog-of-war enforced at relay | Hole cards never appear in relay output during play |
++
++---
++
++## Remaining Blockers
++
++### 1. `robopoker` Git Migration (HIGH — blocks integration testing)
++
++Both `games:traits` and `tui:shell` depend on `robopoker` via **absolute filesystem paths**. This prevents `cargo build` and `cargo test` from running on clean checkout or CI.
++
++**Owned by**: `games:traits` lane (RF-01..04)
++**Impact on this lane**: Cannot verify integration between `agent:experience` surfaces and the actual game engine until robopoker is migrated to a proper git dependency.
++**Resolution**: This lane should proceed with Phase 0 surfaces that can be tested in isolation (schema tests, pipe output tests using mock renderers).
++
++### 2. `myosu-play` Binary Skeleton Missing (HIGH — blocks CLI delivery)
++
++The `myosu-play` binary (`crates/myosu-play/src/main.rs`) does not exist. All `--pipe`, `--context`, `--narrate`, and `--spectate` flags require modifications to this binary's CLI dispatch.
++
++**Owned by**: `play:tui` lane (Slice 1: binary skeleton)
++**Impact on this lane**: Cannot deliver integrated surfaces as a runnable binary until the binary skeleton exists.
++**Resolution**: `play:tui` lane must deliver the binary skeleton before or concurrently with `agent:integration` Slice INT-2.
++
++### 3. Chain Discovery Stubbed (MEDIUM — Phase 2 only)
++
++The lobby (AC-AX-05) requires querying the chain or miner for active subnet information. This is stubbed for Phase 0 with hardcoded data.
++
++**Owned by**: `chain:runtime` lane
++**Impact on this lane**: Agents in pipe mode can only select from hardcoded subnet data in Phase 0. This is acceptable for Phase 0 proof.
++**Resolution**: Real chain integration is Phase 2 (depends on `chain:runtime`).
++
++---
++
++## Lane Readiness
++
++| Dimension | Status | Notes |
++|-----------|--------|-------|
++| JSON Schema | **TRUSTED** | 939 lines, 16 tests pass; covers 10 game types |
++| GameRenderer trait | **TRUSTED** | `pipe_output()` contract exists; used by PipeMode |
++| PipeMode driver | **TRUSTED** | 6 tests pass; basic stdin/stdout works |
++| agent_context.rs | **MISSING** | Needed for Slice INT-3 |
++| narration.rs | **MISSING** | Needed for Slice INT-4 |
++| journal.rs | **MISSING** | Needed for Slice INT-3 |
++| SpectatorRelay | **MISSING** | Needed for Slice INT-5 |
++| myosu-play binary | **MISSING** | Owned by play:tui lane |
++| robopoker git deps | **BLOCKER** | Owned by games:traits lane |
++| Integration slices | **DEFINED** | 5 slices, INT-1 through INT-5 |
++
++---
++
++## Decision: Implementation Family Next
++
++The `agent:experience` review explicitly states "proceed to implementation-family workflow next." This `agent:integration` lane is that workflow — it delivers the implementation slices that wire the agent:experience surfaces to runnable binaries.
++
++**No further upstream unblocks are needed before proceeding.** The primary blockers (robopoker git migration, myosu-play binary skeleton) are owned by other lanes and should be resolved in parallel. This lane can begin with:
++
++1. **INT-1**: Verify schema and pipe_output contract (can use mock renderers, no robopoker needed)
++2. **INT-3**: Agent context + journal + --context wiring (depends on play:tui binary, but design is clear from spec)
++3. **INT-4**: Narration + --narrate wiring (depends on narration.rs implementation)
++
++The implementation family is ready to begin. The decision is **implementation family next**, not another upstream unblock.
++
++---
++
++## Recommendation
++
++**Proceed to implementation-family workflow.** This lane should work in parallel with:
++- `games:traits` resolving robopoker git migration
++- `play:tui` delivering the binary skeleton
++
++Begin with INT-1 (schema verification using mocks) while waiting for those blockers to clear. Once the binary skeleton exists, proceed with INT-3 and INT-4 in sequence.
++
++Update this review after each slice completes to track proof availability and remaining blockers.
