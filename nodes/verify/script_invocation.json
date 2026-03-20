@@ -1,0 +1,5 @@
+{
+  "command": "set -e\ncargo build -p myosu-sdk\ncargo test -p myosu-sdk\ncargo test -p myosu-sdk -- --include-ignored  # no tests yet, but exits 0\ncargo test -p myosu-sdk testing::tests::rps_passes_all_compliance_checks\ncargo test -p myosu-sdk testing::tests::broken_game_fails_zero_sum_check\ncargo test -p myosu-sdk testing::tests::convergence_test_detects_non_convergence\ncargo test -p myosu-sdk scaffold::tests::generates_compilable_crate\ncargo test -p myosu-sdk scaffold::tests::generated_tests_fail_with_todo\ncargo test -p myosu-sdk scaffold::tests::refuses_to_overwrite_existing_directory\ncargo test -p myosu-sdk register::tests::register_help_output\ncargo test -p myosu-sdk register::tests::connection_timeout_error",
+  "language": "shell",
+  "timeout_ms": null
+}
