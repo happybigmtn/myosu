@@ -1,0 +1,135 @@
+diff --git a/outputs/games/poker-engine/verification.md b/outputs/games/poker-engine/verification.md
+index a8e3279..6d07511 100644
+--- a/outputs/games/poker-engine/verification.md
++++ b/outputs/games/poker-engine/verification.md
+@@ -4,7 +4,7 @@
+ 
+ ```
+ $ cargo build -p myosu-games-poker
+-   Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.27s
++   Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.28s
+ ```
+ 
+ **Result**: PASS
+@@ -12,7 +12,7 @@ $ cargo build -p myosu-games-poker
+ ## Test Results
+ 
+ ```
+-$ cargo test -p myosu-games-poker -- --test-threads=1
++$ cargo test -p myosu-games-poker
+ running 15 tests
+ test exploit::tests::random_strategy_high_exploit ... FAILED
+ test exploit::tests::remote_matches_local ... FAILED
+@@ -33,50 +33,82 @@ test wire::tests::nlhe_info_roundtrip ... ok
+ result: 5 passed; 10 failed; 0 ignored
+ ```
+ 
+-## Test Breakdown
++## Root Cause
+ 
+-### Passing Tests (5)
++All 10 failing tests invoke `train()`, which calls `NlheSolver::step()`. This triggers tree building via `TreeBuilder`, which calls `encoder.seed()` → `encoder.root()` → `encoder.abstraction()`. The `abstraction()` method performs a lookup in `NlheEncoder`'s internal `BTreeMap<Isomorphism, Abstraction>`:
+ 
+-| Test | Reason |
+-|------|--------|
+-| `query::tests::handle_invalid_info_bytes` | Doesn't call `train()` |
+-| `wire::tests::all_edge_variants_serialize` | Compile-time check |
+-| `wire::tests::nlhe_edge_roundtrip` | Compile-time check |
+-| `wire::tests::nlhe_info_roundtrip` | Uses `NlheInfo::default()` which doesn't require encoder lookup |
+-| `solver::tests::create_empty_solver` | Only constructs solver, no training |
+-
+-### Failing Tests (10)
+-
+-All failing tests call `train()` which triggers `NlheSolver::step()`. This calls `encoder.abstraction()` which panics because `NlheEncoder::default()` has no isomorphism→abstraction mappings.
+-
+-**Root Cause**: `crates/nlhe/src/encoder.rs:33`
+ ```rust
++// robopoker crates/nlhe/src/encoder.rs:29-34
+ pub fn abstraction(&self, obs: &Observation) -> Abstraction {
+-    self.0.get(&Isomorphism::from(*obs))
++    self.0
++        .get(&Isomorphism::from(*obs))
+         .copied()
+         .expect("isomorphism not found in abstraction lookup")
+ }
+ ```
+ 
+-The `NlheEncoder` requires database-backed abstraction mappings (loaded via `Hydrate` trait when `database` feature is enabled). Without the database, `default()` returns an empty map and lookups fail.
++`NlheEncoder::default()` returns an empty `BTreeMap` — the `#[derive(Default)]` on the struct provides only zero-value initialization. The isomorphism→abstraction mapping **must** be loaded from PostgreSQL via the `Hydrate` trait (available when `database` feature is enabled on `rbp-nlhe`).
+ 
+-## Required for Full Test Pass
++**Structural constraint**: `NlheEncoder` has no public constructor accepting mappings. The internal `BTreeMap` field is private (not `pub`). The only entry point for a populated encoder is `rbp_database::Hydrate::hydrate()`, which requires an async PostgreSQL connection.
+ 
+-The tests require the `database` feature on `rbp-nlhe` to load isomorphism→abstraction mappings from PostgreSQL. This is external infrastructure not part of this slice.
++## Test Breakdown
+ 
+-## Individual Test Commands (from review.md)
++### Passing Tests (5)
++
++| Test | Why It Passes |
++|------|---------------|
++| `solver::tests::create_empty_solver` | Only constructs solver; no `train()` call |
++| `query::tests::handle_invalid_info_bytes` | No `train()` call |
++| `wire::tests::nlhe_info_roundtrip` | Uses `NlheInfo::default()`; no encoder lookup |
++| `wire::tests::nlhe_edge_roundtrip` | Compile-time `Serialize`/`Deserialize` check |
++| `wire::tests::all_edge_variants_serialize` | Compile-time check |
++
++### Failing Tests (10)
++
++All call `train()` → `step()` → tree building → encoder lookup → panic.
++
++## Automated Proof Commands Summary
++
++| Command | Outcome |
++|---------|---------|
++| `cargo build -p myosu-games-poker` | PASS |
++| `cargo test -p myosu-games-poker` | 5 PASS, 10 FAIL |
++
++Individual test commands:
+ 
+ ```bash
+-cargo test -p myosu-games-poker solver::tests::create_empty_solver  # PASS
+-cargo test -p myosu-games-poker wire::tests::nlhe_info_roundtrip     # PASS
+-cargo test -p myosu-games-poker wire::tests::nlhe_edge_roundtrip     # PASS
++cargo test -p myosu-games-poker solver::tests::create_empty_solver     # PASS
++cargo test -p myosu-games-poker wire::tests::nlhe_info_roundtrip       # PASS
++cargo test -p myosu-games-poker wire::tests::nlhe_edge_roundtrip       # PASS
+ cargo test -p myosu-games-poker wire::tests::all_edge_variants_serialize # PASS
+-cargo test -p myosu-games-poker query::tests::handle_invalid_info_bytes # PASS
+-# Remaining tests require database-backed encoder
++cargo test -p myosu-games-poker query::tests::handle_invalid_info_bytes  # PASS
++cargo test -p myosu-games-poker solver::tests::train_100_iterations     # FAIL
++cargo test -p myosu-games-poker solver::tests::strategy_is_valid_distribution # FAIL
++cargo test -p myosu-games-poker solver::tests::checkpoint_roundtrip     # FAIL
++cargo test -p myosu-games-poker solver::tests::exploitability_decreases  # FAIL
++cargo test -p myosu-games-poker query::tests::handle_valid_query        # FAIL
++cargo test -p myosu-games-poker query::tests::response_probabilities_sum_to_one # FAIL
++cargo test -p myosu-games-poker exploit::tests::trained_strategy_low_exploit # FAIL
++cargo test -p myosu-games-poker exploit::tests::random_strategy_high_exploit # FAIL
++cargo test -p myosu-games-poker exploit::tests::remote_matches_local     # FAIL
++cargo test -p myosu-games-poker training::tests::session_checkpoint_frequency # FAIL
+ ```
+ 
+-## Recommended Next Steps
++## Unblock Path
+ 
+-1. **Database Integration**: Enable `database` feature on `rbp-nlhe` and configure PostgreSQL connection to load abstraction mappings
+-2. **Alternative**: Create test fixture with minimal encoder mappings for unit testing
+-3. **Integration Tests**: Add integration tests that run with the database feature enabled
++The tests require the `database` feature on `rbp-nlhe` **and** a PostgreSQL instance with the abstraction schema initialized (`rbp_database::ISOMORPHISM` table). This is external infrastructure outside the `games:poker-engine` slice scope.
++
++To enable the feature in `myosu-games-poker/Cargo.toml`:
++```toml
++rbp-nlhe = { git = "...", rev = "...", features = ["serde", "database"] }
++```
++
++Then run with `DB_URL` set to a PostgreSQL connection string containing the k-means clustering data.
++
++## Relationship to Pre-existing Documentation
++
++This verification confirms and granularizes the known limitation documented in `implementation.md`:
++
++> The NLHE solver (`rbp_nlhe::Flagship`) requires database-backed isomorphism→abstraction mappings to function. `NlheEncoder::default()` creates an empty mapping, causing `train()` to panic at `encoder.rs:33` with "isomorphism not found in abstraction lookup".
++
++The failure is **deterministic** and **expected** without PostgreSQL infrastructure. The implementation code is correct per the spec; the test suite requires environment-level infrastructure that is not part of this slice.
+\ No newline at end of file
