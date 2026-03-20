@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/myosu-games",
+    "crates/myosu-games-poker",
     "crates/myosu-tui",
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
     # "crates/myosu-chain",      # Stage 1: Substrate chain fork
