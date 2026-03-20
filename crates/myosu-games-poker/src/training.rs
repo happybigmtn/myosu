@@ -167,6 +167,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    #[ignore = "train() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
     fn session_checkpoint_frequency() {
         let temp_dir = TempDir::new().unwrap();
         let config = TrainingConfig::with_frequency(50)

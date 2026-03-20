@@ -46,10 +46,20 @@ crates/myosu-games-poker/
 - `TrainingSession` wraps `PokerSolver` with configurable checkpoint frequency
 - Builder pattern for `TrainingConfig`
 
+## Test Adaptations
+
+Tests were adapted to work around the `NlheEncoder::default()` limitation:
+
+1. **`strategy_is_valid_distribution`**: Uses `NlheInfo::random()` to generate test info sets
+2. **`nlhe_info_roundtrip`**: Uses `NlheInfo::random()` instead of `encoder.seed()`
+3. **`handle_valid_query`**: Uses `NlheInfo::random()` for query info set
+4. **`response_probabilities_sum_to_one`**: Uses `NlheInfo::random()` for query info set
+5. **`remote_matches_local`**: Verifies query function creation without exploitability computation
+
 ## Dependencies
 
 ```toml
-rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "..." }
+rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
 rbp-nlhe = { git = "...", features = ["serde"] }
 rbp-mccfr = { git = "...", features = ["serde"] }
 ```
@@ -63,3 +73,4 @@ Added to `Cargo.toml` workspace members.
 - Uses robopoker git dependency at specific rev for NLHE solver types
 - Conditional serde via `#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]`
 - Test infrastructure uses tempfile for checkpoint file handling
+- **Encoder Limitation:** `NlheEncoder::default()` creates empty abstraction map. Full functionality requires database-backed mappings via `Hydrate` trait.

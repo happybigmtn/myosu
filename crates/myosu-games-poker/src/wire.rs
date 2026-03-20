@@ -40,15 +40,15 @@ impl WireSerializable for NlheEdge {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rbp_core::Arbitrary;
     use rbp_gameplay::Edge;
-    use rbp_mccfr::{CfrGame, Encoder};
+    use rbp_mccfr::CfrGame;
     use rbp_nlhe::NlheGame;
 
     #[test]
     fn nlhe_info_roundtrip() {
-        let encoder = rbp_nlhe::NlheEncoder::default();
-        let root = NlheGame::root();
-        let info = encoder.seed(&root);
+        // Use random info set to avoid encoder.seed() which requires database-backed mappings
+        let info = rbp_nlhe::NlheInfo::random();
 
         let bytes = info.to_bytes();
         let recovered = <rbp_nlhe::NlheInfo as WireSerializable>::from_bytes(&bytes).unwrap();
