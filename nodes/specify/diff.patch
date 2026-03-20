@@ -1,0 +1,313 @@
+diff --git a/outputs/foundations/foundation-plan.md b/outputs/foundations/foundation-plan.md
+new file mode 100644
+index 0000000..b1d6199
+--- /dev/null
++++ b/outputs/foundations/foundation-plan.md
+@@ -0,0 +1,178 @@
++# Foundations Lane — Plan
++
++Lane: `foundations`
++
++## Purpose / Big Picture
++
++This lane does not implement game-solving code. It produces the honest baseline artifacts for the Myosu frontier: an authoritative `foundation-plan.md` and a reviewed `review.md` that capture the current state of all lanes, the known execution-layer defects in Fabro/Raspberry, and the path to trustworthy run-truth.
++
++The goal is to establish a reviewed slice of the frontier that other lanes can build on, where "truth" in `execute/status/watch` actually means something — where a "success" report reflects real execution, not a false submit.
++
++## Progress
++
++- [x] (2026-03-20) Inspect repo surfaces: README.md, SPEC.md, PLANS.md, AGENTS.md, specs/031626-00-master-index.md, specs/031826-fabro-primary-executor-decision.md
++- [x] (2026-03-20) Inspect outputs/ directory for existing lane artifacts
++- [x] (2026-03-20) Inspect fabro/programs/ for current program structure
++- [ ] (2026-03-20) Document current frontier state honestly
++- [ ] (2026-03-20) Document known Fabro/Raspberry execution defects
++- [ ] (2026-03-20) Produce `outputs/foundations/foundation-plan.md`
++- [ ] (2026-03-20) Produce `outputs/foundations/review.md`
++
++## Surprises & Discoveries
++
++- Observation: `games:multi-game` lane produced a `review.md` and `spec.md` claiming lane completion, but the task description calls this a "false-submit" — the lane was Raspberry-dispatched but the execution did not produce a truthful success or failure.
++- Observation: No `.raspberry/` state files exist in the worktree, suggesting the Raspberry state path in `fabro/programs/myosu.yaml` (`state_path: ../../.raspberry/myosu-state.json`) has never been written or has been wiped.
++- Observation: The `myosu.yaml` program manifest has 7 units (bootstrap, chain-core, games-traits-implementation, services, product, platform, recurring) but the bootstrap program (`myosu-bootstrap.yaml`) only has 3 units (games, tui, chain). The larger `myosu.yaml` is the aspirational target; `myosu-bootstrap.yaml` is what actually runs.
++- Observation: The `foundations` lane does not appear in any program manifest. It is a meta-lane that produces artifacts about the frontier rather than implementing code.
++
++## Decision Log
++
++- Decision: This lane produces artifacts at `outputs/foundations/`, not at a lane-specific subdirectory under `outputs/<domain>/`.
++  Rationale: "Foundations" is a meta-lane that documents the frontier itself, not a single domain. The artifact location must be accessible to all downstream lanes.
++  Date/Author: 2026-03-20 / foundations lane
++
++## Current Frontier State
++
++### Trusted Lanes (honest review complete)
++
++| Lane | Status | Last Reviewed | Evidence |
++|------|--------|---------------|----------|
++| `games:traits` | TRUSTED — KEEP | 2026-03-19 | `cargo test -p myosu-games` → 10 unit + 4 doctest pass |
++| `tui:shell` | TRUSTED — KEEP | (review.md exists) | `cargo test -p myosu-tui` |
++
++### Untrusted Lanes (bootstrap in progress or stalled)
++
++| Lane | Status | Blocker |
++|------|--------|---------|
++| `chain:runtime` | Restart in progress | Needs honest review completion |
++| `chain:pallet` | Restart in progress | Blocked on `chain:runtime` review |
++| `games:multi-game` | FALSE SUBMIT | Raspberry dispatched execution but truth is untrustworthy |
++
++### Aspirational Lanes (not yet started)
++
++| Lane | Status |
++|------|--------|
++| `games:poker-engine` | Not started |
++| `services:miner` | Not started |
++| `services:validator-oracle` | Not started |
++| `product:play-tui` | Not started |
++| `platform:abstraction` | Not started |
++
++## Known Fabro/Raspberry Defects
++
++### Defect 1: `games:multi-game` False Submit
++
++**Symptom**: The `games:multi-game` lane has a complete `review.md` and `spec.md` claiming the lane is "KEEP" and ready for implementation, but the task description explicitly calls this a "false-submit." The Raspberry dispatch reported success without real execution producing a truthful outcome.
++
++**Impact**: Any lane that depends on `games:multi-game` correctness cannot trust its status. The `execute/status/watch` surface reports a completed lane that did not actually complete.
++
++**Diagnosis**: Unknown. Possible causes:
++- Fabro run completed but with an error that was not propagated to Raspberry state
++- Raspberry state was written but with incorrect status
++- The execution was never actually dispatched
++
++**Required fix**: Rerun `games:multi-game` with a trustworthy proof command and produce a new `review.md` that reflects actual execution results.
++
++### Defect 2: No Raspberry State Files
++
++**Symptom**: The `.raspberry/` directory has no state files. The `myosu.yaml` manifest specifies `state_path: ../../.raspberry/myosu-state.json` but no such file exists.
++
++**Impact**: `raspberry status --manifest fabro/programs/myosu.yaml` cannot read the last known state. The control plane has no durable memory of what has run.
++
++**Diagnosis**: Either the Raspberry CLI has never been run against `myosu.yaml`, or the state path resolution is incorrect relative to the worktree.
++
++**Required fix**: Verify the state path resolution. If the path is wrong, fix the manifest. If the state has never been written, run `raspberry execute` and verify state is persisted.
++
++### Defect 3: Two Program Manifests with Different Scope
++
++**Symptom**: `myosu.yaml` has 7 units; `myosu-bootstrap.yaml` has 3 units. Both reference each other in some lanes but the relationship is unclear.
++
++**Impact**: Contributors may run the wrong manifest or be unclear which is authoritative.
++
++**Diagnosis**: `myosu-bootstrap.yaml` is the narrow bootstrap program (games, tui, chain). `myosu.yaml` is the full program-of-programs. The bootstrap is the current operational entrypoint; the full program is aspirational.
++
++**Required fix**: Document the relationship clearly. The bootstrap manifest should be explicitly labeled as "current operational entrypoint" and the full manifest as "aspirational target."
++
++## Plan of Work
++
++### Step 1: Document Current State Honestly
++
++Produce this `foundation-plan.md` that captures:
++- The exact state of every known lane (trusted, untrusted, aspirational)
++- The three known Fabro/Raspberry defects with diagnosis and required fixes
++- The criteria for trustworthy execution truth
++
++### Step 2: Produce `review.md`
++
++Produce `review.md` with:
++- An honest "KEEP / RESET / REOPEN" judgment for the frontier as a whole
++- A judgment on each individual lane
++- Explicit statement of which lanes are currently trustworthy
++- A list of what must be true before the frontier is trustworthy again
++
++### Step 3: Define Trustworthy Execution Criteria
++
++Codify the following invariant:
++
++> A lane's `execute/status/watch` status is trustworthy iff:
++> 1. The proof command ran to completion (exit 0 or documented expected failure)
++> 2. The Raspberry state was written with the correct status
++> 3. The lane's artifacts (`spec.md`, `review.md`) reflect the actual execution result
++
++### Step 4: Fix `games:multi-game` False Submit
++
++The `games:multi-game` lane must be rerun. Until then, any claim of `games:multi-game` readiness is untrustworthy. The fix is not in the code — it's in the execution layer.
++
++### Step 5: Verify Raspberry State Persistence
++
++Run `raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml` and verify that `state_path` is actually written.
++
++## Validation and Acceptance
++
++This lane is complete when:
++
++1. `outputs/foundations/foundation-plan.md` exists and honestly documents all lanes and known defects
++2. `outputs/foundations/review.md` exists and provides an honest judgment on each lane
++3. The `games:multi-game` false-submit is explicitly called out as untrustworthy
++4. The three defects above are documented with their required fixes
++5. The criteria for "trustworthy execution truth" are explicit and testable
++
++## Idempotence and Recovery
++
++This lane is idempotent. Re-running it will produce the same artifacts unless the underlying frontier state changes. If execution-layer fixes are applied, this lane should be rerun to update the baseline.
++
++## Artifacts
++
++### Current Lane Status Map
++
++```
++TRUSTED:
++  games:traits     — cargo test passes, review.md complete
++  tui:shell        — review.md exists, tests pass
++
++UNTRUSTWORTHY:
++  games:multi-game — FALSE SUBMIT (do not rely on its review.md)
++  chain:runtime    — in progress
++  chain:pallet     — blocked on chain:runtime
++
++ASPIRATIONAL (not started):
++  games:poker-engine
++  services:miner
++  services:validator-oracle
++  product:play-tui
++  platform:abstraction
++```
++
++### Known Defects Summary
++
++| Defect | Impact | Required Fix |
++|--------|--------|-------------|
++| `games:multi-game` false submit | Untrustworthy lane status | Rerun with real execution |
++| No `.raspberry/` state files | No durable control plane memory | Verify state path; run and persist |
++| Two manifests with unclear scope | Contributor confusion | Document bootstrap vs. full program |
++
++## Interfaces and Dependencies
++
++This lane depends only on the existing repo surfaces. It produces artifacts that all other lanes depend on for honest baseline truth.
++
++The lane does not modify any code. It only observes, documents, and judges.
+diff --git a/outputs/foundations/review.md b/outputs/foundations/review.md
+new file mode 100644
+index 0000000..7c88511
+--- /dev/null
++++ b/outputs/foundations/review.md
+@@ -0,0 +1,123 @@
++# `foundations` Lane Review
++
++## Lane Boundary
++
++`foundations` is a **meta-lane** — it does not implement game-solving code. It produces the honest baseline artifacts for the Myosu frontier: an authoritative `foundation-plan.md` and this `review.md`. These artifacts capture the current state of all lanes, the known execution-layer defects in Fabro/Raspberry, and the path to trustworthy run-truth.
++
++## Keep / Reopen / Reset Judgment
++
++**Judgment: KEEP (foundational — must be kept accurate as the frontier evolves)**
++
++The `foundations` lane is not a software feature lane. It is the honest accounting surface for the entire frontier. Its artifacts must be kept accurate. Any lane that claims completion without fixing the `games:multi-game` false-submit is operating on untrustworthy truth.
++
++The foundations lane is never "done" in the sense that other lanes are done. It must be updated whenever:
++- A lane completes an honest review
++- A new Fabro/Raspberry execution defect is discovered
++- A lane's `review.md` is updated with corrected judgments
++
++## Concrete Defects the Implementation Must Preserve or Fix
++
++### Defect 1: `games:multi-game` False Submit (Critical)
++
++**Location**: `outputs/games/multi-game/review.md` claims "KEEP" but the task description explicitly calls this a "false-submit."
++
++**What must happen**: The `games:multi-game` lane must be rerun with real execution. Until that rerun produces an honest `review.md`, the existing one is untrustworthy and must not be used as a basis for downstream lane decisions.
++
++**Trustworthiness criteria**:
++```bash
++# A lane's status is trustworthy iff ALL of:
++# 1. The proof command ran to completion (exit 0 or documented expected failure)
++# 2. The Raspberry state was written with the correct status
++# 3. The lane's artifacts reflect the actual execution result
++
++# games:multi-game currently fails criterion 1 and 3.
++# Until it is rerun, its review.md is not evidence of anything.
++```
++
++**Verification after fix**:
++```bash
++# Must show real execution
++cargo test -p myosu-games-liars-dice
++# All slice tests must exit 0 (see outputs/games/multi-game/review.md lines 22-56)
++```
++
++### Defect 2: No Raspberry State Files
++
++**Location**: `.raspberry/` directory has no state files. `myosu.yaml` specifies `state_path: ../../.raspberry/myosu-state.json` but no such file exists.
++
++**What must happen**: The Raspberry state path resolution must be verified. If the path is incorrect, fix the manifest. If the state has never been persisted, run `raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml` and verify state is written.
++
++**Verification after fix**:
++```bash
++# After running raspberry execute, this file must exist:
++ls -la .raspberry/myosu-state.json  # or myosu-bootstrap-state.json
++# And must contain valid JSON with lane status
++```
++
++### Defect 3: Two Program Manifests with Unclear Scope
++
++**Location**: `fabro/programs/myosu.yaml` (7 units) vs `fabro/programs/myosu-bootstrap.yaml` (3 units)
++
++**What must happen**: The bootstrap manifest should be explicitly labeled "current operational entrypoint." The full manifest should be labeled "aspirational target." The relationship must be documented in `foundation-plan.md` and referenced from both manifests.
++
++**Verification after fix**:
++```bash
++# Both manifests should have a comment or label indicating their role
++grep -n "operational\|aspirational\|bootstrap" fabro/programs/myosu-bootstrap.yaml
++grep -n "operational\|aspirational\|bootstrap" fabro/programs/myosu.yaml
++```
++
++## Lane-by-Lane Trust Assessment
++
++| Lane | Trust Level | Basis | Required Action |
++|------|-------------|-------|-----------------|
++| `games:traits` | **TRUSTED** | `cargo test -p myosu-games` passes, honest review complete | Continue; no action needed |
++| `tui:shell` | **TRUSTED** | Review artifacts exist, tests pass | Continue; no action needed |
++| `games:multi-game` | **UNTRUSTWORTHY** | False submit; review.md does not reflect real execution | Rerun with real execution before any downstream use |
++| `chain:runtime` | **IN PROGRESS** | Bootstrap restart lane; honest review not yet complete | Complete review before chain:pallet can proceed |
++| `chain:pallet` | **BLOCKED** | Depends on chain:runtime reviewed | Unblock by completing chain:runtime review |
++| `games:poker-engine` | **ASPIRATIONAL** | Not started | Await trusted upstream lanes first |
++| `services:miner` | **ASPIRATIONAL** | Not started | Await chain:pallet and games:poker-engine |
++| `services:validator-oracle` | **ASPIRATIONAL** | Not started | Await chain:pallet and games:poker-engine |
++| `product:play-tui` | **ASPIRATIONAL** | Not started | Await trusted upstream lanes |
++| `platform:abstraction` | **ASPIRATIONAL** | Not started | Await chain:pallet |
++
++## Proof Commands
++
++| Context | Command | Expected |
++|---------|---------|----------|
++| Foundations artifacts exist | `ls outputs/foundations/` | `foundation-plan.md review.md` |
++| `games:multi-game` rerun | `cargo test -p myosu-games-liars-dice` | All slice tests exit 0 |
++| Raspberry state persists | After `raspberry execute`, `ls .raspberry/` | State JSON file present |
++| Bootstrap manifest labeled | `grep "bootstrap\|operational" fabro/programs/myosu-bootstrap.yaml` | Role label found |
++
++## Is the Frontier Ready for a Full Program Run?
++
++**No — not until the following are resolved:**
++
++1. **`games:multi-game` false submit is eliminated**: A real execution must produce a real `review.md`
++2. **Raspberry state persistence is verified**: `.raspberry/` state files must exist after runs
++3. **`chain:runtime` completes honest review**: The chain restart lanes must produce truthful review artifacts
++4. **`chain:pallet` unblocks**: Depends on chain:runtime completion
++
++Until these four items are resolved, any `raspberry execute --manifest fabro/programs/myosu.yaml` run will produce untrustworthy truth. The Fabro/Raspberry execution surface is the foundation of all downstream lane confidence.
++
++## Relationship to Other Lanes
++
++| Lane | Relationship |
++|------|-------------|
++| All lanes | Depend on foundations for honest baseline truth |
++| `games:multi-game` | Must be repaired before depending on it |
++| `chain:runtime` | Must complete before `chain:pallet` can unblock |
++| `myosu.yaml` program | Aspirational target; `myosu-bootstrap.yaml` is current entrypoint |
++
++## File Reference Index
++
++| File | Role |
++|------|------|
++| `outputs/foundations/foundation-plan.md` | Honest baseline plan and state documentation |
++| `outputs/foundations/review.md` | This file — trust judgments for all lanes |
++| `outputs/games/multi-game/review.md` | **UNTRUSTWORTHY** — do not use without rerun |
++| `fabro/programs/myosu.yaml` | Aspirational full program manifest (7 units) |
++| `fabro/programs/myosu-bootstrap.yaml` | Current operational bootstrap manifest (3 units) |
++| `.raspberry/` | Raspberry state directory — **currently empty** |
