@@ -1,0 +1,559 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 7e077fc..0c6922f 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -65,6 +65,56 @@ version = "0.2.21"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
+ 
++[[package]]
++name = "anstream"
++version = "1.0.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d"
++dependencies = [
++ "anstyle",
++ "anstyle-parse",
++ "anstyle-query",
++ "anstyle-wincon",
++ "colorchoice",
++ "is_terminal_polyfill",
++ "utf8parse",
++]
++
++[[package]]
++name = "anstyle"
++version = "1.0.14"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
++
++[[package]]
++name = "anstyle-parse"
++version = "1.0.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e"
++dependencies = [
++ "utf8parse",
++]
++
++[[package]]
++name = "anstyle-query"
++version = "1.1.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
++dependencies = [
++ "windows-sys 0.61.2",
++]
++
++[[package]]
++name = "anstyle-wincon"
++version = "3.0.11"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
++dependencies = [
++ "anstyle",
++ "once_cell_polyfill",
++ "windows-sys 0.61.2",
++]
++
+ [[package]]
+ name = "anyhow"
+ version = "1.0.102"
+@@ -445,6 +495,52 @@ version = "1.0.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+ 
++[[package]]
++name = "clap"
++version = "4.6.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b193af5b67834b676abd72466a96c1024e6a6ad978a1f484bd90b85c94041351"
++dependencies = [
++ "clap_builder",
++ "clap_derive",
++]
++
++[[package]]
++name = "clap_builder"
++version = "4.6.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "714a53001bf66416adb0e2ef5ac857140e7dc3a0c48fb28b2f10762fc4b5069f"
++dependencies = [
++ "anstream",
++ "anstyle",
++ "clap_lex",
++ "strsim",
++]
++
++[[package]]
++name = "clap_derive"
++version = "4.6.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1110bd8a634a1ab8cb04345d8d878267d57c3cf1b38d91b71af6686408bbca6a"
++dependencies = [
++ "heck",
++ "proc-macro2",
++ "quote",
++ "syn 2.0.117",
++]
++
++[[package]]
++name = "clap_lex"
++version = "1.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
++
++[[package]]
++name = "colorchoice"
++version = "1.0.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
++
+ [[package]]
+ name = "common-path"
+ version = "1.0.0"
+@@ -1437,6 +1533,12 @@ dependencies = [
+  "num-traits",
+ ]
+ 
++[[package]]
++name = "is_terminal_polyfill"
++version = "1.70.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
++
+ [[package]]
+ name = "itertools"
+ version = "0.10.5"
+@@ -1717,6 +1819,21 @@ dependencies = [
+  "tokio-test",
+ ]
+ 
++[[package]]
++name = "myosu-play"
++version = "0.1.0"
++dependencies = [
++ "anyhow",
++ "clap",
++ "crossterm",
++ "myosu-tui",
++ "ratatui",
++ "tokio",
++ "tokio-test",
++ "tracing",
++ "tracing-subscriber",
++]
++
+ [[package]]
+ name = "myosu-tui"
+ version = "0.1.0"
+@@ -1799,6 +1916,12 @@ version = "1.21.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+ 
++[[package]]
++name = "once_cell_polyfill"
++version = "1.70.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
++
+ [[package]]
+ name = "opaque-debug"
+ version = "0.3.1"
+@@ -3537,6 +3660,12 @@ version = "0.2.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
+ 
++[[package]]
++name = "utf8parse"
++version = "0.2.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
++
+ [[package]]
+ name = "uuid"
+ version = "1.22.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index e532e62..08c3a6f 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -3,11 +3,11 @@ resolver = "2"
+ members = [
+     "crates/myosu-games",
+     "crates/myosu-tui",
++    "crates/myosu-play",
+     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
+     # "crates/myosu-chain",      # Stage 1: Substrate chain fork
+     # "crates/myosu-miner",      # Stage 4: Miner binary
+     # "crates/myosu-validator",   # Stage 4: Validator binary
+-    # "crates/myosu-play",       # Stage 5: Gameplay CLI
+ ]
+ 
+ [workspace.package]
+diff --git a/crates/myosu-play/Cargo.toml b/crates/myosu-play/Cargo.toml
+new file mode 100644
+index 0000000..a58eace
+--- /dev/null
++++ b/crates/myosu-play/Cargo.toml
+@@ -0,0 +1,23 @@
++[package]
++name = "myosu-play"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++description = "Myosu gameplay TUI — interactive NLHE poker training"
++
++[[bin]]
++name = "myosu-play"
++path = "src/main.rs"
++
++[dependencies]
++myosu-tui = { path = "../myosu-tui" }
++clap = { workspace = true }
++tokio = { workspace = true }
++ratatui = { workspace = true }
++crossterm = { workspace = true }
++anyhow = { workspace = true }
++tracing = { workspace = true }
++tracing-subscriber = { workspace = true }
++
++[dev-dependencies]
++tokio-test = { workspace = true }
+diff --git a/crates/myosu-play/src/main.rs b/crates/myosu-play/src/main.rs
+new file mode 100644
+index 0000000..9214288
+--- /dev/null
++++ b/crates/myosu-play/src/main.rs
+@@ -0,0 +1,175 @@
++//! `myosu-play` — Myosu gameplay TUI binary.
++//!
++//! Interactive NLHE poker training with blueprint and heuristic bots.
++//! Run with `--train` for local training mode.
++
++use anyhow::Context;
++use clap::Parser;
++use myosu_tui::shell::Shell;
++use myosu_tui::{renderer::GameRenderer, screens::Screen};
++use ratatui::backend::CrosstermBackend;
++use ratatui::Terminal;
++use std::io;
++use tracing_subscriber::EnvFilter;
++
++/// Command-line arguments for myosu-play.
++#[derive(Parser, Debug)]
++#[command(name = "myosu-play")]
++#[command(about = "Myosu NLHE poker training TUI", long_about = None)]
++struct Args {
++    /// Local training mode (no chain required).
++    #[arg(long)]
++    train: bool,
++
++    /// Chain websocket URL for miner-connected play.
++    #[arg(long)]
++    chain: Option<String>,
++
++    /// Pipe mode for agent protocol (non-interactive).
++    #[arg(long)]
++    pipe: bool,
++}
++
++/// Stub NLHE renderer for Slice 1 — hardcoded state, proves the render loop.
++///
++/// Full NLHE rendering with real game states comes in Slice 2.
++struct NlheRenderer {
++    hand_active: bool,
++}
++
++impl NlheRenderer {
++    fn new() -> Self {
++        Self { hand_active: true }
++    }
++}
++
++impl GameRenderer for NlheRenderer {
++    fn render_state(&self, area: ratatui::layout::Rect, buf: &mut ratatui::buffer::Buffer) {
++        if !self.hand_active || area.width < 2 || area.height < 1 {
++            return;
++        }
++
++        let line = "pot: 12bb  hero: A♠ K♥  board: T♠ 7♥ 2♣";
++        let x = area.x;
++        let y = area.y;
++
++        for (i, ch) in line.chars().enumerate() {
++            if x + i as u16 >= area.right() {
++                break;
++            }
++            buf[(x + i as u16, y)].set_char(ch);
++        }
++
++        let line2 = "bot: 47bb  action: hero's turn";
++        for (i, ch) in line2.chars().enumerate() {
++            if x + i as u16 >= area.right() {
++                break;
++            }
++            if y + 1 < area.bottom() {
++                buf[(x + i as u16, y + 1)].set_char(ch);
++            }
++        }
++    }
++
++    fn desired_height(&self, _width: u16) -> u16 {
++        if self.hand_active { 4 } else { 0 }
++    }
++
++    fn declaration(&self) -> &str {
++        if self.hand_active {
++            "THE SYSTEM AWAITS YOUR DECISION"
++        } else {
++            "NO ACTIVE HAND"
++        }
++    }
++
++    fn completions(&self) -> Vec<String> {
++        if self.hand_active {
++            vec!["fold".into(), "call".into(), "raise".into(), "check".into()]
++        } else {
++            vec!["deal".into(), "quit".into()]
++        }
++    }
++
++    fn parse_input(&self, input: &str) -> Option<String> {
++        match input.trim().to_lowercase().as_str() {
++            "f" | "fold" => Some("fold".into()),
++            "c" | "call" => Some("call".into()),
++            "r" | "raise" => Some("raise".into()),
++            "k" | "check" => Some("check".into()),
++            _ => None,
++        }
++    }
++
++    fn clarify(&self, input: &str) -> Option<String> {
++        if input.starts_with('r') && input != "raise" {
++            Some("raise to how much? (e.g., raise 15)".into())
++        } else {
++            None
++        }
++    }
++
++    fn pipe_output(&self) -> String {
++        if self.hand_active {
++            "STATE hand=1 pot=12 hero=AK board=T72".into()
++        } else {
++            "STATE idle".into()
++        }
++    }
++
++    fn game_label(&self) -> &str {
++        "NLHE-HU"
++    }
++
++    fn context_label(&self) -> &str {
++        "HAND 1"
++    }
++}
++
++fn run_train_mode() -> anyhow::Result<()> {
++    let renderer = NlheRenderer::new();
++    let shell = Shell::with_screen(Screen::Game);
++
++    let backend = CrosstermBackend::new(io::stderr());
++    let mut terminal = Terminal::new(backend).context("failed to create terminal")?;
++
++    // Initial render to prove the render loop works
++    terminal
++        .draw(|f| {
++            let area = f.area();
++            let mut buf = ratatui::buffer::Buffer::empty(area);
++            shell.draw(area, &mut buf, &renderer);
++            f.buffer_mut().clone_from(&buf);
++        })
++        .context("render")?;
++
++    // For Slice 1, we prove the render loop works.
++    // Full async event loop integration comes in later slices.
++    eprintln!("[Slice 1] Render loop proven. Shell draws 5-panel layout without panic.");
++
++    Ok(())
++}
++
++fn main() -> anyhow::Result<()> {
++    tracing_subscriber::fmt()
++        .with_env_filter(EnvFilter::from_default_env())
++        .init();
++
++    let args = Args::parse();
++
++    if args.train {
++        run_train_mode()?;
++    } else if args.pipe {
++        anyhow::bail!("--pipe mode not yet implemented");
++    } else if args.chain.is_some() {
++        anyhow::bail!("--chain mode not yet implemented (depends on chain:runtime lane)");
++    } else {
++        eprintln!("myosu-play 0.1.0");
++        eprintln!("Usage: myosu-play --train    Local training mode");
++        eprintln!("       myosu-play --chain WS  Miner-connected play");
++        eprintln!("       myosu-play --pipe      Agent protocol mode");
++        std::process::exit(1);
++    }
++
++    Ok(())
++}
+diff --git a/outputs/play/tui/implementation.md b/outputs/play/tui/implementation.md
+new file mode 100644
+index 0000000..490adb0
+--- /dev/null
++++ b/outputs/play/tui/implementation.md
+@@ -0,0 +1,91 @@
++# `play:tui` Lane — Slice 1 Implementation
++
++## Slice: `tui-implement/slice-1-binary-skeleton`
++
++**Date**: 2026-03-20
++**Status**: Complete
++
++---
++
++## What Was Implemented
++
++### 1. `crates/myosu-play/` Crate Scaffold
++
++Created the `myosu-play` binary crate with:
++- `Cargo.toml` — workspace member, depends on `myosu-tui`, `ratatui`, `crossterm`, `tokio`, `clap`
++- `src/main.rs` — CLI entry point with `--train` / `--chain` / `--pipe` mode dispatch
++
++### 2. Stub `NlheRenderer` Implementing `GameRenderer` Trait
++
++A minimal `GameRenderer` implementation with hardcoded NLHE state that proves the render loop works:
++- `render_state()` — renders 2 lines of poker state (pot, hero cards, board, bot info)
++- `desired_height()` — returns 4 when hand active, 0 otherwise
++- `declaration()` — returns `THE SYSTEM AWAITS YOUR DECISION` or `NO ACTIVE HAND`
++- `completions()` — provides tab-completion for `fold`, `call`, `raise`, `check`
++- `parse_input()` — parses shorthand input (`f`, `c`, `r`, `k`) to full actions
++- `clarify()` — prompts for raise amount when input is ambiguous
++- `pipe_output()` — returns plain-text state for `--pipe` mode
++- `game_label()` — returns `"NLHE-HU"`
++- `context_label()` — returns `"HAND 1"`
++
++### 3. Shell Wiring
++
++- `Shell::with_screen(Screen::Game)` creates shell in game mode
++- `terminal.draw()` renders via `shell.draw()` into ratatui buffer
++- Successfully proves the 5-panel layout renders without panic
++
++### 4. Workspace Integration
++
++- Added `crates/myosu-play` to workspace `members` in root `Cargo.toml`
++
++---
++
++## Files Created/Modified
++
++| File | Change |
++|------|--------|
++| `crates/myosu-play/Cargo.toml` | Created — new binary crate |
++| `crates/myosu-play/src/main.rs` | Created — CLI + stub renderer |
++| `Cargo.toml` (workspace) | Modified — added `crates/myosu-play` to members |
++
++---
++
++## Architecture Notes
++
++### Why `GameRenderer` trait is object-safe
++
++The `GameRenderer` trait in `myosu-tui` requires no `Sized` bounds and has only object-safe methods (`&self`). This allows `Box<dyn GameRenderer>` to be created and passed to `Shell::draw()`.
++
++### Slice 1 limitation: no event loop
++
++The full async event loop integration is deferred to later slices. Slice 1 proves:
++1. The binary builds
++2. The render loop executes without panic
++3. The `Shell` + `GameRenderer` integration compiles
++
++### `myosu-games-poker` crate (Slice 2)
++
++The `NlheRenderer` in Slice 1 is a stub. The real NLHE renderer with proper card/suit rendering and game-state logic will live in `crates/myosu-games-poker/` (Slice 2).
++
++---
++
++## Deps Graph
++
++```
++myosu-play (binary)
++├── myosu-tui (shell, GameRenderer trait)
++│   ├── ratatui
++│   ├── crossterm
++│   └── tokio
++├── clap (CLI)
++└── tracing-subscriber (logging)
++```
++
++---
++
++## Next Slice
++
++**Slice 2**: `NlheRenderer` with hardcoded states in `crates/myosu-games-poker/`
++- Move the stub `NlheRenderer` to a dedicated `myosu-games-poker` crate
++- Add hardcoded preflop/-flop/turn/river/showdown states
++- Prove `cargo test -p myosu-games-poker` passes
+diff --git a/outputs/play/tui/verification.md b/outputs/play/tui/verification.md
+new file mode 100644
+index 0000000..007e434
+--- /dev/null
++++ b/outputs/play/tui/verification.md
+@@ -0,0 +1,54 @@
++# `play:tui` Lane — Slice 1 Verification
++
++## Slice: `tui-implement/slice-1-binary-skeleton`
++
++**Date**: 2026-03-20
++
++---
++
++## Automated Proof Commands
++
++### Proof 1: Binary skeleton builds ✅
++
++```bash
++$ cargo build -p myosu-play
++   Compiling myosu-play v0.1.0
++    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.49s
++```
++
++**Exit code**: 0
++**Result**: PASS
++
++### Proof: Upstream still works (regression check)
++
++```bash
++$ cargo test -p myosu-tui
++test result: ok. 82 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out
++
++$ cargo test -p myosu-games
++test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
++```
++
++**Result**: PASS — no regression in trusted upstream crates
++
++---
++
++## Proof Expectations for Later Slices
++
++These proofs are not yet applicable (Slice 1 scope):
++
++| Proof | Command | Slice |
++|-------|---------|-------|
++| NLHE renderer | `cargo test -p myosu-games-poker` | Slice 2 |
++| Training fold | `cargo test -p myosu-play training::tests::hand_completes_fold` | Slice 3 |
++| Training showdown | `cargo test -p myosu-play training::tests::hand_completes_showdown` | Slice 3 |
++| Blueprint load | `cargo test -p myosu-play blueprint::tests::load_valid_artifact` | Slice 4 |
++| Advisor format | `cargo test -p myosu-play advisor::tests::format_distribution_text` | Slice 5 |
++
++---
++
++## Notes
++
++- **Slice 1 proof gate satisfied**: `cargo build -p myosu-play` exits 0
++- **Trusted upstream preserved**: `myosu-tui` (82 tests) and `myosu-games` (10 tests) all pass
++- **No breaking changes**: workspace `Cargo.toml` only added a new member
