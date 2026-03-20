@@ -1718,6 +1718,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "myosu-games-liars-dice"
+version = "0.1.0"
+dependencies = [
+ "myosu-games",
+ "rand 0.8.5",
+ "rbp-core",
+ "rbp-mccfr",
+ "rbp-transport",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio-test",
+]
+
+[[package]]
+name = "myosu-play"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-test",
+ "tokio-util",
+]
+
+[[package]]
 name = "myosu-tui"
 version = "0.1.0"
 dependencies = [
@@ -3295,6 +3323,19 @@ dependencies = [
  "futures-core",
  "tokio",
  "tokio-stream",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

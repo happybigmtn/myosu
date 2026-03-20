@@ -1,0 +1,19 @@
+[package]
+name = "myosu-play"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+anyhow.workspace = true
+futures.workspace = true
+
+# Local Unix socket support
+tokio-util = { version = "0.7", features = ["codec"] }
+
+# Testing
+tokio-test.workspace = true

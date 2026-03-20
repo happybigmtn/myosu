@@ -19,5 +19,7 @@ pub mod screens;
 pub mod shell;
 pub mod theme;
 
+pub use screens::spectate;
+
 pub use renderer::{GameRenderer, Renderable};
 pub use theme::Theme;

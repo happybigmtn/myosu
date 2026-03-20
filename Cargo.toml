@@ -2,12 +2,13 @@
 resolver = "2"
 members = [
     "crates/myosu-games",
+    "crates/myosu-games-liars-dice",
     "crates/myosu-tui",
+    "crates/myosu-play",
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
     # "crates/myosu-chain",      # Stage 1: Substrate chain fork
     # "crates/myosu-miner",      # Stage 4: Miner binary
     # "crates/myosu-validator",   # Stage 4: Validator binary
-    # "crates/myosu-play",       # Stage 5: Gameplay CLI
 ]
 
 [workspace.package]

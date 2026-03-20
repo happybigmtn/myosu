@@ -12,6 +12,8 @@
 
 use std::path::Path;
 
+pub mod spectate;
+
 /// Application screens.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
