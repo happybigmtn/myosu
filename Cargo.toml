@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/myosu-sdk",
     "crates/myosu-games",
     "crates/myosu-tui",
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
