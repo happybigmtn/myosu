@@ -1,13 +1,15 @@
 {
-  "timestamp": "2026-03-20T21:39:14.848729830Z",
-  "current_node": "specify",
+  "timestamp": "2026-03-20T21:39:28.238020279Z",
+  "current_node": "review",
   "completed_nodes": [
     "start",
-    "specify"
+    "specify",
+    "review"
   ],
   "node_retries": {
     "start": 1,
-    "specify": 1
+    "specify": 1,
+    "review": 1
   },
   "context_values": {
     "internal.retry_count.start": 1,
@@ -16,19 +18,21 @@
     "graph.rankdir": "LR",
     "response.specify": "Both required artifacts are in place. Here is the summary:\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**What this lane bootstrap actually produces** is not a spec or a review of the lane itself (those exist at `outputs/agent/experience/`), but an **honest integration adapter** that maps the `agent:experience` specification to concrete code surfaces. The key insight is that the `agent:experience` lane is *specification-ready* but *implementation-blocked* on two external dependencies — the `robopoker` git migration and the `play:tui` binary skeleton — which is why the adapter correctly gates Slices 1–2 (immediately ready) from Slices 3–9 (blocked).\n\nThe slice dependency chain has a subtle property: `narration.rs` (Slice 5) depends on *both* `agent_context.rs` (Slice 1) and `journal.rs` (Slice 2), but Slices 1 and 2 are independent of each other. This means they can run in parallel, but Slice 5 genuinely cannot begin until both are done.\n\nThe fog-of-war enforcement point (relay, not renderer) is an important architectural decision that the integration adapter preserves — it means `SpectatorRelay` must actively strip hole cards rather than trusting the upstream renderer to do it, which shifts the security invariant to the integration boundary rather than keeping it inside a single module.\n`─────────────────────────────────────────────────`\n\n---\n\n**Artifacts produced:**\n\n| File | Size |\n|------|------|\n| `outputs/agent-integration/agent-adapter.md` | 11.3 KB |\n| `outputs/agent-integration/review.md` | 10.5 KB |\n\n**Lane judgment: KEEP** — Slices 1–2 are immediately unblocked (depend only on trusted `tui:shell`). Slices 3–9 are gated on the `robopoker` git migration and `play:tui` binary skeleton.\n\n**Decision for next step**: The next honest decision is whether to open an **implementation family** for `agent:experience` (a Fabro program that drives the 9 sequential slices to completion) or to first unblock the two HIGH-risk blockers via the lanes that own them. Given that `games:traits` lane already owns the `robopoker` resolution and `play:tui` is a sibling in `myosu-product.yaml`, the honest answer is: **unblock the blockers first, then open the implementation family**, or open the implementation family now with Slices 1–2 while the blockers resolve in parallel.",
     "last_stage": "specify",
-    "current_node": "specify",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "current_node": "review",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 782.4k tokens in / 11.5k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n",
     "internal.retry_count.specify": 1,
+    "internal.retry_count.review": 1,
     "internal.fidelity": "compact",
     "internal.node_visit_count": 1,
-    "outcome": "success",
-    "internal.thread_id": "start",
+    "outcome": "fail",
+    "internal.thread_id": "specify",
     "thread.start.current_node": "specify",
     "last_response": "Both required artifacts are in place. Here is the summary:\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**What th",
-    "failure_class": "",
-    "failure_signature": "",
+    "failure_class": "deterministic",
+    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6JTKPH2GRW4JDMJ4294GV7/worktree",
-    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        "
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "thread.specify.current_node": "review"
   },
   "logs": [],
   "node_outcomes": {
@@ -55,13 +59,26 @@
       ],
       "duration_ms": 187955
     },
+    "review": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_04e86d05a4e4fbf90169bdbe85686081949cac460c4460b0bb' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 11768
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
     }
   },
-  "next_node_id": "review",
+  "next_node_id": "polish",
+  "loop_failure_signatures": {
+    "review|deterministic|api_deterministic|openai|not_found": 1
+  },
   "node_visits": {
+    "review": 1,
     "specify": 1,
     "start": 1
   }
