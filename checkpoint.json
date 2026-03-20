@@ -1,14 +1,16 @@
 {
-  "timestamp": "2026-03-20T22:13:41.783871092Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-20T22:14:44.325092745Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
     "polish": 1,
+    "verify": 1,
     "specify": 1,
     "review": 1,
     "start": 1
@@ -17,25 +19,29 @@
     "last_stage": "specify",
     "thread.start.current_node": "specify",
     "thread.specify.current_node": "review",
+    "thread.polish.current_node": "verify",
     "internal.retry_count.start": 1,
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 145 tokens in / 112 out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 145 tokens in / 112 out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "failure_signature": "",
     "last_response": "Already handled — exit code 144 was a lock contention from the earlier parallel test attempt, not a test failure. Both artifacts are complete and verified. The `agent:experience` integration artifac",
     "response.specify": "Already handled — exit code 144 was a lock contention from the earlier parallel test attempt, not a test failure. Both artifacts are complete and verified. The `agent:experience` integration artifacts are at:\n\n- **`outputs/agent-integration/agent-adapter.md`**\n- **`outputs/agent-integration/review.md`**",
     "internal.retry_count.polish": 1,
     "internal.retry_count.review": 1,
     "internal.run_id": "01KM6M51EB1AFBHY9SZEKN0BBA",
-    "current_node": "polish",
-    "failure_class": "deterministic",
+    "current_node": "verify",
+    "failure_class": "",
     "thread.review.current_node": "polish",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "internal.node_visit_count": 1,
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6M51EB1AFBHY9SZEKN0BBA/worktree",
-    "internal.thread_id": "review",
+    "internal.thread_id": "polish",
+    "internal.retry_count.verify": 1,
+    "command.output": "",
     "graph.rankdir": "LR",
     "internal.fidelity": "compact",
-    "outcome": "fail",
+    "outcome": "success",
+    "command.stderr": "",
     "internal.retry_count.specify": 1
   },
   "logs": [],
@@ -72,6 +78,15 @@
       },
       "duration_ms": 10515
     },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": ""
+      },
+      "notes": "Script completed: test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md",
+      "duration_ms": 4
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
@@ -86,7 +101,7 @@
       "duration_ms": 6800
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "review|deterministic|api_deterministic|openai|not_found": 1,
     "polish|deterministic|api_deterministic|openai|not_found": 1
@@ -95,6 +110,7 @@
     "review": 1,
     "start": 1,
     "polish": 1,
+    "verify": 1,
     "specify": 1
   }
 }
