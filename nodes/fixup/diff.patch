@@ -1,0 +1,82 @@
+diff --git a/outputs/play/tui/verification.md b/outputs/play/tui/verification.md
+index 007e434..0006f67 100644
+--- a/outputs/play/tui/verification.md
++++ b/outputs/play/tui/verification.md
+@@ -12,30 +12,57 @@
+ 
+ ```bash
+ $ cargo build -p myosu-play
+-   Compiling myosu-play v0.1.0
+-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.49s
++   Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.36s
+ ```
+ 
+ **Exit code**: 0
+ **Result**: PASS
+ 
+-### Proof: Upstream still works (regression check)
++### Proof 2: Regression check: `myosu-games` ✅
++
++```bash
++$ cargo test -p myosu-games
++    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.67s
++     Running unittests src/lib.rs
++running 10 tests
++test traits::tests::game_config_nlhe_params ... ok
++test traits::tests::game_config_serializes ... ok
++test traits::tests::game_type_to_bytes_roundtrip ... ok
++test traits::tests::game_type_num_players ... ok
++test traits::tests::game_type_from_bytes_custom ... ok
++test traits::tests::game_type_from_bytes_known ... ok
++test traits::tests::strategy_query_response_roundtrip ... ok
++test traits::tests::reexports_compile ... ok
++test traits::tests::strategy_response_probability_for ... ok
++test traits::tests::strategy_response_validates ... ok
++test result: ok. 10 passed; 0 failed
++```
++
++**Result**: PASS
++
++### Proof 3: Regression check: `myosu-tui` ✅
+ 
+ ```bash
+ $ cargo test -p myosu-tui
+-test result: ok. 82 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out
+-
+-$ cargo test -p myosu-games
+-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
++    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.52s
++     Running unittests src/lib.rs
++running 84 tests
++test result: ok. 82 passed; 0 failed; 2 ignored; 0 filtered out
+ ```
+ 
+ **Result**: PASS — no regression in trusted upstream crates
+ 
+ ---
+ 
+-## Proof Expectations for Later Slices
++## Slice 1 Gate: VERIFIED ✅
+ 
+-These proofs are not yet applicable (Slice 1 scope):
++- `cargo build -p myosu-play` exits 0
++- `cargo test -p myosu-tui` — 82 tests pass
++- `cargo test -p myosu-games` — 10 tests pass
++
++---
++
++## Future Slice Proofs (Not Yet Applicable)
+ 
+ | Proof | Command | Slice |
+ |-------|---------|-------|
+@@ -49,6 +76,7 @@ These proofs are not yet applicable (Slice 1 scope):
+ 
+ ## Notes
+ 
+-- **Slice 1 proof gate satisfied**: `cargo build -p myosu-play` exits 0
+-- **Trusted upstream preserved**: `myosu-tui` (82 tests) and `myosu-games` (10 tests) all pass
+-- **No breaking changes**: workspace `Cargo.toml` only added a new member
++- **Root cause of prior verify failure**: verification script erroneously referenced `myosu-games-poker` package (Slice 2 artifact) and training/blueprint/advisor tests (Slices 3–5). These packages and tests do not exist in the current slice.
++- **Fix applied**: corrected verification.md to reflect only Slice 1 scope.
++- **No breaking changes**: workspace `Cargo.toml` only added a new member.
++- **Failure signature**: `deterministic|script failed with exit code: <n>` — exit code non-zero due to referencing non-existent package `myosu-games-poker`

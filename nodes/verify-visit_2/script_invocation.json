@@ -1,0 +1,5 @@
+{
+  "command": "set -e\ncargo build -p myosu-play\ncargo test -p myosu-games-poker\ncargo test -p myosu-play training::tests::hand_completes_fold\ncargo test -p myosu-play training::tests::hand_completes_showdown\ncargo test -p myosu-play blueprint::tests::load_valid_artifact\ncargo test -p myosu-play advisor::tests::format_distribution_text",
+  "language": "shell",
+  "timeout_ms": null
+}
