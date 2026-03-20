@@ -1,0 +1,24 @@
+[package]
+name = "myosu-play"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Interactive NLHE poker gameplay binary for myosu"
+
+[[bin]]
+name = "myosu-play"
+path = "src/main.rs"
+
+[dependencies]
+myosu-tui = { path = "../myosu-tui" }
+myosu-games-poker = { path = "../myosu-games-poker" }
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+
+# Robopoker game engine
+rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }

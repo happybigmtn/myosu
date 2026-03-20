@@ -1,0 +1,18 @@
+[package]
+name = "myosu-games-poker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "NLHE poker GameRenderer implementation for the myosu TUI"
+
+[dependencies]
+myosu-tui = { path = "../myosu-tui" }
+ratatui = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+# Robopoker (for Game types used in the renderer interface)
+rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
