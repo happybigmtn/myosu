@@ -96,14 +96,29 @@ cargo test -p myosu-games-poker training::tests::session_checkpoint_frequency # 
 
 ## Unblock Path
 
-The tests require the `database` feature on `rbp-nlhe` **and** a PostgreSQL instance with the abstraction schema initialized (`rbp_database::ISOMORPHISM` table). This is external infrastructure outside the `games:poker-engine` slice scope.
+**Status**: `database` feature is now enabled in `myosu-games-poker/Cargo.toml`.
 
-To enable the feature in `myosu-games-poker/Cargo.toml`:
-```toml
-rbp-nlhe = { git = "...", rev = "...", features = ["serde", "database"] }
+The tests require **PostgreSQL infrastructure** with the abstraction schema initialized (`rbp_database::ISOMORPHISM` table). The `database` feature enables the `Hydrate` trait for loading encoder mappings, but the data must still come from a PostgreSQL instance containing the k-means clustering results.
+
+To run the full test suite:
+```bash
+# 1. Set up PostgreSQL and run k-means clustering pipeline (external to this slice)
+# 2. Set DB_URL environment variable
+export DB_URL="postgres://user:pass@host:port/db"
+cargo test -p myosu-games-poker
 ```
 
-Then run with `DB_URL` set to a PostgreSQL connection string containing the k-means clustering data.
+**Infrastructure requirements** (outside `games:poker-engine` slice scope):
+- PostgreSQL instance
+- `rbp_database::ISOMORPHISM` table populated via k-means clustering
+- `rbp_database::ABSTRACTION`, `rbp_database::STREET`, `rbp_database::BLUEPRINT` tables
+
+## Fixup Applied
+
+The `database` feature has been enabled on `rbp-nlhe` in `myosu-games-poker/Cargo.toml`. This unlocks:
+- `rbp_database::Hydrate` trait availability for `NlheEncoder` and `NlheProfile`
+- Async encoder hydration from PostgreSQL when `DB_URL` is set
+- The full test suite can pass once PostgreSQL infrastructure is available
 
 ## Relationship to Pre-existing Documentation
 
@@ -112,3 +127,5 @@ This verification confirms and granularizes the known limitation documented in `
 > The NLHE solver (`rbp_nlhe::Flagship`) requires database-backed isomorphism→abstraction mappings to function. `NlheEncoder::default()` creates an empty mapping, causing `train()` to panic at `encoder.rs:33` with "isomorphism not found in abstraction lookup".
 
 The failure is **deterministic** and **expected** without PostgreSQL infrastructure. The implementation code is correct per the spec; the test suite requires environment-level infrastructure that is not part of this slice.
+
+**Fixup update**: The `database` feature is now enabled, making the PostgreSQL hydration path available. The tests still require a PostgreSQL instance with k-means data to pass.

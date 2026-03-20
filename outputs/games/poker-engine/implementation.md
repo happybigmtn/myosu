@@ -9,7 +9,7 @@
 ### Slice 1 — Crate Skeleton
 
 Created `crates/myosu-games-poker/` with:
-- `Cargo.toml` with dependencies on `rbp-nlhe` (serde feature), `rbp-mccfr` (serde feature), `rbp-core`, `myosu-games`
+- `Cargo.toml` with dependencies on `rbp-nlhe` (serde + database features), `rbp-mccfr` (serde feature), `rbp-core`, `myosu-games`
 - `src/lib.rs` with public re-exports
 - Added `crates/myosu-games-poker` to workspace members
 
@@ -58,9 +58,9 @@ Note: Uses **serde-json** (not bincode Encode/Decode) because `NlheInfo` and `Nl
 
 The NLHE solver (`rbp_nlhe::Flagship`) requires database-backed isomorphism→abstraction mappings to function. `NlheEncoder::default()` creates an empty mapping, causing `train()` to panic at `encoder.rs:33` with "isomorphism not found in abstraction lookup".
 
-This is an architectural requirement of robopoker at the pinned revision (`04716310143094ab41ec7172e6cea5a2a66744ef`). The `database` feature loads these mappings from PostgreSQL.
+This is an architectural requirement of robopoker at the pinned revision (`04716310143094ab41ec7172e6cea5a2a66744ef`). The `database` feature (now enabled) provides `rbp_database::Hydrate` for loading these mappings from PostgreSQL.
 
-**Impact**: Tests that call `train()` fail without the database feature. Tests that only construct/save/load pass.
+**Impact**: Tests that call `train()` fail without PostgreSQL infrastructure. Tests that only construct/save/load pass. The `database` feature is enabled to unlock the PostgreSQL hydration path.
 
 ## Files Created
 
@@ -79,3 +79,4 @@ crates/myosu-games-poker/
 ## Files Modified
 
 - `Cargo.toml` (workspace root) — added `crates/myosu-games-poker` to members
+- `crates/myosu-games-poker/Cargo.toml` — enabled `database` feature on `rbp-nlhe` (fixup stage)
