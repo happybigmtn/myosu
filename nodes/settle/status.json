@@ -1,0 +1,26 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "Wrote [promotion.md](/home/r/.fabro/runs/20260320-01KM6J48QT2T9EWKBMSE5FSWA9/worktree/outputs/games/poker-engine/promotion.md) and marked the lane `merge_ready: no` with `manual_proof_pending: yes`.\n\n",
+    "last_stage": "settle",
+    "response.settle": "Wrote [promotion.md](/home/r/.fabro/runs/20260320-01KM6J48QT2T9EWKBMSE5FSWA9/worktree/outputs/games/poker-engine/promotion.md) and marked the lane `merge_ready: no` with `manual_proof_pending: yes`.\n\nThe settlement blocker is that the reviewed contract in [spec.md](/home/r/.fabro/runs/20260320-01KM6J48QT2T9EWKBMSE5FSWA9/worktree/outputs/games/poker-engine/spec.md) and [review.md](/home/r/.fabro/runs/20260320-01KM6J48QT2T9EWKBMSE5FSWA9/worktree/outputs/games/poker-engine/review.md) expects spec-faithful exploitability, but [exploit.rs](/home/r/.fabro/runs/20260320-01KM6J48QT2T9EWKBMSE5FSWA9/worktree/crates/myosu-games-poker/src/exploit.rs) currently uses a sampling proxy for `remote_poker_exploitability`. Also, [verification.md](/home/r/.fabro/runs/20260320-01KM6J48QT2T9EWKBMSE5FSWA9/worktree/outputs/games/poker-engine/verification.md) claims unhydrated `strategy()` needs the encoder and will panic, which does not match [solver.rs](/home/r/.fabro/runs/20260320-01KM6J48QT2T9EWKBMSE5FSWA9/worktree/crates/myosu-games-poker/src/solver.rs) or the passing query-path tests. No source code was changed beyond the promotion artifact."
+  },
+  "notes": "Stage completed: settle",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 250675,
+    "output_tokens": 5873,
+    "cost": 0.7147825
+  },
+  "files_written": [
+    "outputs/games/poker-engine/promotion.md"
+  ],
+  "files_touched": [
+    "outputs/games/poker-engine/promotion.md"
+  ],
+  "duration_ms": 120266,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:38:36.919646816+00:00",
+  "updated_at": "2026-03-20T23:38:36.919650970+00:00"
+}
