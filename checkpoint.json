@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T22:15:29.987779444Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "response.specify": "Both required durable artifacts are now in place:\n\n**`outputs/foundations/foundation-plan.md`** (292 lines) — A PLANS.md-style ExecPlan that:\n- Establishes the execution truth problem (detach path returns run ID before worker starts)\n- Documents the `games:multi-game` false-submit case (`01KM2BS4ASVRXVT2ND1GVVMKJ0`) as a concrete instance\n- Splits work into Track A (detach path repair in `/home/r/coding/fabro`) and Track B (foreground Fabro fallback for `games:multi-game`)\n- Includes a submit-path trust inventory table across all known lanes\n- Defines explicit acceptance criteria for when detach can be marked trustworthy again\n\n**`outputs/foundations/review.md`** (159 lines) — A lane review that:\n- Marks `raspberry execute --detach` and `raspberry status/watch` (for detach) as **UNVERIFIED**\n- Marks direct foreground Fabro as **TRUSTED** with concrete run ID evidence\n- Explicitly requires the `games:multi-game` false-submit to be converted to an honest result\n- Provides a submit-path trust inventory across all lanes (8 lanes assessed: 5 trusted via foreground, 1 broken via detach, 2 verified via foreground)\n- Includes contributor guidance: use foreground Fabro as the honest fallback until detach is repaired\n\n`★ Insight ─────────────────────────────────────`\nThis lane is unusual — it reviews the **control plane itself**, not product code. The key insight is that the false-submit problem is a **class defect** (the detach mechanism) not an instance defect (one bad run). The review treats the foreground path as the gold standard because it has consistently produced real manifests and stage labels, while the detach path has produced run IDs without workers. The honest inventory table gives contributors a clear signal about which submit paths to trust today.\n`─────────────────────────────────────────────────`",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n",
+    "last_response": "Both required durable artifacts are now in place:\n\n**`outputs/foundations/foundation-plan.md`** (292 lines) — A PLANS.md-style ExecPlan that:\n- Establishes the execution truth problem (detach path r",
+    "internal.node_visit_count": 1,
+    "outcome": "success",
+    "internal.retry_count.specify": 1,
+    "internal.retry_count.start": 1,
+    "internal.thread_id": "start",
+    "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
+    "failure_class": "",
+    "failure_signature": "",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6MW2ND9D0G8ZQXRV9SZA0M/worktree",
+    "graph.rankdir": "LR",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.run_id": "01KM6MW2ND9D0G8ZQXRV9SZA0M",
+    "thread.start.current_node": "specify",
+    "internal.fidelity": "compact",
+    "last_stage": "specify",
+    "current_node": "specify"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "response.specify": "Both required durable artifacts are now in place:\n\n**`outputs/foundations/foundation-plan.md`** (292 lines) — A PLANS.md-style ExecPlan that:\n- Establishes the execution truth problem (detach path returns run ID before worker starts)\n- Documents the `games:multi-game` false-submit case (`01KM2BS4ASVRXVT2ND1GVVMKJ0`) as a concrete instance\n- Splits work into Track A (detach path repair in `/home/r/coding/fabro`) and Track B (foreground Fabro fallback for `games:multi-game`)\n- Includes a submit-path trust inventory table across all known lanes\n- Defines explicit acceptance criteria for when detach can be marked trustworthy again\n\n**`outputs/foundations/review.md`** (159 lines) — A lane review that:\n- Marks `raspberry execute --detach` and `raspberry status/watch` (for detach) as **UNVERIFIED**\n- Marks direct foreground Fabro as **TRUSTED** with concrete run ID evidence\n- Explicitly requires the `games:multi-game` false-submit to be converted to an honest result\n- Provides a submit-path trust inventory across all lanes (8 lanes assessed: 5 trusted via foreground, 1 broken via detach, 2 verified via foreground)\n- Includes contributor guidance: use foreground Fabro as the honest fallback until detach is repaired\n\n`★ Insight ─────────────────────────────────────`\nThis lane is unusual — it reviews the **control plane itself**, not product code. The key insight is that the false-submit problem is a **class defect** (the detach mechanism) not an instance defect (one bad run). The review treats the foreground path as the gold standard because it has consistently produced real manifests and stage labels, while the detach path has produced run IDs without workers. The honest inventory table gives contributors a clear signal about which submit paths to trust today.\n`─────────────────────────────────────────────────`",
+        "last_response": "Both required durable artifacts are now in place:\n\n**`outputs/foundations/foundation-plan.md`** (292 lines) — A PLANS.md-style ExecPlan that:\n- Establishes the execution truth problem (detach path r",
+        "last_stage": "specify"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 605861,
+        "output_tokens": 10386
+      },
+      "files_written": [
+        "outputs/foundations/foundation-plan.md",
+        "outputs/foundations/review.md"
+      ],
+      "files_touched": [
+        "outputs/foundations/foundation-plan.md",
+        "outputs/foundations/review.md"
+      ],
+      "duration_ms": 217324
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}

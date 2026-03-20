@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.specify": "Both required durable artifacts are now in place:\n\n**`outputs/foundations/foundation-plan.md`** (292 lines) — A PLANS.md-style ExecPlan that:\n- Establishes the execution truth problem (detach path returns run ID before worker starts)\n- Documents the `games:multi-game` false-submit case (`01KM2BS4ASVRXVT2ND1GVVMKJ0`) as a concrete instance\n- Splits work into Track A (detach path repair in `/home/r/coding/fabro`) and Track B (foreground Fabro fallback for `games:multi-game`)\n- Includes a submit-path trust inventory table across all known lanes\n- Defines explicit acceptance criteria for when detach can be marked trustworthy again\n\n**`outputs/foundations/review.md`** (159 lines) — A lane review that:\n- Marks `raspberry execute --detach` and `raspberry status/watch` (for detach) as **UNVERIFIED**\n- Marks direct foreground Fabro as **TRUSTED** with concrete run ID evidence\n- Explicitly requires the `games:multi-game` false-submit to be converted to an honest result\n- Provides a submit-path trust inventory across all lanes (8 lanes assessed: 5 trusted via foreground, 1 broken via detach, 2 verified via foreground)\n- Includes contributor guidance: use foreground Fabro as the honest fallback until detach is repaired\n\n`★ Insight ─────────────────────────────────────`\nThis lane is unusual — it reviews the **control plane itself**, not product code. The key insight is that the false-submit problem is a **class defect** (the detach mechanism) not an instance defect (one bad run). The review treats the foreground path as the gold standard because it has consistently produced real manifests and stage labels, while the detach path has produced run IDs without workers. The honest inventory table gives contributors a clear signal about which submit paths to trust today.\n`─────────────────────────────────────────────────`",
+    "last_response": "Both required durable artifacts are now in place:\n\n**`outputs/foundations/foundation-plan.md`** (292 lines) — A PLANS.md-style ExecPlan that:\n- Establishes the execution truth problem (detach path r",
+    "last_stage": "specify"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 605861,
+    "output_tokens": 10386
+  },
+  "files_written": [
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md"
+  ],
+  "files_touched": [
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md"
+  ],
+  "duration_ms": 217324,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T22:15:29.986601813+00:00",
+  "updated_at": "2026-03-20T22:15:29.986609455+00:00"
+}
