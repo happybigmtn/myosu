@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "specify",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\n- **Lane bootstrap is an artifact-first operation**: the foundations lane is defined by what it produces (`foundation-plan.md` + `review.md`) before any code changes. This is the Fabro/Raspberry contract model — lane identity is anchored in its curated outputs, not in a branch name or issue标签.\n- **False-submit is a control-plane integrity defect, not a lane defect**: the `games:multi-game` issue is not that the lane failed — it's that the supervisory dispatch recorded success without earning it. This corrupts the `execute/status/watch` signal for all lanes sharing that path.\n- **Honest reviewed slices require naming the broken thing explicitly**: rather than saying \"the control plane works\", the review identifies the false-submit as the specific canary and describes the verification needed to confirm the repair.\n`─────────────────────────────────────────────────`\n\nBoth required durable artifacts are now bootstrapped:\n\n**`outputs/foundations/foundation-plan.md`** (138 lines) — defines the lane boundary, current broken state, and 6 ordered steps:\n1. Produce honest artifacts (done)\n2. Add `foundations` unit to `myosu.yaml`\n3. Create `myosu-foundations.yaml` manifest\n4. Fix `games:multi-game` false-submit via truthful run or truthful failure\n5. Verify `execute/status/watch` truth path after repair\n6. Rerun affected frontiers\n\n**`outputs/foundations/review.md`** (61 lines) — honest assessment:\n- **Judgment: KEEP (lane active, awaiting execution)**\n- Four concrete risks with mitigations: false-submit corruption scope, unverified truth path, systemic Fabro detach issues, and missing manifest entries\n- Proof commands that verify the lane exists, the manifest is added, and the false-submit is cleared\n\nThe lane is now ready for the next honest step: adding the `foundations` unit to `fabro/programs/myosu.yaml` and creating the `myosu-foundations.yaml` manifest.",
+    "last_response": "`★ Insight ─────────────────────────────────────`\n- **Lane bootstrap is an artifact-first operation**: the foundations lane "
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 327825,
+    "output_tokens": 5566
+  },
+  "files_written": [
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md"
+  ],
+  "files_touched": [
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md"
+  ],
+  "duration_ms": 105425,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T21:28:37.245847722+00:00",
+  "updated_at": "2026-03-20T21:28:37.245854464+00:00"
+}

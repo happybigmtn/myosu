@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T21:28:37.247192731Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n",
+    "internal.retry_count.specify": 1,
+    "internal.thread_id": "start",
+    "failure_signature": "",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\n- **Lane bootstrap is an artifact-first operation**: the foundations lane is defined by what it produces (`foundation-plan.md` + `review.md`) before any code changes. This is the Fabro/Raspberry contract model — lane identity is anchored in its curated outputs, not in a branch name or issue标签.\n- **False-submit is a control-plane integrity defect, not a lane defect**: the `games:multi-game` issue is not that the lane failed — it's that the supervisory dispatch recorded success without earning it. This corrupts the `execute/status/watch` signal for all lanes sharing that path.\n- **Honest reviewed slices require naming the broken thing explicitly**: rather than saying \"the control plane works\", the review identifies the false-submit as the specific canary and describes the verification needed to confirm the repair.\n`─────────────────────────────────────────────────`\n\nBoth required durable artifacts are now bootstrapped:\n\n**`outputs/foundations/foundation-plan.md`** (138 lines) — defines the lane boundary, current broken state, and 6 ordered steps:\n1. Produce honest artifacts (done)\n2. Add `foundations` unit to `myosu.yaml`\n3. Create `myosu-foundations.yaml` manifest\n4. Fix `games:multi-game` false-submit via truthful run or truthful failure\n5. Verify `execute/status/watch` truth path after repair\n6. Rerun affected frontiers\n\n**`outputs/foundations/review.md`** (61 lines) — honest assessment:\n- **Judgment: KEEP (lane active, awaiting execution)**\n- Four concrete risks with mitigations: false-submit corruption scope, unverified truth path, systemic Fabro detach issues, and missing manifest entries\n- Proof commands that verify the lane exists, the manifest is added, and the false-submit is cleared\n\nThe lane is now ready for the next honest step: adding the `foundations` unit to `fabro/programs/myosu.yaml` and creating the `myosu-foundations.yaml` manifest.",
+    "last_response": "`★ Insight ─────────────────────────────────────`\n- **Lane bootstrap is an artifact-first operation**: the foundations lane ",
+    "last_stage": "specify",
+    "thread.start.current_node": "specify",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.retry_count.start": 1,
+    "outcome": "success",
+    "internal.run_id": "01KM6J9N2FZ2REPPQXR017RBYY",
+    "internal.node_visit_count": 1,
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6J9N2FZ2REPPQXR017RBYY/worktree",
+    "current_node": "specify",
+    "internal.fidelity": "compact",
+    "failure_class": "",
+    "graph.rankdir": "LR"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_stage": "specify",
+        "response.specify": "`★ Insight ─────────────────────────────────────`\n- **Lane bootstrap is an artifact-first operation**: the foundations lane is defined by what it produces (`foundation-plan.md` + `review.md`) before any code changes. This is the Fabro/Raspberry contract model — lane identity is anchored in its curated outputs, not in a branch name or issue标签.\n- **False-submit is a control-plane integrity defect, not a lane defect**: the `games:multi-game` issue is not that the lane failed — it's that the supervisory dispatch recorded success without earning it. This corrupts the `execute/status/watch` signal for all lanes sharing that path.\n- **Honest reviewed slices require naming the broken thing explicitly**: rather than saying \"the control plane works\", the review identifies the false-submit as the specific canary and describes the verification needed to confirm the repair.\n`─────────────────────────────────────────────────`\n\nBoth required durable artifacts are now bootstrapped:\n\n**`outputs/foundations/foundation-plan.md`** (138 lines) — defines the lane boundary, current broken state, and 6 ordered steps:\n1. Produce honest artifacts (done)\n2. Add `foundations` unit to `myosu.yaml`\n3. Create `myosu-foundations.yaml` manifest\n4. Fix `games:multi-game` false-submit via truthful run or truthful failure\n5. Verify `execute/status/watch` truth path after repair\n6. Rerun affected frontiers\n\n**`outputs/foundations/review.md`** (61 lines) — honest assessment:\n- **Judgment: KEEP (lane active, awaiting execution)**\n- Four concrete risks with mitigations: false-submit corruption scope, unverified truth path, systemic Fabro detach issues, and missing manifest entries\n- Proof commands that verify the lane exists, the manifest is added, and the false-submit is cleared\n\nThe lane is now ready for the next honest step: adding the `foundations` unit to `fabro/programs/myosu.yaml` and creating the `myosu-foundations.yaml` manifest.",
+        "last_response": "`★ Insight ─────────────────────────────────────`\n- **Lane bootstrap is an artifact-first operation**: the foundations lane "
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 327825,
+        "output_tokens": 5566
+      },
+      "files_written": [
+        "outputs/foundations/foundation-plan.md",
+        "outputs/foundations/review.md"
+      ],
+      "files_touched": [
+        "outputs/foundations/foundation-plan.md",
+        "outputs/foundations/review.md"
+      ],
+      "duration_ms": 105425
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}
