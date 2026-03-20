@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T22:24:17.621094170Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "graph.rankdir": "LR",
+    "internal.node_visit_count": 1,
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6NE712FKGBH4K8VE3ZZG7Y/worktree",
+    "response.specify": "Both required artifacts are produced and the outputs tree is consistent with existing patterns.\n\n---\n\n**Lane complete.** Here's what was produced:\n\n**`outputs/agent-integration/agent-adapter.md`** — Maps the reviewed `agent:experience` lane to its first concrete implementation steps. Key findings:\n- Slices 1 (`agent_context.rs`) and 2 (`journal.rs`) are implementable **today** — they depend only on the already-trusted `tui:shell` (82 tests)\n- The two HIGH-severity blockers (`robopoker` git migration, `myosu-play` binary skeleton) affect Slices 3–9, not the first honest slice\n- The adapter also specifies the full slice dependency map and recommended manifest additions\n\n**`outputs/agent-integration/review.md`** — Synthesizes the reviewed artifacts and answers the gate question. Verdict: **PROCEED — implementation family is the correct next step**. No additional upstream unblock required. The `robopoker` blocker is being actively resolved in `games:traits` and the `myosu-play` skeleton is being built in `play:tui` — both lanes can run in parallel with `agent:experience` Slices 1–2.\n\n**Decision reached**: Create `myosu-agent-experience-implementation.yaml` (following the `myosu-games-traits-implementation.yaml` pattern) and execute Slices 1–4 (agent identity phase) as the first honest slice. Re-evaluate blocker status before Slices 5–7.",
+    "current_node": "specify",
+    "internal.retry_count.specify": 1,
+    "last_response": "Both required artifacts are produced and the outputs tree is consistent with existing patterns.\n\n---\n\n**Lane complete.** Here's what was produced:\n\n**`outputs/agent-integration/agent-adapter.md`** —",
+    "thread.start.current_node": "specify",
+    "internal.thread_id": "start",
+    "last_stage": "specify",
+    "outcome": "success",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "internal.fidelity": "compact",
+    "internal.run_id": "01KM6NE712FKGBH4K8VE3ZZG7Y",
+    "failure_class": "",
+    "internal.retry_count.start": 1,
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "failure_signature": ""
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "response.specify": "Both required artifacts are produced and the outputs tree is consistent with existing patterns.\n\n---\n\n**Lane complete.** Here's what was produced:\n\n**`outputs/agent-integration/agent-adapter.md`** — Maps the reviewed `agent:experience` lane to its first concrete implementation steps. Key findings:\n- Slices 1 (`agent_context.rs`) and 2 (`journal.rs`) are implementable **today** — they depend only on the already-trusted `tui:shell` (82 tests)\n- The two HIGH-severity blockers (`robopoker` git migration, `myosu-play` binary skeleton) affect Slices 3–9, not the first honest slice\n- The adapter also specifies the full slice dependency map and recommended manifest additions\n\n**`outputs/agent-integration/review.md`** — Synthesizes the reviewed artifacts and answers the gate question. Verdict: **PROCEED — implementation family is the correct next step**. No additional upstream unblock required. The `robopoker` blocker is being actively resolved in `games:traits` and the `myosu-play` skeleton is being built in `play:tui` — both lanes can run in parallel with `agent:experience` Slices 1–2.\n\n**Decision reached**: Create `myosu-agent-experience-implementation.yaml` (following the `myosu-games-traits-implementation.yaml` pattern) and execute Slices 1–4 (agent identity phase) as the first honest slice. Re-evaluate blocker status before Slices 5–7.",
+        "last_stage": "specify",
+        "last_response": "Both required artifacts are produced and the outputs tree is consistent with existing patterns.\n\n---\n\n**Lane complete.** Here's what was produced:\n\n**`outputs/agent-integration/agent-adapter.md`** —"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 697821,
+        "output_tokens": 9352
+      },
+      "files_written": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 151222
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}
