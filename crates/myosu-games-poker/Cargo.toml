@@ -1,0 +1,27 @@
+[package]
+name = "myosu-games-poker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "NLHE poker engine integration for the myosu game-solving chain"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+rand = { workspace = true }
+bincode = "1"
+
+# Robopoker dependencies (same rev as myosu-games)
+rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-gameplay = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
+
+# myosu-games for traits
+myosu-games = { path = "../myosu-games" }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
