@@ -1,0 +1,5 @@
+{
+  "command": "test -f ./outputs/foundations/foundation-plan.md && test -f ./outputs/foundations/review.md",
+  "language": "shell",
+  "timeout_ms": null
+}
