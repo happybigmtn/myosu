@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "specify",
+    "last_response": "`★ Insight ─────────────────────────────────────`\n- **Lane integration patterns**: The `agent:experience` lane consumes upst",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\n- **Lane integration patterns**: The `agent:experience` lane consumes upstream lanes (`tui:shell`, `games:traits`) via stable trait contracts (`GameRenderer`, `PipeMode`). The adapter documents these contracts explicitly so implementation slices can proceed independently of upstream resolution.\n- **Trusted vs. missing surfaces**: The lane has a clear split — `schema.rs` (939 lines, 16 tests) is already trusted and can be used as an integration contract, while `agent_context.rs`, `narration.rs`, `journal.rs` are entirely absent. This distinction guides slice sequencing.\n- **Decision framing**: \"Proceed to implementation family\" vs \"another upstream unblock\" hinges on whether the blocked slices can be implemented against mocks/fixtures. Slices 1-2 can — so the answer is implementation family, not another unblock.\n`─────────────────────────────────────────────────`\n\n---\n\n## Lane Bootstrap Complete\n\nProduced the required durable artifacts:\n\n| Artifact | Path | Judgment |\n|----------|------|----------|\n| `agent-adapter.md` | `outputs/agent-integration/agent-adapter.md` | Integration contracts documented |\n| `review.md` | `outputs/agent-integration/review.md` | **READY — proceed to implementation family** |\n\n### Decision Rendered\n\n`agent:experience` is the last remaining ready product lane. **Proceed to implementation family now.** Do not wait for robopoker git migration or `play:tui` binary skeleton to unblock Slices 1-2 — those slices can be implemented against mock `GameRenderer` inputs.\n\n### Parallel Work to Track\n\n1. **`games:traits` lane** — robopoker git migration (unblocks Phase 1 integration testing)\n2. **`play:tui` lane** — binary skeleton Slice 1 (unblocks Slices 3-9 CLI wiring)\n\n### Slice 1-2 Can Start Immediately\n\n- **Slice 1**: `agent_context.rs` — `AgentContext` with load/save/default; roundtrip test\n- **Slice 2**: `journal.rs` — append-only markdown writer; never-truncates invariant"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 693551,
+    "output_tokens": 7283
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 130513,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:48:59.430162467+00:00",
+  "updated_at": "2026-03-20T23:48:59.430167339+00:00"
+}
