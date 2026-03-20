@@ -1,40 +1,46 @@
 {
-  "timestamp": "2026-03-20T22:28:37.485364684Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-20T22:28:39.240760072Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
     "start": 1,
     "specify": 1,
     "review": 1,
-    "polish": 1
+    "polish": 1,
+    "verify": 1
   },
   "context_values": {
     "internal.retry_count.start": 1,
+    "command.output": "",
     "thread.start.current_node": "specify",
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "failure_signature": "",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "graph.rankdir": "LR",
     "internal.run_id": "01KM6NMJTWV4EFFYYFF2K0ZZVZ",
-    "failure_class": "deterministic",
+    "failure_class": "",
+    "internal.retry_count.verify": 1,
     "thread.review.current_node": "polish",
     "last_response": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that sy",
-    "internal.thread_id": "review",
+    "internal.thread_id": "polish",
     "internal.retry_count.review": 1,
     "internal.fidelity": "compact",
-    "outcome": "fail",
+    "outcome": "success",
     "last_stage": "specify",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6NMJTWV4EFFYYFF2K0ZZVZ/worktree",
     "response.specify": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that synthesizes existing reviewed artifacts, the adapter document serves as the integration boundary map — it answers \"what connects to what\" without re-stating what each upstream lane already owns. This keeps the adapter focused on integration decisions, not duplicated spec content.\n\n**Decision framing**: The keep/reopen/reset judgment was straightforward because `agent:experience` is already READY (KEEP). The more interesting question was \"proceed or wait?\" — and the answer was to proceed with the 3 unblocked slices rather than treating an external cross-lane dependency (`play:tui` binary) as a reason to pause this lane entirely.\n`─────────────────────────────────────────────────`\n\n## Summary\n\nBootstrapped the `agent:integration` lane — the last remaining ready product lane. Created:\n\n**Required artifacts** (both done):\n- `outputs/agent-integration/agent-adapter.md` — integration boundary map, Phase 1–4 state inventory, decision records\n- `outputs/agent-integration/review.md` — judgment: **KEEP**, decision: **implementation family next**\n\n**Decision**: The product does **not** need another upstream unblock. Slices 1 (`agent_context.rs`), 2 (`journal.rs`), and 5 (`narration.rs`) can proceed immediately — they depend only on already-trusted upstream surfaces (`tui:shell`, `games:traits`, `schema.rs`). The remaining slices are blocked on the `myosu-play` binary owned by `play:tui` lane.\n\n**Also updated**:\n- `fabro/programs/myosu-product.yaml` — added `agent:integration` lane under the `agent` unit\n- `fabro/run-configs/product/agent-integration.toml` — run config for the lane\n- `fabro/workflows/bootstrap/agent-integration.fabro` — workflow graph",
     "thread.specify.current_node": "review",
     "internal.node_visit_count": 1,
-    "current_node": "polish",
+    "current_node": "verify",
     "internal.retry_count.polish": 1,
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 1.0m tokens in / 10.4k out\n  - Files: fabro/programs/myosu-product.yaml, fabro/run-configs/product/agent-integration.toml, fabro/workflows/bootstrap/agent-integration.fabro, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
+    "command.stderr": "",
+    "thread.polish.current_node": "verify",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 1.0m tokens in / 10.4k out\n  - Files: fabro/programs/myosu-product.yaml, fabro/run-configs/product/agent-integration.toml, fabro/workflows/bootstrap/agent-integration.fabro, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
     "internal.retry_count.specify": 1,
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n"
   },
@@ -90,9 +96,18 @@
         "failure_signature": "api_deterministic|openai|not_found"
       },
       "duration_ms": 10973
+    },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.stderr": "",
+        "command.output": ""
+      },
+      "notes": "Script completed: test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md",
+      "duration_ms": 2
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "polish|deterministic|api_deterministic|openai|not_found": 1,
     "review|deterministic|api_deterministic|openai|not_found": 1
@@ -100,6 +115,7 @@
   "node_visits": {
     "polish": 1,
     "start": 1,
+    "verify": 1,
     "specify": 1,
     "review": 1
   }
