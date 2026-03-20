@@ -1,26 +1,29 @@
 {
-  "timestamp": "2026-03-20T22:28:27.037857502Z",
-  "current_node": "review",
+  "timestamp": "2026-03-20T22:28:37.485364684Z",
+  "current_node": "polish",
   "completed_nodes": [
     "start",
     "specify",
-    "review"
+    "review",
+    "polish"
   ],
   "node_retries": {
     "start": 1,
     "specify": 1,
-    "review": 1
+    "review": 1,
+    "polish": 1
   },
   "context_values": {
     "internal.retry_count.start": 1,
     "thread.start.current_node": "specify",
-    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
+    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "graph.rankdir": "LR",
     "internal.run_id": "01KM6NMJTWV4EFFYYFF2K0ZZVZ",
     "failure_class": "deterministic",
+    "thread.review.current_node": "polish",
     "last_response": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that sy",
-    "internal.thread_id": "specify",
+    "internal.thread_id": "review",
     "internal.retry_count.review": 1,
     "internal.fidelity": "compact",
     "outcome": "fail",
@@ -29,8 +32,9 @@
     "response.specify": "`★ Insight ─────────────────────────────────────`\n**Bootstrap pattern for new lanes**: When bootstrapping a new lane that synthesizes existing reviewed artifacts, the adapter document serves as the integration boundary map — it answers \"what connects to what\" without re-stating what each upstream lane already owns. This keeps the adapter focused on integration decisions, not duplicated spec content.\n\n**Decision framing**: The keep/reopen/reset judgment was straightforward because `agent:experience` is already READY (KEEP). The more interesting question was \"proceed or wait?\" — and the answer was to proceed with the 3 unblocked slices rather than treating an external cross-lane dependency (`play:tui` binary) as a reason to pause this lane entirely.\n`─────────────────────────────────────────────────`\n\n## Summary\n\nBootstrapped the `agent:integration` lane — the last remaining ready product lane. Created:\n\n**Required artifacts** (both done):\n- `outputs/agent-integration/agent-adapter.md` — integration boundary map, Phase 1–4 state inventory, decision records\n- `outputs/agent-integration/review.md` — judgment: **KEEP**, decision: **implementation family next**\n\n**Decision**: The product does **not** need another upstream unblock. Slices 1 (`agent_context.rs`), 2 (`journal.rs`), and 5 (`narration.rs`) can proceed immediately — they depend only on already-trusted upstream surfaces (`tui:shell`, `games:traits`, `schema.rs`). The remaining slices are blocked on the `myosu-play` binary owned by `play:tui` lane.\n\n**Also updated**:\n- `fabro/programs/myosu-product.yaml` — added `agent:integration` lane under the `agent` unit\n- `fabro/run-configs/product/agent-integration.toml` — run config for the lane\n- `fabro/workflows/bootstrap/agent-integration.fabro` — workflow graph",
     "thread.specify.current_node": "review",
     "internal.node_visit_count": 1,
-    "current_node": "review",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 1.0m tokens in / 10.4k out\n  - Files: fabro/programs/myosu-product.yaml, fabro/run-configs/product/agent-integration.toml, fabro/workflows/bootstrap/agent-integration.fabro, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n",
+    "current_node": "polish",
+    "internal.retry_count.polish": 1,
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 1.0m tokens in / 10.4k out\n  - Files: fabro/programs/myosu-product.yaml, fabro/run-configs/product/agent-integration.toml, fabro/workflows/bootstrap/agent-integration.fabro, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
     "internal.retry_count.specify": 1,
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n"
   },
@@ -65,6 +69,15 @@
       ],
       "duration_ms": 178831
     },
+    "polish": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_08070bee3b2934180169bdca0cf3988193b1be9bca4309b3d4' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 9379
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
@@ -79,11 +92,13 @@
       "duration_ms": 10973
     }
   },
-  "next_node_id": "polish",
+  "next_node_id": "verify",
   "loop_failure_signatures": {
+    "polish|deterministic|api_deterministic|openai|not_found": 1,
     "review|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
+    "polish": 1,
     "start": 1,
     "specify": 1,
     "review": 1
