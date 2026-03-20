@@ -1,37 +1,50 @@
 {
-  "timestamp": "2026-03-20T22:47:35.462291610Z",
-  "current_node": "specify",
+  "timestamp": "2026-03-20T22:47:51.764814582Z",
+  "current_node": "review",
   "completed_nodes": [
     "start",
-    "specify"
+    "specify",
+    "review"
   ],
   "node_retries": {
     "start": 1,
-    "specify": 1
+    "specify": 1,
+    "review": 1
   },
   "context_values": {
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 784.4k tokens in / 11.5k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n",
     "last_stage": "specify",
-    "outcome": "success",
-    "failure_signature": "",
+    "internal.retry_count.review": 1,
+    "outcome": "fail",
+    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
     "graph.rankdir": "LR",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6PEB4HQVC3D7CHXMJHDY9M/worktree",
+    "thread.specify.current_node": "review",
     "internal.run_id": "01KM6PEB4HQVC3D7CHXMJHDY9M",
     "thread.start.current_node": "specify",
     "response.specify": "Both artifacts are written. Here's what was produced and the key decision:\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**Two parallel tracks, not a sequential unblock.** The critical finding is that `agent:experience` Slices 1–2 (`agent_context.rs`, `journal.rs`) are pure library modules in `myosu-tui` — they depend only on `serde` and `std::path::PathBuf`, with **zero** external dependencies on the missing `myosu-play` binary or the unresolved `robopoker` git migration. This means the lane can start producing code immediately while `play:tui` Slice 1 (binary skeleton) is built concurrently.\n`─────────────────────────────────────────────────`\n\n**Artifacts produced:**\n\n| File | Purpose |\n|------|---------|\n| `outputs/agent-integration/agent-adapter.md` | Maps the 9 `agent:experience` slices to actual file paths, module shapes, and proof gates; documents what already exists vs. what needs building |\n| `outputs/agent-integration/review.md` | Assesses the `agent:experience` lane, analyzes blockers, and decides: **both** parallel tracks — `agent:experience` Slices 1–2 start immediately, `play:tui` Slice 1 starts concurrently to unblock Slice 3 |\n\n**Decision**: No new frontier program needed. The `product` program's `agent` unit handles `agent:experience` implementation. No upstream unblock is required before starting — the two blocking dependencies (binary skeleton, robopoker) are either concurrent work or irrelevant for the first two slices.",
-    "internal.thread_id": "start",
+    "internal.thread_id": "specify",
     "last_response": "Both artifacts are written. Here's what was produced and the key decision:\n\n---\n\n`★ Insight ───────────────────────────────────",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
     "internal.node_visit_count": 1,
-    "current_node": "specify",
+    "current_node": "review",
     "internal.retry_count.specify": 1,
     "internal.fidelity": "compact",
-    "failure_class": "",
+    "failure_class": "deterministic",
     "internal.retry_count.start": 1
   },
   "logs": [],
   "node_outcomes": {
+    "review": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_063c2e09de71e7450169bdce8a3fe48197adc9906905b7879f' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 14757
+    },
     "specify": {
       "status": "success",
       "context_updates": {
@@ -60,9 +73,13 @@
       "duration_ms": 0
     }
   },
-  "next_node_id": "review",
+  "next_node_id": "polish",
+  "loop_failure_signatures": {
+    "review|deterministic|api_deterministic|openai|not_found": 1
+  },
   "node_visits": {
     "specify": 1,
+    "review": 1,
     "start": 1
   }
 }
