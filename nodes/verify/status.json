@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "duration_ms": 3,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-20T21:29:01.941710182+00:00",
+  "updated_at": "2026-03-20T21:29:01.941714475+00:00",
+  "notes": "Script completed: test -f ./outputs/foundations/foundation-plan.md && test -f ./outputs/foundations/review.md"
+}
