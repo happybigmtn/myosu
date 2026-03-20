@@ -1,19 +1,22 @@
 {
-  "timestamp": "2026-03-20T22:31:46.649934192Z",
-  "current_node": "review",
+  "timestamp": "2026-03-20T22:32:00.674649964Z",
+  "current_node": "polish",
   "completed_nodes": [
     "start",
     "specify",
-    "review"
+    "review",
+    "polish"
   ],
   "node_retries": {
     "start": 1,
+    "polish": 1,
     "specify": 1,
     "review": 1
   },
   "context_values": {
+    "thread.review.current_node": "polish",
     "internal.run_id": "01KM6NWTN7M5MZ3FCT7CZWXFGJ",
-    "internal.thread_id": "specify",
+    "internal.thread_id": "review",
     "graph.rankdir": "LR",
     "internal.retry_count.specify": 1,
     "failure_class": "deterministic",
@@ -23,19 +26,38 @@
     "response.specify": "Both required artifacts have been created:\n\n- `outputs/foundations/foundation-plan.md` (9.9KB) — Full ExecPlan following PLANS.md format with Purpose, Progress, Surprises & Discoveries, Decision Log, Outcomes & Retrospective, Context, Plan of Work, Concrete Steps, Validation, and Interfaces\n- `outputs/foundations/review.md` (7.4KB) — Honest review with Keep/Reopen/Reset judgment, truth-posture assessment, concrete risks, and next steps\n\n`★ Insight ─────────────────────────────────────`\n**Why a dedicated foundations lane?** The Myosu project has a bootstrap program (`myosu-bootstrap.yaml`) with units for `games`, `tui`, and `chain`, but no structural home for truth-integrity work. The `games:multi-game` false-submit — a lane that recorded a reviewed milestone without a successful live run — demonstrates that milestone claims alone are insufficient. The foundations lane creates the control-plane home for honest assessment and repair.\n\n**The false-submit problem is a control-plane integrity failure.** It's not enough to delete the false claim — the lane must either produce a truthful failure record (with documented root cause) or be re-run honestly. Cosmetic fixes undermine all downstream milestone decisions.\n\n**Three-phase approach: assess → repair honestly → verify trust.** Phase 1 examines current truth posture without speculation. Phase 2 fixes only execution-proven defects (not theoretical ones). Phase 3 verifies the detach path is clean so `execute/status/watch` truth survives across runs.\n`─────────────────────────────────────────────────`",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "thread.specify.current_node": "review",
+    "internal.retry_count.polish": 1,
     "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
     "outcome": "fail",
-    "current_node": "review",
+    "current_node": "polish",
     "last_response": "Both required artifacts have been created:\n\n- `outputs/foundations/foundation-plan.md` (9.9KB) — Full ExecPlan following PLANS.md format with Purpose, Progress, Surprises & Discoveries, Decision Log",
     "internal.retry_count.review": 1,
-    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
-    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 273.1k tokens in / 6.4k out\n  - Files: outputs/foundations/foundation-plan.md, outputs/foundations/review.md\n",
+    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 273.1k tokens in / 6.4k out\n  - Files: outputs/foundations/foundation-plan.md, outputs/foundations/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
     "thread.start.current_node": "specify",
     "internal.fidelity": "compact",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6NWTN7M5MZ3FCT7CZWXFGJ/worktree"
   },
   "logs": [],
   "node_outcomes": {
+    "review": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_0aab14270a50c6aa0169bdcac62a7c8195a06373830fe164b9' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 13412
+    },
+    "polish": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_08dfe769304f80990169bdcad56f78819497c555bbc5e3ec33' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 12398
+    },
     "specify": {
       "status": "success",
       "context_updates": {
@@ -59,27 +81,20 @@
       ],
       "duration_ms": 105442
     },
-    "review": {
-      "status": "fail",
-      "failure": {
-        "message": "LLM error: Not found on openai: Item with id 'rs_0aab14270a50c6aa0169bdcac62a7c8195a06373830fe164b9' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
-        "failure_class": "deterministic",
-        "failure_signature": "api_deterministic|openai|not_found"
-      },
-      "duration_ms": 13412
-    },
     "start": {
       "status": "success",
       "duration_ms": 0
     }
   },
-  "next_node_id": "polish",
+  "next_node_id": "verify",
   "loop_failure_signatures": {
-    "review|deterministic|api_deterministic|openai|not_found": 1
+    "review|deterministic|api_deterministic|openai|not_found": 1,
+    "polish|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
-    "specify": 1,
+    "polish": 1,
     "review": 1,
-    "start": 1
+    "start": 1,
+    "specify": 1
   }
 }
