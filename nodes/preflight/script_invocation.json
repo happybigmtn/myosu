@@ -1,0 +1,5 @@
+{
+  "command": "set +e\ncargo build -p myosu-runtime --release` exits 0; `cargo check` on runtime crate passes.\ncargo build -p myosu-node --release` exits 0.\ntrue",
+  "language": "shell",
+  "timeout_ms": null
+}
