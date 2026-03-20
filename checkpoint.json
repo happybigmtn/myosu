@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-03-20T22:20:27.179703022Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "internal.run_id": "01KM6N3SE4ZH57HZQ2316K9HX8",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "outcome": "success",
+    "failure_signature": "",
+    "last_response": "All artifacts are in place. Here's what was created in this session:\n\n**Created files:**\n\n| File | Purpose |\n|------|---------|\n| `fabro/workflows/bootstrap/foundations.fabro` | Workflow graph followi",
+    "last_stage": "specify",
+    "failure_class": "",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n",
+    "internal.retry_count.start": 1,
+    "graph.rankdir": "LR",
+    "internal.retry_count.specify": 1,
+    "response.specify": "All artifacts are in place. Here's what was created in this session:\n\n**Created files:**\n\n| File | Purpose |\n|------|---------|\n| `fabro/workflows/bootstrap/foundations.fabro` | Workflow graph following the specify→review→polish→verify pattern |\n| `fabro/run-configs/bootstrap/foundations.toml` | Run config naming inputs, scope, and the two required artifact paths |\n| `outputs/foundations/foundation-plan.md` | 6-lane inventory with trust levels, blocking relationships, and priority order |\n| `outputs/foundations/review.md` | Trust judgments per lane, false-submit defect register, and next-execution recommendations |\n\n**Key findings documented:**\n\n- **`games:traits`**: KEEP, implementation-ready now\n- **`tui:shell`**: KEEP (partial) — 3 modules have proof gaps but aren't blocking other lanes  \n- **`chain:runtime` / `chain:pallet`**: RESET needed — non-building transplants confirmed\n- **`games:poker-engine`**: GREENFIELD — spec is sound, crate doesn't exist yet\n- **`games:multi-game`**: REOPEN — false-submit history must be resolved before re-running\n- **`execute/status/watch`**: **NOT TRUSTWORTHY** — `games:multi-game` is the first confirmed instance of claim-without-delivery\n\n**The two frontier tasks addressed honestly:**\n1. The false-submit is the first real defect surfaced by execution — the rule \"fix only when discovered\" is the correct posture\n2. `games:multi-game` needs a clean re-run through the proper Fabro path after diagnosing whether `goal_gate=true` on `verify` is passing when artifacts pre-exist",
+    "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
+    "internal.thread_id": "start",
+    "current_node": "specify",
+    "thread.start.current_node": "specify",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6N3SE4ZH57HZQ2316K9HX8/worktree",
+    "internal.node_visit_count": 1,
+    "internal.fidelity": "compact"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_response": "All artifacts are in place. Here's what was created in this session:\n\n**Created files:**\n\n| File | Purpose |\n|------|---------|\n| `fabro/workflows/bootstrap/foundations.fabro` | Workflow graph followi",
+        "last_stage": "specify",
+        "response.specify": "All artifacts are in place. Here's what was created in this session:\n\n**Created files:**\n\n| File | Purpose |\n|------|---------|\n| `fabro/workflows/bootstrap/foundations.fabro` | Workflow graph following the specify→review→polish→verify pattern |\n| `fabro/run-configs/bootstrap/foundations.toml` | Run config naming inputs, scope, and the two required artifact paths |\n| `outputs/foundations/foundation-plan.md` | 6-lane inventory with trust levels, blocking relationships, and priority order |\n| `outputs/foundations/review.md` | Trust judgments per lane, false-submit defect register, and next-execution recommendations |\n\n**Key findings documented:**\n\n- **`games:traits`**: KEEP, implementation-ready now\n- **`tui:shell`**: KEEP (partial) — 3 modules have proof gaps but aren't blocking other lanes  \n- **`chain:runtime` / `chain:pallet`**: RESET needed — non-building transplants confirmed\n- **`games:poker-engine`**: GREENFIELD — spec is sound, crate doesn't exist yet\n- **`games:multi-game`**: REOPEN — false-submit history must be resolved before re-running\n- **`execute/status/watch`**: **NOT TRUSTWORTHY** — `games:multi-game` is the first confirmed instance of claim-without-delivery\n\n**The two frontier tasks addressed honestly:**\n1. The false-submit is the first real defect surfaced by execution — the rule \"fix only when discovered\" is the correct posture\n2. `games:multi-game` needs a clean re-run through the proper Fabro path after diagnosing whether `goal_gate=true` on `verify` is passing when artifacts pre-exist"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 1561495,
+        "output_tokens": 13514
+      },
+      "files_written": [
+        "fabro/run-configs/bootstrap/foundations.toml",
+        "fabro/workflows/bootstrap/foundations.fabro",
+        "outputs/foundations/foundation-plan.md",
+        "outputs/foundations/review.md"
+      ],
+      "files_touched": [
+        "fabro/run-configs/bootstrap/foundations.toml",
+        "fabro/workflows/bootstrap/foundations.fabro",
+        "outputs/foundations/foundation-plan.md",
+        "outputs/foundations/review.md"
+      ],
+      "duration_ms": 262372
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "specify": 1,
+    "start": 1
+  }
+}

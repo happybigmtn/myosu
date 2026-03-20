@@ -1,0 +1,31 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "All artifacts are in place. Here's what was created in this session:\n\n**Created files:**\n\n| File | Purpose |\n|------|---------|\n| `fabro/workflows/bootstrap/foundations.fabro` | Workflow graph followi",
+    "last_stage": "specify",
+    "response.specify": "All artifacts are in place. Here's what was created in this session:\n\n**Created files:**\n\n| File | Purpose |\n|------|---------|\n| `fabro/workflows/bootstrap/foundations.fabro` | Workflow graph following the specify→review→polish→verify pattern |\n| `fabro/run-configs/bootstrap/foundations.toml` | Run config naming inputs, scope, and the two required artifact paths |\n| `outputs/foundations/foundation-plan.md` | 6-lane inventory with trust levels, blocking relationships, and priority order |\n| `outputs/foundations/review.md` | Trust judgments per lane, false-submit defect register, and next-execution recommendations |\n\n**Key findings documented:**\n\n- **`games:traits`**: KEEP, implementation-ready now\n- **`tui:shell`**: KEEP (partial) — 3 modules have proof gaps but aren't blocking other lanes  \n- **`chain:runtime` / `chain:pallet`**: RESET needed — non-building transplants confirmed\n- **`games:poker-engine`**: GREENFIELD — spec is sound, crate doesn't exist yet\n- **`games:multi-game`**: REOPEN — false-submit history must be resolved before re-running\n- **`execute/status/watch`**: **NOT TRUSTWORTHY** — `games:multi-game` is the first confirmed instance of claim-without-delivery\n\n**The two frontier tasks addressed honestly:**\n1. The false-submit is the first real defect surfaced by execution — the rule \"fix only when discovered\" is the correct posture\n2. `games:multi-game` needs a clean re-run through the proper Fabro path after diagnosing whether `goal_gate=true` on `verify` is passing when artifacts pre-exist"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 1561495,
+    "output_tokens": 13514
+  },
+  "files_written": [
+    "fabro/run-configs/bootstrap/foundations.toml",
+    "fabro/workflows/bootstrap/foundations.fabro",
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md"
+  ],
+  "files_touched": [
+    "fabro/run-configs/bootstrap/foundations.toml",
+    "fabro/workflows/bootstrap/foundations.fabro",
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md"
+  ],
+  "duration_ms": 262372,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T22:20:27.178528469+00:00",
+  "updated_at": "2026-03-20T22:20:27.178535989+00:00"
+}
