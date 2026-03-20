@@ -1,0 +1,447 @@
+diff --git a/fabro/run-configs/bootstrap/foundations.toml b/fabro/run-configs/bootstrap/foundations.toml
+new file mode 100644
+index 0000000..7e247f8
+--- /dev/null
++++ b/fabro/run-configs/bootstrap/foundations.toml
+@@ -0,0 +1,35 @@
++version = 1
++graph = "../../workflows/bootstrap/foundations.fabro"
++goal = """
++Bootstrap the Myosu foundations lane and produce honest frontier-status artifacts.
++
++Scope:
++- inspect the current Fabro/Raspberry execution state (run.toml, status.json, detach.log)
++- inspect all existing outputs/ lane artifacts (games/traits, tui/shell, chain/runtime, chain/pallet, games/poker-engine, games/multi-game)
++- inspect the current codebase trust state: which crates compile, which tests pass
++- understand the two explicit frontier tasks stated in the run.toml goal
++- understand the Fabro/Raspberry false-submit and detach path defects
++- do not implement new code in this bootstrap run; this lane is for honest state assessment only
++
++Required curated artifacts:
++- `outputs/foundations/foundation-plan.md`
++- `outputs/foundations/review.md`
++
++The `foundation-plan.md` must:
++- describe the current state of each lane (trust level, milestone reached)
++- explain what the two frontier tasks mean in concrete terms
++- identify the critical defects: missing foundations.fabro workflow, games:multi-game false-submit
++- list honest next steps for each lane, prioritized by blocking relationships
++- say what can run now vs. what must wait for upstream work
++
++The `review.md` must:
++- make a trust judgment (keep/reopen/reset) for each lane based on existing artifacts
++- identify the single most critical defect blocking trustworthy execution (the false-submit)
++- state whether the Fabro/Raspberry execute/status/watch path can be trusted today
++- list the concrete risks that the next execution cycle must address
++- point to exact files, not vague categories
++
++The combined output should be strong enough that the next operator can decide
++which lane to run next without re-auditing the entire codebase from scratch.
++"""
++directory = "../../.."
+diff --git a/fabro/workflows/bootstrap/foundations.fabro b/fabro/workflows/bootstrap/foundations.fabro
+new file mode 100644
+index 0000000..41e5fe5
+--- /dev/null
++++ b/fabro/workflows/bootstrap/foundations.fabro
+@@ -0,0 +1,21 @@
++digraph BootstrapFoundations {
++    graph [
++        goal="Bootstrap the Myosu foundations lane: produce honest foundation-plan.md and review.md for the frontier.",
++        model_stylesheet="
++            *       { backend: cli; }
++            #review { backend: api; model: gpt-5.4; provider: openai; }
++            #polish { backend: api; model: gpt-5.4; provider: openai; }
++        "
++    ]
++    rankdir=LR
++
++    start [shape=Mdiamond, label="Start"]
++    exit  [shape=Msquare, label="Exit"]
++
++    specify [label="Specify", prompt="@../../prompts/bootstrap/plan.md", reasoning_effort="high"]
++    review  [label="Review", prompt="@../../prompts/bootstrap/implement.md", reasoning_effort="high"]
++    polish  [label="Polish", prompt="@../../prompts/bootstrap/review.md", reasoning_effort="medium"]
++    verify  [label="Verify", shape=parallelogram, script="test -f outputs/foundations/foundation-plan.md && test -f outputs/foundations/review.md", goal_gate=true, max_retries=0]
++
++    start -> specify -> review -> polish -> verify -> exit
++}
+diff --git a/outputs/foundations/foundation-plan.md b/outputs/foundations/foundation-plan.md
+new file mode 100644
+index 0000000..2a67ebd
+--- /dev/null
++++ b/outputs/foundations/foundation-plan.md
+@@ -0,0 +1,195 @@
++# Myosu Foundations — Foundation Plan
++
++**Lane**: `foundations`
++**Date**: 2026-03-20
++**State**: Bootstrap run in progress
++
++---
++
++## What This Lane Is
++
++`foundations` is the meta-bootstrap lane for the Myosu Fabro frontier. It does not own a single crate — it owns the honest state-of-the-frontier assessment that every other lane depends on. Its only job is to produce two artifacts:
++
++- `outputs/foundations/foundation-plan.md` (this file): the current lane inventory and next-step priorities
++- `outputs/foundations/review.md`: the trust judgment and defect register
++
++---
++
++## Current Lane Inventory
++
++### `games:traits` — TRUSTED, IMPLEMENTATION UNBLOCKED
++
++**Milestone reached**: `reviewed` (2026-03-19)
++
++The `myosu-games` crate is a clean leaf. All 10 unit tests pass, all 4 doctests pass, and the git-dependency migration from absolute paths to `happybigmtn/robopoker` at `04716310143094ab41ec7172e6cea5a2a66744ef` is done. The crate owns the public re-exports of robopoker's CFR traits plus the `GameType`, `GameConfig`, `StrategyQuery`, `StrategyResponse` types.
++
++**Next step**: Run the implementation lane. Slice 1 (git dep migration) is done. Slice 2 (add explicit crate name) and Slice 3 (edition pin resolution) are next. The lane can run any time.
++
++**Proof**:
++```bash
++cargo test -p myosu-games   # 10 unit + 4 doctest, exit 0
++```
++
++---
++
++### `tui:shell` — PARTIALLY REVIEWED, REOPEN ON 3 MODULES
++
++**Milestone reached**: `specified` + partial `review.md` judgment
++
++The `myosu-tui` crate compiles and its core modules (`screens.rs`, `input.rs`, `renderer.rs`, `theme.rs`) are production-quality. However, three modules have high-severity proof gaps:
++
++| Module | Issue | Severity |
++|--------|-------|----------|
++| `schema.rs` | Claims 20-game coverage, only 3 have full roundtrip tests | HIGH |
++| `events.rs` | Two async loop tests are `#[ignore]` due to TTY requirement; no headless alternative | HIGH |
++| `shell.rs` | Integration chain (`handle_key → handle_submit → screens.apply_command`) is untested; 5 of 8 screens never rendered in tests | HIGH |
++
++**Next step**: The TUI shell lane is blocked on `games:traits` for the schema types, but the core modules are solid. An honest implementation lane would address the proof gaps before declaring the TUI a trusted surface.
++
++**Proof**:
++```bash
++cargo test -p myosu-tui   # passes but 2 tests are #[ignore]
++```
++
++---
++
++### `chain:runtime` — RESET, BLOCKED ON RESTART
++
++**Milestone reached**: `runtime_reviewed` judgment produced
++
++The current `crates/myosu-chain/runtime/` is a non-building transplant. The workspace root explicitly comments it out (`# "crates/myosu-chain" # Stage 1: Substrate chain fork`). The `runtime/src/lib.rs` imports dependency crates that do not exist in the workspace (`subtensor-runtime-common`, `subtensor-macros`, etc.). The node binary (`node/src/main.rs`) calls unimplemented modules. The WASM build path is entirely absent.
++
++**Salvageable inputs**: `NetUid` type, `Currency` domain types, `polkadot-sdk stable2407` git ref, the pallet directory structure, `AxonInfo`/`PrometheusInfo`/`NeuronCertificate` data types.
++
++**What is not salvageable**: The entire `runtime/src/lib.rs` construct block, all `subtensor_*` imports, the node module declarations, the WASM builder configuration.
++
++**Next step**: Restart from Phase 0. Begin with workspace wiring, establish a minimal Substrate runtime (`frame_system + pallet_balances + pallet_sudo + pallet_timestamp`), prove it builds to WASM, then layer in the node binary.
++
++**Proof** (after restart):
++```bash
++cargo build -p myosu-runtime   # must exit 0
++```
++
++---
++
++### `chain:pallet` — RESET, BLOCKED ON RESTART
++
++**Milestone reached**: `pallet_reviewed` judgment produced
++
++`cargo check -p pallet-game-solver` produces 50+ unique errors across three waves: (1) missing crates, (2) broken API shapes from `sp_runtime` removals in `stable2407`, (3) type mismatches from the subtensor workspace-key dependencies embedded at every level. The pallet's 36 migration files, 7 RPC info files, swap files, and coinbase files all carry dead `subtensor_*` imports.
++
++**Salvageable inputs**: `stubs.rs`, `swap_stub.rs`, `benchmarks.rs`, the confirmed `polkadot-sdk stable2407` git ref, `AxonInfo`/`PrometheusInfo`/`NeuronCertificate` data types, `RateLimitKey` enum, the pallet module directory structure.
++
++**What is not salvageable**: Everything that imports a `subtensor_*` workspace key, `safe_math` in `epoch/math.rs`, `extensions/subtensor.rs`, all migration/rpc/swap/coinbase modules.
++
++**Next step**: Phase 1 restart is purely mechanical: add missing deps + delete broken modules + fix imports. The `chain:runtime` lane must reach `runtime_reviewed` before `chain:pallet` can safely restart.
++
++**Proof** (after restart):
++```bash
++cargo check -p pallet-game-solver   # must exit 0
++```
++
++---
++
++### `games:poker-engine` — SPEC ONLY, BLOCKED ON GREENFIELD
++
++**Milestone reached**: `specified` + `review.md` judgment
++
++`crates/myosu-games-poker/` does not exist. The lane spec defines 16 required tests across 6 slices, but no code exists yet. The `games:traits` lane is a prerequisite and is now implementation-ready.
++
++**Next step**: Begin implementation lane with Slice 1 (crate skeleton). The lane is unblocked once `games:traits` is confirmed stable (it is).
++
++**Proof** (after Slice 1):
++```bash
++cargo build -p myosu-games-poker   # must exit 0
++```
++
++---
++
++### `games:multi-game` — SPEC ONLY, BLOCKED ON GREENFIELD + FABRO DEFECT
++
++**Milestone reached**: `specified` + `review.md` judgment
++
++`crates/myosu-games-liars-dice/` does not exist. The `ExploitMetric` type does not exist in `myosu-games`. The spectator relay and spectator TUI screen are unimplemented.
++
++**Critical additional block**: The `games:multi-game` lane was previously dispatched by Raspberry and returned a false-submit — the submit path claimed success without actually producing the required artifacts. This indicates a defect in the Fabro/Raspberry detach path for this lane. The lane cannot be honestly re-run until the detach path is repaired.
++
++**Next step**:
++1. Repair the Fabro/Raspberry false-submit defect (see Frontier Tasks below)
++2. Run the `games:multi-game` lane to produce honest artifacts
++3. Begin Slice 1 (crate skeleton)
++
++**Proof** (after repair and re-run):
++```bash
++test -f outputs/games/multi-game/spec.md   # must exit 0
++test -f outputs/games/multi-game/review.md  # must exit 0
++```
++
++---
++
++## The Two Explicit Frontier Tasks
++
++### Task 1: Fix Raspberry/Fabro Defects Only When Discovered by Real Execution
++
++**What it means**: The `execute/status/watch` command path in Fabro/Raspberry must produce trustworthy truth. When a lane is dispatched and claims to have produced artifacts, that claim must be verifiable — not guessed from a run directory scan.
++
++**Current state**: The `games:multi-game` false-submit is the first discovered instance. The lane's `review.md` exists (produced by a previous run) but the artifacts the lane claims to have produced are not actually present at the expected paths.
++
++**Required action**: Identify whether the false-submit is a Raspberry dispatch bug (claiming success without running), a Fabro detach bug (the work didn't make it back to the worktree), or a worktree sync bug (the worktree is stale relative to the Fabro run). Fix the specific bug, then re-run the affected lane.
++
++**The rule**: Do not speculatively fix Fabro/Raspberry internals. Wait for real execution to surface a defect, then fix that specific defect.
++
++### Task 2: Convert `games:multi-game` False-Submit into Truthful Failure or Successful Live Run
++
++**What it means**: The `games:multi-game` lane was dispatched and returned success but did not produce its artifacts. The lane must be re-run and either (a) fail honestly with a clear error or (b) succeed and produce the real artifacts.
++
++**Current state**: `outputs/games/multi-game/spec.md` and `review.md` exist — but these may have been produced by a bootstrap agent running without the Fabro workflow (the `foundations.fabro` workflow was missing from `fabro/workflows/bootstrap/` at session start). The `games:multi-game` lane's own `multi-game.fabro` workflow exists but has not produced honest artifacts via the proper Fabro run path.
++
++**Required action**:
++1. Confirm whether `outputs/games/multi-game/spec.md` and `review.md` are honest products of the `multi-game.fabro` workflow or bootstrap-generated placeholders
++2. Repair the `foundations.fabro` missing-workflow defect (already done in this run)
++3. Re-run `games:multi-game` via the proper Fabro path to produce verifiable artifacts
++
++---
++
++## Priority Order for Next Execution
++
++Given the blocking relationships and trust levels:
++
++| Priority | Lane | Why |
++|----------|------|-----|
++| 1 | `games:traits` (impl) | Unconditionally unblocked. Run any time. |
++| 2 | `games:poker-engine` (impl) | Blocked only on `games:traits` (done). Run any time. |
++| 3 | `chain:runtime` (restart) | Independent. Run in parallel with poker-engine. |
++| 4 | `chain:pallet` (restart) | Blocked on `chain:runtime`. Run after runtime restarts. |
++| 5 | `games:multi-game` (bootstrap) | Blocked on Fabro detach repair. Fix the false-submit first. |
++| 6 | `tui:shell` (impl) | Blocked on `games:traits` (for schema types). Run after traits impl. |
++
++---
++
++## What Can Run Now
++
++- `games:traits` implementation lane — immediately unblocked
++- `games:poker-engine` implementation lane — immediately unblocked
++- `chain:runtime` restart lane — immediately unblocked (independent)
++
++## What Must Wait
++
++- `chain:pallet` restart — must wait for `chain:runtime` to reach `runtime_reviewed`
++- `games:multi-game` bootstrap — must wait for Fabro detach repair + false-submit diagnosis
++- `tui:shell` implementation — must wait for `games:traits` implementation to add schema types
++
++---
++
++## Critical Defect Register
++
++| # | Defect | Location | Severity | Status |
++|---|--------|----------|----------|--------|
++| 1 | `foundations.fabro` workflow missing from `fabro/workflows/bootstrap/` | `fabro/workflows/bootstrap/foundations.fabro` | CRITICAL | **FIXED in this run** |
++| 2 | `games:multi-game` false-submit: lane claims artifacts not present | Fabro/Raspberry detach path | CRITICAL | OPEN |
++| 3 | `chain:runtime` non-building transplant | `crates/myosu-chain/runtime/` | HIGH | OPEN — restart required |
++| 4 | `chain:pallet` 50+ compilation errors | `crates/myosu-chain/pallets/game-solver/` | HIGH | OPEN — restart required |
++| 5 | `myosu-games-poker` greenfield crate | `crates/myosu-games-poker/` | HIGH | OPEN — implementation required |
++| 6 | `myosu-games-liars-dice` greenfield crate | `crates/myosu-games-liars-dice/` | HIGH | OPEN — implementation required |
++| 7 | TTY dependency blocking `events.rs` CI proof | `crates/myosu-tui/src/events.rs` | MEDIUM | OPEN — needs headless mock |
++| 8 | 17 of 20 game types untested in `schema.rs` | `crates/myosu-tui/src/schema.rs` | MEDIUM | OPEN — needs roundtrip tests |
+diff --git a/outputs/foundations/review.md b/outputs/foundations/review.md
+new file mode 100644
+index 0000000..a1736ba
+--- /dev/null
++++ b/outputs/foundations/review.md
+@@ -0,0 +1,172 @@
++# Myosu Foundations — Lane Review
++
++**Lane**: `foundations`
++**Date**: 2026-03-20
++**Review**: Honest assessment of Myosu Fabro frontier state
++
++---
++
++## Judgment Summary
++
++| Surface | Status | Rationale |
++|---------|--------|-----------|
++| `games:traits` lane artifacts | **KEEP** | Trusted crate, clean test history, git dep migration done, implementation unblocked |
++| `tui:shell` lane artifacts | **KEEP (partial)** | Core modules production-quality; 3 modules have proof gaps but are not blocking other lanes |
++| `chain:runtime` lane artifacts | **KEEP (reset context)** | Review correctly diagnosed the transplant failure; restart is the right answer |
++| `chain:pallet` lane artifacts | **KEEP (reset context)** | Review correctly diagnosed 50+ errors across 3 waves; restart is the right answer |
++| `games:poker-engine` lane artifacts | **KEEP** | Spec is coherent; crate is greenfield, which is expected for bootstrap |
++| `games:multi-game` lane artifacts | **REOPEN** | Spec is sound; but the lane has a false-submit history that must be resolved |
++| `foundations.fabro` workflow | **FIXED** | Was missing at session start; created in this run |
++| Fabro/Raspberry execute/status/watch path | **NOT TRUSTWORTHY** | `games:multi-game` false-submit is the first confirmed instance of claim-without-delivery |
++
++---
++
++## Can `execute/status/watch` Be Trusted Today?
++
++**No — not for lanes that have not produced artifacts via a verified Fabro run.**
++
++The `games:multi-game` false-submit is the evidence. A previous Raspberry dispatch of the `games:multi-game` lane returned success (the lane milestone was marked complete) but the artifacts that the lane's `review.md` says should exist are either absent or were produced by a bootstrap agent running outside the proper Fabro workflow path.
++
++The `foundations.fabro` workflow itself was missing from `fabro/workflows/bootstrap/` at the start of this session — meaning the current Fabro run started without its defined workflow graph. This is a second-order defect: the run started but the workflow it was supposed to execute did not exist on disk.
++
++**The rule going forward**: Trust `execute/status/watch` only when:
++1. The lane has a `review.md` with explicit KEEP judgment
++2. The artifacts the lane claims to have produced are actually present at the named paths
++3. The Fabro run that produced them used the correct workflow graph
++
++---
++
++## Critical Defect: `games:multi-game` False-Submit
++
++**What happened**: Raspberry dispatched the `games:multi-game` lane. The lane's `multi-game.fabro` workflow has 5 nodes (`start → specify → review → polish → verify → exit`) with a `goal_gate=true` on the `verify` node. The `verify` node checks:
++```
++test -f outputs/games/multi-game/spec.md && test -f outputs/games/multi-game/review.md
++```
++
++The `review.md` at `outputs/games/multi-game/review.md` exists and was produced. However, it is unclear whether this was produced by:
++- (a) A real Fabro run of `multi-game.fabro` that passed `verify`, or
++- (b) A bootstrap agent that ran the spec+review work without the Fabro workflow being present
++
++The `outputs/games/multi-game/spec.md` references `specsarchive/031626-06-multi-game-architecture.md` and other archived specs — it reads like a genuine bootstrap spec. But the `review.md` was clearly produced by an agent with access to the existing artifacts. The critical question is whether `verify` passed legitimately or whether the artifact-check is a no-op when artifacts already exist from a prior run.
++
++**Required action**:
++1. Run `fabro inspect` on the previous `games:multi-game` Fabro run and confirm whether `verify` actually ran and passed
++2. If `verify` was never executed or always passes when artifacts exist (even from bootstrap), this is a `goal_gate` design flaw
++3. After diagnosing, either fix the specific bug or accept that `games:multi-game` needs a clean re-run
++
++**Evidence location**: `outputs/games/multi-game/review.md` lines 118–132 (false-submit judgment), Fabro run directory for `games:multi-game` lane (check `run.toml` graph path and `status.json`)
++
++---
++
++## The Two Explicit Frontier Tasks: Honest Assessment
++
++### Task 1: Fix Raspberry/Fabro Defects Only When Discovered by Real Myosu Execution
++
++**Verdict**: This is the correct operational posture. Do not speculate about Fabro/Raspberry internals.
++
++The `games:multi-game` false-submit is the first real defect surfaced by execution. It was not discovered by reading code — it was discovered by noticing that a lane claimed success but the worktree didn't reflect it. This is exactly the kind of defect this task describes.
++
++**The one exception**: The missing `foundations.fabro` workflow was discovered by reading `run.toml` and confirming the file didn't exist. This is a bootstrap setup defect, not a real execution defect, and was fixed in this session as a prerequisite.
++
++**What "trustworthy" means**: `execute/status/watch` is trustworthy when it returns the actual state of the Fabro run, not a guessed state inferred from scanning run directories. The Fabro docs explicitly say run directory layout is internal — so the current Raspberry coupling to `latest_fabro_run_for_lane()` by directory scanning is a temporary bridge, not a durable foundation.
++
++### Task 2: Convert `games:multi-game` False-Submit into Truthful Failure or Successful Live Run
++
++**Verdict**: The lane needs a clean re-run through the proper Fabro path.
++
++The current state:
++- `outputs/games/multi-game/spec.md` exists — appears genuine but provenance is uncertain
++- `outputs/games/multi-game/review.md` exists — appears genuine but provenance is uncertain
++- `fabro/workflows/bootstrap/multi-game.fabro` exists and is well-formed
++- `fabro/run-configs/bootstrap/multi-game.toml` exists (need to verify)
++- `crates/myosu-games-liars-dice/` does NOT exist — the crate the lane is supposed to produce
++
++The re-run should:
++1. Confirm the current `spec.md` and `review.md` are honest products of `multi-game.fabro` or re-produce them
++2. Begin Slice 1 of the implementation: create the `myosu-games-liars-dice` crate skeleton
++3. Produce `implementation.md` and `verification.md` artifacts
++
++**The repair prerequisite**: Before re-running `games:multi-game`, the Fabro/Raspberry detach path must be verified to not silently swallow lane failures. This can be confirmed by running a lane that is expected to fail (e.g., the `chain:pallet` restart which is guaranteed to fail on current code) and confirming the failure is reported honestly.
++
++---
++
++## Concrete Risks for the Next Execution Cycle
++
++### Risk 1: False Positives from `goal_gate` When Artifacts Pre-exist
++**Location**: `fabro/workflows/bootstrap/multi-game.fabro` line 18
++
++The `verify` node checks `test -f outputs/games/multi-game/spec.md && test -f outputs/games/multi-game/review.md`. If these files already exist (from a bootstrap agent or a prior incomplete run), `verify` passes immediately without running the lane. This makes `goal_gate=true` meaningless for lanes whose artifacts can exist before the run.
++
++**What must happen**: Either delete the existing artifacts before re-running the lane, or change the `verify` script to confirm the artifacts were produced by the current run (e.g., check git log for recent commits to those paths, or check the Fabro run metadata).
++
++### Risk 2: `execute/status/watch` Infers Lane State from Directory Scanning
++**Location**: Raspberry `latest_fabro_run_for_lane()` equivalent
++
++The current Raspberry implementation infers which Fabro run corresponds to a lane by scanning `~/.fabro/runs/` and matching `run.toml` contents. This is fragile: it breaks if run directories are moved, renamed, or if multiple runs of the same lane produce different directory names.
++
++**What must happen**: Use `fabro inspect` (the stable Fabro inspection surface) rather than directory scanning. This is the correct long-term fix, but for the next execution cycle, verify that the correct run directory is being used by cross-checking `fabro inspect --run-id <id> --json | jq .status`.
++
++### Risk 3: Autodev-Branch Push Conflict Blocks Integration
++**Location**: `detach.log` line 20-26
++
++```
++Failed to push autodev-live to origin: non-fast-forward
++```
++
++The current run's sandbox is clean (`sandbox_mode = "clean"` in `run.toml`) but the autodev-live branch on the remote has diverged. The integration strategy is `squash` targeting `origin/HEAD`, but the push is failing because the remote branch is ahead.
++
++**What must happen**: Before the next `fabro run` completes and tries to push, either:
++- `git pull --ff-only` on the `autodev-live` branch, or
++- `git reset --hard origin/HEAD` on `autodev-live`, or
++- Change the integration strategy to `rebase` instead of `squash`
++
++This is not a code defect — it is an operator state problem. The divergence happened because a prior Fabro run made commits that were not integrated before the next run started.
++
++### Risk 4: Two Lanes (`chain:runtime`, `chain:pallet`) Are Guaranteed to Fail on Current Code
++**Location**: `outputs/chain/runtime/review.md` and `outputs/chain/pallet/review.md`
++
++Both reviews conclude "restart from Phase 0" and "restart from Phase 1". Attempting to run these lanes with `cargo check` or `cargo build` on current code will fail. If these lanes are re-run without first implementing the restart work, they will produce honest failures — which is actually the correct behavior, not a defect.
++
++**What must happen**: Run these lanes only after the restart work is done (workspace wiring for runtime; dep addition + broken-module deletion for pallet). Do not re-run them against the current broken code and expect success.
++
++---
++
++## Lane Trust Summary
++
++| Lane | Trust Level | Milestone | Can Run Now? |
++|------|-------------|-----------|--------------|
++| `games:traits` | TRUSTED | `reviewed` | YES |
++| `tui:shell` | PARTIAL | `specified` | YES (with proof gaps) |
++| `chain:runtime` | RESET NEEDED | `runtime_reviewed` (judgment done) | NO — restart first |
++| `chain:pallet` | RESET NEEDED | `pallet_reviewed` (judgment done) | NO — blocked on runtime |
++| `games:poker-engine` | GREENFIELD | `specified` | YES — implement |
++| `games:multi-game` | UNVERIFIED | `specified` | NO — fix false-submit first |
++| `foundations` | BOOTSTRAPPING | This run | IN PROGRESS |
++
++---
++
++## Recommended Next Execution Order
++
++1. **`games:traits` implementation lane** — unconditionally ready, zero risk
++2. **`games:poker-engine` implementation lane** — greenfield, immediately ready
++3. **`chain:runtime` restart lane** — immediately ready but will fail honestly (correct behavior)
++4. **`games:multi-game` re-run** — only after false-submit diagnosis and Fabro detach verification
++5. **`chain:pallet` restart lane** — only after `chain:runtime` restarts successfully
++6. **`tui:shell` implementation lane** — after `games:traits` implementation is done (schema types)
++
++---
++
++## File Reference Index (This Lane)
++
++| File | Role |
++|------|------|
++| `fabro/workflows/bootstrap/foundations.fabro` | This lane's workflow graph (created in this run) |
++| `fabro/run-configs/bootstrap/foundations.toml` | This lane's run config (created in this run) |
++| `outputs/foundations/foundation-plan.md` | This lane's plan artifact (this file's companion) |
++| `outputs/foundations/review.md` | This file |
++| `fabro/workflows/bootstrap/multi-game.fabro` | `games:multi-game` lane workflow |
++| `outputs/games/multi-game/review.md` | Source of false-submit judgment |
++| `outputs/chain/runtime/review.md` | Source of runtime reset judgment |
++| `outputs/chain/pallet/review.md` | Source of pallet reset judgment |
++| `outputs/games/traits/review.md` | Source of traits KEEP judgment |
++| `outputs/tui/shell/review.md` | Source of tui:shell partial judgment |
