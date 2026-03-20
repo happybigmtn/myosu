@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-03-20T23:21:36.250969838Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "specify": 1,
+    "start": 1
+  },
+  "context_values": {
+    "internal.retry_count.start": 1,
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6RQ0W84NK1VR1EANXRYH18/worktree",
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "internal.run_id": "01KM6RQ0W84NK1VR1EANXRYH18",
+    "outcome": "success",
+    "thread.start.current_node": "specify",
+    "last_stage": "specify",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration` lane bridges `agent:experience` outputs to the rest of the system. Key architectural decisions documented:\n1. **Fog-of-war at the relay layer** — enforced at `SpectatorRelay`, not at `GameRenderer`, ensuring no hole card leakage regardless of renderer bugs\n2. **Schema as canonical contract** — all agent-facing surfaces (pipe, narration, spectator events) must be representable as `GameState`\n3. **Phase ordering isolation** — Phase 1–3 have no chain dependencies; Phase 4 integration is cleanly gated\n`─────────────────────────────────────────────────`\n\n## Summary\n\n**Decision: KEEP — proceed to implementation-family workflow for product frontier**\n\nThe `agent:experience` lane has complete, reviewed artifacts. The two HIGH blockers identified in its review are owned by other lanes:\n- **robopoker git migration** → `games:traits` lane (KEEP, implementation unblocked)\n- **`myosu-play` binary missing** → `play:tui` lane (KEEP, ready for implementation)\n\nBoth blocking items are tracked and addressed in lanes that are themselves ready for implementation.\n\n**Artifacts produced:**\n- `outputs/agent-integration/agent-adapter.md` — Integration contracts for all 9 surfaces (pipe mode, JSON schema, context file, narration, journal, reflection, spectator relay, lobby)\n- `outputs/agent-integration/review.md` — Judgment: KEEP, decision: implementation family next\n\n**Immediate next steps:**\n1. Begin `agent:experience` Slices 1–4 (no external dependencies beyond trusted `tui:shell`)\n2. `play:tui` begins Slice 1 (binary skeleton) — unblocks `agent:experience` Slice 3\n3. `games:traits` proceeds with Slice 1 (robopoker git migration) — unblocks CI",
+    "internal.node_visit_count": 1,
+    "internal.fidelity": "compact",
+    "graph.rankdir": "LR",
+    "failure_class": "",
+    "last_response": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration` lane bridges `agent:experience` outputs to the res",
+    "internal.thread_id": "start",
+    "internal.retry_count.specify": 1,
+    "failure_signature": "",
+    "current_node": "specify"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_response": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration` lane bridges `agent:experience` outputs to the res",
+        "response.specify": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration` lane bridges `agent:experience` outputs to the rest of the system. Key architectural decisions documented:\n1. **Fog-of-war at the relay layer** — enforced at `SpectatorRelay`, not at `GameRenderer`, ensuring no hole card leakage regardless of renderer bugs\n2. **Schema as canonical contract** — all agent-facing surfaces (pipe, narration, spectator events) must be representable as `GameState`\n3. **Phase ordering isolation** — Phase 1–3 have no chain dependencies; Phase 4 integration is cleanly gated\n`─────────────────────────────────────────────────`\n\n## Summary\n\n**Decision: KEEP — proceed to implementation-family workflow for product frontier**\n\nThe `agent:experience` lane has complete, reviewed artifacts. The two HIGH blockers identified in its review are owned by other lanes:\n- **robopoker git migration** → `games:traits` lane (KEEP, implementation unblocked)\n- **`myosu-play` binary missing** → `play:tui` lane (KEEP, ready for implementation)\n\nBoth blocking items are tracked and addressed in lanes that are themselves ready for implementation.\n\n**Artifacts produced:**\n- `outputs/agent-integration/agent-adapter.md` — Integration contracts for all 9 surfaces (pipe mode, JSON schema, context file, narration, journal, reflection, spectator relay, lobby)\n- `outputs/agent-integration/review.md` — Judgment: KEEP, decision: implementation family next\n\n**Immediate next steps:**\n1. Begin `agent:experience` Slices 1–4 (no external dependencies beyond trusted `tui:shell`)\n2. `play:tui` begins Slice 1 (binary skeleton) — unblocks `agent:experience` Slice 3\n3. `games:traits` proceeds with Slice 1 (robopoker git migration) — unblocks CI",
+        "last_stage": "specify"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 695077,
+        "output_tokens": 9905
+      },
+      "files_written": [
+        "outputs/agent-integration/.gitkeep",
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/.gitkeep",
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 155540
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}

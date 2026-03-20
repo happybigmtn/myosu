@@ -1,0 +1,29 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration` lane bridges `agent:experience` outputs to the res",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration` lane bridges `agent:experience` outputs to the rest of the system. Key architectural decisions documented:\n1. **Fog-of-war at the relay layer** — enforced at `SpectatorRelay`, not at `GameRenderer`, ensuring no hole card leakage regardless of renderer bugs\n2. **Schema as canonical contract** — all agent-facing surfaces (pipe, narration, spectator events) must be representable as `GameState`\n3. **Phase ordering isolation** — Phase 1–3 have no chain dependencies; Phase 4 integration is cleanly gated\n`─────────────────────────────────────────────────`\n\n## Summary\n\n**Decision: KEEP — proceed to implementation-family workflow for product frontier**\n\nThe `agent:experience` lane has complete, reviewed artifacts. The two HIGH blockers identified in its review are owned by other lanes:\n- **robopoker git migration** → `games:traits` lane (KEEP, implementation unblocked)\n- **`myosu-play` binary missing** → `play:tui` lane (KEEP, ready for implementation)\n\nBoth blocking items are tracked and addressed in lanes that are themselves ready for implementation.\n\n**Artifacts produced:**\n- `outputs/agent-integration/agent-adapter.md` — Integration contracts for all 9 surfaces (pipe mode, JSON schema, context file, narration, journal, reflection, spectator relay, lobby)\n- `outputs/agent-integration/review.md` — Judgment: KEEP, decision: implementation family next\n\n**Immediate next steps:**\n1. Begin `agent:experience` Slices 1–4 (no external dependencies beyond trusted `tui:shell`)\n2. `play:tui` begins Slice 1 (binary skeleton) — unblocks `agent:experience` Slice 3\n3. `games:traits` proceeds with Slice 1 (robopoker git migration) — unblocks CI",
+    "last_stage": "specify"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 695077,
+    "output_tokens": 9905
+  },
+  "files_written": [
+    "outputs/agent-integration/.gitkeep",
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/.gitkeep",
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 155540,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:21:36.250381484+00:00",
+  "updated_at": "2026-03-20T23:21:36.250385499+00:00"
+}
