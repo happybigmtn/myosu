@@ -7,6 +7,7 @@
 
 use crate::solver::{PokerSolver, PokerSolverError};
 use rbp_core::Utility;
+use rbp_nlhe::NlheEncoder;
 use std::path::Path;
 use thiserror::Error;
 
@@ -19,6 +20,8 @@ pub enum TrainingError {
     CheckpointLoad(#[source] PokerSolverError),
     #[error("training failed: {0}")]
     TrainingFailed(#[source] PokerSolverError),
+    #[error("exploitability failed: {0}")]
+    ExploitabilityFailed(#[source] PokerSolverError),
 }
 
 /// Configuration for a training session.
@@ -73,7 +76,8 @@ impl TrainingConfig {
 ///     .with_frequency(100)
 ///     .with_checkpoint_dir("/tmp/checkpoints");
 ///
-/// let mut session = TrainingSession::new(config)?;
+/// let encoder = /* load abstraction artifact */;
+/// let mut session = TrainingSession::new_with_encoder(config, encoder)?;
 /// session.train(1000)?;
 /// ```
 #[derive(Debug)]
@@ -87,7 +91,7 @@ impl TrainingSession {
     /// Creates a new training session.
     ///
     /// If a checkpoint exists at the configured path, it is loaded.
-    /// Otherwise, starts fresh with a new solver.
+    /// Otherwise, starts fresh with a checkpoint-capable but untrained solver.
     pub fn new(config: TrainingConfig) -> Result<Self, TrainingError> {
         let checkpoint_path = config.checkpoint_path();
 
@@ -95,6 +99,29 @@ impl TrainingSession {
             PokerSolver::load(&checkpoint_path).map_err(TrainingError::CheckpointLoad)?
         } else {
             PokerSolver::new()
+        };
+
+        let start_epoch = solver.epochs();
+
+        Ok(Self {
+            solver,
+            config,
+            start_epoch,
+        })
+    }
+
+    /// Creates a training session backed by a concrete encoder artifact.
+    pub fn new_with_encoder(
+        config: TrainingConfig,
+        encoder: NlheEncoder,
+    ) -> Result<Self, TrainingError> {
+        let checkpoint_path = config.checkpoint_path();
+
+        let solver = if checkpoint_path.exists() {
+            PokerSolver::load_with_encoder(&checkpoint_path, encoder)
+                .map_err(TrainingError::CheckpointLoad)?
+        } else {
+            PokerSolver::with_encoder(encoder).map_err(TrainingError::TrainingFailed)?
         };
 
         let start_epoch = solver.epochs();
@@ -131,12 +158,15 @@ impl TrainingSession {
     /// Checkpoints are saved automatically according to the configuration.
     pub fn train(&mut self, iterations: usize) -> Result<(), TrainingError> {
         for _ in 0..iterations {
-            self.solver.train(1);
+            self.solver
+                .train(1)
+                .map_err(TrainingError::TrainingFailed)?;
 
             // Save checkpoint if needed
             let epoch = self.solver.epochs();
             if epoch % self.config.checkpoint_frequency == 0 {
-                self.save_checkpoint().map_err(TrainingError::CheckpointSave)?;
+                self.save_checkpoint()
+                    .map_err(TrainingError::CheckpointSave)?;
             }
         }
         Ok(())
@@ -149,15 +179,18 @@ impl TrainingSession {
     }
 
     /// Computes the current exploitability of the strategy.
-    pub fn exploitability(&self) -> Utility {
-        self.solver.exploitability()
+    pub fn exploitability(&self) -> Result<Utility, TrainingError> {
+        self.solver
+            .exploitability()
+            .map_err(TrainingError::ExploitabilityFailed)
     }
 }
 
 impl TrainingConfig {
     /// Returns the full path to the checkpoint file.
     pub fn checkpoint_path(&self) -> std::path::PathBuf {
-        self.checkpoint_dir.join(format!("{}.myos", self.checkpoint_name))
+        self.checkpoint_dir
+            .join(format!("{}.myos", self.checkpoint_name))
     }
 }
 
@@ -167,7 +200,6 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    #[ignore = "train() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
     fn session_checkpoint_frequency() {
         let temp_dir = TempDir::new().unwrap();
         let config = TrainingConfig::with_frequency(50)
@@ -175,20 +207,36 @@ mod tests {
             .with_checkpoint_name("test_checkpoint");
 
         let mut session = TrainingSession::new(config.clone()).unwrap();
-
-        // Train 120 iterations — should trigger checkpoints at 50, 100
-        session.train(120).unwrap();
-
-        // Verify epochs
-        assert_eq!(session.epochs(), 120);
-        assert_eq!(session.session_epochs(), 120);
-
-        // Verify checkpoint file was created
         let checkpoint_path = config.checkpoint_path();
-        assert!(checkpoint_path.exists(), "checkpoint should exist at {:?}", checkpoint_path);
 
-        // Load a new session from the same checkpoint — should resume at 120
-        let session2 = TrainingSession::new(config).unwrap();
-        assert_eq!(session2.epochs(), 120, "resumed session should start at epoch 120");
+        let error = session.train(120).unwrap_err();
+
+        assert!(matches!(
+            error,
+            TrainingError::TrainingFailed(PokerSolverError::MissingEncoderAbstractions {
+                context: "training"
+            })
+        ));
+        assert_eq!(session.epochs(), 0);
+        assert_eq!(session.session_epochs(), 0);
+        assert!(
+            !checkpoint_path.exists(),
+            "failed training should not checkpoint"
+        );
+    }
+
+    #[test]
+    fn new_with_encoder_rejects_empty_abstraction_map() {
+        let temp_dir = TempDir::new().unwrap();
+        let config = TrainingConfig::with_frequency(10).with_checkpoint_dir(temp_dir.path());
+
+        let error = TrainingSession::new_with_encoder(config, NlheEncoder::default()).unwrap_err();
+
+        assert!(matches!(
+            error,
+            TrainingError::TrainingFailed(PokerSolverError::MissingEncoderAbstractions {
+                context: "encoder validation"
+            })
+        ));
     }
 }

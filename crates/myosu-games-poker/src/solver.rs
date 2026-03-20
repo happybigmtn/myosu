@@ -4,10 +4,12 @@
 //! and adds file-based checkpoint save/load with the MYOS format.
 
 use rbp_core::{Probability, Utility};
-use rbp_mccfr::{CfrGame, Profile, Solver, TreeBuilder};
+use rbp_mccfr::{CfrGame, Encoder, Profile, Solver};
 use rbp_nlhe::{NlheEdge, NlheEncoder, NlheGame, NlheInfo, NlheProfile};
+use std::any::Any;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
 use thiserror::Error;
 
@@ -20,7 +22,11 @@ const CHECKPOINT_VERSION: u32 = 1;
 #[derive(Error, Debug)]
 pub enum PokerSolverError {
     #[error("failed to open checkpoint file: {path}")]
-    FileOpen { path: String, #[source] source: std::io::Error },
+    FileOpen {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
     #[error("checkpoint has invalid magic: expected MYOS, found {found:?}")]
     InvalidMagic { found: Vec<u8> },
     #[error("checkpoint has unsupported version: {version}")]
@@ -29,6 +35,15 @@ pub enum PokerSolverError {
     CorruptedCheckpoint(#[source] bincode::Error),
     #[error("failed to serialize checkpoint")]
     Serialization(#[source] bincode::Error),
+    #[error("encoder abstractions are unavailable during {context}")]
+    MissingEncoderAbstractions { context: &'static str },
+    #[error("solver panicked during {context}: {message}")]
+    OperationPanicked {
+        context: &'static str,
+        message: String,
+    },
+    #[error("exploitability is not finite: {value}")]
+    InvalidExploitability { value: Utility },
 }
 
 /// NLHE poker solver with training and persistence.
@@ -44,28 +59,42 @@ pub struct PokerSolver {
 }
 
 impl PokerSolver {
-    /// Creates a new solver with empty profile and encoder.
+    /// Creates a new solver with an empty profile and no abstraction data.
     ///
-    /// The profile starts with zero iterations; call `train()` to begin.
+    /// This is sufficient for checkpoint serialization and strategy lookups over
+    /// explicit [`NlheInfo`] values, but training and exploitability require a
+    /// populated encoder loaded from abstraction artifacts.
     pub fn new() -> Self {
         Self {
             inner: rbp_nlhe::Flagship::new(NlheProfile::default(), NlheEncoder::default()),
         }
     }
 
-    /// Trains the solver for `iterations` CFR iterations.
-    pub fn train(&mut self, iterations: usize) {
+    /// Creates a solver backed by an externally-provided encoder.
+    pub fn with_encoder(encoder: NlheEncoder) -> Result<Self, PokerSolverError> {
+        let solver = Self {
+            inner: rbp_nlhe::Flagship::new(NlheProfile::default(), encoder),
+        };
+        solver.validate_abstractions()?;
+        Ok(solver)
+    }
+
+    /// Verifies that the encoder can at least construct the root infoset.
+    pub fn validate_abstractions(&self) -> Result<(), PokerSolverError> {
+        catch_unwind(AssertUnwindSafe(|| {
+            let _ = self.inner.encoder.seed(&NlheGame::root());
+        }))
+        .map_err(|payload| Self::map_operation_panic("encoder validation", payload))?;
+        Ok(())
+    }
+
+    /// Trains the solver for `iterations` MCCFR iterations.
+    pub fn train(&mut self, iterations: usize) -> Result<(), PokerSolverError> {
         for _ in 0..iterations {
-            let root = NlheGame::root();
-            let builder =
-                TreeBuilder::<_, _, _, _, _, _, rbp_mccfr::PluribusSampling>::new(
-                    &self.inner.encoder,
-                    &self.inner.profile,
-                    root,
-                );
-            let _tree = builder.build();
-            self.inner.advance();
+            catch_unwind(AssertUnwindSafe(|| self.inner.step()))
+                .map_err(|payload| Self::map_operation_panic("training", payload))?;
         }
+        Ok(())
     }
 
     /// Returns the current number of training iterations (epochs).
@@ -87,17 +116,15 @@ impl PokerSolver {
     /// Returns the Nash equilibrium distance in milli-big-blinds per hand (mbb/h).
     /// Lower values indicate strategies closer to equilibrium.
     /// A trained strategy should have exploitability significantly below random play.
-    pub fn exploitability(&self) -> Utility {
-        use rbp_mccfr::Profile;
-        let root = NlheGame::root();
-        let builder =
-            TreeBuilder::<_, _, _, _, _, _, rbp_mccfr::PluribusSampling>::new(
-                &self.inner.encoder,
-                &self.inner.profile,
-                root,
-            );
-        let tree = builder.build();
-        self.inner.profile().exploitability(tree)
+    pub fn exploitability(&self) -> Result<Utility, PokerSolverError> {
+        let value = catch_unwind(AssertUnwindSafe(|| Solver::exploitability(&self.inner)))
+            .map_err(|payload| Self::map_operation_panic("exploitability", payload))?;
+
+        if !value.is_finite() {
+            return Err(PokerSolverError::InvalidExploitability { value });
+        }
+
+        Ok(value)
     }
 
     /// Saves the solver state to a checkpoint file.
@@ -148,6 +175,23 @@ impl PokerSolver {
     /// Returns error if the file cannot be opened, has invalid format,
     /// or contains unsupported version.
     pub fn load(path: &Path) -> Result<Self, PokerSolverError> {
+        let profile = Self::read_profile(path)?;
+        Ok(Self {
+            inner: rbp_nlhe::Flagship::new(profile, NlheEncoder::default()),
+        })
+    }
+
+    /// Loads a checkpoint and pairs it with a caller-provided encoder.
+    pub fn load_with_encoder(path: &Path, encoder: NlheEncoder) -> Result<Self, PokerSolverError> {
+        let profile = Self::read_profile(path)?;
+        let solver = Self {
+            inner: rbp_nlhe::Flagship::new(profile, encoder),
+        };
+        solver.validate_abstractions()?;
+        Ok(solver)
+    }
+
+    fn read_profile(path: &Path) -> Result<NlheProfile, PokerSolverError> {
         let mut file = File::open(path).map_err(|source| PokerSolverError::FileOpen {
             path: path.display().to_string(),
             source,
@@ -155,10 +199,11 @@ impl PokerSolver {
 
         // Read and validate magic
         let mut magic = [0u8; 4];
-        file.read_exact(&mut magic).map_err(|source| PokerSolverError::FileOpen {
-            path: path.display().to_string(),
-            source,
-        })?;
+        file.read_exact(&mut magic)
+            .map_err(|source| PokerSolverError::FileOpen {
+                path: path.display().to_string(),
+                source,
+            })?;
         if magic != CHECKPOINT_MAGIC {
             return Err(PokerSolverError::InvalidMagic {
                 found: magic.to_vec(),
@@ -167,22 +212,18 @@ impl PokerSolver {
 
         // Read and validate version
         let mut version_bytes = [0u8; 4];
-        file.read_exact(&mut version_bytes).map_err(|source| PokerSolverError::FileOpen {
-            path: path.display().to_string(),
-            source,
-        })?;
+        file.read_exact(&mut version_bytes)
+            .map_err(|source| PokerSolverError::FileOpen {
+                path: path.display().to_string(),
+                source,
+            })?;
         let version = u32::from_le_bytes(version_bytes);
         if version != CHECKPOINT_VERSION {
             return Err(PokerSolverError::UnsupportedVersion { version });
         }
 
         // Load profile
-        let profile: NlheProfile =
-            bincode::deserialize_from(&file).map_err(PokerSolverError::CorruptedCheckpoint)?;
-
-        Ok(Self {
-            inner: rbp_nlhe::Flagship::new(profile, NlheEncoder::default()),
-        })
+        bincode::deserialize_from(&file).map_err(PokerSolverError::CorruptedCheckpoint)
     }
 
     /// Returns a reference to the inner solver for use by other crate modules.
@@ -195,6 +236,18 @@ impl PokerSolver {
     #[allow(dead_code)]
     pub(crate) fn mut_inner(&mut self) -> &mut rbp_nlhe::Flagship {
         &mut self.inner
+    }
+
+    fn map_operation_panic(
+        context: &'static str,
+        payload: Box<dyn Any + Send>,
+    ) -> PokerSolverError {
+        let message = panic_message(payload.as_ref());
+        if message.contains("isomorphism not found in abstraction lookup") {
+            PokerSolverError::MissingEncoderAbstractions { context }
+        } else {
+            PokerSolverError::OperationPanicked { context, message }
+        }
     }
 }
 
@@ -212,6 +265,16 @@ impl std::fmt::Debug for PokerSolver {
     }
 }
 
+fn panic_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else {
+        "non-string panic payload".to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,29 +289,38 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "train() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
     fn train_100_iterations() {
         let mut solver = PokerSolver::new();
-        solver.train(100);
-        assert_eq!(solver.epochs(), 100);
+        let error = solver.train(100).unwrap_err();
+
+        assert!(matches!(
+            error,
+            PokerSolverError::MissingEncoderAbstractions {
+                context: "training"
+            }
+        ));
+        assert_eq!(solver.epochs(), 0);
     }
 
     #[test]
     fn strategy_is_valid_distribution() {
-        // Use NlheInfo::random() to avoid encoder.seed() which requires database-backed mappings
         let solver = PokerSolver::new();
         let info = rbp_nlhe::NlheInfo::random();
         let strategy = solver.strategy(&info);
-        // With a random info set on an untrained solver, strategy may be empty
-        // This test verifies the query doesn't panic
-        let _sum: f32 = strategy.iter().map(|(_, p)| *p).sum();
+        let sum: f32 = strategy.iter().map(|(_, p)| *p).sum();
+
+        assert!(
+            !strategy.is_empty(),
+            "random infos should expose legal actions"
+        );
+        assert!((sum - 1.0).abs() < 0.001, "probabilities should sum to 1.0");
     }
 
     #[test]
-    #[ignore = "train() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
     fn checkpoint_roundtrip() {
-        let mut solver = PokerSolver::new();
-        solver.train(50);
+        let solver = PokerSolver::new();
+        let info = rbp_nlhe::NlheInfo::random();
+        let baseline_strategy = solver.strategy(&info);
 
         let temp_file = NamedTempFile::new().unwrap();
         let temp_path = temp_file.path();
@@ -267,20 +339,32 @@ mod tests {
 
         // Load and verify
         let loaded = PokerSolver::load(temp_path).unwrap();
-        assert_eq!(loaded.epochs(), 50);
+        assert_eq!(loaded.epochs(), 0);
+        assert_eq!(loaded.strategy(&info), baseline_strategy);
     }
 
     #[test]
-    #[ignore = "exploitability() requires encoder with database-backed mappings (NlheEncoder::hydrate)"]
     fn exploitability_decreases() {
-        let mut solver = PokerSolver::new();
+        let solver = PokerSolver::new();
+        let error = solver.exploitability().unwrap_err();
 
-        // Note: exploitability() requires encoder with database-backed mappings
-        // These tests verify basic functionality but actual exploitability computation
-        // requires a properly initialized encoder (loaded via Hydrate from database)
+        assert!(matches!(
+            error,
+            PokerSolverError::MissingEncoderAbstractions {
+                context: "exploitability"
+            }
+        ));
+    }
 
-        // Train for some iterations
-        solver.train(200);
-        assert_eq!(solver.epochs(), 200);
+    #[test]
+    fn with_encoder_rejects_empty_abstraction_map() {
+        let error = PokerSolver::with_encoder(NlheEncoder::default()).unwrap_err();
+
+        assert!(matches!(
+            error,
+            PokerSolverError::MissingEncoderAbstractions {
+                context: "encoder validation"
+            }
+        ));
     }
 }
