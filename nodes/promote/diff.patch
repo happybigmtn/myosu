@@ -1,0 +1,1156 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index eb85e81..a8d6571 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1840,7 +1840,9 @@ dependencies = [
+  "myosu-games",
+  "myosu-tui",
+  "rand 0.8.5",
++ "ratatui",
+  "rbp-mccfr",
++ "rbp-transport",
+  "serde",
+  "serde_json",
+  "tempfile",
+diff --git a/crates/myosu-sdk/Cargo.toml b/crates/myosu-sdk/Cargo.toml
+index 016d74a..71d3b49 100644
+--- a/crates/myosu-sdk/Cargo.toml
++++ b/crates/myosu-sdk/Cargo.toml
+@@ -10,12 +10,13 @@ crate-type = ["lib"]
+ 
+ [features]
+ default = []
+-tui = ["myosu-tui"]
++tui = ["myosu-tui", "ratatui"]
+ 
+ [dependencies]
+ myosu-games = { path = "../myosu-games" }
+ myosu-tui = { path = "../myosu-tui", optional = true }
+ rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
++rbp-transport = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+ clap = { workspace = true }
+ anyhow = { workspace = true }
+ serde = { workspace = true }
+@@ -25,6 +26,7 @@ rand = { workspace = true }
+ thiserror = { workspace = true }
+ tracing = { workspace = true }
+ tracing-subscriber = { workspace = true }
++ratatui = { workspace = true, optional = true }
+ 
+ # External dependencies needed for test harness and scaffold
+ tempfile = "3"
+diff --git a/crates/myosu-sdk/src/lib.rs b/crates/myosu-sdk/src/lib.rs
+index d600ebf..a0020b6 100644
+--- a/crates/myosu-sdk/src/lib.rs
++++ b/crates/myosu-sdk/src/lib.rs
+@@ -15,9 +15,11 @@
+ //! ```
+ 
+ pub use myosu_games::{
+-    CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Profile,
+-    Probability, StrategyQuery, StrategyResponse, Utility,
++    CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Probability,
++    Profile, StrategyQuery, StrategyResponse, Utility,
+ };
++pub use rbp_mccfr::{Branch, CfrPublic, CfrSecret, Node, Tree};
++pub use rbp_transport::Support;
+ 
+ // Test harness (AC-SDK-03)
+ pub mod testing;
+@@ -27,3 +29,9 @@ pub mod scaffold;
+ 
+ // Registration CLI (AC-SDK-04)
+ pub mod register;
++
++#[cfg(feature = "tui")]
++pub use myosu_tui::GameRenderer;
++
++#[cfg(feature = "tui")]
++pub use ratatui::{buffer::Buffer, layout::Rect};
+diff --git a/crates/myosu-sdk/src/scaffold/mod.rs b/crates/myosu-sdk/src/scaffold/mod.rs
+index e510352..190e03f 100644
+--- a/crates/myosu-sdk/src/scaffold/mod.rs
++++ b/crates/myosu-sdk/src/scaffold/mod.rs
+@@ -1,8 +1,8 @@
+ //! Scaffold tool for generating new game engine crates.
+ //!
+ //! The `ScaffoldGenerator` creates a new `myosu-games-<name>` crate
+-//! from a template, providing stub implementations of `CfrGame`, `Encoder`,
+-//! and `GameRenderer` that the developer fills in.
++//! from a template, providing compileable stubs for `CfrGame`,
++//! `Encoder`, and the optional `GameRenderer`.
+ //!
+ //! # Example
+ //!
+@@ -10,13 +10,14 @@
+ //! use myosu_sdk::scaffold::ScaffoldGenerator;
+ //!
+ //! let generator = ScaffoldGenerator::new("kuhn-poker")?;
+-//! generator.generate()?;
++//! let path = generator.generate()?;
++//! println!("generated {}", path.display());
+ //! ```
+ 
+-pub mod templates;
+-pub mod tests;
++mod templates;
++
++use std::path::{Component, Path, PathBuf};
+ 
+-use std::path::Path;
+ use thiserror::Error;
+ 
+ #[derive(Error, Debug)]
+@@ -39,64 +40,108 @@ pub struct ScaffoldGenerator {
+ impl ScaffoldGenerator {
+     /// Create a new generator for the given game name.
+     pub fn new(name: &str) -> Result<Self, ScaffoldError> {
+-        // Validate name: must be a valid Rust identifier (no spaces, etc.)
+-        if !name
+-            .chars()
+-            .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+-        {
+-            return Err(ScaffoldError::InvalidName(name.to_string()));
+-        }
+         if name.is_empty() {
+             return Err(ScaffoldError::InvalidName("empty".to_string()));
+         }
+ 
++        if !name
++            .chars()
++            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
++        {
++            return Err(ScaffoldError::InvalidName(name.to_string()));
++        }
++
+         Ok(Self {
+             name: name.to_string(),
+         })
+     }
+ 
+-    /// Get the validated name.
++    /// Get the validated game name.
+     pub fn name(&self) -> &str {
+         &self.name
+     }
+ 
++    /// Get the generated crate name.
++    pub fn crate_name(&self) -> String {
++        format!("myosu-games-{}", self.name)
++    }
++
++    /// Generate a crate into the conventional `myosu-games-<name>` directory.
++    pub fn generate(&self) -> Result<PathBuf, ScaffoldError> {
++        let path = PathBuf::from(self.crate_name());
++        self.generate_into(&path)?;
++        Ok(path)
++    }
++
+     /// Generate the crate at the given path.
+-    pub fn generate_into(self, path: &Path) -> Result<(), ScaffoldError> {
++    pub fn generate_into(&self, path: &Path) -> Result<(), ScaffoldError> {
+         if path.exists() {
+             return Err(ScaffoldError::DirectoryExists(path.to_path_buf()));
+         }
+ 
+         std::fs::create_dir_all(path)?;
+ 
+-        let crate_name = format!("myosu-games-{}", self.name.replace('-', "_"));
++        let sdk_dependency_path = sdk_dependency_path(path)?;
+ 
+-        // Write Cargo.toml
+-        let cargo_toml = templates::cargo_toml(&crate_name);
+-        std::fs::write(path.join("Cargo.toml"), cargo_toml)?;
++        std::fs::write(
++            path.join("Cargo.toml"),
++            templates::cargo_toml(&self.crate_name(), &sdk_dependency_path),
++        )?;
+ 
+-        // Create src directory
+         std::fs::create_dir_all(path.join("src"))?;
+-
+-        // Write src/lib.rs
+-        std::fs::write(path.join("src/lib.rs"), templates::lib_rs(&crate_name))?;
+-
+-        // Write src/game.rs
++        std::fs::write(path.join("src/lib.rs"), templates::lib_rs(&self.name))?;
+         std::fs::write(path.join("src/game.rs"), templates::game_rs(&self.name))?;
+-
+-        // Write src/encoder.rs
+-        std::fs::write(path.join("src/encoder.rs"), templates::encoder_rs())?;
+-
+-        // Write src/renderer.rs (with tui feature)
+-        std::fs::write(path.join("src/renderer.rs"), templates::renderer_rs())?;
+-
+-        // Write src/tests.rs
+-        std::fs::write(path.join("src/tests.rs"), templates::tests_rs())?;
+-
+-        // Write README.md
++        std::fs::write(
++            path.join("src/encoder.rs"),
++            templates::encoder_rs(&self.name),
++        )?;
++        std::fs::write(
++            path.join("src/renderer.rs"),
++            templates::renderer_rs(&self.name),
++        )?;
++        std::fs::write(path.join("src/tests.rs"), templates::tests_rs(&self.name))?;
+         std::fs::write(path.join("README.md"), templates::readme_md(&self.name))?;
+ 
+         Ok(())
+     }
+ }
+ 
+-use std::path::PathBuf;
++fn sdk_dependency_path(target_dir: &Path) -> Result<String, ScaffoldError> {
++    let sdk_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).canonicalize()?;
++    let target_dir = target_dir.canonicalize()?;
++    Ok(relative_path(&target_dir, &sdk_dir)
++        .to_string_lossy()
++        .into_owned())
++}
++
++fn relative_path(from: &Path, to: &Path) -> PathBuf {
++    let from_components: Vec<_> = from.components().collect();
++    let to_components: Vec<_> = to.components().collect();
++
++    let shared_prefix = from_components
++        .iter()
++        .zip(&to_components)
++        .take_while(|(left, right)| left == right)
++        .count();
++
++    let mut relative = PathBuf::new();
++
++    for component in &from_components[shared_prefix..] {
++        if matches!(component, Component::Normal(_) | Component::ParentDir) {
++            relative.push("..");
++        }
++    }
++
++    for component in &to_components[shared_prefix..] {
++        relative.push(component.as_os_str());
++    }
++
++    if relative.as_os_str().is_empty() {
++        PathBuf::from(".")
++    } else {
++        relative
++    }
++}
++
++#[cfg(test)]
++mod tests;
+diff --git a/crates/myosu-sdk/src/scaffold/templates.rs b/crates/myosu-sdk/src/scaffold/templates.rs
+index 7c97b9e..699d851 100644
+--- a/crates/myosu-sdk/src/scaffold/templates.rs
++++ b/crates/myosu-sdk/src/scaffold/templates.rs
+@@ -1,213 +1,347 @@
+ //! Project templates for scaffold-generated game crates.
+ 
+ /// Generate the Cargo.toml content for a new game crate.
+-pub fn cargo_toml(crate_name: &str) -> String {
++pub fn cargo_toml(crate_name: &str, sdk_dependency_path: &str) -> String {
+     format!(
+         r#"[package]
+ name = "{crate_name}"
+ version = "0.1.0"
+-edition = "2021"
++edition = "2024"
+ license = "MIT"
+ description = "Game engine implementation for myosu"
+ 
+-[dependencies]
+-myosu-sdk = {{ path = "../../crates/myosu-sdk", features = ["tui"] }}
++[features]
++default = []
++tui = ["myosu-sdk/tui"]
+ 
+-[dev-dependencies]
+-tokio-test = "0.4"
++[dependencies]
++myosu-sdk = {{ path = "{sdk_dependency_path}", default-features = false }}
+ "#,
+-        crate_name = crate_name
+     )
+ }
+ 
+ /// Generate the src/lib.rs content.
+-pub fn lib_rs(crate_name: &str) -> String {
++pub fn lib_rs(game_name: &str) -> String {
+     format!(
+-        r#"//! {crate_name}: Game engine implementation for myosu
++        r#"//! `myosu-games-{game_name}`: game engine implementation scaffold for myosu.
+ //!
+-//! This crate implements the `CfrGame` trait for the game.
++//! Replace the stub types in `game.rs`, `encoder.rs`, and `renderer.rs`
++//! with your concrete game implementation.
+ 
+ pub mod game;
+ pub mod encoder;
++
++#[cfg(feature = "tui")]
+ pub mod renderer;
+ 
+-pub use game::Game;
++#[cfg(test)]
++mod tests;
++
++pub use encoder::GameEncoder;
++pub use game::{{Game, GameAction, GameInfo, GamePublicInfo, GameSecretInfo, GameTurn}};
++
++#[cfg(feature = "tui")]
++pub use renderer::GameRendererImpl;
+ "#,
+-        crate_name = crate_name
+     )
+ }
+ 
+-/// Generate the src/game.rs content with todo!() stubs.
++/// Generate the src/game.rs content with compileable stub types.
+ pub fn game_rs(game_name: &str) -> String {
+     format!(
+-        r#"//! Game state and CFR implementation.
++        r#"//! Game state and CFR implementation scaffold for `{game_name}`.
+ //!
+-//! Fill in the `CfrGame` implementation for your game.
+-//! The `{{todo!("implement {{game_name}} game logic")}}` stubs
+-//! guide you through the required methods.
++//! The template intentionally uses fixed-size arrays plus a length field so
++//! the game state stays `Copy`. For games with variable-length histories,
++//! keep this pattern and choose a capacity that fits your rules.
+ 
+-use myosu_sdk::{{CfrGame, CfrEdge, CfrTurn, CfrInfo, Profile, Encoder, Probability, Utility}};
++use myosu_sdk::{{
++    CfrEdge, CfrGame, CfrInfo, CfrPublic, CfrSecret, CfrTurn, Support, Utility,
++}};
+ 
+-/// Game state for {game_name}
++const MAX_HISTORY: usize = 16;
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
++pub enum GameAction {{
++    Placeholder,
++}}
++
++impl Support for GameAction {{}}
++impl CfrEdge for GameAction {{}}
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
++pub enum GameTurn {{
++    Chance,
++    PlayerOne,
++    PlayerTwo,
++    Terminal,
++}}
++
++impl From<usize> for GameTurn {{
++    fn from(player: usize) -> Self {{
++        match player {{
++            0 => Self::PlayerOne,
++            1 => Self::PlayerTwo,
++            _ => panic!("scaffold only models two players by default"),
++        }}
++    }}
++}}
++
++impl Support for GameTurn {{}}
++
++impl CfrTurn for GameTurn {{
++    fn chance() -> Self {{
++        Self::Chance
++    }}
++
++    fn terminal() -> Self {{
++        Self::Terminal
++    }}
++}}
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
++pub struct GamePublicInfo {{
++    pub turn: GameTurn,
++    pub history: [Option<GameAction>; MAX_HISTORY],
++    pub history_len: u8,
++}}
++
++impl CfrPublic for GamePublicInfo {{
++    type E = GameAction;
++    type T = GameTurn;
++
++    fn choices(&self) -> Vec<Self::E> {{
++        todo!("define the legal actions visible from this public state")
++    }}
++
++    fn history(&self) -> Vec<Self::E> {{
++        self.history
++            .into_iter()
++            .take(self.history_len as usize)
++            .flatten()
++            .collect()
++    }}
++}}
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
++pub struct GameSecretInfo {{
++    pub bucket: u8,
++}}
++
++impl Support for GameSecretInfo {{}}
++impl CfrSecret for GameSecretInfo {{}}
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
++pub struct GameInfo {{
++    pub public: GamePublicInfo,
++    pub secret: GameSecretInfo,
++}}
++
++impl CfrInfo for GameInfo {{
++    type E = GameAction;
++    type T = GameTurn;
++    type X = GamePublicInfo;
++    type Y = GameSecretInfo;
++
++    fn public(&self) -> Self::X {{
++        self.public
++    }}
++
++    fn secret(&self) -> Self::Y {{
++        self.secret
++    }}
++}}
++
++/// Game state for `{game_name}`.
+ ///
+-/// Your game state must implement `Copy` — use fixed-size arrays
+-/// for variable-length data (bid history, card sequences).
+-#[derive(Debug, Clone)]
++/// Keep the state compact and `Copy`. If you need variable-length data
++/// such as a bid history, prefer fixed-size arrays with sentinel slots.
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ pub struct Game {{
+-    // TODO: Add your game state fields here.
+-    // IMPORTANT: Game must be Copy for CFR to work.
+-    // Use fixed-size arrays with sentinel values for variable-length data.
++    pub turn: GameTurn,
++    pub history: [Option<GameAction>; MAX_HISTORY],
++    pub history_len: u8,
+ }}
+ 
+ impl CfrGame for Game {{
+-    type Action = (); // TODO: Define your action type
+-    type Info = (); // TODO: Define your information set type
++    type E = GameAction;
++    type T = GameTurn;
+ 
+-    fn cfr_turn(&self) -> CfrTurn {{
+-        todo!("implement CFR turn determination")
++    fn root() -> Self {{
++        Self {{
++            turn: GameTurn::Chance,
++            history: [None; MAX_HISTORY],
++            history_len: 0,
++        }}
+     }}
+ 
+-    fn legal_actions(&self) -> Vec<Self::Action> {{
+-        todo!("return legal actions from this state")
++    fn turn(&self) -> Self::T {{
++        self.turn
+     }}
+ 
+-    fn apply_action(&mut self, action: Self::Action) {{
+-        todo!("apply the given action to advance game state")
++    fn apply(&self, edge: Self::E) -> Self {{
++        let _ = edge;
++        todo!("advance the game state and append the chosen action")
+     }}
+ 
+-    fn current_player(&self) -> u8 {{
+-        todo!("return the acting player index (0, 1, ...)")
+-    }}
+-
+-    fn terminal_utility(&self, player: u8) -> Utility {{
+-        todo!("return utility for `player` at terminal state")
+-    }}
+-
+-    fn info_sets(&self, player: u8) -> Vec<CfrInfo<Self>> {{
+-        todo!("return information sets for the given player")
+-    }}
+-
+-    fn encode_info(&self, info: &CfrInfo<Self>, encoder: &mut impl Encoder<Self>) {{
+-        todo!("encode the information set using the encoder")
+-    }}
+-
+-    fn is_chance_node(&self) -> bool {{
+-        todo!("return true if this is a chance node")
+-    }}
+-
+-    fn chance_outcomes(&self) -> Vec<(Self::Action, Probability)> {{
+-        todo!("return (action, probability) pairs for chance node")
+-    }}
+-
+-    fn apply_chance(&mut self, action: Self::Action) {{
+-        todo!("apply the chance action to advance game state")
++    fn payoff(&self, turn: Self::T) -> Utility {{
++        let _ = turn;
++        todo!("return terminal utility for the requested player")
+     }}
+ }}
+-"#
++"#,
+     )
+ }
+ 
+ /// Generate the src/encoder.rs content.
+-pub fn encoder_rs() -> String {
+-    r#"//! Encoder implementation for game information sets.
++pub fn encoder_rs(game_name: &str) -> String {
++    format!(
++        r#"//! Encoder implementation scaffold for `{game_name}`.
+ //!
+-//! The encoder serializes game information sets for storage
+-//! and retrieval of CFR profiles.
++//! The encoder maps game states onto information sets. For simple games this
++//! can be direct; for larger games it usually encodes abstractions.
+ 
+-use myosu_sdk::Encoder;
++use myosu_sdk::{{Branch, Encoder, Tree}};
+ 
+-/// Encoder for game information sets.
+-#[derive(Debug)]
++use crate::{{Game, GameAction, GameInfo, GameTurn}};
++
++#[derive(Debug, Clone, Copy, Default)]
+ pub struct GameEncoder;
+ 
+-impl Encoder<super::Game> for GameEncoder {
+-    fn encode_action(&mut self, action: &<super::Game as myosu_sdk::CfrGame>::Action) -> Vec<u8> {
+-        todo!("encode the given action")
+-    }
++impl Encoder for GameEncoder {{
++    type T = GameTurn;
++    type E = GameAction;
++    type G = Game;
++    type I = GameInfo;
+ 
+-    fn encode_info(&mut self, info: &<super::Game as myosu_sdk::CfrGame>::Info) -> Vec<u8> {
+-        todo!("encode the information set")
+-    }
+-}
+-"#
+-    .to_string()
++    fn seed(&self, game: &Self::G) -> Self::I {{
++        let _ = game;
++        todo!("build the root information set")
++    }}
++
++    fn info(
++        &self,
++        tree: &Tree<Self::T, Self::E, Self::G, Self::I>,
++        leaf: Branch<Self::E, Self::G>,
++    ) -> Self::I {{
++        let _ = (tree, leaf);
++        todo!("derive an information set for a child branch")
++    }}
++
++    fn resume(&self, past: &[Self::E], game: &Self::G) -> Self::I {{
++        let _ = (past, game);
++        todo!("rebuild an information set from a path and game state")
++    }}
++}}
++"#,
++    )
+ }
+ 
+ /// Generate the src/renderer.rs content.
+-pub fn renderer_rs() -> String {
+-    r#"//! TUI renderer for the game.
++pub fn renderer_rs(game_name: &str) -> String {
++    format!(
++        r#"//! TUI renderer scaffold for `{game_name}`.
+ //!
+-//! This module provides `GameRenderer` implementation for displaying
+-//! the game state in the terminal. Only compiled when the `tui` feature
+-//! is enabled.
++//! This module is only compiled when the generated crate enables its `tui`
++//! feature, which forwards to `myosu-sdk/tui`.
+ 
+-#[cfg(feature = "tui")]
+-use myosu_sdk::myosu_tui::GameRenderer;
++use myosu_sdk::{{Buffer, GameRenderer, Rect}};
+ 
+-#[cfg(feature = "tui")]
+-/// Renderer for displaying game state in the terminal.
++#[derive(Debug, Clone, Copy, Default)]
+ pub struct GameRendererImpl;
+ 
+-#[cfg(feature = "tui")]
+-impl GameRenderer for GameRendererImpl {
+-    type Game = super::Game;
++impl GameRenderer for GameRendererImpl {{
++    fn render_state(&self, area: Rect, buf: &mut Buffer) {{
++        let _ = (area, buf);
++        todo!("draw the game-specific state panel")
++    }}
+ 
+-    fn render(&self, game: &Self::Game) -> String {
+-        todo!("render game state to string")
+-    }
+-}
+-"#
+-    .to_string()
++    fn desired_height(&self, width: u16) -> u16 {{
++        let _ = width;
++        8
++    }}
++
++    fn declaration(&self) -> &str {{
++        "IMPLEMENT YOUR GAME DECLARATION"
++    }}
++
++    fn completions(&self) -> Vec<String> {{
++        vec![]
++    }}
++
++    fn parse_input(&self, input: &str) -> Option<String> {{
++        let _ = input;
++        None
++    }}
++
++    fn clarify(&self, input: &str) -> Option<String> {{
++        let _ = input;
++        None
++    }}
++
++    fn pipe_output(&self) -> String {{
++        todo!("render a pipe-friendly view of the game state")
++    }}
++
++    fn game_label(&self) -> &str {{
++        "{game_name}"
++    }}
++
++    fn context_label(&self) -> &str {{
++        "SETUP"
++    }}
++}}
++"#,
++    )
+ }
+ 
+-/// Generate the src/tests.rs content with pre-written compliance tests.
+-pub fn tests_rs() -> String {
+-    r#"//! Trait compliance tests for the game.
++/// Generate the src/tests.rs content with a pre-written failing compliance test.
++pub fn tests_rs(game_name: &str) -> String {
++    format!(
++        r#"//! Compliance tests for the `{game_name}` scaffold.
+ //!
+-//! These tests validate that the game implementation satisfies
+-//! CFR invariants. They fail until you implement the game.
++//! This test is expected to fail until you replace the `todo!()` with a real
++//! call to the SDK harness after implementing your game.
+ 
+-use myosu_sdk::testing::assert_game_valid;
+ use crate::Game;
+ 
+ #[test]
+-fn game_passes_all_compliance_checks() {
+-    // This test will pass once the game is fully implemented.
+-    // For now it serves as a reminder of what needs to be done.
+-    todo!("implement game and uncomment the assertion");
+-    // assert_game_valid::<Game>();
+-}
+-"#
+-    .to_string()
++fn game_passes_all_compliance_checks() {{
++    let _game_type = std::any::type_name::<Game>();
++    // Replace this todo with:
++    // myosu_sdk::testing::assert_game_valid::<Game>();
++    todo!("implement `{game_name}` and replace this todo with a real compliance assertion");
++}}
++"#,
++    )
+ }
+ 
+ /// Generate the README.md content.
+ pub fn readme_md(game_name: &str) -> String {
+     format!(
+-        r#"# {game_name} — myosu Game Engine
++        r#"# myosu-games-{game_name}
+ 
+-Game engine implementation for [myosu](https://github.com/happybigmtn/myosu).
++Scaffolded game engine crate for the myosu platform.
+ 
+-## Status
++## What to Fill In
+ 
+-🚧 **Implementing** — This crate is a scaffold generated by `myosu init --game {game_name}`.
++1. Implement `Game`, `GameAction`, `GameTurn`, and the information-set types in `src/game.rs`.
++2. Implement `GameEncoder` in `src/encoder.rs`.
++3. Replace the scaffolded compliance-test `todo!()` in `src/tests.rs` with `assert_game_valid::<Game>();`.
++4. If you want TUI support, enable `--features tui` and implement `GameRendererImpl` in `src/renderer.rs`.
+ 
+-## Implementation Guide
+-
+-1. **Implement `Game`** in `src/game.rs` — the game state and CFR logic
+-2. **Implement `Encoder`** in `src/encoder.rs` — information set serialization
+-3. **Implement `GameRenderer`** in `src/renderer.rs` — TUI rendering (optional, requires `tui` feature)
+-4. **Run tests** with `cargo test`
+-
+-## Compliance
+-
+-Once implemented, run the compliance harness:
++## Commands
+ 
+ ```bash
+-cargo test -p myosu-sdk testing::assert_game_valid
++cargo check
++cargo test
++cargo check --features tui
+ ```
+ 
+-This validates that your game satisfies all CFR invariants.
+-"#
++## Copy Constraint Reminder
++
++`CfrGame` is `Copy`, so store variable-length data in fixed-size arrays plus
++an explicit length field instead of heap-backed containers like `Vec`.
++"#,
+     )
+ }
+diff --git a/crates/myosu-sdk/src/scaffold/tests.rs b/crates/myosu-sdk/src/scaffold/tests.rs
+index 1a479ba..e130f3b 100644
+--- a/crates/myosu-sdk/src/scaffold/tests.rs
++++ b/crates/myosu-sdk/src/scaffold/tests.rs
+@@ -1,88 +1,144 @@
+-//! Tests for the scaffold generator.
++use std::path::{Path, PathBuf};
++use std::process::{Command, Output};
+ 
+-#[cfg(test)]
+-mod tests {
+-    use tempfile::TempDir;
+-    use super::super::ScaffoldGenerator;
++use tempfile::TempDir;
+ 
+-    #[test]
+-    fn generates_compilable_crate() {
+-        let temp_dir = TempDir::new().unwrap();
+-        let target_dir = temp_dir.path().join("myosu-games-test-game");
++use super::ScaffoldGenerator;
+ 
+-        let generator = ScaffoldGenerator::new("test-game").unwrap();
+-        generator.generate_into(&target_dir).unwrap();
++#[test]
++fn generates_compilable_crate() {
++    let temp_dir = TempDir::new().expect("tempdir");
++    let target_dir = temp_dir.path().join("myosu-games-test-game");
+ 
+-        // Verify the generated Cargo.toml exists
+-        assert!(target_dir.join("Cargo.toml").exists());
++    let generator = ScaffoldGenerator::new("test-game").expect("valid name");
++    generator
++        .generate_into(&target_dir)
++        .expect("scaffold should generate");
+ 
+-        // Verify src/lib.rs exists
+-        assert!(target_dir.join("src/lib.rs").exists());
++    assert!(target_dir.join("Cargo.toml").exists());
++    assert!(target_dir.join("src/lib.rs").exists());
++    assert!(target_dir.join("src/game.rs").exists());
++    assert!(target_dir.join("src/encoder.rs").exists());
++    assert!(target_dir.join("src/renderer.rs").exists());
++    assert!(target_dir.join("src/tests.rs").exists());
++    assert!(target_dir.join("README.md").exists());
+ 
+-        // Verify src/game.rs exists with todo!()
+-        let game_rs = std::fs::read_to_string(target_dir.join("src/game.rs")).unwrap();
+-        assert!(game_rs.contains("todo!"));
++    let cargo_toml = std::fs::read_to_string(target_dir.join("Cargo.toml")).expect("read Cargo");
++    assert!(cargo_toml.contains("name = \"myosu-games-test-game\""));
++    assert!(cargo_toml.contains("tui = [\"myosu-sdk/tui\"]"));
+ 
+-        // Verify src/encoder.rs exists
+-        assert!(target_dir.join("src/encoder.rs").exists());
++    let game_rs = std::fs::read_to_string(target_dir.join("src/game.rs")).expect("read game");
++    assert!(game_rs.contains("history: [Option<GameAction>; MAX_HISTORY]"));
++    assert!(game_rs.contains("impl CfrGame for Game"));
+ 
+-        // Verify src/renderer.rs exists
+-        assert!(target_dir.join("src/renderer.rs").exists());
++    let default_check = cargo(&target_dir, ["check", "--offline"]);
++    assert!(
++        default_check.status.success(),
++        "generated crate should compile:\n{}",
++        render_output(&default_check)
++    );
+ 
+-        // Verify src/tests.rs exists
+-        assert!(target_dir.join("src/tests.rs").exists());
++    let tui_check = cargo(&target_dir, ["check", "--offline", "--features", "tui"]);
++    assert!(
++        tui_check.status.success(),
++        "generated crate should compile with tui enabled:\n{}",
++        render_output(&tui_check)
++    );
++}
+ 
+-        // Verify README.md exists
+-        assert!(target_dir.join("README.md").exists());
+-    }
++#[test]
++fn generated_tests_fail_with_todo() {
++    let temp_dir = TempDir::new().expect("tempdir");
++    let target_dir = temp_dir.path().join("myosu-games-todo-game");
+ 
+-    #[test]
+-    fn generated_tests_fail_with_todo() {
+-        let temp_dir = TempDir::new().unwrap();
+-        let target_dir = temp_dir.path().join("myosu-games-todo-game");
++    let generator = ScaffoldGenerator::new("todo-game").expect("valid name");
++    generator
++        .generate_into(&target_dir)
++        .expect("scaffold should generate");
+ 
+-        let generator = ScaffoldGenerator::new("todo-game").unwrap();
+-        generator.generate_into(&target_dir).unwrap();
++    let test_run = cargo(&target_dir, ["test", "--offline", "--color", "never"]);
++    let combined = render_output(&test_run);
+ 
+-        // Read the tests.rs and verify it has todo!
+-        let tests_rs = std::fs::read_to_string(target_dir.join("src/tests.rs")).unwrap();
+-        assert!(tests_rs.contains("todo!"));
+-    }
++    assert!(!test_run.status.success(), "generated tests should fail");
++    assert!(
++        combined.contains("replace this todo with a real compliance assertion"),
++        "expected scaffold todo failure, got:\n{combined}"
++    );
++}
+ 
+-    #[test]
+-    fn refuses_to_overwrite_existing_directory() {
+-        let temp_dir = TempDir::new().unwrap();
+-        let target_dir = temp_dir.path().join("existing-game");
++#[test]
++fn refuses_to_overwrite_existing_directory() {
++    let temp_dir = TempDir::new().expect("tempdir");
++    let target_dir = temp_dir.path().join("existing-game");
+ 
+-        // Create the directory first
+-        std::fs::create_dir(&target_dir).unwrap();
++    std::fs::create_dir(&target_dir).expect("create existing directory");
+ 
+-        let generator = ScaffoldGenerator::new("existing-game").unwrap();
+-        let result = generator.generate_into(&target_dir);
++    let generator = ScaffoldGenerator::new("existing-game").expect("valid name");
++    let result = generator.generate_into(&target_dir);
+ 
+-        assert!(result.is_err());
+-        assert!(result
+-            .unwrap_err()
+-            .to_string()
+-            .contains("already exists"));
+-    }
++    assert!(result.is_err());
++    assert!(result.unwrap_err().to_string().contains("already exists"));
++}
+ 
+-    #[test]
+-    fn validates_game_name() {
+-        // Invalid names should be rejected
+-        let result = ScaffoldGenerator::new("invalid name with spaces");
+-        assert!(result.is_err());
++#[test]
++fn validates_game_name() {
++    assert!(ScaffoldGenerator::new("invalid name with spaces").is_err());
++    assert!(ScaffoldGenerator::new("").is_err());
++    assert!(ScaffoldGenerator::new("UpperCase").is_err());
++}
+ 
+-        let result = ScaffoldGenerator::new("");
+-        assert!(result.is_err());
+-    }
++#[test]
++fn accepts_valid_game_names() {
++    assert!(ScaffoldGenerator::new("kuhn-poker").is_ok());
++    assert!(ScaffoldGenerator::new("liars_dice").is_ok());
++    assert!(ScaffoldGenerator::new("rockpaperscissors").is_ok());
++    assert!(ScaffoldGenerator::new("game123").is_ok());
++}
+ 
+-    #[test]
+-    fn accepts_valid_game_names() {
+-        // Valid names should be accepted
+-        assert!(ScaffoldGenerator::new("kuhn-poker").is_ok());
+-        assert!(ScaffoldGenerator::new("liars_dice").is_ok());
+-        assert!(ScaffoldGenerator::new("rockpaperscissors").is_ok());
+-        assert!(ScaffoldGenerator::new("game123").is_ok());
++#[test]
++fn generate_uses_default_directory_name() {
++    let temp_dir = TempDir::new().expect("tempdir");
++    let previous = std::env::current_dir().expect("cwd");
++    std::env::set_current_dir(temp_dir.path()).expect("chdir");
++    let _restore = CurrentDirGuard(previous);
++
++    let generator = ScaffoldGenerator::new("kuhn-poker").expect("valid name");
++    let generated_path = generator.generate().expect("generate default path");
++
++    assert_eq!(generated_path, PathBuf::from("myosu-games-kuhn-poker"));
++    assert!(
++        temp_dir
++            .path()
++            .join(&generated_path)
++            .join("Cargo.toml")
++            .exists()
++    );
++}
++
++fn cargo<const N: usize>(manifest_dir: &Path, args: [&str; N]) -> Output {
++    let target_dir = manifest_dir.join("target");
++    let manifest_path = manifest_dir.join("Cargo.toml");
++
++    Command::new("cargo")
++        .args(args)
++        .arg("--manifest-path")
++        .arg(&manifest_path)
++        .env("CARGO_TARGET_DIR", &target_dir)
++        .current_dir(manifest_dir)
++        .output()
++        .expect("cargo command should launch")
++}
++
++fn render_output(output: &Output) -> String {
++    let stdout = String::from_utf8_lossy(&output.stdout);
++    let stderr = String::from_utf8_lossy(&output.stderr);
++    format!("stdout:\n{stdout}\n\nstderr:\n{stderr}")
++}
++
++struct CurrentDirGuard(PathBuf);
++
++impl Drop for CurrentDirGuard {
++    fn drop(&mut self) {
++        std::env::set_current_dir(&self.0).expect("restore cwd");
+     }
+ }
+diff --git a/outputs/sdk/core/implementation.md b/outputs/sdk/core/implementation.md
+index 2eb816b..c98f23f 100644
+--- a/outputs/sdk/core/implementation.md
++++ b/outputs/sdk/core/implementation.md
+@@ -4,35 +4,43 @@
+ `core-implement`
+ 
+ ## Slice
+-Slice 2 — Trait Compliance Test Harness (`AC-SDK-03`)
++Slice 3 — Scaffold Tool (`AC-SDK-02`)
+ 
+ ## Goal
+-Replace the initial `testing` helpers with real compliance checks, keep the work contained to the `sdk:core` test-harness surfaces, and make the reviewed Slice 2 proof commands exercise real tests.
++Replace the initial scaffold surface with a real generator that emits a compileable `myosu-games-<name>` crate aligned to the reviewed robopoker trait surface and the `CfrGame: Copy` constraint.
+ 
+ ## Touched Surfaces
++- `Cargo.lock`
+ - `crates/myosu-sdk/Cargo.toml`
+-- `crates/myosu-sdk/src/testing/mod.rs`
+-- `crates/myosu-sdk/src/testing/game_valid.rs`
+-- `crates/myosu-sdk/src/testing/convergence.rs`
+-- `crates/myosu-sdk/src/testing/tests.rs`
++- `crates/myosu-sdk/src/lib.rs`
++- `crates/myosu-sdk/src/scaffold/mod.rs`
++- `crates/myosu-sdk/src/scaffold/templates.rs`
++- `crates/myosu-sdk/src/scaffold/tests.rs`
+ 
+ ## What Changed
+-- Added a direct `rbp-mccfr` dependency to `myosu-sdk` so the public convergence helper can use the upstream `Solver` trait without reaching through tests-only dependencies.
+-- Reworked `testing::assert_game_valid` into a real tree walk for games whose `turn()` also serves as the reachable info-set view. The helper now checks:
+-  - root is not terminal
+-  - non-terminal states expose at least one action
+-  - terminal states expose no actions
+-  - `apply()` changes state
+-  - the explored tree is acyclic within a path
+-  - terminal utilities are finite
+-  - two-player terminal payoffs sum to zero
+-  - repeated info sets expose the same action set
+-- Replaced the earlier no-op convergence helper with a real `assert_solver_converges` helper that runs `Solver::step()` for the requested number of steps and fails with the measured exploitability when the target is missed.
+-- Flattened the Slice 2 unit tests so the reviewed command filters now hit real tests at `testing::tests::...` instead of silently matching zero tests.
+-- Added two concrete proof fixtures:
+-  - a deliberately broken RPS wrapper whose terminal payoffs are non-zero-sum
+-  - an undertrained RPS solver that misses the exploitability target
++- Added the minimal SDK-facing dependencies and re-exports the scaffolded crate needs to depend on `myosu-sdk` alone:
++  - `rbp-transport::Support`
++  - `rbp-mccfr::{Branch, Tree, Node, CfrPublic, CfrSecret}`
++  - `GameRenderer`, `Buffer`, and `Rect` behind the existing `tui` feature
++- Reworked `ScaffoldGenerator` into a real Slice 3 API:
++  - validates lowercase game names
++  - preserves the expected package name format `myosu-games-<name>`
++  - adds `crate_name()` and `generate()` helpers
++  - computes the SDK dependency path relative to the generated crate instead of hardcoding `../../...`
++- Replaced the old template bodies with compileable stubs that match the actual robopoker traits in this repo:
++  - `GameAction`, `GameTurn`, `GamePublicInfo`, `GameSecretInfo`, and `GameInfo`
++  - `Game` uses fixed-size history storage so the scaffold demonstrates the `Copy` constraint directly
++  - `GameEncoder` implements the upstream `Encoder` trait signature
++  - `renderer.rs` is gated by a generated `tui = ["myosu-sdk/tui"]` feature and compiles against the real `GameRenderer` API
++- Tightened the scaffolded compliance test so it stays compileable today while still failing at the intended boundary:
++  - the file contains the intended `assert_game_valid::<Game>()` follow-up as an inline replacement comment
++  - the generated test fails via `todo!()` with an explicit compliance message until the developer wires their real game in
++- Upgraded Slice 3 proof coverage:
++  - the scaffold tests now shell out to nested Cargo checks on the generated crate
++  - default and `--features tui` compilation are both verified
++  - generated tests are verified to fail for the expected scaffold `todo!()` reason
++  - overwrite refusal and default-directory generation are both covered
+ 
+ ## Notes
+-- This pass stayed inside the Slice 2 harness boundary. Scaffold, registration, and docs surfaces were left untouched.
+-- The current helper shape is anchored to the trusted robopoker trait surface available in this repo today. In practice that means the generic game-validity helper works for games whose reachable `turn()` value is also a usable `CfrInfo` view, which covers the reviewed RPS proof target for this slice.
++- Slice 2 test-harness behavior was preserved and re-verified after the scaffold work.
++- Registration and documentation surfaces were left untouched in this pass.
+diff --git a/outputs/sdk/core/promotion.md b/outputs/sdk/core/promotion.md
+index 345b7bf..517b6df 100644
+--- a/outputs/sdk/core/promotion.md
++++ b/outputs/sdk/core/promotion.md
+@@ -1,13 +1,4 @@
+-# `sdk:core` Promotion
+-
+-## Decision
+-Promote the lane from Slice 2 (`AC-SDK-03`) to Slice 3 (`AC-SDK-02`).
+-
+-## Why
+-- The Slice 2 implementation stayed contained to `crates/myosu-sdk/Cargo.toml` and `crates/myosu-sdk/src/testing/*`.
+-- The reviewed Slice 2 proof commands now execute real tests at the expected `testing::tests::...` paths and pass.
+-- A broader `cargo build -p myosu-sdk` and `cargo test -p myosu-sdk` sanity pass also stayed green after the harness changes.
+-
+-## Remaining Scope
+-- Scaffold generation remains the next owned `sdk:core` surface to implement and verify.
+-- Registration and documentation remain outside this completed slice.
++merge_ready: yes
++manual_proof_pending: no
++reason: quality.md is green and the Slice 3 scaffold proof plus full myosu-sdk regression all passed against the current code.
++next_action: Promote sdk:core from Slice 3 scaffold work to Slice 4 registration CLI.
+diff --git a/outputs/sdk/core/quality.md b/outputs/sdk/core/quality.md
+index c4b6753..cae5a19 100644
+--- a/outputs/sdk/core/quality.md
++++ b/outputs/sdk/core/quality.md
+@@ -5,11 +5,12 @@ artifact_mismatch_risk: no
+ manual_followup_required: no
+ 
+ ## Touched Surfaces
++- Cargo.lock
+ - crates/myosu-sdk/Cargo.toml
+-- crates/myosu-sdk/src/testing/mod.rs
+-- crates/myosu-sdk/src/testing/game_valid.rs
+-- crates/myosu-sdk/src/testing/convergence.rs
+-- crates/myosu-sdk/src/testing/tests.rs
++- crates/myosu-sdk/src/lib.rs
++- crates/myosu-sdk/src/scaffold/mod.rs
++- crates/myosu-sdk/src/scaffold/templates.rs
++- crates/myosu-sdk/src/scaffold/tests.rs
+ 
+ ## Placeholder Hits
+ 
+@@ -21,4 +22,3 @@ manual_followup_required: no
+ 
+ 
+ ## Manual Followup Hits
+-
+diff --git a/outputs/sdk/core/verification.md b/outputs/sdk/core/verification.md
+index ab04447..41c5901 100644
+--- a/outputs/sdk/core/verification.md
++++ b/outputs/sdk/core/verification.md
+@@ -4,57 +4,79 @@
+ `core-implement`
+ 
+ ## Slice
+-Slice 2 — Trait Compliance Test Harness (`AC-SDK-03`)
++Slice 3 — Scaffold Tool (`AC-SDK-02`)
+ 
+ ## Automated Proof Commands
+ 
+-All commands were run from the workspace root with:
++All commands were run from the workspace root with a writable Cargo target override because the default shared target path is read-only in this sandbox:
+ 
+ ```bash
+-export CARGO_TARGET_DIR=/tmp/myosu-sdk-target
++export CARGO_TARGET_DIR=/tmp/myosu-sdk-slice3-full
+ ```
+ 
+-The local sandbox points Cargo at a read-only shared target directory by default, so the writable override above was required to get a valid proof run for this slice.
++Focused scaffold checks also used equivalent writable target dirs such as `/tmp/myosu-sdk-slice3-test1b`.
+ 
+-### Slice 2 Proof
++### Slice 3 Proof
+ 
+ ```bash
+-$ cargo test -p myosu-sdk testing::tests::rps_passes_all_compliance_checks
++$ cargo test -p myosu-sdk scaffold::tests::generates_compilable_crate
+ ```
+ 
+ - Result: PASS
+-- Evidence: the filter ran exactly 1 test, and that test passed after validating the RPS game checks and the convergence helper.
++- Evidence:
++  - the generated crate contains `Cargo.toml`, `src/lib.rs`, `src/game.rs`, `src/encoder.rs`, `src/renderer.rs`, `src/tests.rs`, and `README.md`
++  - the generated `Cargo.toml` includes `tui = ["myosu-sdk/tui"]`
++  - the test shells out to nested `cargo check --offline` and `cargo check --offline --features tui`, and both succeed
+ 
+ ```bash
+-$ cargo test -p myosu-sdk testing::tests::broken_game_fails_zero_sum_check
++$ cargo test -p myosu-sdk scaffold::tests::generated_tests_fail_with_todo
+ ```
+ 
+ - Result: PASS
+-- Evidence: the filter ran exactly 1 test, and that test passed by observing the expected validation panic for a deliberately non-zero-sum terminal payoff.
++- Evidence: the generated crate's nested `cargo test --offline` fails with the scaffolded compliance `todo!()` message, proving the crate compiles and the prewritten test stops at the intended boundary.
+ 
+ ```bash
+-$ cargo test -p myosu-sdk testing::tests::convergence_test_detects_non_convergence
++$ cargo test -p myosu-sdk scaffold::tests::refuses_to_overwrite_existing_directory
+ ```
+ 
+ - Result: PASS
+-- Evidence: the filter ran exactly 1 test, and that test passed by observing the expected convergence failure for an undertrained solver.
++- Evidence: generation against a pre-existing directory returns the expected "already exists" error.
+ 
+-### Broader Sanity Check
++```bash
++$ cargo test -p myosu-sdk scaffold::tests::generate_uses_default_directory_name
++```
++
++- Result: PASS
++- Evidence: `ScaffoldGenerator::generate()` creates `myosu-games-<name>` in the current directory and returns that path.
++
++### Regression / Broader Sanity
+ 
+ ```bash
+ $ cargo build -p myosu-sdk
+ $ cargo test -p myosu-sdk
++$ cargo test -p myosu-sdk -- --include-ignored
++$ cargo test -p myosu-sdk testing::tests::rps_passes_all_compliance_checks
++$ cargo test -p myosu-sdk testing::tests::broken_game_fails_zero_sum_check
++$ cargo test -p myosu-sdk testing::tests::convergence_test_detects_non_convergence
++$ cargo test -p myosu-sdk scaffold::tests::generates_compilable_crate
++$ cargo test -p myosu-sdk scaffold::tests::generated_tests_fail_with_todo
++$ cargo test -p myosu-sdk scaffold::tests::refuses_to_overwrite_existing_directory
++$ cargo test -p myosu-sdk scaffold::tests::generate_uses_default_directory_name
+ ```
+ 
+ - `cargo build -p myosu-sdk`: PASS
+ - `cargo test -p myosu-sdk`: PASS
+-  - 12 unit tests passed
++  - 13 unit tests passed
+   - doctests: 1 passed, 2 ignored
++- `cargo test -p myosu-sdk -- --include-ignored`: PASS
++  - 13 unit tests passed
++  - doctests: 3 passed
++- All three retained Slice 2 proof filters passed after the scaffold work.
++- All four focused Slice 3 scaffold filters passed.
+ 
+ ## Residual Risks
+-- The generic `assert_game_valid` helper currently relies on the reachable `turn()` value also providing the info-set action surface used during traversal. That matches the reviewed RPS proof target and keeps this slice grounded in the trusted trait surface already present in the repo.
+-- Later lane slices still own the scaffold, registration, and documentation surfaces. This verification pass did not reopen or re-prove those areas.
++- The current generic `assert_game_valid` helper still assumes games whose reachable `turn()` value is also the usable info-set surface. The scaffold therefore leaves the intended compliance call as a replacement comment inside the generated test instead of typechecking it immediately.
++- The scaffold emits a standalone game crate but does not yet edit the workspace member list for the larger repo. Adding the new crate to the workspace remains a manual step.
+ 
+ ## Next Approved Slice
+-- Slice 3 — Scaffold Tool (`AC-SDK-02`)
+-
++- Slice 4 — Registration CLI (`AC-SDK-04`)
