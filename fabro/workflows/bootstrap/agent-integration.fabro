@@ -1,0 +1,22 @@
+digraph BootstrapAgentIntegration {
+    graph [
+        goal="Bootstrap the Myosu agent:integration lane and produce curated lane artifacts.",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: api; model: gpt-5.4; provider: openai; }
+            #polish { backend: api; model: gpt-5.4; provider: openai; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    check   [label="Check", shape=parallelogram, script="test -f outputs/agent/experience/spec.md && test -f outputs/agent/experience/review.md", max_retries=0]
+    adapter [label="Adapter", prompt="@../../prompts/bootstrap/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/bootstrap/implement.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/bootstrap/review.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f outputs/agent-integration/agent-adapter.md && test -f outputs/agent-integration/review.md", goal_gate=true, max_retries=0]
+
+    start -> check -> adapter -> review -> polish -> verify -> exit
+}

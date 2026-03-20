@@ -60,3 +60,14 @@ units:
             type: file_exists
             path: ../../docs/api/game-state.json
         produces: [spec, review]
+
+      - id: integration
+        kind: implementation
+        title: Agent Integration Lane
+        run_config: ../run-configs/product/agent-integration.toml
+        managed_milestone: reviewed
+        depends_on:
+          - unit: agent
+            lane: experience
+            milestone: reviewed
+        produces: [adapter, review]

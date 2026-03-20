@@ -1,0 +1,35 @@
+version = 1
+graph = "../../workflows/bootstrap/agent-integration.fabro"
+goal = """
+Bootstrap the Myosu `agent:integration` lane for Fabro and Raspberry.
+
+Scope:
+- inspect `outputs/agent/experience/spec.md`
+- inspect `outputs/agent/experience/review.md`
+- inspect `outputs/tui/shell/spec.md` and `outputs/tui/shell/review.md`
+- inspect `outputs/games/traits/spec.md` and `outputs/games/traits/review.md`
+- inspect `fabro/programs/myosu-product.yaml`
+
+Required curated artifacts:
+- `outputs/agent-integration/agent-adapter.md`
+- `outputs/agent-integration/review.md`
+
+The `agent-adapter.md` must define:
+- the integration surface between agent:experience and upstream crates (tui:shell, games:traits)
+- the current state inventory of integration paths (Phase 1–4)
+- which slices have upstream blockers and which can proceed immediately
+- the integration decision record with rationale
+
+The `review.md` must:
+- make the keep/reopen/reset judgment explicit for the lane
+- state the decision: implementation family next OR another upstream unblock
+- identify which slices can proceed without upstream blockers
+- note cross-lane dependencies and their owners
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
