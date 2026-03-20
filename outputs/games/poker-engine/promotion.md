@@ -1,4 +1,4 @@
 merge_ready: no
-manual_proof_pending: no
-reason: The current tree still includes future-slice `unimplemented!` modules and emits 12 compiler warnings, so the broader touched surface is not cleanly proven as a merge-ready Slice 1 settlement.
-next_action: Either reduce the change back to the approved Slice 1 skeleton surface or finish and verify the broader poker-engine implementation with warning-free code before re-running quality and promotion.
+manual_proof_pending: yes
+reason: Slice 2 is code-clean and locally verified for constructor, strategy, and checkpoint behavior, but the reviewed MCCFR training/exploitability proof remains blocked on RF-02 and a usable abstraction artifact.
+next_action: Provide the reviewed non-DB encoder load path or a pinned abstraction artifact, then unignore and run the solver training/exploitability tests before promoting this slice.
