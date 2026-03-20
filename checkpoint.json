@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-03-20T00:45:28.439295144Z",
+  "current_node": "preflight",
+  "completed_nodes": [
+    "start",
+    "preflight"
+  ],
+  "node_retries": {
+    "start": 1,
+    "preflight": 1
+  },
+  "context_values": {
+    "internal.fidelity": "compact",
+    "current_node": "preflight",
+    "current.preamble": "Goal: Implement the next approved `sdk:core` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `sdk:core`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `promotion.md`\n\n",
+    "failure_class": "",
+    "graph.rankdir": "LR",
+    "internal.run_id": "01KM4B8FNCMBRGRWKSHK9Y8TDA",
+    "failure_signature": "",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: cli; model: gpt-5.4; provider: openai; }\n            #promote { backend: cli; model: gpt-5.4; provider: openai; }\n        ",
+    "thread.start.current_node": "preflight",
+    "command.output": "",
+    "outcome": "success",
+    "internal.retry_count.start": 1,
+    "internal.work_dir": "/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree",
+    "internal.thread_id": "start",
+    "internal.retry_count.preflight": 1,
+    "command.stderr": "error: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\n",
+    "internal.node_visit_count": 1,
+    "graph.goal": "Implement the next approved `sdk:core` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `sdk:core`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `promotion.md`\n"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "preflight": {
+      "status": "success",
+      "context_updates": {
+        "command.stderr": "error: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\nerror: package ID specification `myosu-sdk` did not match any packages\n\nhelp: a package with a similar name exists: `myosu-tui`\n",
+        "command.output": ""
+      },
+      "notes": "Script completed: set +e\ncargo build -p myosu-sdk\ncargo test -p myosu-sdk\ncargo test -p myosu-sdk -- --include-ignored  # no tests yet, but exits 0\ncargo test -p myosu-sdk testing::tests::rps_passes_all_compliance_checks\ncargo test -p myosu-sdk testing::tests::broken_game_fails_zero_sum_check\ncargo test -p myosu-sdk testing::tests::convergence_test_detects_non_convergence\ncargo test -p myosu-sdk scaffold::tests::generates_compilable_crate\ncargo test -p myosu-sdk scaffold::tests::generated_tests_fail_with_todo\ncargo test -p myosu-sdk scaffold::tests::refuses_to_overwrite_existing_directory\ncargo test -p myosu-sdk register::tests::register_help_output\ncargo test -p myosu-sdk register::tests::connection_timeout_error\ntrue",
+      "duration_ms": 3672
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "implement",
+  "node_visits": {
+    "preflight": 1,
+    "start": 1
+  }
+}
