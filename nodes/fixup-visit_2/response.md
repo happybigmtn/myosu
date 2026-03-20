@@ -1,0 +1,1 @@
+Already confirmed — exit code 0. The scoped check script passes cleanly. The fabro system will pick up the updated `graph.fabro` on its next cycle and transition from `fixup` → `verify` with the correct scoped script.
