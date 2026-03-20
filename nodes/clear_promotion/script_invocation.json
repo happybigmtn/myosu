@@ -1,0 +1,5 @@
+{
+  "command": "rm -f outputs/play/tui/promotion.md",
+  "language": "shell",
+  "timeout_ms": null
+}

@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "duration_ms": 2,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-20T11:10:45.776721395+00:00",
+  "updated_at": "2026-03-20T11:10:45.776725782+00:00",
+  "notes": "Script completed: rm -f outputs/play/tui/promotion.md"
+}
