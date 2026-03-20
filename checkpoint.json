@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T21:49:37.222558914Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "current_node": "specify",
+    "thread.start.current_node": "specify",
+    "internal.retry_count.specify": 1,
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6KEK6CGRBVA5X4XWFXQ90K/worktree",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\nThe integration analysis revealed a structural pattern across all three TUI-adjacent lanes (`agent:experience`, `play:tui`, `tui:shell`): they all converge on one missing crate — `myosu-play`. The workspace `Cargo.toml` even has it commented out as \"Stage 5\". This is the binary that must exist before any flag wiring (--pipe, --context, --narrate, --spectate) can be integration-tested. The two HIGH blockers — robopoker git migration and the missing binary — are both **owned by other lanes**, confirming `agent:experience` itself is unblocked for Slices 1–4.\n`─────────────────────────────────────────────────`\n\n---\n\n## Delivery Summary\n\n**Lane executed**: `agent:experience` (last remaining ready product lane)\n\n**Verdict from reviewed artifacts**: **KEEP — proceed to implementation-family workflow (Track A)**\n\n**Required artifacts produced**:\n- `outputs/agent-integration/agent-adapter.md` — concrete integration specification covering: the trusted/trusted-missing surface inventory, the `myosu-play` binary as the root integration blocker, the `PipeMode → AgentContext → Journal` adapter chain with concrete flag types, the two HIGH blockers and their resolution owners, and a 13-step next-action table\n- `outputs/agent-integration/review.md` — integration verdict and decision record confirming Track A, assessing readiness across all dimensions, and recommending immediate start on Slices 1–4\n\n**Key finding**: The `agent:experience` lane spec is sound and the upstream is trusted. The lane is not blocked on new discovery — it is blocked on **coordination** (the `myosu-play` binary needs to exist, owned by `play:tui` Slice 1) and **build-system hygiene** (robopoker git migration, owned by `games:traits` Slice 1).\n\n**Decision**: Slices 1–4 (`agent_context.rs`, `journal.rs`, `--context` wiring, `reflect>` prompt) can begin immediately — they depend only on the already-trusted `tui:shell`. The `myosu-play` binary skeleton should be created in parallel by `play:tui`. Do not wait for the robopoker git migration to start slice development.",
+    "outcome": "success",
+    "failure_signature": "",
+    "internal.thread_id": "start",
+    "failure_class": "",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "last_response": "`★ Insight ─────────────────────────────────────`\nThe integration analysis revealed a structural pattern across all three TU",
+    "graph.rankdir": "LR",
+    "internal.node_visit_count": 1,
+    "internal.run_id": "01KM6KEK6CGRBVA5X4XWFXQ90K",
+    "last_stage": "specify",
+    "internal.retry_count.start": 1,
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "internal.fidelity": "compact"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_stage": "specify",
+        "last_response": "`★ Insight ─────────────────────────────────────`\nThe integration analysis revealed a structural pattern across all three TU",
+        "response.specify": "`★ Insight ─────────────────────────────────────`\nThe integration analysis revealed a structural pattern across all three TUI-adjacent lanes (`agent:experience`, `play:tui`, `tui:shell`): they all converge on one missing crate — `myosu-play`. The workspace `Cargo.toml` even has it commented out as \"Stage 5\". This is the binary that must exist before any flag wiring (--pipe, --context, --narrate, --spectate) can be integration-tested. The two HIGH blockers — robopoker git migration and the missing binary — are both **owned by other lanes**, confirming `agent:experience` itself is unblocked for Slices 1–4.\n`─────────────────────────────────────────────────`\n\n---\n\n## Delivery Summary\n\n**Lane executed**: `agent:experience` (last remaining ready product lane)\n\n**Verdict from reviewed artifacts**: **KEEP — proceed to implementation-family workflow (Track A)**\n\n**Required artifacts produced**:\n- `outputs/agent-integration/agent-adapter.md` — concrete integration specification covering: the trusted/trusted-missing surface inventory, the `myosu-play` binary as the root integration blocker, the `PipeMode → AgentContext → Journal` adapter chain with concrete flag types, the two HIGH blockers and their resolution owners, and a 13-step next-action table\n- `outputs/agent-integration/review.md` — integration verdict and decision record confirming Track A, assessing readiness across all dimensions, and recommending immediate start on Slices 1–4\n\n**Key finding**: The `agent:experience` lane spec is sound and the upstream is trusted. The lane is not blocked on new discovery — it is blocked on **coordination** (the `myosu-play` binary needs to exist, owned by `play:tui` Slice 1) and **build-system hygiene** (robopoker git migration, owned by `games:traits` Slice 1).\n\n**Decision**: Slices 1–4 (`agent_context.rs`, `journal.rs`, `--context` wiring, `reflect>` prompt) can begin immediately — they depend only on the already-trusted `tui:shell`. The `myosu-play` binary skeleton should be created in parallel by `play:tui`. Do not wait for the robopoker git migration to start slice development."
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 497051,
+        "output_tokens": 8855
+      },
+      "files_written": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 155517
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}
