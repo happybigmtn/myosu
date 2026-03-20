@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "Both artifacts produced. Here's the summary:\n\n---\n\n## `agent-integration` Lane — Bootstrap Complete\n\n**Artifacts produced:**\n- `outputs/agent-integration/agent-adapter.md` — 17KB spec defining the",
+    "response.specify": "Both artifacts produced. Here's the summary:\n\n---\n\n## `agent-integration` Lane — Bootstrap Complete\n\n**Artifacts produced:**\n- `outputs/agent-integration/agent-adapter.md` — 17KB spec defining the integration layer\n- `outputs/agent-integration/review.md` — 11KB honest review with judgment and blockers\n\n---\n\n### Decision: **Implementation-family workflow next**\n\n`agent:experience` (the last remaining ready product lane) has already been reviewed and judged KEEP. Its upstream dependencies (`tui:shell`, `games:traits`) are trusted. The remaining blockers are owned by other lanes and do not prevent implementation work from starting.\n\n### What `agent-integration` owns\n\nThe gap between `agent:experience` (presentation surfaces — pipe output, narration, journal, reflection, spectator relay) and the actual miner/validator infrastructure:\n\n| Component | Role |\n|-----------|------|\n| `AgentAdapter` trait | Unified interface over 4 transports: pipe subprocess, HTTP, WebSocket, in-process Rust |\n| `ChainDiscovery` trait | Subnet → miner axon URL resolution (devnet stub in Phase 1, real Substrate RPC in Phase 3) |\n| `SessionManager` | Multi-hand session with context save/restore and reconnection logic |\n| `myosu-agent` CLI | Binary wiring all transports with `--pipe`, `--http`, `--ws`, `--subnet`, `--context` flags |\n\n### Key design choices in the adapter\n\n- **`Send + Sync` on the trait** — enforces that all transports are thread-safe (required for multi-threaded session handling)\n- **Adapter errors are typed, never stringly-typed** — `AdapterError` enum covers timeout, invalid response, unreachable, encoding, disconnected, chain error\n- **Miner responses are untrusted** — `StrategyResponse` is serde-validated before constructing `ActionDistribution`\n- **Recovery is local-only** — session context is saved to a `0o600` JSON file; miner is not re-notified of missed hands (correctness over completeness)\n- **10 sequential slices with honest gates** — Phase 1 (trait + 2 adapters) has no external dependencies; Phase 3 defers to `chain:runtime`; Phase 4 defers to `agent:experience` Slice 8 (SpectatorRelay)\n\n### Remaining blockers\n\n| Blocker | Severity | Owner |\n|---------|----------|-------|\n| `myosu-play` binary missing | HIGH | `play:tui` lane |\n| `SpectatorRelay` (AC-SP-01) missing | MEDIUM | `agent:experience` Slice 8 |\n| `robopoker` git migration | LOW | `games:traits` lane (indirect) |\n\n### Phase ordering\n\n```\nPhase 1 (local, no deps): Slice 1-3  → trait + PipeAdapter + HttpAdapter\nPhase 2 (local):           Slice 4-6  → WsAdapter + ProcessAdapter + ChainDiscovery stub\nPhase 3 (chain):           Slice 7-9  → real chain discovery + reconnection\nPhase 4 (spectator):       Slice 10   → SpectatorRelay integration (blocked on agent:experience Slice 8)\n```",
+    "last_stage": "specify"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 522150,
+    "output_tokens": 10715
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 175556,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:25:10.756187622+00:00",
+  "updated_at": "2026-03-20T23:25:10.756191921+00:00"
+}
