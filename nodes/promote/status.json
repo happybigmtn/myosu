@@ -1,0 +1,44 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "Slice 3 for `sdk:core` is implemented in [crates/myosu-sdk/src/scaffold/mod.rs](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/crates/myosu-sdk/src/scaffold/mod.rs), [crates/myosu-sd",
+    "response.promote": "Slice 3 for `sdk:core` is implemented in [crates/myosu-sdk/src/scaffold/mod.rs](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/crates/myosu-sdk/src/scaffold/mod.rs), [crates/myosu-sdk/src/scaffold/templates.rs](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/crates/myosu-sdk/src/scaffold/templates.rs), and [crates/myosu-sdk/src/scaffold/tests.rs](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/crates/myosu-sdk/src/scaffold/tests.rs), with the minimal SDK re-exports added in [crates/myosu-sdk/src/lib.rs](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/crates/myosu-sdk/src/lib.rs) and dependency updates in [crates/myosu-sdk/Cargo.toml](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/crates/myosu-sdk/Cargo.toml). The generator now emits a real `myosu-games-<name>` crate, uses fixed-size history storage for the `Copy` constraint, computes the SDK dependency path relative to the generated crate, supports a gated `tui` feature, and proves the generated crate both compiles and fails at the intended scaffold `todo!()` boundary.\n\nThe curated artifacts are updated in [implementation.md](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/outputs/sdk/core/implementation.md), [verification.md](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/outputs/sdk/core/verification.md), [quality.md](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/outputs/sdk/core/quality.md), and [promotion.md](/home/r/.fabro/runs/20260319-01KM4B8FNCMBRGRWKSHK9Y8TDA/worktree/outputs/sdk/core/promotion.md). `promotion.md` now marks the slice `merge_ready: yes`.\n\nVerified with `cargo build -p myosu-sdk`, `cargo test -p myosu-sdk`, `cargo test -p myosu-sdk -- --include-ignored`, the retained Slice 2 harness filters, and the focused Slice 3 scaffold filters.",
+    "last_stage": "promote"
+  },
+  "notes": "Stage completed: promote",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 6567044,
+    "output_tokens": 47735,
+    "cost": 17.133634999999998
+  },
+  "files_written": [
+    "Cargo.lock",
+    "crates/myosu-sdk/Cargo.toml",
+    "crates/myosu-sdk/src/lib.rs",
+    "crates/myosu-sdk/src/scaffold/mod.rs",
+    "crates/myosu-sdk/src/scaffold/templates.rs",
+    "crates/myosu-sdk/src/scaffold/tests.rs",
+    "outputs/sdk/core/implementation.md",
+    "outputs/sdk/core/promotion.md",
+    "outputs/sdk/core/quality.md",
+    "outputs/sdk/core/verification.md"
+  ],
+  "files_touched": [
+    "Cargo.lock",
+    "crates/myosu-sdk/Cargo.toml",
+    "crates/myosu-sdk/src/lib.rs",
+    "crates/myosu-sdk/src/scaffold/mod.rs",
+    "crates/myosu-sdk/src/scaffold/templates.rs",
+    "crates/myosu-sdk/src/scaffold/tests.rs",
+    "outputs/sdk/core/implementation.md",
+    "outputs/sdk/core/promotion.md",
+    "outputs/sdk/core/quality.md",
+    "outputs/sdk/core/verification.md"
+  ],
+  "duration_ms": 1254844,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T01:55:16.372927204+00:00",
+  "updated_at": "2026-03-20T01:55:16.372937047+00:00"
+}
