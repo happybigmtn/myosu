@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 128770,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T07:34:23.371124194+00:00",
+  "updated_at": "2026-03-20T07:34:23.371128485+00:00",
+  "failure_reason": "Script failed with exit code: 101\n\n## stderr\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on artifact directory\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 07s\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n"
+}
