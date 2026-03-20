@@ -9,9 +9,8 @@
 
 use rbp_core::Utility;
 use rbp_mccfr::{
-    Solver, Profile, CfrGame, Encoder,
-    PluribusRegret, LinearWeight, PluribusSampling, VanillaSampling,
-    TreeBuilder,
+    Solver, Profile, CfrGame, PluribusRegret, LinearWeight, PluribusSampling,
+    VanillaSampling, TreeBuilder,
 };
 use rbp_nlhe::{NlheEncoder, NlheGame, NlheInfo, NlheProfile, NlheSolver};
 use std::path::Path;

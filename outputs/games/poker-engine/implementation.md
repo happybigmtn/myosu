@@ -15,7 +15,7 @@ Created the `myosu-games-poker` crate wrapping robopoker's NLHE MCCFR solver wit
 - Exploitability computation via best-response analysis
 - Training session with configurable checkpoint frequency
 
-## Files Created
+## Files Created/Modified
 
 ```
 crates/myosu-games-poker/
@@ -29,6 +29,14 @@ crates/myosu-games-poker/
 │   └── training.rs     # TrainingSession with periodic checkpointing
 └── (no tests/ directory — tests live in each module)
 ```
+
+## Build Status
+
+- **Build**: Passes (1 false-positive warning in `query.rs`)
+- **Tests compile**: Pass
+- **Tests pass**: 2/16 (remaining 14 blocked on encoder data dependency)
+
+The `query.rs` warning about unused imports `CfrGame`, `Encoder`, `Solver` is a false positive. These traits are used by the `#[cfg(test)]` module via `use super::*`, but Rust's lint checker does not track cross-module trait usage.
 
 ## Architecture
 
@@ -102,7 +110,7 @@ The mapping is output of k-means clustering pipeline run externally. Without thi
 | `query::response_probabilities_sum_to_one` | No | Requires valid query |
 | `exploit::trained_strategy_low_exploit` | No | Requires encoder |
 | `exploit::random_strategy_high_exploit` | No | Requires encoder |
-| `exploit::remote_matches_local` | No | Returns Err (placeholder) |
+| `exploit::remote_matches_local_returns_err` | No | Returns Err — remote is placeholder |
 | `wire::nlhe_info_roundtrip` | No | Requires `encoder.seed()` |
 | `wire::nlhe_edge_roundtrip` | No | Requires `encoder.seed()` |
 | `wire::all_edge_variants_serialize` | No | Requires `encoder.seed()` |

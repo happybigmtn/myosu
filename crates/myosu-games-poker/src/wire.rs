@@ -1,6 +1,5 @@
 //! Wire serialization for NLHE types using bincode.
 
-use rbp_mccfr::{Encoder, CfrGame};
 use rbp_nlhe::{NlheEdge, NlheInfo};
 use thiserror::Error;
 
