@@ -1,0 +1,338 @@
+diff --git a/outputs/foundations/foundation-plan.md b/outputs/foundations/foundation-plan.md
+new file mode 100644
+index 0000000..465cccd
+--- /dev/null
++++ b/outputs/foundations/foundation-plan.md
+@@ -0,0 +1,166 @@
++# foundations — Lane Plan
++
++## Purpose
++
++Establish honest execution truth as the baseline contract for all Myosu Fabro lanes.
++
++The `foundations` lane does not own a specific crate or product surface. It owns the
++**cross-lane execution integrity** surface: ensuring that every Fabro-dispatched turn
++produces a trustworthy structured outcome, that false submits are repaired before they
++propagate, and that `execute/status/watch` truth is reliable enough to drive downstream
++milestone decisions.
++
++## Lane Boundary
++
++`foundations` is the **horizontal execution-integrity lane**. It owns:
++
++- The repair of the `games:multi-game` false-submit produced by an earlier Fabro run
++- The definition and enforcement of honest submit criteria across all active lanes
++- The honest trust posture assessment of every bootstrap lane (`games:traits`,
++  `tui:shell`, `chain:runtime`, `chain:pallet`) as input to downstream milestone
++  decisions
++- The invariant-gate discipline that defects are only repaired when discovered by
++  **real Myosu execution**, not by inspection
++
++`foundations` does **not** own:
++
++- Writing code in domain crates (games, chain, tui, miner, validator, play)
++- Defining the product roadmap or architecture (those are `strategy/planning` and
++  the domain specs)
++- Owning the Raspberry manifest (that lives in `fabro/programs/myosu.yaml`)
++
++## Current State
++
++### False Submit on `games:multi-game`
++
++A prior Fabro run dispatched the `games:multi-game` lane and produced an apparently
++successful outcome, but the `polish` step did not execute real multi-game code.
++The lane has no corresponding crate surface in `crates/`, no passing tests, and no
++implementation. The submit was **false** — it ended without a trusted `RESULT:` or
++`BLOCKED:` outcome and without failing closed.
++
++This is an **INV-001 violation**: structured closure honesty.
++
++### Lane Trust Posture Summary
++
++| Lane | Trust | Bootstrap Status | Blocked By |
++|------|-------|-----------------|-----------|
++| `games:traits` | **KEEP** | Bootstrap complete | — |
++| `tui:shell` | **REOPEN** (3 modules) | Bootstrap artifacts exist; proof gaps remain | `schema` coverage, `events` TTY, `shell` integration |
++| `chain:runtime` | **RESTART** | Bootstrap artifacts exist | No Cargo.toml for chain/runtime yet |
++| `chain:pallet` | **RESTART** | Bootstrap artifacts exist | Blocked on runtime review |
++| `games:multi-game` | **RESET — FALSE SUBMIT** | No real implementation | Must become truthful failure or live run |
++
++### The Two Frontier Tasks
++
++**Task 1 — Fix Raspberry/Fabro defects only when discovered by real Myosu
++execution, then rerun the affected frontier until `execute/status/watch` truth is
++trustworthy again.**
++
++This means:
++- Do not proactively fix defects discovered by reading code
++- Only act on defects surfaced by a Fabro run's proof output
++- After each fix, rerun the affected lane and verify the run produces a
++  trustworthy structured outcome
++- Treat `execute/status/watch` as untrustworthy until multiple consecutive runs
++  agree on lane state
++
++**Task 2 — Convert `games:multi-game` false-submit into a truthful failure or
++successful live run, then rerun the lane with the repaired Fabro detach path.**
++
++This means:
++- The false submit cannot be left as-is; it must be closed with a real outcome
++- Two valid paths: (a) the lane honestly fails because multi-game has no
++  implementation, or (b) an implementation is created that makes the lane succeed
++- After closing the false submit, rerun the lane and verify the new run produces
++  a real structured outcome
++
++## Honest Submit Criteria
++
++A Fabro lane submit is **honest** when it ends in one of:
++
++1. `RESULT:` — all proof gates passed, curated artifacts written, tests green
++2. `BLOCKED:` — lane is blocked on an upstream dependency that is not yet satisfied
++3. **Fails closed** — if proof cannot be demonstrated, the lane must report failure
++   rather than claiming success
++
++A submit is **false** when:
++
++- The lane reports success but no real implementation exists
++- The lane reports success but proof gates were not actually executed
++- The `polish` or `verify` step produced no meaningful evidence of work done
++
++## Next Slices
++
++### Slice 1 — Repair the `games:multi-game` False Submit
++
++**Action**: Evaluate whether `games:multi-game` should honestly fail (no multi-game
++implementation exists) or be built as a real lane.
++
++If honest failure:
++1. Create a `fabro/programs/myosu-platform.yaml` lane that honestly declares
++   `games:multi-game` as blocked or not-yet-implemented
++2. Rerun the `games:multi-game` lane through Fabro and verify it produces
++   `BLOCKED:` or an honest failure rather than false success
++3. Update `outputs/games/multi-game/review.md` to reflect the honest state
++
++If real implementation:
++1. Create the multi-game implementation surface under `crates/myosu-games-multi/`
++2. Add tests proving at least one multi-game type works
++3. Rerun the lane and verify it produces `RESULT:`
++
++**Proof gate**: Rerunning the lane produces a trustworthy structured outcome
++matching the actual state of the multi-game surface.
++
++### Slice 2 — Assess and Document Lane Trust Posture
++
++**Action**: For each active bootstrap lane, write an honest one-paragraph trust
++summary in `outputs/foundations/lane-trust.md`:
++
++- `games:traits` — KEEP; all tests pass; path-dependency risk accepted for now
++- `tui:shell` — 3 modules REOPEN; proof gaps documented; lane cannot be declared
++  "bootstrapped" until gaps are closed
++- `chain:runtime` — RESTART; no Cargo.toml; nothing to test yet
++- `chain:pallet` — RESTART; blocked upstream on runtime; same non-state as runtime
++
++**Proof gate**: `outputs/foundations/lane-trust.md` exists and honestly characterizes
++each lane.
++
++### Slice 3 — Harden `execute/status/watch` Truth Reliability
++
++**Action**: Define what "trustworthy `execute/status/watch`" means for Myosu lanes:
++
++- Run the same lane 3 times consecutively
++- Record whether `execute/status/watch` reports the same state all 3 times
++- If outputs disagree, the truth surface is not yet trustworthy
++
++Until `execute/status/watch` is trustworthy, downstream milestone decisions must not
++assume lane state is reliable.
++
++**Proof gate**: A lane run 3 times produces 3 agreeing `execute/status/watch`
++reports.
++
++## Progress
++
++- [ ] Slice 1: Repair `games:multi-game` false submit
++- [ ] Slice 2: Document lane trust posture honestly
++- [ ] Slice 3: Harden `execute/status/watch` truth reliability
++
++## Decision Log
++
++- Decision: `foundations` is a horizontal lane, not a crate-specific lane.
++  Rationale: execution integrity spans all lanes and cannot belong to any single
++  domain unit.
++  Date/Author: 2026-03-20 / foundations lane bootstrap
++
++- Decision: A false submit is an INV-001 violation regardless of whether the lane
++  "would have succeeded if code existed."
++  Rationale: structured closure honesty requires the outcome to match the actual
++  code state, not the hypothetical state.
++  Date/Author: 2026-03-20 / foundations lane bootstrap
++
++- Decision: Only repair defects discovered by real Fabro execution, not by
++  inspection alone.
++  Rationale: the execution substrate is the ground truth; reading code cannot
++  substitute for running code.
++  Date/Author: 2026-03-20 / foundations lane bootstrap
+diff --git a/outputs/foundations/review.md b/outputs/foundations/review.md
+new file mode 100644
+index 0000000..45d789d
+--- /dev/null
++++ b/outputs/foundations/review.md
+@@ -0,0 +1,160 @@
++# foundations — Lane Review
++
++## Judgment Summary
++
++| Surface | Status | Rationale |
++|---------|--------|-----------|
++| `games:traits` bootstrap artifacts | **KEEP** | Full bootstrap complete; all tests pass; path-dep risk accepted |
++| `tui:shell` bootstrap artifacts | **KEEP (REOPEN modules)** | Bootstrap artifacts produced honestly; proof gaps in schema/events/shell are real and documented |
++| `chain:runtime` bootstrap artifacts | **KEEP (RESTART)** | Bootstrap artifacts exist; runtime is non-existent as a crate — honest restart state |
++| `chain:pallet` bootstrap artifacts | **KEEP (RESTART)** | Bootstrap artifacts exist; pallet is blocked upstream — honest restart state |
++| `games:multi-game` submit | **RESET — FALSE SUBMIT** | Lane dispatched but no real implementation exists; must be repaired before treating as valid |
++| `execute/status/watch` truth surface | **UNTRUSTWORTHY** | No evidence that consecutive runs agree on lane state; must be validated before downstream use |
++
++---
++
++## The `games:multi-game` False Submit — Root Cause Analysis
++
++### What Happened
++
++A Fabro run dispatched the `games:multi-game` lane. The workflow graph at
++`fabro/workflows/bootstrap/multi-game.fabro` defines a 4-step pipeline:
++`specify → review → polish → verify`. The `verify` step checked for the
++existence of `outputs/games/multi-game/spec.md` and
++`outputs/games/multi-game/review.md`, which had been pre-created as empty
++`.gitkeep` siblings alongside real artifact files for other lanes.
++
++The run produced an apparently successful exit, but:
++
++1. No `crates/myosu-games-multi/` or equivalent multi-game implementation exists
++2. No tests for multi-game logic exist in the workspace
++3. The `polish` step ran against pre-seeded empty artifact files, not against
++   a real implementation
++4. The submit was **false** — it claimed completion without any real work done
++
++### Why It Violates INV-001
++
++INV-001 (Structured Closure Honesty) states:
++
++> No dispatched turn may be treated as complete unless it ends in a trusted
++> structured `RESULT:` or `BLOCKED:` outcome or fails closed.
++
++The `games:multi-game` run did not fail closed. It reported success without
++demonstrating that any real multi-game code was written, tested, or verified.
++This is a false-green proof — exactly what INV-001 prohibits.
++
++### Why It Violates INV-002
++
++INV-002 (Proof Honesty) states:
++
++> Named proof commands must actually execute and must never be used as
++> false-green placeholders.
++
++The `verify` step checked for file existence, but those files were pre-seeded
++empty artifacts, not proof of real work. The proof command passed without
++verifying that any implementation existed.
++
++---
++
++## What This Lane Must Preserve
++
++### From `games:traits` (KEEP)
++
++- All 10 unit tests + 4 doctests passing (`cargo test -p myosu-games`)
++- The thin re-export surface in `src/traits.rs` (lines 8–9)
++- The `reexports_compile` test confirming re-exports compile
++- The path-dependency risk documented in `review.md` (accepted for now)
++
++### From `tui:shell` (KEEP — with documented REOPEN modules)
++
++- `screens.rs` (18 tests, all transitions, exhaustive) — KEEP without reservation
++- `input.rs` (20+ tests, all key handlers) — KEEP without reservation
++- `renderer.rs` (trait object-safe, mock-based tests) — KEEP without reservation
++- `theme.rs` (8-token palette, 7 tests) — KEEP without reservation
++- `pipe.rs` (ANSI detection, 5 tests) — KEEP with optional property test caveat
++- `schema.rs` — REOPEN: only 3/20 games fully tested; proof gap is HIGH severity
++- `events.rs` — REOPEN: 2 TTY-ignored tests, no headless alternative; proof gap
++  is HIGH severity
++- `shell.rs` — REOPEN: no integration test for screen transitions; proof gap is
++  HIGH severity
++
++The `tui:shell` bootstrap artifacts were produced **honestly** — the review
++correctly identifies proof gaps and does not overclaim. The artifacts themselves
++are trustworthy; what remains is the implementation work to close the proof gaps.
++
++### From `chain:runtime` and `chain:pallet` (KEEP — RESTART state)
++
++- Bootstrap artifacts exist and honestly characterize the restart state
++- No Cargo.toml exists for `crates/myosu-chain/runtime/` — this is an honest
++  "nothing to test yet" state, not a false claim of progress
++- The restart lanes correctly show `chain:runtime` as a dependency for
++  `chain:pallet`
++
++---
++
++## What This Lane Must Repair
++
++### Priority 1: `games:multi-game` False Submit
++
++**Must not preserve**: the false submit outcome.
++
++**Must produce**: either (a) an honest failure if multi-game is not implemented,
++or (b) a real implementation if multi-game should be built now.
++
++**Verification after repair**:
++```bash
++# Option A (honest failure): verify the lane produces BLOCKED or honest failure
++# Option B (real implementation): verify cargo test -p myosu-games-multi passes
++```
++
++### Priority 2: `execute/status/watch` Truth Reliability
++
++**Must not assume**: that Fabro's `execute/status/watch` accurately reflects lane
++state after a single run.
++
++**Must verify**: that consecutive runs of the same lane produce agreeing outputs.
++
++**Verification**:
++```bash
++# Run the same lane 3 times and compare execute/status/watch outputs
++# If outputs disagree, the truth surface is not yet trustworthy
++```
++
++---
++
++## Risk Register
++
++| Risk | Severity | Mitigation |
++|------|----------|------------|
++| `games:multi-game` false submit propagates to downstream milestone decisions | **S0** | Must be repaired before any downstream lane depends on multi-game state |
++| `execute/status/watch` disagrees across runs | **S1** | Do not use for milestone decisions until 3 consecutive agreeing runs |
++| `tui:shell` proof gaps in schema/events/shell remain open | **S1** | Document in lane trust posture; do not claim "bootstrap complete" for these modules |
++| `chain:runtime` has no Cargo.toml | **S2** | Honest restart state; not a risk, just a fact |
++| `chain:pallet` blocked on runtime | **S2** | Honest dependency; not a risk, just a fact |
++
++---
++
++## Proof Commands
++
++| Context | Command | Expected |
++|---------|---------|----------|
++| `games:traits` trust check | `cargo test -p myosu-games` | Exit 0, 10 unit + 4 doctest pass |
++| `tui:shell` trust check | `cargo test -p myosu-tui` | Exit 0, all non-ignored tests pass |
++| `multi-game` honest assessment | `ls crates/myosu-games-multi/` (or similar) | Returns "not found" or implementation files |
++| `execute/status/watch` agreement | 3 consecutive Fabro runs of same lane | All 3 agree on lane state |
++
++---
++
++## File Reference Index
++
++| File | Role |
++|------|------|
++| `outputs/games/traits/spec.md` | Trusted leaf crate — `games:traits` lane contract |
++| `outputs/games/traits/review.md` | Trusted leaf crate — `games:traits` trust assessment |
++| `outputs/tui/shell/spec.md` | Shell lane contract with documented proof gaps |
++| `outputs/tui/shell/review.md` | Shell trust assessment (KEEP + REOPEN on 3 modules) |
++| `outputs/chain/runtime/spec.md` | Runtime restart lane — honest restart state |
++| `outputs/chain/pallet/spec.md` | Pallet restart lane — honest restart state, blocked on runtime |
++| `outputs/games/multi-game/review.md` | Multi-game false submit — must be repaired |
++| `fabro/workflows/bootstrap/multi-game.fabro` | Multi-game workflow definition |
++| `INVARIANTS.md` | INV-001 (structured closure honesty), INV-002 (proof honesty) definitions |
