@@ -134,3 +134,23 @@ and reflect prompt) can proceed in parallel with continued work on Slice 5 (narr
 
 The `review.md` should be updated after each slice completes to track proof
 availability and remaining blockers.
+
+---
+
+## Integration Review (2026-03-20)
+
+**Verdict: GO — implementation-family slices 1–2 are unblocked.**
+
+Synthesized in `outputs/agent-integration/review.md`. Full integration analysis:
+
+- Slices 1 (`agent_context.rs`) and 2 (`journal.rs`) are fully unblocked —
+  only depend on `tui:shell`, which is already trusted (82 tests pass).
+- Slice 5 (`narration.rs`) is also unblocked and can run in parallel with
+  Slices 3–4.
+- Slices 3–4 and 6–9 are blocked pending `play:tui` binary skeleton (owned by
+  `play:tui` lane).
+- Critical path: `robopoker` git migration (owned by `games:traits` lane) must
+  resolve before Slices 5–9 integration testing can succeed.
+
+**Next action**: Launch `agent:experience` implementation-family workflow targeting
+Slices 1–2. Track `games:traits` robopoker resolution in parallel.
