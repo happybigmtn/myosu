@@ -1,0 +1,29 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "specify",
+    "last_response": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration` lane produces a **DEFER** judgment because impleme",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration` lane produces a **DEFER** judgment because implementation requires a working dependency graph. The critical path blocker is the robopoker git migration in `games:traits` — the absolute paths `/home/r/coding/robopoker/...` make `cargo build` fail on any clean checkout. This is a **sequencing decision**, not a design concern: the `agent:experience` lane is well-specified, but verification requires upstream resolution first.\n`─────────────────────────────────────────────────`\n\n## Summary\n\nExecuted the `agent:experience` lane (the last remaining ready product lane) and produced the required integration artifacts:\n\n**`outputs/agent-integration/agent-adapter.md`** — Documents the 7 agent-facing interfaces:\n1. **Pipe mode** (`--pipe`) — stdin/stdout text protocol, 6 tests pass, trusted\n2. **JSON schema** (`GameState`) — machine-readable game state, 16 tests pass, trusted\n3. **Agent context** (`--context <path>`) — persistent identity/memory/journal, missing\n4. **Reflection channel** — `reflect>` prompt after each hand, missing\n5. **Narration mode** (`--narrate`) — atmospheric prose rendering, missing\n6. **Lobby** — subnet selection without `--subnet` flag, missing\n7. **Spectator relay** — Unix socket event stream with fog-of-war, missing\n\n**`outputs/agent-integration/review.md`** — Renders a **DEFER** judgment:\n\n| Priority | Action | Owner |\n|----------|--------|-------|\n| 1 | Complete robopoker git migration (RF-01) | `games:traits` |\n| 2 | Complete `myosu-play` binary skeleton | `play:tui` |\n| 3 | Begin `agent:experience` Slices 1-2 (no upstream blockers) | `agent` |\n| 4 | Re-review after upstream unblocks | — |\n\n**Decision**: Do not open an implementation family yet. The `agent:experience` lane is ready, but the critical path dependency on robopoker git migration must resolve before integration testing is possible. Slices 1-2 (`agent_context.rs`, `journal.rs`) can begin immediately — they depend only on trusted `tui:shell` (82 tests pass)."
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 743170,
+    "output_tokens": 9680
+  },
+  "files_written": [
+    "outputs/agent-integration/.gitkeep",
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/.gitkeep",
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 170644,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:53:01.633270955+00:00",
+  "updated_at": "2026-03-20T23:53:01.633276307+00:00"
+}
