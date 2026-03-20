@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T23:59:35.682218619Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "graph.rankdir": "LR",
+    "response.specify": "Both required artifacts are produced.\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**Why `agent-adapter.md` is the right integration artifact**: Rather than re-stating what `agent:experience` does internally, the adapter maps *interfaces across lane boundaries* — what surfaces the lane exposes, what upstream surfaces it consumes, and which other lanes own the dependencies. This is the honest contract that downstream implementers need. A spec about what a lane does internally is not the same as an integration document about what a lane promises to other lanes.\n\n**Why the judgment is KEEP not RESET**: The `agent:experience` lane's review correctly distinguishes between \"spec is sound\" and \"implementation is done.\" KEEP means the foundation is trustworthy; it does not mean the work is complete. RESET would have thrown away good specification work based on the presence of known blockers — which are correctly owned by other lanes, not this one.\n`─────────────────────────────────────────────────`\n\n---\n\n## Summary\n\n**Lane executed**: `agent-integration`\n\n**Decision**: **KEEP** — proceed to `agent:experience` implementation-family workflow next.\n\n### What this lane produced\n\n**`outputs/agent-integration/agent-adapter.md`** — Maps every agent-facing surface to its owning module and upstream dependency:\n- 8 surfaces documented (`--pipe`, JSON schema, context file, reflection channel, journal, narration, spectator relay, spectate screen)\n- Full dependency map showing `tui:shell` and `games:traits` as the only hard upstream dependencies\n- Cross-lane dependency table with `play:tui` binary and `chain:runtime` correctly attributed\n\n**`outputs/agent-integration/review.md`** — Honest judgment with rationale:\n- **KEEP**: `agent:experience` artifacts are sound; the lane correctly identified what's trusted and what's missing\n- 3 cross-lane blockers identified: `robopoker` git migration (HIGH, owned by `games:traits`), `myosu-play` binary (HIGH, owned by `play:tui`), chain discovery stubbed (MEDIUM, acceptable progressive disclosure)\n- **Decision**: implementation-family workflow for `agent:experience` is the right next step; Slices 1–2 can start immediately with no additional upstream work needed\n\n### Decision on next step\n\n**Product needs an implementation family next**, not another upstream unblock from this lane. The remaining blockers are correctly owned by `games:traits` and `play:tui` lanes and are tracked there. `agent:experience` Slices 1–2 (`agent_context.rs`, `journal.rs`) can proceed immediately.",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "current_node": "specify",
+    "last_response": "Both required artifacts are produced.\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**Why `agent-adapter.md` is th",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6TXN4QPWF5D8NDVK3RJMNS/worktree",
+    "failure_class": "",
+    "failure_signature": "",
+    "internal.retry_count.start": 1,
+    "internal.run_id": "01KM6TXN4QPWF5D8NDVK3RJMNS",
+    "last_stage": "specify",
+    "thread.start.current_node": "specify",
+    "internal.fidelity": "compact",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "internal.thread_id": "start",
+    "internal.node_visit_count": 1,
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "outcome": "success",
+    "internal.retry_count.specify": 1
+  },
+  "logs": [],
+  "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_stage": "specify",
+        "response.specify": "Both required artifacts are produced.\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**Why `agent-adapter.md` is the right integration artifact**: Rather than re-stating what `agent:experience` does internally, the adapter maps *interfaces across lane boundaries* — what surfaces the lane exposes, what upstream surfaces it consumes, and which other lanes own the dependencies. This is the honest contract that downstream implementers need. A spec about what a lane does internally is not the same as an integration document about what a lane promises to other lanes.\n\n**Why the judgment is KEEP not RESET**: The `agent:experience` lane's review correctly distinguishes between \"spec is sound\" and \"implementation is done.\" KEEP means the foundation is trustworthy; it does not mean the work is complete. RESET would have thrown away good specification work based on the presence of known blockers — which are correctly owned by other lanes, not this one.\n`─────────────────────────────────────────────────`\n\n---\n\n## Summary\n\n**Lane executed**: `agent-integration`\n\n**Decision**: **KEEP** — proceed to `agent:experience` implementation-family workflow next.\n\n### What this lane produced\n\n**`outputs/agent-integration/agent-adapter.md`** — Maps every agent-facing surface to its owning module and upstream dependency:\n- 8 surfaces documented (`--pipe`, JSON schema, context file, reflection channel, journal, narration, spectator relay, spectate screen)\n- Full dependency map showing `tui:shell` and `games:traits` as the only hard upstream dependencies\n- Cross-lane dependency table with `play:tui` binary and `chain:runtime` correctly attributed\n\n**`outputs/agent-integration/review.md`** — Honest judgment with rationale:\n- **KEEP**: `agent:experience` artifacts are sound; the lane correctly identified what's trusted and what's missing\n- 3 cross-lane blockers identified: `robopoker` git migration (HIGH, owned by `games:traits`), `myosu-play` binary (HIGH, owned by `play:tui`), chain discovery stubbed (MEDIUM, acceptable progressive disclosure)\n- **Decision**: implementation-family workflow for `agent:experience` is the right next step; Slices 1–2 can start immediately with no additional upstream work needed\n\n### Decision on next step\n\n**Product needs an implementation family next**, not another upstream unblock from this lane. The remaining blockers are correctly owned by `games:traits` and `play:tui` lanes and are tracked there. `agent:experience` Slices 1–2 (`agent_context.rs`, `journal.rs`) can proceed immediately.",
+        "last_response": "Both required artifacts are produced.\n\n---\n\n`★ Insight ─────────────────────────────────────`\n**Why `agent-adapter.md` is th"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 314738,
+        "output_tokens": 7081
+      },
+      "files_written": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 120437
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}
