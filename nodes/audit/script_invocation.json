@@ -1,0 +1,5 @@
+{
+  "command": "test -f outputs/play/tui/implementation.md && test -f outputs/play/tui/verification.md && test -f outputs/play/tui/quality.md && test -f outputs/play/tui/promotion.md",
+  "language": "shell",
+  "timeout_ms": null
+}
