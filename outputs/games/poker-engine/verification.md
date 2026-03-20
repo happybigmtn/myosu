@@ -1,4 +1,4 @@
-# Verification: games:poker-engine (solver guardrails slice)
+# Verification: games:poker-engine (encoder artifact ingress slice)
 
 ## Automated proof
 
@@ -15,10 +15,19 @@ CARGO_TARGET_DIR=/tmp/myosu-games-poker-target cargo test -p myosu-games-poker
 
 - `cargo build -p myosu-games-poker`: PASS
 - `cargo test -p myosu-games-poker`: PASS
-- Unit tests: 17 passed, 0 failed, 0 ignored
+- Unit tests: 22 passed, 0 failed, 0 ignored
 - Doc tests: 1 ignored example block in `training.rs`
+- No compiler warnings were emitted by the successful proof commands
 
-## Coverage from the passing suite
+## Newly-covered artifact ingress proofs
+
+- `solver::tests::with_encoder_bytes_accepts_root_artifact`
+- `solver::tests::with_encoder_file_accepts_root_artifact`
+- `solver::tests::checkpoint_roundtrip_with_encoder_artifact_preserves_epoch`
+- `training::tests::new_with_encoder_bytes_accepts_root_artifact`
+- `training::tests::new_with_encoder_file_resumes_checkpointed_solver`
+
+## Existing coverage that remained green
 
 - Solver guardrails:
   - `solver::tests::create_empty_solver`
@@ -30,23 +39,21 @@ CARGO_TARGET_DIR=/tmp/myosu-games-poker-target cargo test -p myosu-games-poker
 - Training-session guardrails:
   - `training::tests::session_checkpoint_frequency`
   - `training::tests::new_with_encoder_rejects_empty_abstraction_map`
-- Exploitability guardrails:
-  - `exploit::tests::trained_strategy_low_exploit`
-  - `exploit::tests::random_strategy_high_exploit`
-  - `exploit::tests::remote_matches_local`
-- Existing wire/query smoke coverage remained green:
-  - all `wire::*` tests
+- Existing query/wire/exploit smoke coverage:
   - all `query::*` tests
+  - all `wire::*` tests
+  - all `exploit::*` tests
 
 ## What this proof establishes
 
-- The solver wrapper now calls real MCCFR stepping when training is attempted.
-- Missing abstraction maps are surfaced as explicit errors instead of panics.
-- Zero-state checkpoints roundtrip correctly.
-- Training-session checkpointing does not write state after a failed training step.
+- Poker-engine can ingest a real serialized `NlheEncoder` artifact from bytes or disk through owned `PokerSolver` APIs.
+- `TrainingSession` can use the same artifact-backed path and resume a zero-state checkpoint without reaching into robopoker internals.
+- The preflop artifact fixture is large enough to satisfy root-level encoder validation because it covers all 169 canonical preflop isomorphisms.
 
 ## What this proof does not establish
 
-- Successful training with a real encoder-backed abstraction artifact.
-- Actual exploitability reduction between trained and untrained NLHE strategies.
-- Validator-grade parity for remote exploitability scoring.
+- Positive encoder-backed training past epoch 0.
+- Positive exploitability reduction between trained and untrained NLHE strategies.
+- Validator-grade remote exploitability scoring against a full abstraction artifact.
+
+Those proofs remain blocked by upstream randomized `Game::root()` generation and the absence of a full NLHE abstraction artifact in this repo.

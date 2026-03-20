@@ -35,6 +35,14 @@ pub enum PokerSolverError {
     CorruptedCheckpoint(#[source] bincode::Error),
     #[error("failed to serialize checkpoint")]
     Serialization(#[source] bincode::Error),
+    #[error("failed to read encoder artifact: {path}")]
+    EncoderArtifactRead {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to decode encoder artifact")]
+    EncoderArtifactDecode(#[source] bincode::Error),
     #[error("encoder abstractions are unavailable during {context}")]
     MissingEncoderAbstractions { context: &'static str },
     #[error("solver panicked during {context}: {message}")]
@@ -77,6 +85,17 @@ impl PokerSolver {
         };
         solver.validate_abstractions()?;
         Ok(solver)
+    }
+
+    /// Creates a solver backed by a bincode-serialized encoder artifact.
+    pub fn with_encoder_bytes(bytes: &[u8]) -> Result<Self, PokerSolverError> {
+        Self::with_encoder(Self::decode_encoder(bytes)?)
+    }
+
+    /// Creates a solver backed by a file-based encoder artifact.
+    pub fn with_encoder_file(path: &Path) -> Result<Self, PokerSolverError> {
+        let bytes = Self::read_encoder_artifact(path)?;
+        Self::with_encoder_bytes(&bytes)
     }
 
     /// Verifies that the encoder can at least construct the root infoset.
@@ -191,6 +210,23 @@ impl PokerSolver {
         Ok(solver)
     }
 
+    /// Loads a checkpoint and pairs it with a serialized encoder artifact.
+    pub fn load_with_encoder_bytes(
+        path: &Path,
+        encoder_bytes: &[u8],
+    ) -> Result<Self, PokerSolverError> {
+        Self::load_with_encoder(path, Self::decode_encoder(encoder_bytes)?)
+    }
+
+    /// Loads a checkpoint and pairs it with an encoder artifact from disk.
+    pub fn load_with_encoder_file(
+        path: &Path,
+        encoder_path: &Path,
+    ) -> Result<Self, PokerSolverError> {
+        let bytes = Self::read_encoder_artifact(encoder_path)?;
+        Self::load_with_encoder_bytes(path, &bytes)
+    }
+
     fn read_profile(path: &Path) -> Result<NlheProfile, PokerSolverError> {
         let mut file = File::open(path).map_err(|source| PokerSolverError::FileOpen {
             path: path.display().to_string(),
@@ -224,6 +260,17 @@ impl PokerSolver {
 
         // Load profile
         bincode::deserialize_from(&file).map_err(PokerSolverError::CorruptedCheckpoint)
+    }
+
+    fn decode_encoder(bytes: &[u8]) -> Result<NlheEncoder, PokerSolverError> {
+        bincode::deserialize(bytes).map_err(PokerSolverError::EncoderArtifactDecode)
+    }
+
+    fn read_encoder_artifact(path: &Path) -> Result<Vec<u8>, PokerSolverError> {
+        std::fs::read(path).map_err(|source| PokerSolverError::EncoderArtifactRead {
+            path: path.display().to_string(),
+            source,
+        })
     }
 
     /// Returns a reference to the inner solver for use by other crate modules.
@@ -278,7 +325,9 @@ fn panic_message(payload: &(dyn Any + Send)) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::root_encoder_bytes;
     use rbp_core::Arbitrary;
+    use std::fs;
     use std::io::Read;
     use tempfile::NamedTempFile;
 
@@ -366,5 +415,33 @@ mod tests {
                 context: "encoder validation"
             }
         ));
+    }
+
+    #[test]
+    fn with_encoder_bytes_accepts_root_artifact() {
+        let solver = PokerSolver::with_encoder_bytes(root_encoder_bytes()).unwrap();
+        assert_eq!(solver.epochs(), 0);
+    }
+
+    #[test]
+    fn with_encoder_file_accepts_root_artifact() {
+        let temp_file = NamedTempFile::new().unwrap();
+        fs::write(temp_file.path(), root_encoder_bytes()).unwrap();
+
+        let solver = PokerSolver::with_encoder_file(temp_file.path()).unwrap();
+
+        assert_eq!(solver.epochs(), 0);
+    }
+
+    #[test]
+    fn checkpoint_roundtrip_with_encoder_artifact_preserves_epoch() {
+        let solver = PokerSolver::with_encoder_bytes(root_encoder_bytes()).unwrap();
+
+        let temp_file = NamedTempFile::new().unwrap();
+        solver.save(temp_file.path()).unwrap();
+
+        let loaded = PokerSolver::load_with_encoder_bytes(temp_file.path(), root_encoder_bytes())
+            .unwrap();
+        assert_eq!(loaded.epochs(), 0);
     }
 }

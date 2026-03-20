@@ -19,6 +19,8 @@ pub mod query;
 pub mod wire;
 pub mod exploit;
 pub mod training;
+#[cfg(test)]
+pub(crate) mod test_support;
 
 // Re-exports from myosu-games for convenience
 pub use myosu_games::{

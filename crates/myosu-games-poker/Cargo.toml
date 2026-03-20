@@ -26,3 +26,4 @@ myosu-games = { path = "../myosu-games" }
 [dev-dependencies]
 tokio-test = { workspace = true }
 tempfile = "3"
+rbp-cards = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }

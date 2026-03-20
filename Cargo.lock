@@ -1751,6 +1751,7 @@ dependencies = [
  "bincode",
  "myosu-games",
  "rand 0.8.5",
+ "rbp-cards",
  "rbp-core",
  "rbp-gameplay",
  "rbp-mccfr",

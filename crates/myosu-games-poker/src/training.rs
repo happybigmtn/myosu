@@ -14,6 +14,8 @@ use thiserror::Error;
 /// Errors in training session management.
 #[derive(Error, Debug)]
 pub enum TrainingError {
+    #[error("encoder artifact load failed: {0}")]
+    EncoderLoad(#[source] PokerSolverError),
     #[error("checkpoint save failed: {0}")]
     CheckpointSave(#[source] PokerSolverError),
     #[error("checkpoint load failed: {0}")]
@@ -133,6 +135,53 @@ impl TrainingSession {
         })
     }
 
+    /// Creates a training session backed by a serialized encoder artifact.
+    pub fn new_with_encoder_bytes(
+        config: TrainingConfig,
+        encoder_bytes: &[u8],
+    ) -> Result<Self, TrainingError> {
+        let checkpoint_path = config.checkpoint_path();
+
+        let solver = if checkpoint_path.exists() {
+            PokerSolver::load_with_encoder_bytes(&checkpoint_path, encoder_bytes)
+                .map_err(TrainingError::CheckpointLoad)?
+        } else {
+            PokerSolver::with_encoder_bytes(encoder_bytes).map_err(TrainingError::EncoderLoad)?
+        };
+
+        let start_epoch = solver.epochs();
+
+        Ok(Self {
+            solver,
+            config,
+            start_epoch,
+        })
+    }
+
+    /// Creates a training session backed by an encoder artifact on disk.
+    pub fn new_with_encoder_file(
+        config: TrainingConfig,
+        encoder_path: impl AsRef<Path>,
+    ) -> Result<Self, TrainingError> {
+        let checkpoint_path = config.checkpoint_path();
+        let encoder_path = encoder_path.as_ref();
+
+        let solver = if checkpoint_path.exists() {
+            PokerSolver::load_with_encoder_file(&checkpoint_path, encoder_path)
+                .map_err(TrainingError::CheckpointLoad)?
+        } else {
+            PokerSolver::with_encoder_file(encoder_path).map_err(TrainingError::EncoderLoad)?
+        };
+
+        let start_epoch = solver.epochs();
+
+        Ok(Self {
+            solver,
+            config,
+            start_epoch,
+        })
+    }
+
     /// Returns the current epoch (iteration count).
     pub fn epochs(&self) -> usize {
         self.solver.epochs()
@@ -197,6 +246,8 @@ impl TrainingConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::root_encoder_bytes;
+    use std::fs;
     use tempfile::TempDir;
 
     #[test]
@@ -238,5 +289,37 @@ mod tests {
                 context: "encoder validation"
             })
         ));
+    }
+
+    #[test]
+    fn new_with_encoder_bytes_accepts_root_artifact() {
+        let temp_dir = TempDir::new().unwrap();
+        let config = TrainingConfig::with_frequency(10).with_checkpoint_dir(temp_dir.path());
+
+        let session = TrainingSession::new_with_encoder_bytes(config, root_encoder_bytes()).unwrap();
+
+        assert_eq!(session.epochs(), 0);
+    }
+
+    #[test]
+    fn new_with_encoder_file_resumes_checkpointed_solver() {
+        let temp_dir = TempDir::new().unwrap();
+        let encoder_path = temp_dir.path().join("fixture.encoder");
+        fs::write(&encoder_path, root_encoder_bytes()).unwrap();
+
+        let config = TrainingConfig::with_frequency(1)
+            .with_checkpoint_dir(temp_dir.path())
+            .with_checkpoint_name("resume_checkpoint");
+
+        {
+            let session = TrainingSession::new_with_encoder_file(config.clone(), &encoder_path).unwrap();
+            session.save_checkpoint().unwrap();
+            assert_eq!(session.epochs(), 0);
+        }
+
+        let resumed =
+            TrainingSession::new_with_encoder_file(config, &encoder_path).unwrap();
+        assert_eq!(resumed.epochs(), 0);
+        assert_eq!(resumed.session_epochs(), 0);
     }
 }

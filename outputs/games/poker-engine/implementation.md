@@ -1,50 +1,51 @@
-# Implementation: games:poker-engine (solver guardrails slice)
+# Implementation: games:poker-engine (encoder artifact ingress slice)
 
 ## Slice intent
 
-Tightened the local poker-engine wrapper so it behaves truthfully while real NLHE abstraction artifacts are still absent from the repo. This slice stayed inside the owned poker-engine surfaces and focused on solver, training-session, and exploitability behavior.
+This slice makes the poker-engine crate capable of accepting a concrete serialized `NlheEncoder` artifact through owned poker-engine APIs. The work stays inside `myosu-games-poker` and focuses on the next honest step after the guardrail slice: artifact ingress and checkpoint pairing, not simulated end-state training claims.
 
 ## Touched surfaces
 
+- `crates/myosu-games-poker/Cargo.toml`
+- `crates/myosu-games-poker/src/lib.rs`
 - `crates/myosu-games-poker/src/solver.rs`
 - `crates/myosu-games-poker/src/training.rs`
-- `crates/myosu-games-poker/src/exploit.rs`
+- `crates/myosu-games-poker/src/test_support.rs`
 
 ## What changed
 
 ### `solver.rs`
 
-- Replaced the old `train()` behavior that only built a tree and incremented epochs with real MCCFR stepping via `rbp_mccfr::Solver::step()`.
-- Added explicit error surfaces for abstraction failures and bad exploitability outputs:
-  - `MissingEncoderAbstractions`
-  - `OperationPanicked`
-  - `InvalidExploitability`
-- Added encoder-aware entry points:
-  - `PokerSolver::with_encoder(...)`
-  - `PokerSolver::validate_abstractions()`
-  - `PokerSolver::load_with_encoder(...)`
-- Kept `new()` and `load()` as zero-artifact checkpoint/lookup helpers, but training and exploitability now fail cleanly instead of panicking when the encoder is empty.
+- Added encoder artifact ingress on the owned `PokerSolver` surface:
+  - `PokerSolver::with_encoder_bytes(...)`
+  - `PokerSolver::with_encoder_file(...)`
+  - `PokerSolver::load_with_encoder_bytes(...)`
+  - `PokerSolver::load_with_encoder_file(...)`
+- Added explicit artifact error cases:
+  - `EncoderArtifactRead`
+  - `EncoderArtifactDecode`
+- Kept validation centralized in `validate_abstractions()` so byte/file-backed constructors reject unusable encoder artifacts with the same error surface as direct `with_encoder(...)`.
 
 ### `training.rs`
 
-- Added `TrainingSession::new_with_encoder(...)` so downstream callers can pair checkpoints with a real abstraction artifact.
-- Propagates solver failures from `train()` and `exploitability()` instead of hiding them.
-- Checkpoint writes only occur after a successful training step.
+- Added artifact-backed `TrainingSession` constructors:
+  - `TrainingSession::new_with_encoder_bytes(...)`
+  - `TrainingSession::new_with_encoder_file(...)`
+- Added `TrainingError::EncoderLoad` so callers can distinguish artifact ingress failures from checkpoint load/save failures.
+- Verified the zero-state checkpoint resume path works when the session is paired with a concrete encoder artifact.
 
-### `exploit.rs`
+### `test_support.rs`
 
-- `poker_exploitability()` now returns `EmptyProfile` for zero-epoch profiles and converts missing-abstraction panics into `MissingEncoderAbstractions`.
-- `remote_poker_exploitability()` now surfaces the same missing-encoder failure explicitly instead of panicking.
+- Added a poker-engine-owned test fixture that produces a real serialized `NlheEncoder` artifact for preflop validation.
+- The fixture materializes all 169 canonical preflop isomorphisms and assigns them to a deterministic preflop abstraction bucket, which is enough to prove root-level encoder validation and zero-state checkpoint pairing without pretending to cover full NLHE training.
 
-## Test changes
+## Why this is the smallest honest next slice
 
-- Removed the ignored unit tests in the touched modules.
-- Reframed the touched proof toward the slice’s actual contract:
-  - zero-state checkpoint roundtrip remains valid
-  - synthetic strategy lookups still return normalized distributions
-  - missing abstraction maps fail with explicit errors instead of hidden panics
+- The previous slice established clean failure behavior when abstraction data is missing.
+- Downstream miner and validator code still had no poker-engine-owned way to ingest a concrete encoder artifact without reaching into robopoker internals.
+- This slice closes that gap and proves the byte/file-backed path works end-to-end on the owned surfaces.
 
 ## Remaining blockers
 
-- This repo still does not provide a real `NlheEncoder` artifact, so this slice does not claim successful encoder-backed training, convergence, or exploitability improvement on actual poker abstractions.
-- `remote_poker_exploitability()` still uses the existing simplified synthetic-profile path; this slice only hardened its failure behavior.
+- Positive encoder-backed training past epoch 0 is still blocked by upstream randomized `Game::root()` generation plus the absence of a full NLHE abstraction artifact in this repo. A preflop-only fixture cannot honestly prove replayable training across random roots.
+- Positive exploitability improvement proof remains blocked for the same reason: `exploitability()` builds a broader tree than the preflop fixture covers.
