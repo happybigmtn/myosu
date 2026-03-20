@@ -1,0 +1,1 @@
+Already processed — this is the test run showing 4/15 passing with 11 failing due to robopoker `encoder.rs:33` panic. Already documented in verification artifact.
