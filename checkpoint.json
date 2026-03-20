@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T21:42:51.458044551Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "specify": 1,
+    "start": 1
+  },
+  "context_values": {
+    "internal.run_id": "01KM6K1EDGDMQ6PCZPYHBMMM0H",
+    "failure_class": "",
+    "internal.fidelity": "compact",
+    "outcome": "success",
+    "failure_signature": "",
+    "last_response": "\n`★ Insight ─────────────────────────────────────`\nThe `agent:integration` lane is fundamentally a **documentation-first int",
+    "current_node": "specify",
+    "thread.start.current_node": "specify",
+    "internal.thread_id": "start",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "graph.rankdir": "LR",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6K1EDGDMQ6PCZPYHBMMM0H/worktree",
+    "internal.retry_count.specify": 1,
+    "response.specify": "\n`★ Insight ─────────────────────────────────────`\nThe `agent:integration` lane is fundamentally a **documentation-first integration specification** — it doesn't write code but specifies how the agent-facing surfaces (pipe protocol, JSON schema, agent context, journal, narration, spectator relay) fit together as a coherent system.\n\nKey architectural decisions made in `agent-adapter.md`:\n1. **Integration flows upward** — `PipeMode` is the driver that holds `AgentContext`, which holds `Journal`, and both use `NarrationEngine` for rendering\n2. **Fog-of-war is enforced at the relay, not the renderer** — this is the correct separation: the game state renderer doesn't know about spectators; the relay filters before emitting\n3. **Spectator socket path convention** (`~/.myosu/spectate/<session_id>.sock`) is noted as needing verification against `play:tui`'s data directory convention before Slice 6\n\nThe `review.md` decision was: **proceed to implementation family** — not another upstream unblock. The `agent:experience` spec is mature, the upstream blockers are owned elsewhere and tracked, and Slices 1-2 (AgentContext + Journal) can begin immediately without waiting for the robopoker migration or play:tui binary skeleton.\n`─────────────────────────────────────────────────`\n\n---\n\n**Lane artifacts produced:**\n\n| Artifact | Path |\n|----------|------|\n| Integration adapter spec | `outputs/agent-integration/agent-adapter.md` |\n| Honest review | `outputs/agent-integration/review.md` |\n\n**Lane judgment: KEEP — proceed to implementation family**\n\n**Decision reached**: Product needs an **implementation family** next (specifically, `agent:experience` Slices 1-2: `AgentContext` + `Journal` + `--context` wiring). The remaining upstream blockers are owned elsewhere and tracked in their respective lane `review.md` files:\n- robopoker git migration → `games:traits` lane\n- `myosu-play` binary skeleton → `play:tui` lane\n- Chain data for lobby → `chain:runtime` lane (stubbed for Phase 0, acceptable)",
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "internal.node_visit_count": 1,
+    "internal.retry_count.start": 1,
+    "last_stage": "specify"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_response": "\n`★ Insight ─────────────────────────────────────`\nThe `agent:integration` lane is fundamentally a **documentation-first int",
+        "response.specify": "\n`★ Insight ─────────────────────────────────────`\nThe `agent:integration` lane is fundamentally a **documentation-first integration specification** — it doesn't write code but specifies how the agent-facing surfaces (pipe protocol, JSON schema, agent context, journal, narration, spectator relay) fit together as a coherent system.\n\nKey architectural decisions made in `agent-adapter.md`:\n1. **Integration flows upward** — `PipeMode` is the driver that holds `AgentContext`, which holds `Journal`, and both use `NarrationEngine` for rendering\n2. **Fog-of-war is enforced at the relay, not the renderer** — this is the correct separation: the game state renderer doesn't know about spectators; the relay filters before emitting\n3. **Spectator socket path convention** (`~/.myosu/spectate/<session_id>.sock`) is noted as needing verification against `play:tui`'s data directory convention before Slice 6\n\nThe `review.md` decision was: **proceed to implementation family** — not another upstream unblock. The `agent:experience` spec is mature, the upstream blockers are owned elsewhere and tracked, and Slices 1-2 (AgentContext + Journal) can begin immediately without waiting for the robopoker migration or play:tui binary skeleton.\n`─────────────────────────────────────────────────`\n\n---\n\n**Lane artifacts produced:**\n\n| Artifact | Path |\n|----------|------|\n| Integration adapter spec | `outputs/agent-integration/agent-adapter.md` |\n| Honest review | `outputs/agent-integration/review.md` |\n\n**Lane judgment: KEEP — proceed to implementation family**\n\n**Decision reached**: Product needs an **implementation family** next (specifically, `agent:experience` Slices 1-2: `AgentContext` + `Journal` + `--context` wiring). The remaining upstream blockers are owned elsewhere and tracked in their respective lane `review.md` files:\n- robopoker git migration → `games:traits` lane\n- `myosu-play` binary skeleton → `play:tui` lane\n- Chain data for lobby → `chain:runtime` lane (stubbed for Phase 0, acceptable)",
+        "last_stage": "specify"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 716290,
+        "output_tokens": 11387
+      },
+      "files_written": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 180639
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "specify": 1,
+    "start": 1
+  }
+}
