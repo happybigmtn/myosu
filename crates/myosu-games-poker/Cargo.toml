@@ -1,0 +1,31 @@
+[package]
+name = "myosu-games-poker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "NLHE poker engine integration for the myosu game-solving chain"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+rand = { workspace = true }
+
+# Robopoker dependencies — same git rev as myosu-games
+# rbp-core: core types (no serde feature needed)
+rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+# rbp-mccfr: CFR traits (serde needed for Profile serialization)
+rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
+# rbp-nlhe: NLHE game engine (serde needed for NlheInfo/NlheEdge serialization)
+rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
+
+# Game trait abstractions
+myosu-games = { path = "../myosu-games" }
+
+# Binary serialization
+bincode = "1"
+
+[dev-dependencies]
+tokio-test = { workspace = true }
