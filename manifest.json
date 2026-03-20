@@ -1,0 +1,13 @@
+{
+  "run_id": "01KM6J35965VYNMEPA52FM82R2",
+  "workflow_name": "PokerEngine",
+  "goal": "Implement the next approved `games:poker-engine` slice.\n\nInputs:\n- `poker-engine/spec.md`\n- `poker-engine/review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `games:poker-engine`\n\nRequired curated artifacts:\n- `poker-engine/implementation.md`\n- `poker-engine/verification.md`\n- `poker-engine/quality.md`\n- `poker-engine/promotion.md`\n",
+  "start_time": "2026-03-20T21:23:18.511828329Z",
+  "node_count": 9,
+  "edge_count": 12,
+  "run_branch": "fabro/run/01KM6J35965VYNMEPA52FM82R2",
+  "base_sha": "6b547323ccdc1c2a06e82f6e47111495a7630ab2",
+  "base_branch": "autodev-live",
+  "workflow_slug": "implement",
+  "host_repo_path": "/home/r/coding/myosu/.worktrees/autodev-live"
+}
