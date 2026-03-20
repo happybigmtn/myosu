@@ -1,0 +1,40 @@
+digraph SdkCore {
+    graph [
+        goal="Implement the next approved `sdk:core` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `sdk:core`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `promotion.md`\n",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: gpt-5.4; provider: openai; }
+            #promote { backend: cli; model: gpt-5.4; provider: openai; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    preflight [label="Preflight", shape=parallelogram, script="set +e\ncargo build -p myosu-sdk\ncargo test -p myosu-sdk\ncargo test -p myosu-sdk -- --include-ignored  # no tests yet, but exits 0\ncargo test -p myosu-sdk testing::tests::rps_passes_all_compliance_checks\ncargo test -p myosu-sdk testing::tests::broken_game_fails_zero_sum_check\ncargo test -p myosu-sdk testing::tests::convergence_test_detects_non_convergence\ncargo test -p myosu-sdk scaffold::tests::generates_compilable_crate\ncargo test -p myosu-sdk scaffold::tests::generated_tests_fail_with_todo\ncargo test -p myosu-sdk scaffold::tests::refuses_to_overwrite_existing_directory\ncargo test -p myosu-sdk register::tests::register_help_output\ncargo test -p myosu-sdk register::tests::connection_timeout_error\ntrue", max_retries=0]
+    implement [label="Implement", prompt="@../../prompts/implement/sdk-core/plan.md", reasoning_effort="high"]
+    verify [label="Verify", shape=parallelogram, script="set -e\ncargo build -p myosu-sdk\ncargo test -p myosu-sdk\ncargo test -p myosu-sdk -- --include-ignored  # no tests yet, but exits 0\ncargo test -p myosu-sdk testing::tests::rps_passes_all_compliance_checks\ncargo test -p myosu-sdk testing::tests::broken_game_fails_zero_sum_check\ncargo test -p myosu-sdk testing::tests::convergence_test_detects_non_convergence\ncargo test -p myosu-sdk scaffold::tests::generates_compilable_crate\ncargo test -p myosu-sdk scaffold::tests::generated_tests_fail_with_todo\ncargo test -p myosu-sdk scaffold::tests::refuses_to_overwrite_existing_directory\ncargo test -p myosu-sdk register::tests::register_help_output\ncargo test -p myosu-sdk register::tests::connection_timeout_error", goal_gate=true, retry_target="fixup"]
+    quality [label="Quality Gate", shape=parallelogram, script="set -e\nQUALITY_PATH='outputs/sdk/core/quality.md'\nIMPLEMENTATION_PATH='outputs/sdk/core/implementation.md'\nVERIFICATION_PATH='outputs/sdk/core/verification.md'\nplaceholder_hits=\"\"\nscan_placeholder() {\n  surface=\"$1\"\n  if [ ! -e \"$surface\" ]; then\n    return 0\n  fi\n  hits=\"$(rg -n -i -g '*.rs' -g 'Cargo.toml' -g '*.toml' 'TODO|stub|placeholder|future slice|not yet implemented|compile-only|for now|will implement' \"$surface\" || true)\"\n  if [ -n \"$hits\" ]; then\n    if [ -n \"$placeholder_hits\" ]; then\n      placeholder_hits=\"$(printf '%s\\n%s' \"$placeholder_hits\" \"$hits\")\"\n    else\n      placeholder_hits=\"$hits\"\n    fi\n  fi\n}\ntrue\nartifact_hits=\"$(rg -n -i 'manual proof still required|future slice|compile-only|placeholder|stub implementation|not yet fully implemented' \"$IMPLEMENTATION_PATH\" \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nwarning_hits=\"$(rg -n 'warning:' \"$IMPLEMENTATION_PATH\" \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nmanual_hits=\"$(rg -n -i 'manual proof still required|manual;' \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nplaceholder_debt=no\nwarning_debt=no\nartifact_mismatch_risk=no\nmanual_followup_required=no\n[ -n \"$placeholder_hits\" ] && placeholder_debt=yes\n[ -n \"$warning_hits\" ] && warning_debt=yes\n[ -n \"$artifact_hits\" ] && artifact_mismatch_risk=yes\n[ -n \"$manual_hits\" ] && manual_followup_required=yes\nquality_ready=yes\nif [ \"$placeholder_debt\" = yes ] || [ \"$warning_debt\" = yes ] || [ \"$artifact_mismatch_risk\" = yes ] || [ \"$manual_followup_required\" = yes ]; then\n  quality_ready=no\nfi\nmkdir -p \"$(dirname \"$QUALITY_PATH\")\"\ncat > \"$QUALITY_PATH\" <<EOF\nquality_ready: $quality_ready\nplaceholder_debt: $placeholder_debt\nwarning_debt: $warning_debt\nartifact_mismatch_risk: $artifact_mismatch_risk\nmanual_followup_required: $manual_followup_required\n\n## Touched Surfaces\n- (none declared)\n\n## Placeholder Hits\n$placeholder_hits\n\n## Artifact Consistency Hits\n$artifact_hits\n\n## Warning Hits\n$warning_hits\n\n## Manual Followup Hits\n$manual_hits\nEOF\ntest \"$quality_ready\" = yes", goal_gate=true, retry_target="fixup"]
+    clear_promotion [label="Clear Promotion", shape=parallelogram, script="rm -f outputs/sdk/core/promotion.md", max_retries=0]
+    fixup [label="Fixup", prompt="@../../prompts/implement/sdk-core/polish.md", reasoning_effort="high", max_visits=3]
+    review [label="Review", prompt="@../../prompts/implement/sdk-core/review.md", reasoning_effort="high"]
+    promote [label="Promote", prompt="@../../prompts/implement/sdk-core/promote.md", reasoning_effort="high"]
+    promotion_check [label="Promotion Gate", shape=parallelogram, script="grep -Eq '^merge_ready: yes$' outputs/sdk/core/promotion.md && grep -Eq '^manual_proof_pending: no$' outputs/sdk/core/promotion.md && grep -Eq '^quality_ready: yes$' outputs/sdk/core/quality.md && grep -Eq '^placeholder_debt: no$' outputs/sdk/core/quality.md && grep -Eq '^warning_debt: no$' outputs/sdk/core/quality.md && grep -Eq '^artifact_mismatch_risk: no$' outputs/sdk/core/quality.md && grep -Eq '^manual_followup_required: no$' outputs/sdk/core/quality.md", goal_gate=true, retry_target="fixup"]
+    audit [label="Audit Artifacts", shape=parallelogram, script="test -f outputs/sdk/core/implementation.md && test -f outputs/sdk/core/verification.md && test -f outputs/sdk/core/quality.md && test -f outputs/sdk/core/promotion.md", goal_gate=true, retry_target="fixup", max_retries=0]
+
+    start -> preflight -> implement -> verify
+    verify -> quality [condition="outcome=success"]
+    verify -> fixup
+    quality -> clear_promotion [condition="outcome=success"]
+    quality -> fixup
+    fixup -> verify
+    clear_promotion -> review
+    review -> promote
+    promote -> promotion_check [condition="outcome=success"]
+    promote -> fixup
+    promotion_check -> audit [condition="outcome=success"]
+    promotion_check -> fixup
+    audit -> exit [condition="outcome=success"]
+    audit -> fixup
+}
