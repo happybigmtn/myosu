@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-20T22:32:02.092413041Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "specify": 1,
+    "start": 1
+  },
+  "context_values": {
+    "internal.node_visit_count": 1,
+    "thread.start.current_node": "specify",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "last_stage": "specify",
+    "current_node": "specify",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "internal.run_id": "01KM6NV1D0PTMJJY0W5F86M480",
+    "last_response": "---\n\n**Execution complete.** Two artifacts produced at `outputs/agent-integration/`:\n\n| Artifact | Purpose |\n|----------|---------|\n| `agent-adapter.md` | Integration contracts: pipe protocol, JSON sc",
+    "internal.fidelity": "compact",
+    "response.specify": "---\n\n**Execution complete.** Two artifacts produced at `outputs/agent-integration/`:\n\n| Artifact | Purpose |\n|----------|---------|\n| `agent-adapter.md` | Integration contracts: pipe protocol, JSON schema, context file, reflection channel, narration, spectator relay |\n| `review.md` | **KEEP** — proceed to implementation-family workflow |\n\n**Decision made**: Implementation family is the right next step. Not an upstream unblock.\n\n`★ Insight ─────────────────────────────────────`\n- **Parallelization is the key insight**: `agent:experience` Slices 1–2 (agent_context.rs, journal.rs) depend only on trusted `tui:shell` and can start immediately. `play:tui` Slice 1 (binary skeleton) runs concurrently and unblocks `agent:experience` Slice 3 onwards.\n- **Robopoker is owned elsewhere**: The git migration in `games:traits` is tracked as in-progress risk there, not a gate here. `agent:experience` doesn't call robopoker directly in Phase 1.\n- **Fog-of-war enforcement location**: Hole card privacy is enforced at `SpectatorRelay::emit()` (the relay process boundary), not at the screen renderer. This is the correct layer — the relay is the last place we can guarantee no data leaks before it leaves the process.\n`─────────────────────────────────────────────────`",
+    "internal.retry_count.start": 1,
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "failure_class": "",
+    "failure_signature": "",
+    "outcome": "success",
+    "internal.retry_count.specify": 1,
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6NV1D0PTMJJY0W5F86M480/worktree",
+    "graph.rankdir": "LR",
+    "internal.thread_id": "start"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_response": "---\n\n**Execution complete.** Two artifacts produced at `outputs/agent-integration/`:\n\n| Artifact | Purpose |\n|----------|---------|\n| `agent-adapter.md` | Integration contracts: pipe protocol, JSON sc",
+        "last_stage": "specify",
+        "response.specify": "---\n\n**Execution complete.** Two artifacts produced at `outputs/agent-integration/`:\n\n| Artifact | Purpose |\n|----------|---------|\n| `agent-adapter.md` | Integration contracts: pipe protocol, JSON schema, context file, reflection channel, narration, spectator relay |\n| `review.md` | **KEEP** — proceed to implementation-family workflow |\n\n**Decision made**: Implementation family is the right next step. Not an upstream unblock.\n\n`★ Insight ─────────────────────────────────────`\n- **Parallelization is the key insight**: `agent:experience` Slices 1–2 (agent_context.rs, journal.rs) depend only on trusted `tui:shell` and can start immediately. `play:tui` Slice 1 (binary skeleton) runs concurrently and unblocks `agent:experience` Slice 3 onwards.\n- **Robopoker is owned elsewhere**: The git migration in `games:traits` is tracked as in-progress risk there, not a gate here. `agent:experience` doesn't call robopoker directly in Phase 1.\n- **Fog-of-war enforcement location**: Hole card privacy is enforced at `SpectatorRelay::emit()` (the relay process boundary), not at the screen renderer. This is the correct layer — the relay is the last place we can guarantee no data leaks before it leaves the process.\n`─────────────────────────────────────────────────`"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "MiniMax-M2.7-highspeed",
+        "input_tokens": 643571,
+        "output_tokens": 11107
+      },
+      "files_written": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 195443
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "specify": 1,
+    "start": 1
+  }
+}
