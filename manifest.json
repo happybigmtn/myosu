@@ -1,0 +1,13 @@
+{
+  "run_id": "01KM6J42E4BMK1M9GCQCQ9WZKG",
+  "workflow_name": "MultiGame",
+  "goal": "Implement the next approved `games:multi-game` slice.\n\nInputs:\n- `multi-game/spec.md`\n- `multi-game/review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `games:multi-game`\n\nRequired curated artifacts:\n- `multi-game/implementation.md`\n- `multi-game/verification.md`\n- `multi-game/quality.md`\n- `multi-game/promotion.md`\n",
+  "start_time": "2026-03-20T21:23:59.893173058Z",
+  "node_count": 9,
+  "edge_count": 12,
+  "run_branch": "fabro/run/01KM6J42E4BMK1M9GCQCQ9WZKG",
+  "base_sha": "6b547323ccdc1c2a06e82f6e47111495a7630ab2",
+  "base_branch": "autodev-live",
+  "workflow_slug": "implement",
+  "host_repo_path": "/home/r/coding/myosu/.worktrees/autodev-live"
+}
