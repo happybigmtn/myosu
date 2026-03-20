@@ -1,34 +1,38 @@
 {
-  "timestamp": "2026-03-20T21:53:54.378653525Z",
-  "current_node": "review",
+  "timestamp": "2026-03-20T21:59:06.452974153Z",
+  "current_node": "polish",
   "completed_nodes": [
     "start",
     "specify",
-    "review"
+    "review",
+    "polish"
   ],
   "node_retries": {
     "specify": 1,
     "start": 1,
+    "polish": 1,
     "review": 1
   },
   "context_values": {
     "failure_class": "deterministic",
     "internal.fidelity": "compact",
-    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
+    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "thread.specify.current_node": "review",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 839.1k tokens in / 13.2k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 839.1k tokens in / 13.2k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
     "thread.start.current_node": "specify",
+    "internal.retry_count.polish": 1,
     "internal.retry_count.start": 1,
     "last_stage": "specify",
     "internal.run_id": "01KM6KMB1V4YN90DVTCWCDM283",
-    "current_node": "review",
-    "internal.thread_id": "specify",
+    "current_node": "polish",
+    "internal.thread_id": "review",
     "internal.node_visit_count": 1,
     "outcome": "fail",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
     "last_response": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration/` directory is distinct from the lane's own `output",
     "internal.retry_count.review": 1,
+    "thread.review.current_node": "polish",
     "response.specify": "`★ Insight ─────────────────────────────────────`\nThe `agent-integration/` directory is distinct from the lane's own `outputs/agent/experience/` directory:\n- **`outputs/agent/experience/`** — the lane's own spec and self-assessment (what the lane *is*)\n- **`outputs/agent-integration/`** — the integration contract and forward-looking decision (how the lane *fits into the product*)\n\nThis separation is intentional. The lane spec captures what the lane will build. The integration adapter captures how the built surfaces connect to the rest of Myosu. The integration review answers \"what should product do next\" — a question the lane's own review doesn't address because it stays within lane boundaries.\n`─────────────────────────────────────────────────`\n\n---\n\n## Execution Complete\n\n**`agent:experience` lane** — last remaining ready product lane — has been honestly assessed and its artifacts are now produced.\n\n### Required Durables\n\n| Artifact | Path | Lines |\n|----------|------|-------|\n| Integration contract | `outputs/agent-integration/agent-adapter.md` | 180 |\n| Forward-looking review | `outputs/agent-integration/review.md` | 117 |\n\n### Decision\n\n**IMPLEMENTATION — start Slices 1–2 now; coordinate upstream unblocks for Slices 5–9**\n\nThe honest read from the lane's own reviewed artifacts:\n\n- **Slices 1–2 are ready now**: `agent_context.rs` and `journal.rs` depend only on the trusted `tui:shell` (82 tests). No robopoker, no binary, no chain.\n- **Slices 3–9 are blocked** by other lanes: `play:tui` owns the binary skeleton; `games:traits` owns the robopoker git migration. These are not `agent:experience`'s blockers to resolve.\n- **The `implement/` workflow family** is the right fit — bounded slices with clear proof commands, same family `games:traits` uses.\n\n### Coordination Actions\n\n| Action | Owner |\n|--------|-------|\n| Confirm robopoker git migration timeline | `games:traits` lane |\n| Confirm `myosu-play` binary skeleton timeline | `play:tui` lane |\n| Slice 1: `agent_context.rs` | `agent:experience` |\n| Slice 2: `journal.rs` | `agent:experience` |\n\nThe product does **not** need another upstream unblock before starting — it needs to start the two implementable slices and coordinate with the two blocking lanes in parallel.",
     "graph.rankdir": "LR",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6KMB1V4YN90DVTCWCDM283/worktree",
@@ -71,15 +75,26 @@
         "failure_signature": "api_deterministic|openai|not_found"
       },
       "duration_ms": 11855
+    },
+    "polish": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_083c403510e3effd0169bdc1f51fa48197b9aa45d7999fc50c' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 310238
     }
   },
-  "next_node_id": "polish",
+  "next_node_id": "verify",
   "loop_failure_signatures": {
-    "review|deterministic|api_deterministic|openai|not_found": 1
+    "review|deterministic|api_deterministic|openai|not_found": 1,
+    "polish|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
     "start": 1,
-    "specify": 1,
-    "review": 1
+    "review": 1,
+    "polish": 1,
+    "specify": 1
   }
 }
