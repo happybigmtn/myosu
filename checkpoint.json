@@ -1,19 +1,21 @@
 {
-  "timestamp": "2026-03-20T23:04:03.884470139Z",
-  "current_node": "review",
+  "timestamp": "2026-03-20T23:04:16.823999222Z",
+  "current_node": "polish",
   "completed_nodes": [
     "start",
     "specify",
-    "review"
+    "review",
+    "polish"
   ],
   "node_retries": {
-    "review": 1,
     "start": 1,
-    "specify": 1
+    "review": 1,
+    "specify": 1,
+    "polish": 1
   },
   "context_values": {
     "failure_class": "deterministic",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 873.3k tokens in / 9.0k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 873.3k tokens in / 9.0k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
     "internal.run_id": "01KM6QNKSS9MT9X7DTVNBNZ13Y",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6QNKSS9MT9X7DTVNBNZ13Y/worktree",
@@ -21,21 +23,36 @@
     "internal.fidelity": "compact",
     "internal.node_visit_count": 1,
     "graph.rankdir": "LR",
-    "internal.thread_id": "specify",
+    "internal.thread_id": "review",
     "outcome": "fail",
-    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
+    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
     "thread.start.current_node": "specify",
     "internal.retry_count.specify": 1,
     "response.specify": "`★ Insight ─────────────────────────────────────`\nThis lane reveals a **bifurcated unblock pattern**: `agent:experience` has 9 slices that split cleanly into two groups based on their actual dependencies. Slices 1 (`agent_context.rs`), 2 (`journal.rs`), and 5 (`narration.rs`) depend only on trusted upstream (`games:traits` + `tui:shell`) and are unblocked right now. Slices 3+ all require the `myosu-play` binary that `play:tui` Slice 1 creates. The critical insight is that **blocking the whole lane is wrong** — the early slices can run in parallel with the blocker resolution. The `robopoker` git migration is the shared critical path that gates all integration testing, but it doesn't gate the code-writing phase.\n`─────────────────────────────────────────────────`\n\n---\n\n**Lane artifacts created:**\n\n- **`outputs/agent-integration/agent-adapter.md`** (185 lines) — Maps every `agent:experience` spec surface onto actual codebase files, identifies what's built vs. missing, and documents the exact dependency chain by slice.\n\n- **`outputs/agent-integration/review.md`** (84 lines) — **Judgment: PROCEED (phased gate)**. Slices 1, 2, 5 are go immediately. Slices 3, 4, 6, 7, 8, 9 are gated on `play:tui` Slice 1. `robopoker` git migration is tracked elsewhere and does not block code-writing, only integration testing.\n\n**Decision**: `agent:experience` is not ready for a unified implementation-family launch, but it is ready for **parallel slice execution** — early slices in one track, blocked slices watching `play:tui` Slice 1 in another. No new upstream unblock is needed; the existing tracker lanes (`games:traits`, `play:tui`) already own the blockers.",
     "thread.specify.current_node": "review",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
     "internal.retry_count.review": 1,
-    "current_node": "review",
+    "current_node": "polish",
+    "thread.review.current_node": "polish",
+    "internal.retry_count.polish": 1,
     "last_stage": "specify",
     "last_response": "`★ Insight ─────────────────────────────────────`\nThis lane reveals a **bifurcated unblock pattern**: `agent:experience` has"
   },
   "logs": [],
   "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "polish": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_0bc3066ffcebccf90169bdd26689708195a0344b8c4a637de6' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 11502
+    },
     "specify": {
       "status": "success",
       "context_updates": {
@@ -67,19 +84,17 @@
         "failure_signature": "api_deterministic|openai|not_found"
       },
       "duration_ms": 14033
-    },
-    "start": {
-      "status": "success",
-      "duration_ms": 0
     }
   },
-  "next_node_id": "polish",
+  "next_node_id": "verify",
   "loop_failure_signatures": {
+    "polish|deterministic|api_deterministic|openai|not_found": 1,
     "review|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
     "specify": 1,
-    "review": 1,
-    "start": 1
+    "polish": 1,
+    "start": 1,
+    "review": 1
   }
 }
