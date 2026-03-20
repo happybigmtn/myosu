@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "duration_ms": 3,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-20T23:22:08.784460695+00:00",
+  "updated_at": "2026-03-20T23:22:08.784466060+00:00",
+  "notes": "Script completed: test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md"
+}
