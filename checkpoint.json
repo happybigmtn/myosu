@@ -1,40 +1,46 @@
 {
-  "timestamp": "2026-03-20T22:55:22.029824901Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-20T22:55:23.479810149Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
     "start": 1,
     "specify": 1,
     "review": 1,
+    "verify": 1,
     "polish": 1
   },
   "context_values": {
     "thread.review.current_node": "polish",
+    "command.output": "",
     "internal.retry_count.start": 1,
     "internal.retry_count.specify": 1,
     "internal.run_id": "01KM6Q4ZRS017AP8R4X50279WT",
     "thread.specify.current_node": "review",
     "internal.retry_count.polish": 1,
     "internal.fidelity": "compact",
-    "outcome": "fail",
+    "outcome": "success",
     "internal.retry_count.review": 1,
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 927.0k tokens in / 10.7k out\n  - Files: outputs/agent-integration/.gitkeep, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 927.0k tokens in / 10.7k out\n  - Files: outputs/agent-integration/.gitkeep, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
     "last_response": "`★ Insight ─────────────────────────────────────`\n**Why an Adapter Pattern Here?**\n\nThe `AgentAdapter` isn't a new abstracti",
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "failure_signature": "",
     "graph.rankdir": "LR",
     "last_stage": "specify",
+    "thread.polish.current_node": "verify",
+    "internal.retry_count.verify": 1,
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "command.stderr": "",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6Q4ZRS017AP8R4X50279WT/worktree",
-    "internal.thread_id": "review",
+    "internal.thread_id": "polish",
     "internal.node_visit_count": 1,
-    "failure_class": "deterministic",
+    "failure_class": "",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
-    "current_node": "polish",
+    "current_node": "verify",
     "thread.start.current_node": "specify",
     "response.specify": "`★ Insight ─────────────────────────────────────`\n**Why an Adapter Pattern Here?**\n\nThe `AgentAdapter` isn't a new abstraction — it's a **porcelain layer** that wires existing components without coupling them. The key insight is:\n\n1. **Decoupling**: `PipeMode` shouldn't need to know about `CfrGame`, `Profile`, or the chain client directly. It just needs to translate actions, load/save context, and emit events.\n\n2. **Testability**: `StubAgentAdapter` lets us test the entire `PipeMode` refactor without a live chain, miner, or `robopoker` dependency. This is critical because `robopoker` still uses absolute filesystem paths.\n\n3. **Evolution**: When the real chain integration arrives (Phase 4), only `MyosuAgentAdapter::query_subnets()` changes — `PipeMode` and the trait boundary stay the same.\n\nThe 4 slices are intentionally narrow: trait+types → stub impl → pipe refactor → context refactor. Each slice modifies exactly one file (plus tests) and produces runnable evidence before proceeding.\n`─────────────────────────────────────────────────`\n\n## Lane Bootstrap Complete\n\n**`agent:integration`** lane bootstrapped. Decision: **implementation family next**.\n\n### Decision Rationale\n\nThe `agent:experience` review concluded \"proceed to implementation-family workflow.\" `agent:integration` IS that workflow — the adapter layer that wires agent-facing surfaces (`PipeMode`, `AgentContext`, `Journal`, `SpectatorRelay`) to Myosu's core systems (`games:traits`, `play:tui`, chain client) without creating direct coupling.\n\n### Key Findings\n\n| Item | Status |\n|------|--------|\n| `agent:experience` | **COMPLETE** — KEEP/proceed |\n| `agent:integration` spec | **BOOTSTRAPPED** — 4 slices defined |\n| Primary blocker | `robopoker` git migration (owned by `games:traits`) |\n| Secondary blocker | `play:tui` binary skeleton (needed for Slice 3) |\n| Parallel opportunity | `agent:integration` Slices 1-2 can run in parallel with `agent:experience` Slice 1 |\n\n### Required Artifacts Produced\n\n- `outputs/agent-integration/agent-adapter.md` — `AgentAdapter` trait + types + 4 slices\n- `outputs/agent-integration/review.md` — KEEP judgment + proof expectations + blockers\n\n### Slice Map\n\n```\nPhase 1 (Adapter Core):\n  Slice 1: AgentAdapter trait + StubAgentAdapter\n  Slice 2: MyosuAgentAdapter skeleton (stubbed chain queries)\n  Slice 3: Refactor PipeMode to use AgentAdapter\n  Slice 4: Refactor AgentContext to use AgentAdapter\n\nPhase 2: Spectator relay integration\nPhase 3: Chain-connected queries (Phase 4 of agent:experience)\n```\n\nThe lane is ready for execution. The primary upstream unblock (`robopoker` git migration) is tracked elsewhere — it doesn't prevent Slices 1–2 from completing and producing validated test evidence."
   },
@@ -83,17 +89,27 @@
       },
       "duration_ms": 10959
     },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": ""
+      },
+      "notes": "Script completed: test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md",
+      "duration_ms": 2
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "review|deterministic|api_deterministic|openai|not_found": 1,
     "polish|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
+    "verify": 1,
     "polish": 1,
     "start": 1,
     "review": 1,
