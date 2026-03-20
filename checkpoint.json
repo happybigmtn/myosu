@@ -1,17 +1,19 @@
 {
-  "timestamp": "2026-03-20T23:03:48.078167525Z",
-  "current_node": "specify",
+  "timestamp": "2026-03-20T23:04:03.884470139Z",
+  "current_node": "review",
   "completed_nodes": [
     "start",
-    "specify"
+    "specify",
+    "review"
   ],
   "node_retries": {
+    "review": 1,
     "start": 1,
     "specify": 1
   },
   "context_values": {
-    "failure_class": "",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "failure_class": "deterministic",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 873.3k tokens in / 9.0k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n",
     "internal.run_id": "01KM6QNKSS9MT9X7DTVNBNZ13Y",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6QNKSS9MT9X7DTVNBNZ13Y/worktree",
@@ -19,14 +21,16 @@
     "internal.fidelity": "compact",
     "internal.node_visit_count": 1,
     "graph.rankdir": "LR",
-    "internal.thread_id": "start",
-    "outcome": "success",
-    "failure_signature": "",
+    "internal.thread_id": "specify",
+    "outcome": "fail",
+    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
     "thread.start.current_node": "specify",
     "internal.retry_count.specify": 1,
     "response.specify": "`★ Insight ─────────────────────────────────────`\nThis lane reveals a **bifurcated unblock pattern**: `agent:experience` has 9 slices that split cleanly into two groups based on their actual dependencies. Slices 1 (`agent_context.rs`), 2 (`journal.rs`), and 5 (`narration.rs`) depend only on trusted upstream (`games:traits` + `tui:shell`) and are unblocked right now. Slices 3+ all require the `myosu-play` binary that `play:tui` Slice 1 creates. The critical insight is that **blocking the whole lane is wrong** — the early slices can run in parallel with the blocker resolution. The `robopoker` git migration is the shared critical path that gates all integration testing, but it doesn't gate the code-writing phase.\n`─────────────────────────────────────────────────`\n\n---\n\n**Lane artifacts created:**\n\n- **`outputs/agent-integration/agent-adapter.md`** (185 lines) — Maps every `agent:experience` spec surface onto actual codebase files, identifies what's built vs. missing, and documents the exact dependency chain by slice.\n\n- **`outputs/agent-integration/review.md`** (84 lines) — **Judgment: PROCEED (phased gate)**. Slices 1, 2, 5 are go immediately. Slices 3, 4, 6, 7, 8, 9 are gated on `play:tui` Slice 1. `robopoker` git migration is tracked elsewhere and does not block code-writing, only integration testing.\n\n**Decision**: `agent:experience` is not ready for a unified implementation-family launch, but it is ready for **parallel slice execution** — early slices in one track, blocked slices watching `play:tui` Slice 1 in another. No new upstream unblock is needed; the existing tracker lanes (`games:traits`, `play:tui`) already own the blockers.",
+    "thread.specify.current_node": "review",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
-    "current_node": "specify",
+    "internal.retry_count.review": 1,
+    "current_node": "review",
     "last_stage": "specify",
     "last_response": "`★ Insight ─────────────────────────────────────`\nThis lane reveals a **bifurcated unblock pattern**: `agent:experience` has"
   },
@@ -55,14 +59,27 @@
       ],
       "duration_ms": 182009
     },
+    "review": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_07f44817db26c3ce0169bdd258a8ac8194b5b315501da47d6c' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 14033
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
     }
   },
-  "next_node_id": "review",
+  "next_node_id": "polish",
+  "loop_failure_signatures": {
+    "review|deterministic|api_deterministic|openai|not_found": 1
+  },
   "node_visits": {
     "specify": 1,
+    "review": 1,
     "start": 1
   }
 }

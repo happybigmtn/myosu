@@ -1,0 +1,281 @@
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..2e7da57
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,185 @@
++# Agent Adapter — Integration Surface Map
++
++## Purpose
++
++This document maps `agent:experience` lane specifications onto actual codebase surfaces. It answers: **what exists today, what must be built, and what must happen first**.
++
++This is not an implementation plan. It is the honest adapter layer between the product spec and the engineering reality.
++
++---
++
++## Current Codebase Surfaces
++
++### `crates/myosu-tui/src/pipe.rs` — Pipe Mode Driver
++
++**Status**: PARTIAL — skeleton exists, no flags, no persistence
++
++The `PipeMode` struct is the stdin/stdout driver for agent piping. It owns:
++- `output_state()` → calls `renderer.pipe_output()` and writes to stdout
++- `read_input()` → reads one line from stdin
++- `run_once()` → output then input in one call
++
++**What exists**:
++- No `--context` flag wiring
++- No `--narrate` flag wiring
++- No `reflect>` prompt after hand
++- No lobby rendering
++- No `AgentContext` integration
++- No `Journal` integration
++
++**Integration point for agent:experience**:
++- `PipeMode` must gain `context_path: Option<PathBuf>` and `narrate: bool` fields
++- After each hand completes, it must emit `HAND COMPLETE` block then call `read_input()` for reflection
++- When no `--subnet` is provided, it must render lobby before game loop
++
++```rust
++// What needs to be added to PipeMode
++pub struct PipeMode<'a> {
++    renderer: &'a dyn GameRenderer,
++    output: io::Stdout,
++    context_path: Option<PathBuf>,   // NEW
++    narrate: bool,                    // NEW
++    agent_ctx: Option<AgentContext>,  // NEW
++}
++```
++
++### `crates/myosu-tui/src/schema.rs` — JSON Game State Schema
++
++**Status**: TRUSTED — fully implemented, 16 tests passing
++
++`GameState`, `LegalAction`, `GamePhase`, and `GameStateBuilder` are complete for all 10 game types. This is the machine-readable contract for structured agents.
++
++**Integration point for agent:experience**:
++- `schema.rs` is already the foundation for `SpectatorRelay` events (AC-SP-01)
++- `SpectatorRelay::emit()` should emit `GameState` JSON lines to its Unix socket
++- No changes needed to schema itself
++
++### `crates/myosu-tui/src/renderer.rs` — `GameRenderer` Trait
++
++**Status**: TRUSTED — object-safe trait, 6 tests passing
++
++The `GameRenderer` trait is the **only integration contract** between the shell and any game. It is object-safe (`Box<dyn GameRenderer>`).
++
++**Integration point for agent:experience**:
++- `pipe_output()` already exists and returns `String`
++- `completions()` already exists for tab-completion in pipe mode
++- `parse_input()` already exists for action parsing
++- No trait changes needed for agent:experience Phase 1
++
++### `crates/myosu-tui/src/` — Missing Modules
++
++| Module | Status | Notes |
++|--------|--------|-------|
++| `agent_context.rs` | **MISSING** | `AgentContext` struct with load/save/journal |
++| `narration.rs` | **MISSING** | `NarrationEngine` for `--narrate` prose |
++| `journal.rs` | **MISSING** | Append-only markdown journal |
++| `spectate.rs` | **MISSING** | `SpectatorRelay` + `SpectateScreen` |
++
++### `crates/myosu-play/` — Binary Does Not Exist
++
++**Status**: MISSING — no crate at this path
++
++`myosu-play` is commented out of `Cargo.toml` members. All pipe-mode flags (`--pipe`, `--context`, `--narrate`, `--spectate`) require this binary's `main.rs` CLI dispatch.
++
++**Integration point for agent:experience**:
++- Slice 1 of `play:tui` creates this binary
++- Slices 3, 6, 7, 8, 9 of `agent:experience` all modify `main.rs`
++- **Hard dependency**: `play:tui` Slice 1 must complete before `agent:experience` Slices 3+
++
++### `crates/myosu-games/src/traits.rs` — Game Traits
++
++**Status**: TRUSTED — 14 tests passing
++
++Provides `CfrGame`, `Profile`, `GameConfig`, `GameType`, `StrategyQuery/Response`. Used by both `myosu-tui` and the future `myosu-play`.
++
++**Integration point for agent:experience**:
++- `agent_context.rs` uses `GameType` for `preferred_game` field
++- `journal.rs` uses `GameType` for hand entry metadata
++- No changes needed to traits themselves
++
++---
++
++## What `agent:experience` Must Build (Summary)
++
++| Slice | File to Create | Upstream Needed |
++|-------|---------------|----------------|
++| 1 | `crates/myosu-tui/src/agent_context.rs` | `games:traits` (GameType) |
++| 2 | `crates/myosu-tui/src/journal.rs` | Slice 1 |
++| 3 | `crates/myosu-tui/src/pipe.rs` (extend) | `play:tui` Slice 1 (binary) |
++| 4 | `crates/myosu-tui/src/pipe.rs` (extend) | Slice 3 |
++| 5 | `crates/myosu-tui/src/narration.rs` | Slice 1 |
++| 6 | `crates/myosu-tui/src/pipe.rs` (extend) | Slice 5 + `play:tui` Slice 1 |
++| 7 | `crates/myosu-tui/src/pipe.rs` (extend) | Slice 3 |
++| 8 | `crates/myosu-play/src/spectate.rs` | `play:tui` Slice 1 |
++| 9 | `crates/myosu-tui/src/screens/spectate.rs` | Slice 8 + `play:tui` Slice 1 |
++
++---
++
++## Dependency Chain
++
++```
++games:traits (robopoker git migration)
++    │
++    ├──► play:tui Slice 1 (myosu-play binary) ──────────────────────┐
++    │                                                             │
++    │         agent:experience                                     │
++    │         ├── Slices 1-2 (agent_context, journal) ────────────┤
++    │         ├── Slice 3 (--context wiring) ─────────────────────┤
++    │         ├── Slice 4 (reflect> prompt) ───────────────────────┤
++    │         ├── Slice 5 (narration.rs) ─────────────────────────┤
++    │         ├── Slice 6 (--narrate wiring) ─────────────────────┤
++    │         ├── Slice 7 (lobby) ─────────────────────────────────┤
++    │         ├── Slice 8 (SpectatorRelay) ────────────────────────┤
++    │         └── Slice 9 (SpectateScreen) ─────────────────────────┘
++    │
++    └──► chain:runtime (future, for Slice 7 lobby + Slice 8 WS)
++```
++
++**Key constraint**: Slices 1, 2, 5 are **unblocked right now** — they depend only on `games:traits` and `tui:shell`, both of which are trusted. Slices 3, 4, 6, 7, 8, 9 all require `play:tui` Slice 1 (binary skeleton) first.
++
++---
++
++## Honest State of Integration Readiness
++
++| Question | Answer | Evidence |
++|----------|--------|----------|
++| Does `PipeMode` exist? | YES | `crates/myosu-tui/src/pipe.rs` |
++| Does `GameRenderer::pipe_output()` exist? | YES | `crates/myosu-tui/src/renderer.rs:45` |
++| Does `GameState` JSON schema exist? | YES | `crates/myosu-tui/src/schema.rs` (16 tests) |
++| Does `myosu-play` binary exist? | NO | Not in `Cargo.toml` members |
++| Does `agent_context.rs` exist? | NO | No such file |
++| Does `narration.rs` exist? | NO | No such file |
++| Does `journal.rs` exist? | NO | No such file |
++| Does `SpectatorRelay` exist? | NO | No such file |
++| Is `robopoker` a git dependency? | NO | Absolute path deps remain |
++| Is `games:traits` fully tested? | YES | 14 tests pass |
++
++---
++
++## Critical Path Items (Blockers)
++
++### 1. `robopoker` Git Migration (HIGH — owned by `games:traits`)
++
++Both `myosu-tui` and `myosu-games` depend on robopoker via absolute filesystem paths. Until this is resolved to a git dependency, `cargo build` fails on any clean checkout or CI environment.
++
++**Impact on agent:experience**: Slices 1-2 don't call robopoker directly (they only use `GameType` from `games:traits`). Slices 3+ will fail to test end-to-end until the dependency is resolved.
++
++### 2. `myosu-play` Binary Skeleton (HIGH — owned by `play:tui`)
++
++`play:tui` Slice 1 creates `crates/myosu-play/`. This binary is the vehicle for all CLI flags (`--pipe`, `--context`, `--narrate`, `--spectate`).
++
++**Impact on agent:experience**: Slices 3, 4, 6, 7, 8, 9 cannot be wired until `main.rs` exists.
++
++### 3. `games:traits` robopoker migration is the shared critical blocker
++
++`agent:experience` and `play:tui` share this blocker. It is owned by `games:traits`. The review at `outputs/games/traits/review.md` tracks its resolution.
++
++---
++
++## Decision Framing for `review.md`
++
++`agent:experience` is **READY** to proceed with Slices 1, 2, 5 immediately. These slices have no external blockers beyond already-trusted upstream.
++
++`agent:experience` is **BLOCKED** on `play:tui` Slice 1 for Slices 3, 4, 6, 7, 8, 9.
++
++The `robopoker` git migration (owned by `games:traits`) must complete before any integration testing that involves `myosu-play` calling robopoker APIs.
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..bdd16d6
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,84 @@
++# `agent-integration` Lane Review
++
++## Judgment: **PROCEED** — implementation-family with phased gate
++
++The `agent:experience` lane spec is sound and the reviewed artifacts are honest. The integration surface is real and partially built. The remaining work decomposes cleanly into two groups: **unblocked slices** (1, 2, 5) that can begin immediately, and **blocked slices** (3, 4, 6, 7, 8, 9) that must wait for `play:tui` Slice 1.
++
++This lane is not a no-go. It is a **phased-go with explicit blockers**.
++
++---
++
++## Rationale for PROCEED (with phased gate)
++
++1. **The spec is done and honest.** `agent:experience` review (KEEP judgment) accurately identifies what's missing and what's blocked. No speculative surfaces — every missing module is named with a file path and a clear contract.
++
++2. **The integration surface is real.** `PipeMode` exists in `crates/myosu-tui/src/pipe.rs`. `GameRenderer::pipe_output()` exists in `crates/myosu-tui/src/renderer.rs`. `GameState` schema is fully implemented with 16 tests passing. These are not sketches — they are the actual integration points.
++
++3. **Slices 1, 2, 5 are unblocked right now.** `agent_context.rs`, `journal.rs`, and `narration.rs` depend only on `games:traits` (`GameType`) and `tui:shell`, both of which are trusted. They do not need `myosu-play` binary or robopoker git migration. Starting them now does not waste parallel work.
++
++4. **The blockers are owned and tracked.** `play:tui` Slice 1 is tracked in `outputs/play/tui/review.md`. The robopoker git migration is tracked in `outputs/games/traits/review.md`. Neither is a surprise — they are explicit, dated, and owned.
++
++5. **No design ambiguity remains.** The `GameRenderer` trait is frozen. The `AgentContext` schema is in the spec. The `reflect>` prompt format is in the spec. The `SpectatorRelay` socket path is in the spec. An implementation-family agent can proceed from these documents alone.
++
++---
++
++## Explicit Go/No-Go by Slice
++
++| Slice | Module | Decision | Blocker |
++|-------|--------|----------|---------|
++| 1 | `agent_context.rs` | **GO** | None — `games:traits` trusted |
++| 2 | `journal.rs` | **GO** | None — `GameType` from trusted upstream |
++| 3 | `--context` wiring | **WAIT** | `play:tui` Slice 1 (`myosu-play` binary) |
++| 4 | `reflect>` prompt | **WAIT** | Slice 3 |
++| 5 | `narration.rs` | **GO** | None — depends only on `GameState` |
++| 6 | `--narrate` wiring | **WAIT** | Slice 5 + `play:tui` Slice 1 |
++| 7 | Lobby | **WAIT** | `play:tui` Slice 1 |
++| 8 | `SpectatorRelay` | **WAIT** | `play:tui` Slice 1 |
++| 9 | `SpectateScreen` | **WAIT** | Slice 8 |
++
++---
++
++## Upstream Dependency Status
++
++| Dependency | Owner | Status | Impact if Delayed |
++|------------|-------|--------|-------------------|
++| `tui:shell` (82 tests) | `tui:shell` lane | **TRUSTED** | No impact — stable contract |
++| `games:traits` (14 tests) | `games:traits` lane | **TRUSTED** | No impact on Slices 1, 2, 5 |
++| `robopoker` git migration | `games:traits` lane | **BLOCKED** | Integration tests fail; Slices 3+ can't validate end-to-end |
++| `myosu-play` binary skeleton | `play:tui` lane | **MISSING** | Slices 3, 4, 6, 7, 8, 9 cannot be wired |
++| `chain:runtime` | `chain:runtime` lane | **FUTURE** | Lobby stubbed for Phase 0; acceptable |
++| Spectator socket path | `play:tui` lane | **LOW** | Must confirm `~/.myosu/spectate/<id>.sock` vs `{data-dir}` convention |
++
++---
++
++## What Happens Next
++
++1. **`games:traits`** continues resolving the robopoker git migration (Slice 1 of that lane). This unblocks all integration testing.
++
++2. **`play:tui`** executes Slice 1 (binary skeleton) in parallel. This unblocks Slices 3, 4, 6, 7, 8, 9 of `agent:experience`.
++
++3. **`agent:experience` (this lane family)** begins Slices 1, 2, 5 immediately and watches `play:tui` Slice 1 completion to gate the remaining slices.
++
++4. **This review is updated** when `play:tui` Slice 1 completes and when robopoker git migration resolves.
++
++---
++
++## Recommendation
++
++**Do not wait.** Begin the implementation-family workflow for `agent:experience` Slices 1, 2, and 5 in parallel with `play:tui` Slice 1. The blocker separation is clean and the dependency chain is understood.
++
++The two critical blockers (`robopoker` git migration and `myosu-play` binary) are **owned elsewhere** and **tracked in their respective lane reviews**. This lane should not hold its own progress waiting for them — it should start where it can and gate the rest honestly.
++
++---
++
++## Evidence
++
++| Check | Result |
++|-------|--------|
++| `GameRenderer::pipe_output()` exists | YES — `renderer.rs:45` |
++| `PipeMode` exists | YES — `pipe.rs:19` |
++| `GameState` schema implemented | YES — 16 tests pass |
++| `AgentContext` spec in `agent:experience` | YES — AC-AX-01 in reviewed spec |
++| `myosu-play` binary exists | NO — not in `Cargo.toml` |
++| `robopoker` git dependency | NO — absolute path deps remain |
++| `play:tui` binary plan exists | YES — `outputs/play/tui/spec.md` Slice 1 |
