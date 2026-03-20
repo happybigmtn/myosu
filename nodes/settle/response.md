@@ -1,0 +1,3 @@
+Wrote [promotion.md](/home/r/.fabro/runs/20260320-01KM5QG91K02QB0QHZB6DNGR88/worktree/outputs/games/poker-engine/promotion.md) with `merge_ready: no`.
+
+The call is based on the current tree rather than the optimistic quality artifact: the crate still exposes future-slice stub modules in [lib.rs](/home/r/.fabro/runs/20260320-01KM5QG91K02QB0QHZB6DNGR88/worktree/crates/myosu-games-poker/src/lib.rs#L12) and `unimplemented!` bodies in [solver.rs](/home/r/.fabro/runs/20260320-01KM5QG91K02QB0QHZB6DNGR88/worktree/crates/myosu-games-poker/src/solver.rs#L27), and a local rerun with `CARGO_TARGET_DIR=/tmp/myosu-poker-target` showed 12 compiler warnings. I left source code untouched in this promotion stage.

@@ -1,0 +1,26 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.settle": "Wrote [promotion.md](/home/r/.fabro/runs/20260320-01KM5QG91K02QB0QHZB6DNGR88/worktree/outputs/games/poker-engine/promotion.md) with `merge_ready: no`.\n\nThe call is based on the current tree rather than the optimistic quality artifact: the crate still exposes future-slice stub modules in [lib.rs](/home/r/.fabro/runs/20260320-01KM5QG91K02QB0QHZB6DNGR88/worktree/crates/myosu-games-poker/src/lib.rs#L12) and `unimplemented!` bodies in [solver.rs](/home/r/.fabro/runs/20260320-01KM5QG91K02QB0QHZB6DNGR88/worktree/crates/myosu-games-poker/src/solver.rs#L27), and a local rerun with `CARGO_TARGET_DIR=/tmp/myosu-poker-target` showed 12 compiler warnings. I left source code untouched in this promotion stage.",
+    "last_response": "Wrote [promotion.md](/home/r/.fabro/runs/20260320-01KM5QG91K02QB0QHZB6DNGR88/worktree/outputs/games/poker-engine/promotion.md) with `merge_ready: no`.\n\nThe call is based on the current tree rather tha",
+    "last_stage": "settle"
+  },
+  "notes": "Stage completed: settle",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 415303,
+    "output_tokens": 6223,
+    "cost": 1.1316025
+  },
+  "files_written": [
+    "outputs/games/poker-engine/promotion.md"
+  ],
+  "files_touched": [
+    "outputs/games/poker-engine/promotion.md"
+  ],
+  "duration_ms": 160391,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T14:09:17.136526188+00:00",
+  "updated_at": "2026-03-20T14:09:17.136530284+00:00"
+}
