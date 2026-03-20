@@ -1,0 +1,13 @@
+{
+  "run_id": "01KM6QC01NSXXXEK2PQB7RZQ6P",
+  "workflow_name": "AgentIntegration",
+  "goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+  "start_time": "2026-03-20T22:55:30.837780790Z",
+  "node_count": 6,
+  "edge_count": 5,
+  "run_branch": "fabro/run/01KM6QC01NSXXXEK2PQB7RZQ6P",
+  "base_sha": "6b547323ccdc1c2a06e82f6e47111495a7630ab2",
+  "base_branch": "autodev-live",
+  "workflow_slug": "bootstrap",
+  "host_repo_path": "/home/r/coding/myosu/.worktrees/autodev-live"
+}
