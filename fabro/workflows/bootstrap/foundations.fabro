@@ -1,0 +1,21 @@
+digraph BootstrapFoundations {
+    graph [
+        goal="Bootstrap the Myosu foundations lane: produce honest foundation-plan.md and review.md for the frontier.",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: api; model: gpt-5.4; provider: openai; }
+            #polish { backend: api; model: gpt-5.4; provider: openai; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/bootstrap/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/bootstrap/implement.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/bootstrap/review.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f outputs/foundations/foundation-plan.md && test -f outputs/foundations/review.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

@@ -1,0 +1,35 @@
+version = 1
+graph = "../../workflows/bootstrap/foundations.fabro"
+goal = """
+Bootstrap the Myosu foundations lane and produce honest frontier-status artifacts.
+
+Scope:
+- inspect the current Fabro/Raspberry execution state (run.toml, status.json, detach.log)
+- inspect all existing outputs/ lane artifacts (games/traits, tui/shell, chain/runtime, chain/pallet, games/poker-engine, games/multi-game)
+- inspect the current codebase trust state: which crates compile, which tests pass
+- understand the two explicit frontier tasks stated in the run.toml goal
+- understand the Fabro/Raspberry false-submit and detach path defects
+- do not implement new code in this bootstrap run; this lane is for honest state assessment only
+
+Required curated artifacts:
+- `outputs/foundations/foundation-plan.md`
+- `outputs/foundations/review.md`
+
+The `foundation-plan.md` must:
+- describe the current state of each lane (trust level, milestone reached)
+- explain what the two frontier tasks mean in concrete terms
+- identify the critical defects: missing foundations.fabro workflow, games:multi-game false-submit
+- list honest next steps for each lane, prioritized by blocking relationships
+- say what can run now vs. what must wait for upstream work
+
+The `review.md` must:
+- make a trust judgment (keep/reopen/reset) for each lane based on existing artifacts
+- identify the single most critical defect blocking trustworthy execution (the false-submit)
+- state whether the Fabro/Raspberry execute/status/watch path can be trusted today
+- list the concrete risks that the next execution cycle must address
+- point to exact files, not vague categories
+
+The combined output should be strong enough that the next operator can decide
+which lane to run next without re-auditing the entire codebase from scratch.
+"""
+directory = "../../.."
