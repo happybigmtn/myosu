@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "duration_ms": 4523,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-20T07:17:54.619376187+00:00",
+  "updated_at": "2026-03-20T07:17:54.619381471+00:00",
+  "notes": "Script completed: set +e\ncargo build -p myosu-play\ncargo test -p myosu-games-poker\ncargo test -p myosu-play training::tests::hand_completes_fold\ncargo test -p myosu-play training::tests::hand_completes_showdown\ncargo test -p myosu-play blueprint::tests::load_valid_artifact\ncargo test -p myosu-play advisor::tests::format_distribution_text\ntrue"
+}

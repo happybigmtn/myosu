@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-03-20T07:17:54.620000038Z",
+  "current_node": "preflight",
+  "completed_nodes": [
+    "start",
+    "preflight"
+  ],
+  "node_retries": {
+    "start": 1,
+    "preflight": 1
+  },
+  "context_values": {
+    "internal.node_visit_count": 1,
+    "thread.start.current_node": "preflight",
+    "current.preamble": "Goal: Implement the next approved `play:tui` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `play:tui`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `promotion.md`\n\n",
+    "internal.retry_count.start": 1,
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM51Q1STBCW7HMTKCR2A1G90/worktree",
+    "internal.thread_id": "start",
+    "graph.rankdir": "LR",
+    "command.stderr": "    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n",
+    "graph.goal": "Implement the next approved `play:tui` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `play:tui`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `promotion.md`\n",
+    "failure_class": "",
+    "outcome": "success",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: cli; model: gpt-5.4; provider: openai; }\n            #promote { backend: cli; model: gpt-5.4; provider: openai; }\n        ",
+    "failure_signature": "",
+    "internal.retry_count.preflight": 1,
+    "internal.run_id": "01KM51Q1STBCW7HMTKCR2A1G90",
+    "internal.fidelity": "compact",
+    "current_node": "preflight",
+    "command.output": ""
+  },
+  "logs": [],
+  "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "preflight": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": "    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-poker` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-play` did not match any packages\n"
+      },
+      "notes": "Script completed: set +e\ncargo build -p myosu-play\ncargo test -p myosu-games-poker\ncargo test -p myosu-play training::tests::hand_completes_fold\ncargo test -p myosu-play training::tests::hand_completes_showdown\ncargo test -p myosu-play blueprint::tests::load_valid_artifact\ncargo test -p myosu-play advisor::tests::format_distribution_text\ntrue",
+      "duration_ms": 4523
+    }
+  },
+  "next_node_id": "implement",
+  "node_visits": {
+    "start": 1,
+    "preflight": 1
+  }
+}
