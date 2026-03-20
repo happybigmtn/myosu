@@ -1,0 +1,29 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.fixup": "Already retrieved — build succeeded cleanly with no warnings. Fixup is complete.",
+    "last_response": "Already retrieved — build succeeded cleanly with no warnings. Fixup is complete.",
+    "last_stage": "fixup"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 145,
+    "output_tokens": 33
+  },
+  "files_written": [
+    "crates/myosu-games-poker/src/exploit.rs",
+    "outputs/games/poker-engine/implementation.md",
+    "outputs/games/poker-engine/verification.md"
+  ],
+  "files_touched": [
+    "crates/myosu-games-poker/src/exploit.rs",
+    "outputs/games/poker-engine/implementation.md",
+    "outputs/games/poker-engine/verification.md"
+  ],
+  "duration_ms": 2522056,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T23:12:50.791298055+00:00",
+  "updated_at": "2026-03-20T23:12:50.791307314+00:00"
+}
