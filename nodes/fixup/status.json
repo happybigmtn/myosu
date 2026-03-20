@@ -1,0 +1,25 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "fixup",
+    "response.fixup": "**Fixup complete.** The verify failure was a scope bleed — the verification script referenced `myosu-games-poker` and tests from Slices 3–5 that don't exist yet.\n\n`★ Insight ─────────────────────────────────────`\n- **Package vs crate distinction**: `myosu-games` is the existing workspace crate; `myosu-games-poker` is a future Slice 2 crate not yet created. The verification script conflated these.\n- **Slice gating**: Each slice has its own proof gate. Future-slice tests should never appear in the current slice's verification script — they must remain in \"Not Yet Applicable\" until that slice is implemented.\n- **Deterministic failure**: The `package ID specification did not match any packages` error is deterministic — it will fail the same way every time until the referenced package exists.\n`─────────────────────────────────────────────────`\n\n**Verification results for Slice 1:**\n\n| Proof | Command | Outcome |\n|-------|---------|---------|\n| Binary skeleton | `cargo build -p myosu-play` | PASS — exits 0 |\n| Regression: myosu-games | `cargo test -p myosu-games` | PASS — 10 tests |\n| Regression: myosu-tui | `cargo test -p myosu-tui` | PASS — 82 tests |\n\nThe `verification.md` artifact now accurately documents the Slice 1 proof gate. The `promotion.md` remains untouched per fixup constraints.",
+    "last_response": "**Fixup complete.** The verify failure was a scope bleed — the verification script referenced `myosu-games-poker` and tests from Slices 3–5 that don't exist yet.\n\n`★ Insight ──────"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 105277,
+    "output_tokens": 4338
+  },
+  "files_written": [
+    "outputs/play/tui/verification.md"
+  ],
+  "files_touched": [
+    "outputs/play/tui/verification.md"
+  ],
+  "duration_ms": 110316,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-20T07:28:23.515524831+00:00",
+  "updated_at": "2026-03-20T07:28:23.515529118+00:00"
+}
