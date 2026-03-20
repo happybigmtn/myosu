@@ -1,0 +1,19 @@
+`★ Insight ─────────────────────────────────────`
+Two structural patterns are worth noting from this bootstrap. First, `foundations` is a **meta-lane** — it governs the infrastructure other lanes use, making it uniquely sensitive to circular dependencies: fixing `execute/status/watch` requires trusting those very commands to verify the fix. The slice order (Slice 1 confirms `fabro inspect` stability before building Slice 2's adapter) breaks this cycle. Second, the `games:multi-game` false-submit reveals a **goal-gate vs content-validation gap**: `verify` checking only `test -f` means a well-written spec about a non-existent crate passes the gate, which is exactly what happened here.
+`─────────────────────────────────────────────────`
+
+Both foundations lane artifacts have been bootstrapped:
+
+- **`outputs/foundations/foundation-plan.md`** (15.5 KB) — The spec defines `foundations` as the execution substrate lane, covering lane boundary, trusted inputs (Fabro workflows, Raspberry manifests, outputs structure), two critical broken surfaces (`execute/status/watch` truth untrustworthy + `games:multi-game` false-submit), six ordered implementation slices (starting with `fabro inspect` stability), and the full dependency graph.
+
+- **`outputs/foundations/review.md`** (8.9 KB) — The review renders a **REOPEN** judgment: the lane is correctly diagnosed but not yet executed. It documents five concrete risks (Fabo inspect output gap, incorrect `multi_game_reviewed` milestone, verify-only-file-existence checks, implicit detach path, no content-level validation), provides a file reference index, and explicitly blocks all downstream lanes until Slice 1 (`fabro inspect` JSON stability) is confirmed.
+
+The `outputs/foundations/` directory now exists with:
+```
+outputs/foundations/
+  .gitkeep
+  foundation-plan.md   # spec artifact
+  review.md            # review artifact
+```
+
+**What the next honest step is**: Run `fabro inspect --last-run --format json` against the most recent Fabro run to confirm whether `fabro inspect` produces machine-readable stable output. If it does, proceed to Slice 2 (Raspberry status adapter). If it doesn't, this must be fixed in Fabro before anything else.
