@@ -1,0 +1,474 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 02c0da9..46b2992 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -918,6 +918,12 @@ dependencies = [
+  "syn 2.0.117",
+ ]
+ 
++[[package]]
++name = "fallible-iterator"
++version = "0.2.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4443176a9f2c162692bd3d352d745ef9413eec5782a80d8fd6f8a1ac692a07f7"
++
+ [[package]]
+ name = "ff"
+ version = "0.13.1"
+@@ -1216,7 +1222,7 @@ checksum = "ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0"
+ dependencies = [
+  "cfg-if",
+  "libc",
+- "wasi",
++ "wasi 0.11.1+wasi-snapshot-preview1",
+ ]
+ 
+ [[package]]
+@@ -1547,6 +1553,15 @@ version = "0.2.183"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
+ 
++[[package]]
++name = "libredox"
++version = "0.1.14"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1744e39d1d6a9948f4f388969627434e31128196de472883b39f148769bfe30a"
++dependencies = [
++ "libc",
++]
++
+ [[package]]
+ name = "libsecp256k1"
+ version = "0.7.2"
+@@ -1682,6 +1697,16 @@ dependencies = [
+  "regex-automata",
+ ]
+ 
++[[package]]
++name = "md-5"
++version = "0.10.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
++dependencies = [
++ "cfg-if",
++ "digest 0.10.7",
++]
++
+ [[package]]
+ name = "memchr"
+ version = "2.8.0"
+@@ -1726,7 +1751,7 @@ checksum = "a69bcab0ad47271a0234d9422b131806bf3968021e5dc9328caf2d4cd58557fc"
+ dependencies = [
+  "libc",
+  "log",
+- "wasi",
++ "wasi 0.11.1+wasi-snapshot-preview1",
+  "windows-sys 0.61.2",
+ ]
+ 
+@@ -1827,6 +1852,24 @@ dependencies = [
+  "autocfg",
+ ]
+ 
++[[package]]
++name = "objc2-core-foundation"
++version = "0.3.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536"
++dependencies = [
++ "bitflags 2.11.0",
++]
++
++[[package]]
++name = "objc2-system-configuration"
++version = "0.3.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7216bd11cbda54ccabcab84d523dc93b858ec75ecfb3a7d89513fa22464da396"
++dependencies = [
++ "objc2-core-foundation",
++]
++
+ [[package]]
+ name = "object"
+ version = "0.37.3"
+@@ -1969,6 +2012,12 @@ dependencies = [
+  "base64ct",
+ ]
+ 
++[[package]]
++name = "percent-encoding"
++version = "2.3.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
++
+ [[package]]
+ name = "petgraph"
+ version = "0.6.5"
+@@ -1989,6 +2038,25 @@ dependencies = [
+  "indexmap",
+ ]
+ 
++[[package]]
++name = "phf"
++version = "0.13.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c1562dc717473dbaa4c1f85a36410e03c047b2e7df7f45ee938fbef64ae7fadf"
++dependencies = [
++ "phf_shared",
++ "serde",
++]
++
++[[package]]
++name = "phf_shared"
++version = "0.13.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e57fef6bc5981e38c2ce2d63bfa546861309f875b8a75f092d1d54ae2d64f266"
++dependencies = [
++ "siphasher",
++]
++
+ [[package]]
+ name = "pin-project-lite"
+ version = "0.2.17"
+@@ -2042,6 +2110,35 @@ dependencies = [
+  "syn 2.0.117",
+ ]
+ 
++[[package]]
++name = "postgres-protocol"
++version = "0.6.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3ee9dd5fe15055d2b6806f4736aa0c9637217074e224bbec46d4041b91bb9491"
++dependencies = [
++ "base64",
++ "byteorder",
++ "bytes",
++ "fallible-iterator",
++ "hmac 0.12.1",
++ "md-5",
++ "memchr",
++ "rand 0.9.2",
++ "sha2 0.10.9",
++ "stringprep",
++]
++
++[[package]]
++name = "postgres-types"
++version = "0.2.12"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "54b858f82211e84682fecd373f68e1ceae642d8d751a1ebd13f33de6257b3e20"
++dependencies = [
++ "bytes",
++ "fallible-iterator",
++ "postgres-protocol",
++]
++
+ [[package]]
+ name = "ppv-lite86"
+ version = "0.2.21"
+@@ -2254,6 +2351,22 @@ dependencies = [
+  "uuid",
+ ]
+ 
++[[package]]
++name = "rbp-database"
++version = "1.0.0"
++source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
++dependencies = [
++ "async-trait",
++ "const_format",
++ "futures",
++ "log",
++ "rbp-cards",
++ "rbp-core",
++ "rbp-gameplay",
++ "tokio",
++ "tokio-postgres",
++]
++
+ [[package]]
+ name = "rbp-gameplay"
+ version = "1.0.0"
+@@ -2287,14 +2400,18 @@ version = "1.0.0"
+ source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
+ dependencies = [
+  "anyhow",
++ "async-trait",
++ "const_format",
+  "log",
+  "rand 0.9.2",
+  "rbp-cards",
+  "rbp-core",
++ "rbp-database",
+  "rbp-gameplay",
+  "rbp-mccfr",
+  "rbp-transport",
+  "serde",
++ "tokio-postgres",
+ ]
+ 
+ [[package]]
+@@ -2706,6 +2823,12 @@ version = "0.1.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "620a1d43d70e142b1d46a929af51d44f383db9c7a2ec122de2cd992ccfcf3c18"
+ 
++[[package]]
++name = "siphasher"
++version = "1.0.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b2aa850e253778c88a04c3d7323b043aeda9d3e30d5971937c1855769763678e"
++
+ [[package]]
+ name = "slab"
+ version = "0.4.12"
+@@ -3186,6 +3309,17 @@ version = "1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+ 
++[[package]]
++name = "stringprep"
++version = "0.1.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7b4df3d392d81bd458a8a621b8bffbd2302a12ffe288a9d931670948749463b1"
++dependencies = [
++ "unicode-bidi",
++ "unicode-normalization",
++ "unicode-properties",
++]
++
+ [[package]]
+ name = "strsim"
+ version = "0.11.1"
+@@ -3370,6 +3504,32 @@ dependencies = [
+  "syn 2.0.117",
+ ]
+ 
++[[package]]
++name = "tokio-postgres"
++version = "0.7.16"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "dcea47c8f71744367793f16c2db1f11cb859d28f436bdb4ca9193eb1f787ee42"
++dependencies = [
++ "async-trait",
++ "byteorder",
++ "bytes",
++ "fallible-iterator",
++ "futures-channel",
++ "futures-util",
++ "log",
++ "parking_lot",
++ "percent-encoding",
++ "phf",
++ "pin-project-lite",
++ "postgres-protocol",
++ "postgres-types",
++ "rand 0.9.2",
++ "socket2",
++ "tokio",
++ "tokio-util",
++ "whoami",
++]
++
+ [[package]]
+ name = "tokio-stream"
+ version = "0.1.18"
+@@ -3392,6 +3552,19 @@ dependencies = [
+  "tokio-stream",
+ ]
+ 
++[[package]]
++name = "tokio-util"
++version = "0.7.18"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
++dependencies = [
++ "bytes",
++ "futures-core",
++ "futures-sink",
++ "pin-project-lite",
++ "tokio",
++]
++
+ [[package]]
+ name = "toml"
+ version = "0.8.23"
+@@ -3582,6 +3755,12 @@ dependencies = [
+  "static_assertions",
+ ]
+ 
++[[package]]
++name = "unicode-bidi"
++version = "0.3.18"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5c1cb5db39152898a79168971543b1cb5020dff7fe43c8dc468b0885f5e29df5"
++
+ [[package]]
+ name = "unicode-ident"
+ version = "1.0.24"
+@@ -3597,6 +3776,12 @@ dependencies = [
+  "tinyvec",
+ ]
+ 
++[[package]]
++name = "unicode-properties"
++version = "0.1.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7df058c713841ad818f1dc5d3fd88063241cc61f49f5fbea4b951e8cf5a8d71d"
++
+ [[package]]
+ name = "unicode-segmentation"
+ version = "1.12.0"
+@@ -3706,6 +3891,15 @@ version = "0.11.1+wasi-snapshot-preview1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
+ 
++[[package]]
++name = "wasi"
++version = "0.14.7+wasi-0.2.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "883478de20367e224c0090af9cf5f9fa85bed63a95c1abf3afc5c083ebc06e8c"
++dependencies = [
++ "wasip2",
++]
++
+ [[package]]
+ name = "wasip2"
+ version = "1.0.2+wasi-0.2.9"
+@@ -3724,6 +3918,15 @@ dependencies = [
+  "wit-bindgen",
+ ]
+ 
++[[package]]
++name = "wasite"
++version = "1.0.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "66fe902b4a6b8028a753d5424909b764ccf79b7a209eac9bf97e59cda9f71a42"
++dependencies = [
++ "wasi 0.14.7+wasi-0.2.4",
++]
++
+ [[package]]
+ name = "wasm-bindgen"
+ version = "0.2.114"
+@@ -3803,6 +4006,29 @@ dependencies = [
+  "semver",
+ ]
+ 
++[[package]]
++name = "web-sys"
++version = "0.3.91"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "854ba17bb104abfb26ba36da9729addc7ce7f06f5c0f90f3c391f8461cca21f9"
++dependencies = [
++ "js-sys",
++ "wasm-bindgen",
++]
++
++[[package]]
++name = "whoami"
++version = "2.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d6a5b12f9df4f978d2cfdb1bd3bac52433f44393342d7ee9c25f5a1c14c0f45d"
++dependencies = [
++ "libc",
++ "libredox",
++ "objc2-system-configuration",
++ "wasite",
++ "web-sys",
++]
++
+ [[package]]
+ name = "winapi"
+ version = "0.3.9"
+diff --git a/crates/myosu-games-poker/Cargo.toml b/crates/myosu-games-poker/Cargo.toml
+index 5091cf0..32ef175 100644
+--- a/crates/myosu-games-poker/Cargo.toml
++++ b/crates/myosu-games-poker/Cargo.toml
+@@ -17,7 +17,7 @@ anyhow = { workspace = true }
+ 
+ # Robopoker — must use same rev as myosu-games
+ rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+-rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
++rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde", "database"] }
+ rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
+ 
+ # Game trait abstractions
+diff --git a/outputs/games/poker-engine/implementation.md b/outputs/games/poker-engine/implementation.md
+index 8b757d6..647802f 100644
+--- a/outputs/games/poker-engine/implementation.md
++++ b/outputs/games/poker-engine/implementation.md
+@@ -9,7 +9,7 @@
+ ### Slice 1 — Crate Skeleton
+ 
+ Created `crates/myosu-games-poker/` with:
+-- `Cargo.toml` with dependencies on `rbp-nlhe` (serde feature), `rbp-mccfr` (serde feature), `rbp-core`, `myosu-games`
++- `Cargo.toml` with dependencies on `rbp-nlhe` (serde + database features), `rbp-mccfr` (serde feature), `rbp-core`, `myosu-games`
+ - `src/lib.rs` with public re-exports
+ - Added `crates/myosu-games-poker` to workspace members
+ 
+@@ -58,9 +58,9 @@ Note: Uses **serde-json** (not bincode Encode/Decode) because `NlheInfo` and `Nl
+ 
+ The NLHE solver (`rbp_nlhe::Flagship`) requires database-backed isomorphism→abstraction mappings to function. `NlheEncoder::default()` creates an empty mapping, causing `train()` to panic at `encoder.rs:33` with "isomorphism not found in abstraction lookup".
+ 
+-This is an architectural requirement of robopoker at the pinned revision (`04716310143094ab41ec7172e6cea5a2a66744ef`). The `database` feature loads these mappings from PostgreSQL.
++This is an architectural requirement of robopoker at the pinned revision (`04716310143094ab41ec7172e6cea5a2a66744ef`). The `database` feature (now enabled) provides `rbp_database::Hydrate` for loading these mappings from PostgreSQL.
+ 
+-**Impact**: Tests that call `train()` fail without the database feature. Tests that only construct/save/load pass.
++**Impact**: Tests that call `train()` fail without PostgreSQL infrastructure. Tests that only construct/save/load pass. The `database` feature is enabled to unlock the PostgreSQL hydration path.
+ 
+ ## Files Created
+ 
+@@ -79,3 +79,4 @@ crates/myosu-games-poker/
+ ## Files Modified
+ 
+ - `Cargo.toml` (workspace root) — added `crates/myosu-games-poker` to members
++- `crates/myosu-games-poker/Cargo.toml` — enabled `database` feature on `rbp-nlhe` (fixup stage)
+diff --git a/outputs/games/poker-engine/verification.md b/outputs/games/poker-engine/verification.md
+index 6d07511..da6dadb 100644
+--- a/outputs/games/poker-engine/verification.md
++++ b/outputs/games/poker-engine/verification.md
+@@ -96,14 +96,29 @@ cargo test -p myosu-games-poker training::tests::session_checkpoint_frequency #
+ 
+ ## Unblock Path
+ 
+-The tests require the `database` feature on `rbp-nlhe` **and** a PostgreSQL instance with the abstraction schema initialized (`rbp_database::ISOMORPHISM` table). This is external infrastructure outside the `games:poker-engine` slice scope.
++**Status**: `database` feature is now enabled in `myosu-games-poker/Cargo.toml`.
+ 
+-To enable the feature in `myosu-games-poker/Cargo.toml`:
+-```toml
+-rbp-nlhe = { git = "...", rev = "...", features = ["serde", "database"] }
++The tests require **PostgreSQL infrastructure** with the abstraction schema initialized (`rbp_database::ISOMORPHISM` table). The `database` feature enables the `Hydrate` trait for loading encoder mappings, but the data must still come from a PostgreSQL instance containing the k-means clustering results.
++
++To run the full test suite:
++```bash
++# 1. Set up PostgreSQL and run k-means clustering pipeline (external to this slice)
++# 2. Set DB_URL environment variable
++export DB_URL="postgres://user:pass@host:port/db"
++cargo test -p myosu-games-poker
+ ```
+ 
+-Then run with `DB_URL` set to a PostgreSQL connection string containing the k-means clustering data.
++**Infrastructure requirements** (outside `games:poker-engine` slice scope):
++- PostgreSQL instance
++- `rbp_database::ISOMORPHISM` table populated via k-means clustering
++- `rbp_database::ABSTRACTION`, `rbp_database::STREET`, `rbp_database::BLUEPRINT` tables
++
++## Fixup Applied
++
++The `database` feature has been enabled on `rbp-nlhe` in `myosu-games-poker/Cargo.toml`. This unlocks:
++- `rbp_database::Hydrate` trait availability for `NlheEncoder` and `NlheProfile`
++- Async encoder hydration from PostgreSQL when `DB_URL` is set
++- The full test suite can pass once PostgreSQL infrastructure is available
+ 
+ ## Relationship to Pre-existing Documentation
+ 
+@@ -111,4 +126,6 @@ This verification confirms and granularizes the known limitation documented in `
+ 
+ > The NLHE solver (`rbp_nlhe::Flagship`) requires database-backed isomorphism→abstraction mappings to function. `NlheEncoder::default()` creates an empty mapping, causing `train()` to panic at `encoder.rs:33` with "isomorphism not found in abstraction lookup".
+ 
+-The failure is **deterministic** and **expected** without PostgreSQL infrastructure. The implementation code is correct per the spec; the test suite requires environment-level infrastructure that is not part of this slice.
+\ No newline at end of file
++The failure is **deterministic** and **expected** without PostgreSQL infrastructure. The implementation code is correct per the spec; the test suite requires environment-level infrastructure that is not part of this slice.
++
++**Fixup update**: The `database` feature is now enabled, making the PostgreSQL hydration path available. The tests still require a PostgreSQL instance with k-means data to pass.
+\ No newline at end of file
