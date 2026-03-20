@@ -1,33 +1,39 @@
 {
-  "timestamp": "2026-03-20T22:50:15.919953460Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-20T22:50:17.585402944Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
     "specify": 1,
     "review": 1,
     "polish": 1,
-    "start": 1
+    "start": 1,
+    "verify": 1
   },
   "context_values": {
     "internal.fidelity": "compact",
-    "internal.thread_id": "review",
-    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 629.4k tokens in / 9.3k out\n  - Files: outputs/foundations/foundation-plan.md, outputs/foundations/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "internal.thread_id": "polish",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 629.4k tokens in / 9.3k out\n  - Files: outputs/foundations/foundation-plan.md, outputs/foundations/review.md\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
+    "failure_signature": "",
     "internal.retry_count.specify": 1,
-    "outcome": "fail",
+    "outcome": "success",
     "last_response": "Both required durable artifacts are now in place:\n\n```\noutputs/foundations/\n├── foundation-plan.md   (9.9 KB)\n└── review.md            (7.9 KB)\n```\n\n---\n\n**What was produced and why:**\n\n**",
-    "current_node": "polish",
+    "thread.polish.current_node": "verify",
+    "internal.retry_count.verify": 1,
+    "current_node": "verify",
     "internal.node_visit_count": 1,
     "thread.start.current_node": "specify",
     "response.specify": "Both required durable artifacts are now in place:\n\n```\noutputs/foundations/\n├── foundation-plan.md   (9.9 KB)\n└── review.md            (7.9 KB)\n```\n\n---\n\n**What was produced and why:**\n\n**`foundation-plan.md`** — The execution plan for the foundations lane. It has two concrete frontier tasks:\n\n1. **Make `execute/status/watch` truth trustworthy** — The current Fabro/Raspberry dispatch path has a false-positive defect: the `goal_gate=true` + `max_retries=0` + pre-existence-verify pattern in `fabro/run-configs/platform/multi-game.toml` passes even when artifacts were not produced by the current run (they pre-exist in a clean worktree). The plan gives a step-by-step diagnosis and repair sequence.\n\n2. **Resolve `games:multi-game` false-submit** — Either convert to a truthful failure with diagnostic or rerun the lane with a repaired Fabro detach path.\n\n**`review.md`** — The honest assessment. The key finding: **only `games:traits` has verified provenance** (both bootstrap and implementation ran in real Fabro executions). Every other lane with `spec.md`/`review.md` artifacts is UNTRUSTED or NOT APPLICABLE. The review documents the false-submit hypothesis with evidence from the workflow/run-config structure, and sets the prerequisite sequence (diagnose → fix → rerun) before the lane can move from diagnosis to implementation.\n\n`★ Insight ─────────────────────────────────────`\nThe core structural defect is the `verify` step logic: `test -f outputs/X/spec.md` in a `worktree_mode = \"clean\"` sandbox proves the files exist, not that the *current run* produced them. This is a workflow-design bug, not a one-off misconfiguration — the same pattern likely affects `games:poker-engine`, `tui:shell`, and other platform-lane run-configs. The fix must change the verify semantics to check run-produced provenance, not pre-existence.\n`─────────────────────────────────────────────────`",
     "internal.run_id": "01KM6PWRGE9XYSAQ8MN2E64C1D",
-    "failure_class": "deterministic",
+    "failure_class": "",
     "thread.review.current_node": "polish",
+    "command.stderr": "",
+    "command.output": "",
     "internal.retry_count.polish": 1,
     "internal.retry_count.start": 1,
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6PWRGE9XYSAQ8MN2E64C1D/worktree",
@@ -81,12 +87,21 @@
       },
       "duration_ms": 5229
     },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": ""
+      },
+      "notes": "Script completed: test -f ./outputs/foundations/foundation-plan.md && test -f ./outputs/foundations/review.md",
+      "duration_ms": 3
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "polish|deterministic|api_deterministic|openai|not_found": 1,
     "review|deterministic|api_deterministic|openai|not_found": 1
@@ -95,6 +110,7 @@
     "specify": 1,
     "review": 1,
     "polish": 1,
-    "start": 1
+    "start": 1,
+    "verify": 1
   }
 }
