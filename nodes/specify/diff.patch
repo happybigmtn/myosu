@@ -1,0 +1,442 @@
+diff --git a/outputs/foundations/.gitkeep b/outputs/foundations/.gitkeep
+new file mode 100644
+index 0000000..e69de29
+diff --git a/outputs/foundations/foundation-plan.md b/outputs/foundations/foundation-plan.md
+new file mode 100644
+index 0000000..d9b0eb9
+--- /dev/null
++++ b/outputs/foundations/foundation-plan.md
+@@ -0,0 +1,280 @@
++# `foundations` Lane Spec
++
++## Lane Boundary
++
++`foundations` is the **execution substrate lane** for the myosu Fabro/Raspberry control plane. It owns the health and correctness of the infrastructure that all other lanes depend on:
++
++- **Fabro execution plane**: workflow graphs (`fabro/workflows/`), run configs (`fabro/run-configs/`), prompt files (`fabro/prompts/`), and check scripts (`fabro/checks/`)
++- **Raspberry control plane**: program manifests (`fabro/programs/*.yaml`), lane milestone definitions, proof profiles, and check definitions
++- **Execute/status/watch surfaces**: the Raspberry commands that read Fabro run state and report lane health
++- **Fabro-to-Raspberry detach path**: the mechanism by which a completed Fabro run's artifacts are incorporated into the permanent repo structure and reported to Raspberry
++- **Outputs structure**: the curated artifact surface under `outputs/` that Raspberry consumes for milestone evaluation
++
++`foundations` does **not** own:
++
++- Any product crate code (those belong to their respective lanes: `games:traits`, `chain:runtime`, etc.)
++- The robopoker fork or subtensor fork (those are owned by their respective migration lanes)
++- The `specs/`, `plans/`, or `ops/` directory content (those are doctrine/lane artifacts)
++
++`foundations` is unique among lanes: it is the only lane whose customers are other lanes, not end users or validators. Every other lane breaks if the execution substrate is broken.
++
++---
++
++## Platform-Facing Purpose
++
++The foundations lane delivers **trustworthy execution**. The user-visible outcomes are:
++
++- A contributor can run `raspberry execute` and trust the result — the reported success or failure accurately reflects what happened in the Fabro run
++- A contributor can run `raspberry status` and trust the lane state — the milestone health signals are derived from real Fabro run truth, not stale or fabricated data
++- A contributor can run `raspberry watch` and see live Fabro run progress that actually corresponds to work happening on disk
++- When a Fabro run completes, its artifacts are cleanly detached from the run directory and incorporated into `outputs/` with correct path attribution
++- The `games:multi-game` lane's current false-submit is resolved: the lane either reports truthful failure or produces a genuinely successful live run
++
++---
++
++## Currently Trusted Inputs
++
++### Fabro Core Assets
++
++| File | Trust Signal |
++|------|-------------|
++| `fabro/workflows/bootstrap/game-traits.fabro` | Passes `fabro inspect`; run produced verified `outputs/games/traits/spec.md` and `outputs/games/traits/review.md`; `games:traits` implementation lane succeeded |
++| `fabro/workflows/bootstrap/tui-shell.fabro` | Passes `fabro inspect`; lane preconditions and proof commands are defined |
++| `fabro/run-configs/bootstrap/game-traits.toml` | Parses cleanly with `tomllib`; run succeeded end-to-end |
++| `fabro/run-configs/bootstrap/tui-shell.toml` | Parses cleanly with `tomllib`; run configured correctly |
++| `fabro/prompts/bootstrap/plan.md` | Produces `spec.md`-shaped output matching `SPEC.md` conventions |
++| `fabro/prompts/bootstrap/review.md` | Produces `review.md`-shaped output with keep/reopen/reset judgment |
++| `fabro/prompts/bootstrap/implement.md` | Produces `review.md`-shaped output; drives the review step in bootstrap workflows |
++| `fabro/prompts/bootstrap/fix.md` | Provides fix-lane guidance for broken bootstrap runs |
++| `fabro/checks/games-traits.sh` | Executes `cargo test -p myosu-games`; exit 0 confirmed on HEAD |
++| `fabro/checks/tui-shell.sh` | Executes `cargo test -p myosu-tui`; exit 0 confirmed on HEAD |
++
++### Raspberry Program Manifests
++
++| File | Trust Signal |
++|------|-------------|
++| `fabro/programs/myosu-bootstrap.yaml` | Produces lane milestone state; `games:traits` reviewed milestone confirmed real; `chain:runtime` and `chain:pallet` restart lanes correctly modeled |
++| `fabro/programs/myosu.yaml` | Top-level program-of-programs; units and lanes match the frontier structure; `max_parallel: 2` correctly limits concurrent runs |
++
++### Outputs Structure
++
++| File | Trust Signal |
++|------|-------------|
++| `outputs/README.md` | Correctly describes the outputs convention: `spec.md` + `review.md` for bootstrap lanes, `implementation.md` + `verification.md` for implementation lanes |
++| `outputs/games/traits/spec.md` | Produced by successful Fabro run; `games:traits` implementation lane confirmed it as accurate foundation |
++| `outputs/games/traits/review.md` | Produced by successful Fabro run; keep/reopen/reset judgment is specific and file-referenced |
++
++---
++
++## Current Broken / Missing Surfaces
++
++### Critical: `execute/status/watch` Truth Is Untrustworthy
++
++**Symptom**: Raspberry's `execute`, `status`, and `watch` commands report lane state that does not match what Fabro runs actually produce. This was identified as the primary blocker for further lane execution.
++
++**Root cause (suspected)**: Raspberry infers live Fabro runs by scanning run directories and matching `run.toml` contents. Fabro's own documentation (`docs/reference/run-directory.mdx`) explicitly warns that raw run-directory layout is an internal detail, not a durable external contract. Raspberry's current `latest_fabro_run_for_lane()` heuristic reads from `~/.fabro/runs/` which is an internal Fabro path, not a stable inspection surface.
++
++**Impact**: Every lane milestone evaluation that depends on `execute/status/watch` is unreliable. The `games:multi-game` false-submit is a downstream symptom of this root cause.
++
++**What must happen**: Replace Raspberry's run-directory scanning with Fabro's stable `fabro inspect` command as the primary run-truth source. This requires:
++1. Fabro `fabro inspect` command produces stable machine-readable output (JSON) with run id, status, artifact paths, and timestamps
++2. Raspberry's lane state adapter reads from `fabro inspect` rather than scanning `~/.fabro/runs/`
++3. The `execute/status/watch` commands are re-bound to the new adapter
++
++### Critical: `games:multi-game` False-Submit
++
++**Symptom**: The `games:multi-game` lane was dispatched by Raspberry (via `myosu-platform.yaml`), a Fabro run completed, and artifacts appeared at `outputs/games/multi-game/spec.md` and `outputs/games/multi-game/review.md`. However, the lane's own review document identifies that the lane's own crate (`myosu-games-liars-dice`) does not exist — the artifacts were produced without the underlying code existing.
++
++**Root cause**: The `multi-game.fabro` workflow's `verify` step only checks file existence (`test -f outputs/games/multi-game/spec.md && test -f outputs/games/multi-game/review.md`). It does not validate that the artifacts are accurate representations of actual code state. A Fabro agent can produce a well-written `spec.md` and `review.md` even when the underlying crate is missing.
++
++**Impact**: The lane is marked as having produced reviewed artifacts when no actual implementation work exists. The `games:multi-game` milestone (`multi_game_reviewed` in `myosu-platform.yaml`) reports success without the lane actually being complete.
++
++**What must happen**: The `games:multi-game` lane must be reset. Either:
++- Option A: the lane is re-run with a corrected workflow that includes real code-presence checks before the `review` step succeeds
++- Option B: the lane is marked as truthfully failed until the greenfield `myosu-games-liars-dice` crate exists
++
++### High: Fabro Detach Path Is Broken
++
++**Symptom**: When a Fabro run completes, its artifacts (the curated outputs that should survive to `outputs/`) are not cleanly incorporated into the repo. The `games:multi-game` false-submit is evidence of this: artifacts appeared without corresponding code.
++
++**Root cause**: The Fabro-to-Raspberry detach path is not explicitly modeled. The workflow graphs show `verify -> exit` but do not include an explicit `detach` step that confirms artifacts are committed to the repo and Raspberry state is updated accordingly.
++
++**What must happen**: The bootstrap workflow family needs an explicit `detach` step that:
++1. Confirms all artifact files exist at the expected `outputs/` paths
++2. Confirms the artifact content passes content-level validation (not just file existence)
++3. Updates Raspberry's lane state to reflect the completed milestone
++
++---
++
++## Code Boundaries and Deliverables
++
++### Fabro Execution Plane Additions
++
++```
++fabro/
++  workflows/
++    bootstrap/
++      foundations.fabro      # Bootstrap workflow for this lane itself
++  checks/
++    fabro-inspect.sh         # Check: fabro inspect returns valid JSON for last run
++    rpi-status.sh            # Check: raspberry status shows correct lane states
++    fabro-detach.sh          # Check: outputs/ artifacts match last run's produced files
++```
++
++### Raspberry Control Plane Additions
++
++```
++fabro/programs/
++  myosu-foundations.yaml    # Program manifest for foundations lane
++```
++
++### Outputs Structure Additions
++
++```
++outputs/
++  foundations/
++    foundation-plan.md       # This file (spec artifact)
++    review.md               # Review artifact
++```
++
++---
++
++## Proof / Check Shape
++
++### Foundations Bootstrap Proof
++
++```bash
++# Fabro inspect produces valid JSON
++fabro inspect --last-run --format json | python -c "import sys, json; json.load(sys.stdin); print('valid')"
++
++# Raspberry status is consistent with Fabro run state
++raspberry status --manifest fabro/programs/myosu.yaml --format json | python -c "import sys, json; data = json.load(sys.stdin); assert 'lanes' in data; print('valid')"
++
++# outputs/ artifact paths match what the last Fabro run produced
++./fabro/checks/fabro-detach.sh
++
++# Execute/status/watch truth test
++raspberry execute --manifest fabro/programs/myosu-platform.yaml --lane games:multi-game --format json
++# The 'success' field must match whether the lane's proof commands actually pass
++```
++
++### Critical Defect Proofs
++
++```bash
++# The execute/status/watch truth test
++raspberry status --manifest fabro/programs/myosu.yaml --lane games:traits --format json
++# Must show 'games:traits' lane state matching actual Fabro run state
++# If fabro inspect shows the run failed, raspberry status must show failed (not stale success)
++
++# games:multi-game false-submit resolution test
++raspberry status --manifest fabro/programs/myosu-platform.yaml --lane games:multi-game --format json
++# Must show 'failed' OR show the lane succeeded with real code present (myosu-games-liars-dice crate exists)
++# Must NOT show 'succeeded' with artifacts but no code
++```
++
++---
++
++## Next Implementation Slices (Smallest Honest First)
++
++### Slice 1 — `fabro inspect` Stability (highest priority)
++
++**Problem**: Raspberry cannot reliably read Fabro run state because it scans run directories instead of using `fabro inspect`.
++
++**What must happen**:
++1. Verify `fabro inspect --last-run --format json` produces stable, machine-readable output
++2. Identify any gaps between what `fabro inspect` returns and what Raspberry's lane adapter needs
++3. If `fabro inspect` output is insufficient, file a Fabro issue or implement the missing fields
++
++**Proof**: `fabro inspect --last-run --format json` returns valid JSON with `run_id`, `status`, `artifacts`, and `timestamp` fields.
++
++---
++
++### Slice 2 — Raspberry `status` Adapter to `fabro inspect`
++
++**Problem**: `raspberry status` reads run state incorrectly because it uses run-directory scanning.
++
++**What must happen**: Bind Raspberry's `status` command to `fabro inspect` output instead of `~/.fabro/runs/` scanning.
++
++**Proof**: `raspberry status --manifest fabro/programs/myosu.yaml --format json` output matches `fabro inspect --last-run --format json` for the same run id.
++
++---
++
++### Slice 3 — `games:multi-game` Truthful Reset
++
++**Problem**: The `games:multi-game` lane's artifacts exist but the underlying crate is missing. The lane reported success without real work.
++
++**What must happen**: Determine whether `games:multi-game` should:
++- Option A: Re-run with proper proof gates that fail if `myosu-games-liars-dice` crate is missing
++- Option B: Mark the lane as blocked/failed until the crate exists
++
++The decision depends on whether the false-submit is a Raspberry-level bug (submitting without checking code presence) or a Fabro workflow design gap (the verify step should have caught missing code).
++
++**Proof**: After reset, `raspberry status --lane games:multi-game` must show an honest state (failed or in-progress) that matches reality.
++
++---
++
++### Slice 4 — Fabro `execute` Truth Binding
++
++**Problem**: `raspberry execute` dispatches a Fabro run but the reported result may not match the actual run outcome.
++
++**What must happen**: Bind `raspberry execute` to authoritative Fabro run ids from `fabro inspect`. The `execute` command should not return until the Fabro run completes and its status is confirmed by `fabro inspect`.
++
++**Proof**: After running `raspberry execute --manifest fabro/programs/myosu.yaml --lane games:traits`, the reported `success` field matches `fabro inspect`'s `status` field for that run id.
++
++---
++
++### Slice 5 — Fabro `watch` Live Progress
++
++**Problem**: `raspberry watch` shows progress that may not correspond to actual work on disk.
++
++**What must happen**: `raspberry watch` should consume Fabro's run event stream (if available) or poll `fabro inspect` at short intervals to render accurate live progress.
++
++**Proof**: While a Fabro run is active, `raspberry watch` output shows step names and timestamps that match the actual work being performed.
++
++---
++
++### Slice 6 — Explicit Fabro-to-Raspberry Detach Step
++
++**Problem**: The workflow graphs end at `verify` without an explicit detach step that commits artifacts to the repo and updates Raspberry state.
++
++**What must happen**: Add a `detach` step to each bootstrap workflow that:
++1. Confirms artifact content validity (not just file existence)
++2. Commits artifacts to the repo (if using a worktree model)
++3. Updates Raspberry's milestone state to `complete`
++
++**Proof**: After a successful Fabro run, `outputs/<lane>/` contains valid artifacts and `raspberry status` shows the lane's milestone as complete.
++
++---
++
++## Dependency Order
++
++```
++Slice 1 (fabro inspect stability)
++  │
++  ├──► Slice 2 (raspberry status adapter) — must precede slices 3-6
++  │      │
++  │      ▼
++  │    Slice 4 (raspberry execute binding)
++  │      │
++  │      ▼
++  │    Slice 5 (raspberry watch live progress)
++  │
++  ├──► Slice 3 (games:multi-game truthful reset) — independent of slice 2
++  │      (can proceed once slice 1 confirms fabro inspect is reliable)
++  │
++  ▼
++Slice 6 (explicit detach step)
++  (must be last — depends on slices 1-5 being stable)
++```
++
++---
++
++## Relationship to Other Lanes
++
++| Lane | Relationship |
++|------|-------------|
++| All lanes | Every lane is blocked by the foundations defects. Until `execute/status/watch` truth is fixed, no lane can trust its milestone evaluation. |
++| `games:multi-game` | Directly affected by the false-submit. Resolved only after slice 2 (Raspberry status adapter) confirms truthful reporting. |
++| `games:traits` | Trusted example lane. Its successful implementation proves the bootstrap workflow shape is correct — the defect is in the Raspberry run-truth layer, not in the Fabro workflow layer. |
++| `chain:runtime`, `chain:pallet` | Restart lanes. Their progress depends on `execute/status/watch` being trustworthy so that restart verification can be trusted. |
++| `services:miner`, `services:validator-oracle` | Future lanes that will be dispatched via Raspberry. Cannot be trusted until foundations are repaired. |
+diff --git a/outputs/foundations/review.md b/outputs/foundations/review.md
+new file mode 100644
+index 0000000..da18489
+--- /dev/null
++++ b/outputs/foundations/review.md
+@@ -0,0 +1,147 @@
++# `foundations` Lane Review
++
++## Keep / Reopen / Reset Judgment
++
++**Judgment: REOPEN**
++
++The foundations lane is correctly identified as the execution substrate lane, and the two critical defects (`execute/status/watch` truth untrustworthy, `games:multi-game` false-submit) are correctly diagnosed. However, no concrete implementation slices have been executed yet. The artifacts in this lane are currently a specification exercise, not a reviewed operational state.
++
++The lane must **reopen** until at least one of the critical defects is demonstrably fixed by a real Fabro run with verified truthful reporting.
++
++---
++
++## Implementation Lane Unblocked?
++
++**No — blocked on Slice 1 (fabro inspect stability).**
++
++The foundations lane cannot proceed to implementation until `fabro inspect` produces stable, machine-readable output that Raspberry can consume as the authoritative run-truth source. Without this, every downstream slice (Raspberry status adapter, execute binding, watch, detach) would be built on an untrustworthy foundation.
++
++---
++
++## Concrete Risks the Foundations Lane Must Preserve or Reduce
++
++### Risk 1: Fabro Inspect Output Gap
++**Exact location**: Fabro `fabro inspect` command — current output format is not documented as machine-readable stable API.
++
++`fabro inspect` may produce human-readable text output today. If the output format is not stable JSON with run id, status, artifacts, and timestamp, Raspberry cannot reliably consume it.
++
++**What must be preserved**:
++- The `fabro inspect` command itself (it exists and is the right abstraction)
++- The intent to use Fabro's own inspection surface rather than run-directory scanning
++
++**What must be reduced**:
++- Raspberry's current `latest_fabro_run_for_lane()` heuristic that scans `~/.fabro/runs/`
++- Any code that reads `run.toml` directly for run state
++
++### Risk 2: games:multi-game Milestone Is Incorrectly Complete
++**Exact location**: `fabro/programs/myosu-platform.yaml` lines 22–23
++
++```yaml
++- id: multi_game_reviewed
++  requires: [multi_game_spec, multi_game_review]
++```
++
++The `multi_game_reviewed` milestone is satisfied because `outputs/games/multi-game/spec.md` and `outputs/games/multi-game/review.md` both exist. However, `myosu-games-liars-dice` crate does not exist. The milestone is satisfied on paper but not in reality.
++
++**What must be preserved**:
++- The milestone model (artifacts as the unit of lane completion)
++- The dependency chain from `poker_engine_reviewed` to `multi_game_reviewed`
++
++**What must be reduced**:
++- Milestone satisfaction that depends only on file existence, not content validation
++- The `games:multi-game` lane's current milestone state in `myosu-platform.yaml`
++
++### Risk 3: Fabro Workflow Verify Steps Only Check File Existence
++**Exact location**: `fabro/workflows/bootstrap/multi-game.fabro` line 18
++
++```fabro
++verify  [label="Verify", shape=parallelogram, script="test -f outputs/games/multi-game/spec.md && test -f outputs/games/multi-game/review.md", goal_gate=true, max_retries=0]
++```
++
++The `verify` step passes if both artifact files exist, regardless of their content accuracy or whether the underlying code exists.
++
++**What must be preserved**:
++- The verify step as a gate before lane completion
++- The `goal_gate=true` semantics (the verify step must pass for the run to be considered successful)
++
++**What must be reduced**:
++- The `test -f` only check — it should be augmented with content validation
++- `max_retries=0` on verify — if verify fails, the lane should not report success
++
++### Risk 4: Raspberry Detach Path Not Explicitly Modeled
++**Exact location**: All bootstrap workflow graphs (e.g., `fabro/workflows/bootstrap/game-traits.fabro`)
++
++All bootstrap workflows end at `verify -> exit`. There is no explicit step that commits artifacts to the repo and updates Raspberry milestone state. This means the "detach" behavior is implicit and likely handled by Raspberry scanning for artifacts after the run — which is exactly the behavior that causes false-submits.
++
++**What must be preserved**:
++- The artifact-based milestone model (artifacts are the contract)
++- The separation between Fabro run state and Raspberry control plane state
++
++**What must be reduced**:
++- Implicit artifact commit after run completion — should be explicit in the workflow
++
++### Risk 5: No Content-Level Validation in Bootstrap Workflows
++**Exact location**: `fabro/prompts/bootstrap/plan.md`, `fabro/prompts/bootstrap/implement.md`, `fabro/prompts/bootstrap/review.md`
++
++The bootstrap prompts direct the agent to write `spec.md` and `review.md` artifacts but do not include explicit checks that the described code actually exists and passes its tests. An agent can produce a well-written spec for a non-existent crate.
++
++**What must be preserved**:
++- The prompt-based bootstrap approach (it works for `games:traits` which has real code)
++- The separation between plan/implement/review prompts
++
++**What must be reduced**:
++- Prompt guidance that does not include code-presence checks as part of the bootstrap review
++
++---
++
++## Proof Commands
++
++| Context | Command | Expected |
++|---------|---------|----------|
++| Fabro inspect stability | `fabro inspect --last-run --format json` | Valid JSON with `run_id`, `status`, `artifacts`, `timestamp` |
++| Raspberry status truth | `raspberry status --manifest fabro/programs/myosu.yaml --format json` | JSON matching actual Fabro run state from `fabro inspect` |
++| games:multi-game honest state | `raspberry status --manifest fabro/programs/myosu-platform.yaml --lane games:multi-game` | `failed` or `blocked` (not `succeeded` with missing code) |
++| Fabro detach check | `./fabro/checks/fabro-detach.sh` | Exit 0; confirms outputs/ artifacts match last run |
++| Execute truth binding | `raspberry execute --manifest fabro/programs/myosu.yaml --lane games:traits --format json` | `success` field matches `fabro inspect --run-id <id> --status` |
++
++---
++
++## File Reference Index
++
++| File | Role |
++|------|------|
++| `fabro/workflows/bootstrap/game-traits.fabro` | Reference bootstrap workflow; verify only checks file existence (same pattern as multi-game) |
++| `fabro/workflows/bootstrap/multi-game.fabro` | Defective bootstrap workflow; verify passes despite missing `myosu-games-liars-dice` crate |
++| `fabro/run-configs/platform/multi-game.toml` | Run config for `games:multi-game`; references the defective workflow |
++| `fabro/programs/myosu-platform.yaml` | Platform program manifest; `multi_game_reviewed` milestone incorrectly satisfied |
++| `fabro/programs/myosu-bootstrap.yaml` | Bootstrap program manifest; `games:traits` milestone correctly satisfied |
++| `fabro/programs/myosu.yaml` | Top-level program-of-programs; used for `execute/status/watch` truth tests |
++| `outputs/games/multi-game/spec.md` | Exists but describes a crate that does not exist |
++| `outputs/games/multi-game/review.md` | Exists but marks the lane complete when the crate is missing |
++| `outputs/games/traits/spec.md` | Reference successful spec; `games:traits` implementation lane confirmed accurate |
++| `outputs/games/traits/review.md` | Reference successful review; keep/reopen/reset judgment is file-specific |
++| `fabro/checks/games-traits.sh` | Working proof script; model for `fabro-detach.sh` and `fabro-inspect.sh` |
++| `outputs/README.md` | Correct outputs convention; `spec.md` + `review.md` for bootstrap lanes |
++
++---
++
++## Relationship to Other Lanes
++
++| Lane | Relationship |
++|------|-------------|
++| `games:traits` | Trusted. Its successful implementation proves the bootstrap workflow shape is correct. Serves as the reference pattern for what trustworthy lane completion looks like. |
++| `games:multi-game` | Directly broken. Must be reset. Currently reports `multi_game_reviewed` milestone satisfied when `myosu-games-liars-dice` crate is missing. |
++| `chain:runtime`, `chain:pallet` | Restart lanes. Cannot trust their milestone evaluations until `execute/status/watch` is fixed. Their proof scripts (`chain-runtime-reset.sh`, `chain-pallet-reset.sh`) are present but their status reporting is untrustworthy. |
++| `services:miner`, `services:validator-oracle` | Future lanes. Will be dispatched via Raspberry. Cannot be trusted until foundations are repaired. |
++
++---
++
++## Is the Lane Ready for an Implementation-Family Workflow Next?
++
++**No — the foundations lane itself must be bootstrapped first.**
++
++The `foundations` lane is a meta-lane: it fixes the infrastructure that other lanes use. Until `execute/status/watch` truth is established, no implementation-family workflow can be trusted to produce honest results.
++
++The first honest implementation step is Slice 1: confirm that `fabro inspect` produces stable JSON output. If it does not, this must be fixed in Fabro itself before Raspberry can be adapted.
++
++If `fabro inspect` is stable, Slice 2 (Raspberry status adapter) can proceed in parallel with the `games:multi-game` truthful reset (Slice 3).
