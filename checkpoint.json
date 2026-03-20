@@ -1,42 +1,48 @@
 {
-  "timestamp": "2026-03-20T22:04:51.810720353Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-20T22:04:54.208446651Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
     "polish": 1,
     "start": 1,
+    "verify": 1,
     "review": 1,
     "specify": 1
   },
   "context_values": {
     "internal.fidelity": "compact",
     "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
-    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 3.5m tokens in / 22.3k out\n  - Files: fabro/checks/chain-pallet-reset.sh, fabro/checks/chain-runtime-reset.sh, outputs/foundations/foundation-plan.md, outputs/foundations/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 3.5m tokens in / 22.3k out\n  - Files: fabro/checks/chain-pallet-reset.sh, fabro/checks/chain-runtime-reset.sh, outputs/foundations/foundation-plan.md, outputs/foundations/review.md\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
     "thread.start.current_node": "specify",
     "internal.retry_count.start": 1,
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6KEK6CW14A44KHR2C1GD5M/worktree",
-    "current_node": "polish",
+    "current_node": "verify",
     "last_response": "Both required artifacts are complete. Here is what was produced and executed:\n\n---\n\n## Foundations Lane — Summary\n\n**Artifacts produced:**\n- `outputs/foundations/foundation-plan.md` (155 lines)\n- `o",
     "response.specify": "Both required artifacts are complete. Here is what was produced and executed:\n\n---\n\n## Foundations Lane — Summary\n\n**Artifacts produced:**\n- `outputs/foundations/foundation-plan.md` (155 lines)\n- `outputs/foundations/review.md` (198 lines)\n\n**What was done:**\n\n### Defect 1: `games:multi-game` false-submit → Truthful Failure\nRan `cargo build -p myosu-games-liars-dice` — confirmed:\n```\nerror: package ID specification `myosu-games-liars-dice` did not match any packages\n```\nThe lane has a correct spec but zero implementation code. The `review.md` was updated to document this honest state and reflect the post-repair execution truth table.\n\n### Defect 2: `execute/status/watch` untrustworthy → Check scripts repaired\nBoth chain restart check scripts were no-ops (only checked file existence, not buildability):\n\n| Script | Before | After |\n|--------|--------|-------|\n| `chain-runtime-reset.sh` | `test -f` (no-op) | `cargo check -p myosu-runtime` → exits non-zero |\n| `chain-pallet-reset.sh` | `test -f` (no-op) | `timeout 300 cargo check -p pallet-game-solver` → exits non-zero |\n\nRuntime script verified: confirmed honest failure with \"package not found.\" Pallet script updated with correct proof logic (5min timeout, proper exit handling) — full execution blocked by cargo lock contention from concurrent worktree builds, but the script logic is correct.\n\n**The `execute/status/watch` surfaces are now trustworthy** because their underlying check scripts tell the truth instead of returning false health.\n\n`★ Insight ─────────────────────────────────────`\nThe foundations lane's job is epistemic hygiene, not implementation. Two defects were fixed: (1) a review that was accurate about the spec but silent about whether the proof could run, and (2) check scripts that returned \"healthy\" without testing anything. The fix in both cases was the same: replace \"proves the script ran\" with \"proves the thing works.\"\n`─────────────────────────────────────────────────`",
     "internal.retry_count.polish": 1,
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "command.stderr": "",
+    "failure_signature": "",
+    "command.output": "",
     "internal.retry_count.review": 1,
+    "internal.retry_count.verify": 1,
+    "thread.polish.current_node": "verify",
     "internal.retry_count.specify": 1,
     "internal.run_id": "01KM6KEK6CW14A44KHR2C1GD5M",
     "graph.rankdir": "LR",
-    "internal.thread_id": "review",
+    "internal.thread_id": "polish",
     "internal.node_visit_count": 1,
     "thread.specify.current_node": "review",
     "thread.review.current_node": "polish",
     "last_stage": "specify",
-    "failure_class": "deterministic",
+    "failure_class": "",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
-    "outcome": "fail"
+    "outcome": "success"
   },
   "logs": [],
   "node_outcomes": {
@@ -85,12 +91,21 @@
       },
       "duration_ms": 13228
     },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.stderr": "",
+        "command.output": ""
+      },
+      "notes": "Script completed: test -f ./outputs/foundations/foundation-plan.md && test -f ./outputs/foundations/review.md",
+      "duration_ms": 3
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "review|deterministic|api_deterministic|openai|not_found": 1,
     "polish|deterministic|api_deterministic|openai|not_found": 1
@@ -99,6 +114,7 @@
     "specify": 1,
     "polish": 1,
     "start": 1,
-    "review": 1
+    "review": 1,
+    "verify": 1
   }
 }
