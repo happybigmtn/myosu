@@ -15,9 +15,11 @@
 //! ```
 
 pub use myosu_games::{
-    CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Profile,
-    Probability, StrategyQuery, StrategyResponse, Utility,
+    CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Probability,
+    Profile, StrategyQuery, StrategyResponse, Utility,
 };
+pub use rbp_mccfr::{Branch, CfrPublic, CfrSecret, Node, Tree};
+pub use rbp_transport::Support;
 
 // Test harness (AC-SDK-03)
 pub mod testing;
@@ -27,3 +29,9 @@ pub mod scaffold;
 
 // Registration CLI (AC-SDK-04)
 pub mod register;
+
+#[cfg(feature = "tui")]
+pub use myosu_tui::GameRenderer;
+
+#[cfg(feature = "tui")]
+pub use ratatui::{buffer::Buffer, layout::Rect};

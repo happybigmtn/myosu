@@ -1,213 +1,347 @@
 //! Project templates for scaffold-generated game crates.
 
 /// Generate the Cargo.toml content for a new game crate.
-pub fn cargo_toml(crate_name: &str) -> String {
+pub fn cargo_toml(crate_name: &str, sdk_dependency_path: &str) -> String {
     format!(
         r#"[package]
 name = "{crate_name}"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 description = "Game engine implementation for myosu"
 
-[dependencies]
-myosu-sdk = {{ path = "../../crates/myosu-sdk", features = ["tui"] }}
+[features]
+default = []
+tui = ["myosu-sdk/tui"]
 
-[dev-dependencies]
-tokio-test = "0.4"
+[dependencies]
+myosu-sdk = {{ path = "{sdk_dependency_path}", default-features = false }}
 "#,
-        crate_name = crate_name
     )
 }
 
 /// Generate the src/lib.rs content.
-pub fn lib_rs(crate_name: &str) -> String {
+pub fn lib_rs(game_name: &str) -> String {
     format!(
-        r#"//! {crate_name}: Game engine implementation for myosu
+        r#"//! `myosu-games-{game_name}`: game engine implementation scaffold for myosu.
 //!
-//! This crate implements the `CfrGame` trait for the game.
+//! Replace the stub types in `game.rs`, `encoder.rs`, and `renderer.rs`
+//! with your concrete game implementation.
 
 pub mod game;
 pub mod encoder;
+
+#[cfg(feature = "tui")]
 pub mod renderer;
 
-pub use game::Game;
+#[cfg(test)]
+mod tests;
+
+pub use encoder::GameEncoder;
+pub use game::{{Game, GameAction, GameInfo, GamePublicInfo, GameSecretInfo, GameTurn}};
+
+#[cfg(feature = "tui")]
+pub use renderer::GameRendererImpl;
 "#,
-        crate_name = crate_name
     )
 }
 
-/// Generate the src/game.rs content with todo!() stubs.
+/// Generate the src/game.rs content with compileable stub types.
 pub fn game_rs(game_name: &str) -> String {
     format!(
-        r#"//! Game state and CFR implementation.
+        r#"//! Game state and CFR implementation scaffold for `{game_name}`.
 //!
-//! Fill in the `CfrGame` implementation for your game.
-//! The `{{todo!("implement {{game_name}} game logic")}}` stubs
-//! guide you through the required methods.
+//! The template intentionally uses fixed-size arrays plus a length field so
+//! the game state stays `Copy`. For games with variable-length histories,
+//! keep this pattern and choose a capacity that fits your rules.
 
-use myosu_sdk::{{CfrGame, CfrEdge, CfrTurn, CfrInfo, Profile, Encoder, Probability, Utility}};
+use myosu_sdk::{{
+    CfrEdge, CfrGame, CfrInfo, CfrPublic, CfrSecret, CfrTurn, Support, Utility,
+}};
 
-/// Game state for {game_name}
+const MAX_HISTORY: usize = 16;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum GameAction {{
+    Placeholder,
+}}
+
+impl Support for GameAction {{}}
+impl CfrEdge for GameAction {{}}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum GameTurn {{
+    Chance,
+    PlayerOne,
+    PlayerTwo,
+    Terminal,
+}}
+
+impl From<usize> for GameTurn {{
+    fn from(player: usize) -> Self {{
+        match player {{
+            0 => Self::PlayerOne,
+            1 => Self::PlayerTwo,
+            _ => panic!("scaffold only models two players by default"),
+        }}
+    }}
+}}
+
+impl Support for GameTurn {{}}
+
+impl CfrTurn for GameTurn {{
+    fn chance() -> Self {{
+        Self::Chance
+    }}
+
+    fn terminal() -> Self {{
+        Self::Terminal
+    }}
+}}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct GamePublicInfo {{
+    pub turn: GameTurn,
+    pub history: [Option<GameAction>; MAX_HISTORY],
+    pub history_len: u8,
+}}
+
+impl CfrPublic for GamePublicInfo {{
+    type E = GameAction;
+    type T = GameTurn;
+
+    fn choices(&self) -> Vec<Self::E> {{
+        todo!("define the legal actions visible from this public state")
+    }}
+
+    fn history(&self) -> Vec<Self::E> {{
+        self.history
+            .into_iter()
+            .take(self.history_len as usize)
+            .flatten()
+            .collect()
+    }}
+}}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct GameSecretInfo {{
+    pub bucket: u8,
+}}
+
+impl Support for GameSecretInfo {{}}
+impl CfrSecret for GameSecretInfo {{}}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct GameInfo {{
+    pub public: GamePublicInfo,
+    pub secret: GameSecretInfo,
+}}
+
+impl CfrInfo for GameInfo {{
+    type E = GameAction;
+    type T = GameTurn;
+    type X = GamePublicInfo;
+    type Y = GameSecretInfo;
+
+    fn public(&self) -> Self::X {{
+        self.public
+    }}
+
+    fn secret(&self) -> Self::Y {{
+        self.secret
+    }}
+}}
+
+/// Game state for `{game_name}`.
 ///
-/// Your game state must implement `Copy` — use fixed-size arrays
-/// for variable-length data (bid history, card sequences).
-#[derive(Debug, Clone)]
+/// Keep the state compact and `Copy`. If you need variable-length data
+/// such as a bid history, prefer fixed-size arrays with sentinel slots.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Game {{
-    // TODO: Add your game state fields here.
-    // IMPORTANT: Game must be Copy for CFR to work.
-    // Use fixed-size arrays with sentinel values for variable-length data.
+    pub turn: GameTurn,
+    pub history: [Option<GameAction>; MAX_HISTORY],
+    pub history_len: u8,
 }}
 
 impl CfrGame for Game {{
-    type Action = (); // TODO: Define your action type
-    type Info = (); // TODO: Define your information set type
+    type E = GameAction;
+    type T = GameTurn;
 
-    fn cfr_turn(&self) -> CfrTurn {{
-        todo!("implement CFR turn determination")
+    fn root() -> Self {{
+        Self {{
+            turn: GameTurn::Chance,
+            history: [None; MAX_HISTORY],
+            history_len: 0,
+        }}
     }}
 
-    fn legal_actions(&self) -> Vec<Self::Action> {{
-        todo!("return legal actions from this state")
+    fn turn(&self) -> Self::T {{
+        self.turn
     }}
 
-    fn apply_action(&mut self, action: Self::Action) {{
-        todo!("apply the given action to advance game state")
+    fn apply(&self, edge: Self::E) -> Self {{
+        let _ = edge;
+        todo!("advance the game state and append the chosen action")
     }}
 
-    fn current_player(&self) -> u8 {{
-        todo!("return the acting player index (0, 1, ...)")
-    }}
-
-    fn terminal_utility(&self, player: u8) -> Utility {{
-        todo!("return utility for `player` at terminal state")
-    }}
-
-    fn info_sets(&self, player: u8) -> Vec<CfrInfo<Self>> {{
-        todo!("return information sets for the given player")
-    }}
-
-    fn encode_info(&self, info: &CfrInfo<Self>, encoder: &mut impl Encoder<Self>) {{
-        todo!("encode the information set using the encoder")
-    }}
-
-    fn is_chance_node(&self) -> bool {{
-        todo!("return true if this is a chance node")
-    }}
-
-    fn chance_outcomes(&self) -> Vec<(Self::Action, Probability)> {{
-        todo!("return (action, probability) pairs for chance node")
-    }}
-
-    fn apply_chance(&mut self, action: Self::Action) {{
-        todo!("apply the chance action to advance game state")
+    fn payoff(&self, turn: Self::T) -> Utility {{
+        let _ = turn;
+        todo!("return terminal utility for the requested player")
     }}
 }}
-"#
+"#,
     )
 }
 
 /// Generate the src/encoder.rs content.
-pub fn encoder_rs() -> String {
-    r#"//! Encoder implementation for game information sets.
+pub fn encoder_rs(game_name: &str) -> String {
+    format!(
+        r#"//! Encoder implementation scaffold for `{game_name}`.
 //!
-//! The encoder serializes game information sets for storage
-//! and retrieval of CFR profiles.
+//! The encoder maps game states onto information sets. For simple games this
+//! can be direct; for larger games it usually encodes abstractions.
 
-use myosu_sdk::Encoder;
+use myosu_sdk::{{Branch, Encoder, Tree}};
 
-/// Encoder for game information sets.
-#[derive(Debug)]
+use crate::{{Game, GameAction, GameInfo, GameTurn}};
+
+#[derive(Debug, Clone, Copy, Default)]
 pub struct GameEncoder;
 
-impl Encoder<super::Game> for GameEncoder {
-    fn encode_action(&mut self, action: &<super::Game as myosu_sdk::CfrGame>::Action) -> Vec<u8> {
-        todo!("encode the given action")
-    }
+impl Encoder for GameEncoder {{
+    type T = GameTurn;
+    type E = GameAction;
+    type G = Game;
+    type I = GameInfo;
 
-    fn encode_info(&mut self, info: &<super::Game as myosu_sdk::CfrGame>::Info) -> Vec<u8> {
-        todo!("encode the information set")
-    }
-}
-"#
-    .to_string()
+    fn seed(&self, game: &Self::G) -> Self::I {{
+        let _ = game;
+        todo!("build the root information set")
+    }}
+
+    fn info(
+        &self,
+        tree: &Tree<Self::T, Self::E, Self::G, Self::I>,
+        leaf: Branch<Self::E, Self::G>,
+    ) -> Self::I {{
+        let _ = (tree, leaf);
+        todo!("derive an information set for a child branch")
+    }}
+
+    fn resume(&self, past: &[Self::E], game: &Self::G) -> Self::I {{
+        let _ = (past, game);
+        todo!("rebuild an information set from a path and game state")
+    }}
+}}
+"#,
+    )
 }
 
 /// Generate the src/renderer.rs content.
-pub fn renderer_rs() -> String {
-    r#"//! TUI renderer for the game.
+pub fn renderer_rs(game_name: &str) -> String {
+    format!(
+        r#"//! TUI renderer scaffold for `{game_name}`.
 //!
-//! This module provides `GameRenderer` implementation for displaying
-//! the game state in the terminal. Only compiled when the `tui` feature
-//! is enabled.
+//! This module is only compiled when the generated crate enables its `tui`
+//! feature, which forwards to `myosu-sdk/tui`.
 
-#[cfg(feature = "tui")]
-use myosu_sdk::myosu_tui::GameRenderer;
+use myosu_sdk::{{Buffer, GameRenderer, Rect}};
 
-#[cfg(feature = "tui")]
-/// Renderer for displaying game state in the terminal.
+#[derive(Debug, Clone, Copy, Default)]
 pub struct GameRendererImpl;
 
-#[cfg(feature = "tui")]
-impl GameRenderer for GameRendererImpl {
-    type Game = super::Game;
+impl GameRenderer for GameRendererImpl {{
+    fn render_state(&self, area: Rect, buf: &mut Buffer) {{
+        let _ = (area, buf);
+        todo!("draw the game-specific state panel")
+    }}
 
-    fn render(&self, game: &Self::Game) -> String {
-        todo!("render game state to string")
-    }
-}
-"#
-    .to_string()
+    fn desired_height(&self, width: u16) -> u16 {{
+        let _ = width;
+        8
+    }}
+
+    fn declaration(&self) -> &str {{
+        "IMPLEMENT YOUR GAME DECLARATION"
+    }}
+
+    fn completions(&self) -> Vec<String> {{
+        vec![]
+    }}
+
+    fn parse_input(&self, input: &str) -> Option<String> {{
+        let _ = input;
+        None
+    }}
+
+    fn clarify(&self, input: &str) -> Option<String> {{
+        let _ = input;
+        None
+    }}
+
+    fn pipe_output(&self) -> String {{
+        todo!("render a pipe-friendly view of the game state")
+    }}
+
+    fn game_label(&self) -> &str {{
+        "{game_name}"
+    }}
+
+    fn context_label(&self) -> &str {{
+        "SETUP"
+    }}
+}}
+"#,
+    )
 }
 
-/// Generate the src/tests.rs content with pre-written compliance tests.
-pub fn tests_rs() -> String {
-    r#"//! Trait compliance tests for the game.
+/// Generate the src/tests.rs content with a pre-written failing compliance test.
+pub fn tests_rs(game_name: &str) -> String {
+    format!(
+        r#"//! Compliance tests for the `{game_name}` scaffold.
 //!
-//! These tests validate that the game implementation satisfies
-//! CFR invariants. They fail until you implement the game.
+//! This test is expected to fail until you replace the `todo!()` with a real
+//! call to the SDK harness after implementing your game.
 
-use myosu_sdk::testing::assert_game_valid;
 use crate::Game;
 
 #[test]
-fn game_passes_all_compliance_checks() {
-    // This test will pass once the game is fully implemented.
-    // For now it serves as a reminder of what needs to be done.
-    todo!("implement game and uncomment the assertion");
-    // assert_game_valid::<Game>();
-}
-"#
-    .to_string()
+fn game_passes_all_compliance_checks() {{
+    let _game_type = std::any::type_name::<Game>();
+    // Replace this todo with:
+    // myosu_sdk::testing::assert_game_valid::<Game>();
+    todo!("implement `{game_name}` and replace this todo with a real compliance assertion");
+}}
+"#,
+    )
 }
 
 /// Generate the README.md content.
 pub fn readme_md(game_name: &str) -> String {
     format!(
-        r#"# {game_name} — myosu Game Engine
+        r#"# myosu-games-{game_name}
 
-Game engine implementation for [myosu](https://github.com/happybigmtn/myosu).
+Scaffolded game engine crate for the myosu platform.
 
-## Status
+## What to Fill In
 
-🚧 **Implementing** — This crate is a scaffold generated by `myosu init --game {game_name}`.
+1. Implement `Game`, `GameAction`, `GameTurn`, and the information-set types in `src/game.rs`.
+2. Implement `GameEncoder` in `src/encoder.rs`.
+3. Replace the scaffolded compliance-test `todo!()` in `src/tests.rs` with `assert_game_valid::<Game>();`.
+4. If you want TUI support, enable `--features tui` and implement `GameRendererImpl` in `src/renderer.rs`.
 
-## Implementation Guide
-
-1. **Implement `Game`** in `src/game.rs` — the game state and CFR logic
-2. **Implement `Encoder`** in `src/encoder.rs` — information set serialization
-3. **Implement `GameRenderer`** in `src/renderer.rs` — TUI rendering (optional, requires `tui` feature)
-4. **Run tests** with `cargo test`
-
-## Compliance
-
-Once implemented, run the compliance harness:
+## Commands
 
 ```bash
-cargo test -p myosu-sdk testing::assert_game_valid
+cargo check
+cargo test
+cargo check --features tui
 ```
 
-This validates that your game satisfies all CFR invariants.
-"#
+## Copy Constraint Reminder
+
+`CfrGame` is `Copy`, so store variable-length data in fixed-size arrays plus
+an explicit length field instead of heap-backed containers like `Vec`.
+"#,
     )
 }

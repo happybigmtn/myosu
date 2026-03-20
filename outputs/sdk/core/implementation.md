@@ -4,35 +4,43 @@
 `core-implement`
 
 ## Slice
-Slice 2 — Trait Compliance Test Harness (`AC-SDK-03`)
+Slice 3 — Scaffold Tool (`AC-SDK-02`)
 
 ## Goal
-Replace the initial `testing` helpers with real compliance checks, keep the work contained to the `sdk:core` test-harness surfaces, and make the reviewed Slice 2 proof commands exercise real tests.
+Replace the initial scaffold surface with a real generator that emits a compileable `myosu-games-<name>` crate aligned to the reviewed robopoker trait surface and the `CfrGame: Copy` constraint.
 
 ## Touched Surfaces
+- `Cargo.lock`
 - `crates/myosu-sdk/Cargo.toml`
-- `crates/myosu-sdk/src/testing/mod.rs`
-- `crates/myosu-sdk/src/testing/game_valid.rs`
-- `crates/myosu-sdk/src/testing/convergence.rs`
-- `crates/myosu-sdk/src/testing/tests.rs`
+- `crates/myosu-sdk/src/lib.rs`
+- `crates/myosu-sdk/src/scaffold/mod.rs`
+- `crates/myosu-sdk/src/scaffold/templates.rs`
+- `crates/myosu-sdk/src/scaffold/tests.rs`
 
 ## What Changed
-- Added a direct `rbp-mccfr` dependency to `myosu-sdk` so the public convergence helper can use the upstream `Solver` trait without reaching through tests-only dependencies.
-- Reworked `testing::assert_game_valid` into a real tree walk for games whose `turn()` also serves as the reachable info-set view. The helper now checks:
-  - root is not terminal
-  - non-terminal states expose at least one action
-  - terminal states expose no actions
-  - `apply()` changes state
-  - the explored tree is acyclic within a path
-  - terminal utilities are finite
-  - two-player terminal payoffs sum to zero
-  - repeated info sets expose the same action set
-- Replaced the earlier no-op convergence helper with a real `assert_solver_converges` helper that runs `Solver::step()` for the requested number of steps and fails with the measured exploitability when the target is missed.
-- Flattened the Slice 2 unit tests so the reviewed command filters now hit real tests at `testing::tests::...` instead of silently matching zero tests.
-- Added two concrete proof fixtures:
-  - a deliberately broken RPS wrapper whose terminal payoffs are non-zero-sum
-  - an undertrained RPS solver that misses the exploitability target
+- Added the minimal SDK-facing dependencies and re-exports the scaffolded crate needs to depend on `myosu-sdk` alone:
+  - `rbp-transport::Support`
+  - `rbp-mccfr::{Branch, Tree, Node, CfrPublic, CfrSecret}`
+  - `GameRenderer`, `Buffer`, and `Rect` behind the existing `tui` feature
+- Reworked `ScaffoldGenerator` into a real Slice 3 API:
+  - validates lowercase game names
+  - preserves the expected package name format `myosu-games-<name>`
+  - adds `crate_name()` and `generate()` helpers
+  - computes the SDK dependency path relative to the generated crate instead of hardcoding `../../...`
+- Replaced the old template bodies with compileable stubs that match the actual robopoker traits in this repo:
+  - `GameAction`, `GameTurn`, `GamePublicInfo`, `GameSecretInfo`, and `GameInfo`
+  - `Game` uses fixed-size history storage so the scaffold demonstrates the `Copy` constraint directly
+  - `GameEncoder` implements the upstream `Encoder` trait signature
+  - `renderer.rs` is gated by a generated `tui = ["myosu-sdk/tui"]` feature and compiles against the real `GameRenderer` API
+- Tightened the scaffolded compliance test so it stays compileable today while still failing at the intended boundary:
+  - the file contains the intended `assert_game_valid::<Game>()` follow-up as an inline replacement comment
+  - the generated test fails via `todo!()` with an explicit compliance message until the developer wires their real game in
+- Upgraded Slice 3 proof coverage:
+  - the scaffold tests now shell out to nested Cargo checks on the generated crate
+  - default and `--features tui` compilation are both verified
+  - generated tests are verified to fail for the expected scaffold `todo!()` reason
+  - overwrite refusal and default-directory generation are both covered
 
 ## Notes
-- This pass stayed inside the Slice 2 harness boundary. Scaffold, registration, and docs surfaces were left untouched.
-- The current helper shape is anchored to the trusted robopoker trait surface available in this repo today. In practice that means the generic game-validity helper works for games whose reachable `turn()` value is also a usable `CfrInfo` view, which covers the reviewed RPS proof target for this slice.
+- Slice 2 test-harness behavior was preserved and re-verified after the scaffold work.
+- Registration and documentation surfaces were left untouched in this pass.
