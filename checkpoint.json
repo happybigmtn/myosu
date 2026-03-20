@@ -1,41 +1,63 @@
 {
-  "timestamp": "2026-03-20T23:25:25.968550977Z",
-  "current_node": "review",
+  "timestamp": "2026-03-20T23:25:41.369528359Z",
+  "current_node": "polish",
   "completed_nodes": [
     "start",
     "specify",
-    "review"
+    "review",
+    "polish"
   ],
   "node_retries": {
+    "polish": 1,
     "specify": 1,
     "review": 1,
     "start": 1
   },
   "context_values": {
-    "failure_signature": "review|deterministic|api_deterministic|openai|not_found",
+    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
     "internal.fidelity": "compact",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
     "internal.node_visit_count": 1,
-    "current_node": "review",
+    "current_node": "polish",
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6RWYSF7PR0J0F6B5Z4HBTD/worktree",
     "last_response": "Both artifacts produced. Here's the summary:\n\n---\n\n## `agent-integration` Lane — Bootstrap Complete\n\n**Artifacts produced:**\n- `outputs/agent-integration/agent-adapter.md` — 17KB spec defining the",
     "last_stage": "specify",
     "thread.specify.current_node": "review",
     "internal.retry_count.review": 1,
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 522.1k tokens in / 10.7k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: MiniMax-M2.7-highspeed, 522.1k tokens in / 10.7k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
     "response.specify": "Both artifacts produced. Here's the summary:\n\n---\n\n## `agent-integration` Lane — Bootstrap Complete\n\n**Artifacts produced:**\n- `outputs/agent-integration/agent-adapter.md` — 17KB spec defining the integration layer\n- `outputs/agent-integration/review.md` — 11KB honest review with judgment and blockers\n\n---\n\n### Decision: **Implementation-family workflow next**\n\n`agent:experience` (the last remaining ready product lane) has already been reviewed and judged KEEP. Its upstream dependencies (`tui:shell`, `games:traits`) are trusted. The remaining blockers are owned by other lanes and do not prevent implementation work from starting.\n\n### What `agent-integration` owns\n\nThe gap between `agent:experience` (presentation surfaces — pipe output, narration, journal, reflection, spectator relay) and the actual miner/validator infrastructure:\n\n| Component | Role |\n|-----------|------|\n| `AgentAdapter` trait | Unified interface over 4 transports: pipe subprocess, HTTP, WebSocket, in-process Rust |\n| `ChainDiscovery` trait | Subnet → miner axon URL resolution (devnet stub in Phase 1, real Substrate RPC in Phase 3) |\n| `SessionManager` | Multi-hand session with context save/restore and reconnection logic |\n| `myosu-agent` CLI | Binary wiring all transports with `--pipe`, `--http`, `--ws`, `--subnet`, `--context` flags |\n\n### Key design choices in the adapter\n\n- **`Send + Sync` on the trait** — enforces that all transports are thread-safe (required for multi-threaded session handling)\n- **Adapter errors are typed, never stringly-typed** — `AdapterError` enum covers timeout, invalid response, unreachable, encoding, disconnected, chain error\n- **Miner responses are untrusted** — `StrategyResponse` is serde-validated before constructing `ActionDistribution`\n- **Recovery is local-only** — session context is saved to a `0o600` JSON file; miner is not re-notified of missed hands (correctness over completeness)\n- **10 sequential slices with honest gates** — Phase 1 (trait + 2 adapters) has no external dependencies; Phase 3 defers to `chain:runtime`; Phase 4 defers to `agent:experience` Slice 8 (SpectatorRelay)\n\n### Remaining blockers\n\n| Blocker | Severity | Owner |\n|---------|----------|-------|\n| `myosu-play` binary missing | HIGH | `play:tui` lane |\n| `SpectatorRelay` (AC-SP-01) missing | MEDIUM | `agent:experience` Slice 8 |\n| `robopoker` git migration | LOW | `games:traits` lane (indirect) |\n\n### Phase ordering\n\n```\nPhase 1 (local, no deps): Slice 1-3  → trait + PipeAdapter + HttpAdapter\nPhase 2 (local):           Slice 4-6  → WsAdapter + ProcessAdapter + ChainDiscovery stub\nPhase 3 (chain):           Slice 7-9  → real chain discovery + reconnection\nPhase 4 (spectator):       Slice 10   → SpectatorRelay integration (blocked on agent:experience Slice 8)\n```",
     "failure_class": "deterministic",
+    "internal.retry_count.polish": 1,
     "internal.run_id": "01KM6RWYSF7PR0J0F6B5Z4HBTD",
     "outcome": "fail",
     "graph.rankdir": "LR",
     "thread.start.current_node": "specify",
     "internal.retry_count.specify": 1,
-    "internal.thread_id": "specify",
+    "internal.thread_id": "review",
+    "thread.review.current_node": "polish",
     "internal.retry_count.start": 1
   },
   "logs": [],
   "node_outcomes": {
+    "review": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_0aba65f5871baa210169bdd759ed5481939f6fb21a5af8b40f' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 13059
+    },
+    "polish": {
+      "status": "fail",
+      "failure": {
+        "message": "LLM error: Not found on openai: Item with id 'rs_0531c0a90b4262700169bdd76abbf08190bdd77034cdee9b9d' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
+        "failure_class": "deterministic",
+        "failure_signature": "api_deterministic|openai|not_found"
+      },
+      "duration_ms": 13990
+    },
     "start": {
       "status": "success",
       "duration_ms": 0
@@ -62,23 +84,16 @@
         "outputs/agent-integration/review.md"
       ],
       "duration_ms": 175556
-    },
-    "review": {
-      "status": "fail",
-      "failure": {
-        "message": "LLM error: Not found on openai: Item with id 'rs_0aba65f5871baa210169bdd759ed5481939f6fb21a5af8b40f' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input.",
-        "failure_class": "deterministic",
-        "failure_signature": "api_deterministic|openai|not_found"
-      },
-      "duration_ms": 13059
     }
   },
-  "next_node_id": "polish",
+  "next_node_id": "verify",
   "loop_failure_signatures": {
+    "polish|deterministic|api_deterministic|openai|not_found": 1,
     "review|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
     "specify": 1,
+    "polish": 1,
     "review": 1,
     "start": 1
   }
