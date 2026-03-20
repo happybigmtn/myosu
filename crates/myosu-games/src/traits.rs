@@ -10,6 +10,47 @@ pub use rbp_mccfr::{CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, Profile};
 
 use serde::{Deserialize, Serialize};
 
+/// Scale classification for exploitability metrics.
+///
+/// Determines how raw exploitability values should be interpreted and displayed.
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+pub enum ExploitScale {
+    /// Raw exploitability value. Lower is better. 0 = Nash.
+    ///
+    /// Used for small games where the absolute difference matters (Liar's Dice,
+    /// rock-paper-scissors, etc.).
+    Absolute,
+    /// Milli-units per hand/round. Lower is better. 0 = Nash.
+    ///
+    /// Used for games with per-hand utility like poker (mbb/h = milli-big-blinds
+    /// per hand) or backgammon (mcpw = milli-checkers per win).
+    MilliPerHand,
+    /// Normalized to [0, 1] where 0 = Nash, 1 = random.
+    ///
+    /// Used when the absolute scale of exploitability varies too much across
+    /// game configurations to make a single baseline meaningful.
+    Normalized,
+}
+
+/// Descriptor for game-specific exploitability metrics.
+///
+/// Each `GameType` variant registers a metric descriptor in the game registry.
+/// The validator oracle uses this to normalize exploitability values from
+/// different games into comparable u16 weights for on-chain consensus.
+#[derive(Clone, Debug, Copy, PartialEq)]
+pub struct ExploitMetric {
+    /// Display unit string (e.g., "mbb/h", "mcpw", "exploit").
+    pub unit: &'static str,
+    /// How to interpret the raw exploitability number.
+    pub scale: ExploitScale,
+    /// Number of decimal places to show in lobby display.
+    pub display_precision: u8,
+    /// Exploitability of a uniform random strategy. Used as normalization denominator.
+    pub random_baseline: f64,
+    /// Below this value, a solver is considered "good". Used for lobby color coding.
+    pub good_threshold: f64,
+}
+
 /// Top-level configuration for a game instance.
 ///
 /// This struct is passed when initializing game engines and solvers.
@@ -129,6 +170,20 @@ impl GameType {
             Self::LiarsDice => 2,
             // Default to 2 for custom games
             Self::Custom(_) => 2,
+        }
+    }
+
+    /// Return the exploitability metric descriptor for this game type.
+    ///
+    /// Returns `None` for custom game types that haven't registered a metric.
+    pub fn exploit_metric(self) -> Option<&'static ExploitMetric> {
+        use crate::registry::all_metrics;
+        let metrics = all_metrics();
+        match self {
+            Self::NlheHeadsUp => Some(&metrics.nlhe_heads_up),
+            Self::NlheSixMax => Some(&metrics.nlhe_six_max),
+            Self::LiarsDice => Some(&metrics.liars_dice),
+            Self::Custom(_) => None,
         }
     }
 }

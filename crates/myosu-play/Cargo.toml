@@ -1,0 +1,17 @@
+[package]
+name = "myosu-play"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+dirs = "5"
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
