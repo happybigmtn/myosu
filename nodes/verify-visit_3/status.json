@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 633,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T02:27:48.925333960+00:00",
+  "updated_at": "2026-03-21T02:27:48.925340679+00:00",
+  "failure_reason": "Script failed with exit code: 101\n\n## stderr\nerror: package ID specification `myosu-games-liars-dice` did not match any packages\n"
+}
