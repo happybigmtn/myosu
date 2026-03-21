@@ -1,0 +1,36 @@
+[package]
+name = "myosu-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Minimal Myosu chain runtime restart slice"
+publish = false
+build = "build.rs"
+
+[dependencies]
+codec.workspace = true
+frame = { workspace = true, features = ["experimental", "runtime"] }
+pallet-balances.workspace = true
+pallet-sudo.workspace = true
+pallet-timestamp.workspace = true
+scale-info.workspace = true
+sp-genesis-builder.workspace = true
+sp-runtime = { workspace = true, features = ["serde"] }
+
+[build-dependencies]
+substrate-wasm-builder = { workspace = true, optional = true, default-features = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame/std",
+    "pallet-balances/std",
+    "pallet-sudo/std",
+    "pallet-timestamp/std",
+    "scale-info/std",
+    "sp-genesis-builder/std",
+    "sp-runtime/std",
+    "substrate-wasm-builder",
+]

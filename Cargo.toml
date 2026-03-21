@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/myosu-games",
     "crates/myosu-tui",
+    "crates/myosu-chain/runtime",               # Runtime restart slice 1: minimal buildable runtime
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
     # "crates/myosu-chain",      # Stage 1: Substrate chain fork
     # "crates/myosu-miner",      # Stage 4: Miner binary
@@ -30,3 +31,12 @@ crossterm = { version = "0.28", features = ["event-stream"] }
 ratatui = "0.29"
 futures = "0.3"
 tokio-test = "0.4"
+codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
+frame = { package = "polkadot-sdk-frame", git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
