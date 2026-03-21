@@ -79,10 +79,13 @@ fabro run fabro/run-configs/bootstrap/tui-shell.toml
 fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
 fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
 
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- autodev --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
+export CARGO_TARGET_DIR="$PWD/.raspberry/cargo-target"
+export MYOSU_MANIFEST="$PWD/fabro/programs/myosu.yaml"
+
+cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- plan --manifest "$MYOSU_MANIFEST"
+cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- status --manifest "$MYOSU_MANIFEST"
+cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- watch --manifest "$MYOSU_MANIFEST"
+cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- execute --manifest "$MYOSU_MANIFEST"
 ```
 
 Useful proof commands:
