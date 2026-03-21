@@ -1,81 +1,73 @@
-# `games:poker-engine` Implementation — Slice 1
+# `games:poker-engine` Implementation — Slice 2
 
 ## Slice Implemented
 
-**Slice 1 — Create `myosu-games-poker` Crate Skeleton**
+**Slice 2 — solver wrapper plus versioned checkpoint I/O**
 
-This slice creates the greenfield `myosu-games-poker` crate, registers it in the workspace, and verifies that the pinned robopoker NLHE types compile with serde support enabled. No solver, wire, query, exploitability, or training-session logic was implemented yet; those remain in later approved slices.
+This increment adds the `PokerSolver` surface for `myosu-games-poker` and lands the file checkpoint format defined by the lane spec: 4-byte `MYOS` magic, `u32` version, then bincode-encoded `NlheProfile`.
+
+The reviewed robopoker pin still does not expose a non-DB path for building a populated `NlheEncoder`, so this slice focuses on the solver work that can be completed inside the owned `games:poker-engine` surfaces without mutating robopoker itself:
+
+- wrap `rbp_nlhe::Flagship`
+- expose profile-driven strategy lookup
+- persist and restore profiles with version checks
+- convert encoder-lookup panics into typed errors for `train()` and `exploitability()`
 
 ## What Changed
 
 ### Workspace root: `Cargo.toml`
 
-- Added `crates/myosu-games-poker` to the workspace `members` list so `cargo build -p myosu-games-poker` can resolve the package.
-- Added workspace dependency entries for:
-  - `rbp-nlhe`
-  - `rbp-mccfr`
-
-Both point at the reviewed robopoker git source and pinned rev `04716310143094ab41ec7172e6cea5a2a66744ef`.
-
-### New crate: `crates/myosu-games-poker/Cargo.toml`
-
-Created the new package with:
-
-- `name = "myosu-games-poker"`
-- `crate-type = ["lib"]`
-- dependency on `myosu-games`
-- dependency on `serde`
-- dependency on `rbp-nlhe` with `features = ["serde"]`
-- dependency on `rbp-mccfr` with `features = ["serde"]`
-
-This is the minimal dependency surface required to prove the NLHE wire types are serde-ready before Slice 3.
-
-### New crate root: `crates/myosu-games-poker/src/lib.rs`
-
-Created a minimal public surface that:
-
-- re-exports `GameConfig`, `GameType`, `StrategyQuery`, and `StrategyResponse` from `myosu-games`
-- re-exports `Flagship`, `NlheInfo`, and `NlheEdge` from `rbp-nlhe`
-- reserves the `Poker`, `PokerSolver`, and `TrainingSession` public type names so later slices can fill in their behavior without reshaping the crate root
-- adds a compile-time serde guard for `NlheInfo` and `NlheEdge`
-- adds two narrow smoke tests:
-  - serde support is enabled for the NLHE types
-  - `GameType::NlheHeadsUp` is reachable through the re-export path
+- Added `rbp-core` to workspace dependencies at the same reviewed robopoker rev as the existing poker crates.
+- Kept the robopoker rev pinned to `04716310143094ab41ec7172e6cea5a2a66744ef`.
 
 ### Lockfile: `Cargo.lock`
 
-The new crate pulled the expected additional packages into the lockfile:
+- Recorded `bincode v1.3.3` for checkpoint serialization.
+- Recorded the added `rbp-core` and `thiserror` edges for `myosu-games-poker`.
 
-- `myosu-games-poker`
-- `rbp-nlhe`
-- `rbp-cards`
-- `rbp-gameplay`
-- `petgraph 0.6.5`
-- `fixedbitset 0.4.2`
+### Crate manifest: `crates/myosu-games-poker/Cargo.toml`
 
-This lockfile update is part of the slice because the package did not previously exist in the workspace.
+- Added `bincode = "1"` for checkpoint payload encoding.
+- Added `thiserror` for a typed error surface.
+- Added a dev dependency on `rbp-core` so the unit tests can use `Arbitrary` with the same pinned rev as the rest of the poker stack.
 
-## Proof Commands Run for This Slice
+### Crate root: `crates/myosu-games-poker/src/lib.rs`
 
-```bash
-CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo build -p myosu-games-poker --offline
-CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline
-cargo tree -p myosu-games-poker -e features --offline
-```
+- Exported the new solver module.
+- Re-exported `PokerSolver`, `PokerSolverError`, `CHECKPOINT_MAGIC`, and `CHECKPOINT_VERSION`.
+- Re-exported `NlheEncoder` and `NlheProfile` alongside the existing NLHE types so later slices can compose on the same public surface.
 
-All three commands exited 0.
+### New solver surface: `crates/myosu-games-poker/src/solver.rs`
 
-## Stage-Owned Artifacts Left Untouched
+Added a concrete `PokerSolver` wrapper around `rbp_nlhe::Flagship` with:
 
-- `outputs/games/poker-engine/quality.md` was not authored here; it is owned by the Quality Gate stage.
-- `outputs/games/poker-engine/promotion.md` was not authored here; it is owned by the Review stage.
+- `new_empty()`, `from_parts()`, `from_inner()`, and `into_inner()`
+- `profile()`, `profile_mut()`, `encoder()`, and `epochs()`
+- `strategy(&NlheInfo) -> StrategyResponse<NlheEdge>` using the profile’s averaged distribution
+- `train(iterations)` and `exploitability()` with panic capture so missing encoder lookup data becomes `PokerSolverError::MissingEncoderArtifacts`
+- `snapshot_profile()` via bincode roundtrip, which gives the lane a practical profile-copy path even though robopoker does not derive `Clone` on `NlheProfile`
+- `save()`, `load()`, and `load_profile()` for the reviewed checkpoint format
 
-## What Remains for Future Slices
+### Solver Tests
 
-| Slice | Description | Status |
-|-------|-------------|--------|
-| Slice 2 | `solver.rs`: `PokerSolver` wrapper + checkpoint format | Pending |
-| Slice 3 | `wire.rs`: bincode roundtrip for `NlheInfo` and `NlheEdge` | Pending |
-| Slice 4 | `query.rs`: `handle_query` bridge | Pending |
-| Slice 5 | `exploit.rs`: local + remote exploitability | Pending |
-| Slice 6 | `training.rs`: `TrainingSession` | Pending |
+Added unit coverage for:
+
+- empty solver construction
+- strategy distributions derived from the profile surface
+- checkpoint roundtrip plus invalid magic and invalid version rejection
+- snapshot/profile copying
+- structured error mapping for encoder-dependent `train()` and `exploitability()` calls on an empty encoder
+
+## Scope Boundary Kept
+
+This slice does **not** claim successful encoder-backed training convergence. The reviewed robopoker pin still only hydrates `NlheEncoder` from the database path, so `NlheEncoder::default()` is enough for profile-only operations like `strategy()` and checkpoint I/O, but not for full tree traversal.
+
+That boundary is now explicit in code rather than hidden behind a panic.
+
+## What Remains After This Slice
+
+- Wire serialization in `wire.rs`
+- Query bridging in `query.rs`
+- Remote/local exploitability helpers in a dedicated `exploit.rs`
+- Batch/session orchestration in `training.rs`
+- A vetted non-DB encoder construction path or encoder artifact ingestion path so `train(100)` and exploitability decrease proofs can run against a populated NLHE abstraction map

@@ -11,5 +11,10 @@ crate-type = ["lib"]
 [dependencies]
 myosu-games = { path = "../myosu-games" }
 serde = { workspace = true }
+thiserror = { workspace = true }
+bincode = "1"
 rbp-nlhe = { workspace = true, features = ["serde"] }
 rbp-mccfr = { workspace = true, features = ["serde"] }
+
+[dev-dependencies]
+rbp-core = { workspace = true }

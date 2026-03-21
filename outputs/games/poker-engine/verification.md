@@ -1,44 +1,52 @@
-# `games:poker-engine` Verification — Slice 1
+# `games:poker-engine` Verification — Slice 2
 
 ## Proof Commands That Passed
 
 | Command | Exit Code | Result |
 |---------|-----------|--------|
-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo build -p myosu-games-poker --offline` | 0 | Built the new crate and resolved `rbp-nlhe`, `rbp-cards`, and `rbp-gameplay` from the pinned robopoker git source |
-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline` | 0 | 2 unit tests passed; 0 failed |
-| `cargo tree -p myosu-games-poker -e features --offline` | 0 | Confirmed `rbp-nlhe feature "serde"` and `rbp-mccfr feature "serde"` are active in the resolved feature graph |
-
-## Fixup Proof Commands That Passed
-
-| Command | Exit Code | Result |
-|---------|-----------|--------|
-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline` | 0 | Re-ran the crate test suite after the wording-only fixup; 2 unit tests passed and doc tests remained green |
-| `quality gate script for outputs/games/poker-engine/{implementation,verification}.md` | 0 | Regenerated `quality.md` with `quality_ready: yes`; artifact scan, warning scan, and follow-up scan all came back clean |
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo build -p myosu-games-poker --offline` | 0 | Built the updated crate, including the new solver module and checkpoint dependencies |
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker --offline` | 0 | Full crate suite passed: 10 unit tests green, 0 failed |
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker solver::tests::checkpoint_roundtrip --offline` | 0 | Confirmed `MYOS` checkpoint write/read roundtrip works |
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker solver::tests::strategy_is_valid_distribution --offline` | 0 | Confirmed profile-driven strategy output remains a valid probability distribution |
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker solver::tests::train_surfaces_missing_encoder_artifacts --offline` | 0 | Confirmed `train()` maps the encoder lookup panic into a typed error instead of crashing |
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker solver::tests::exploitability_surfaces_missing_encoder_artifacts --offline` | 0 | Confirmed `exploitability()` maps the same encoder lookup panic into a typed error |
 
 ## Test Results
 
 ```text
-running 2 tests
-test tests::game_type_reexport_includes_nlhe_heads_up ... ok
+running 10 tests
+test solver::tests::create_empty_solver ... ok
+test solver::tests::checkpoint_rejects_unknown_version ... ok
+test solver::tests::checkpoint_rejects_bad_magic ... ok
+test solver::tests::exploitability_surfaces_missing_encoder_artifacts ... ok
 test tests::robopoker_nlhe_serde_surface_is_enabled ... ok
+test tests::game_type_reexport_includes_nlhe_heads_up ... ok
+test solver::tests::strategy_is_valid_distribution ... ok
+test solver::tests::train_surfaces_missing_encoder_artifacts ... ok
+test solver::tests::snapshot_profile_preserves_profile_data ... ok
+test solver::tests::checkpoint_roundtrip ... ok
 
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ```
 
 ## Environment Notes
 
-- A plain `cargo build -p myosu-games-poker` was attempted first and failed in this sandbox because Cargo tried to refresh the crates.io index and the environment has no DNS/network access.
-- An offline build without overriding `CARGO_TARGET_DIR` also failed because the workspace default target path resolves to a read-only location outside the writable sandbox.
-- The slice was therefore verified with `--offline` plus `CARGO_TARGET_DIR=/tmp/myosu-cargo-target`, which stays inside writable local storage and exercises the new package successfully.
+- A plain `cargo test -p myosu-games-poker` first attempted to refresh the crates.io index and failed because this sandbox has no DNS/network access.
+- An offline Cargo run without overriding `CARGO_TARGET_DIR` hit the workspace default target path, which resolves to a read-only location in this environment.
+- The passing proof path therefore used `--offline` plus `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2`.
 
-## Risks Reduced
+## Coverage Achieved By This Slice
 
-- **Workspace package missing:** Reduced. `myosu-games-poker` now exists and is registered in the workspace, so the package is discoverable by Cargo.
-- **Serde feature uncertainty on robopoker NLHE types:** Reduced. `NlheInfo` and `NlheEdge` now have both compile-time and runtime smoke-check coverage through the crate root and test suite.
-- **Wire-slice ambiguity:** Reduced. `cargo tree -e features` confirms the exact serde feature path that Slice 3 depends on.
+- The new solver/checkpoint code compiles.
+- Checkpoint format validation and profile roundtrip are covered.
+- Strategy lookup over stored profile data is covered.
+- Encoder-dependent solver paths now fail with typed errors instead of an uncaught panic when the encoder has no abstraction lookup data.
 
-## Risks That Remain
+## Coverage Still Outside This Slice
 
-- **Shared robopoker rev is still duplicated:** Reduced but not eliminated. This slice pins the new crate to the same reviewed rev, but `crates/myosu-games/Cargo.toml` still carries its own identical literal pin because that crate is outside the poker-engine owned surface.
-- **Solver/query/exploit/training surfaces remain unimplemented:** Unchanged. This slice intentionally stops at the crate skeleton.
-- **Default workspace build path is not sandbox-friendly:** Unchanged. Proof in this environment still needs a writable `CARGO_TARGET_DIR`.
+The reviewed lane proof for a fully populated Slice 2 still depends on a non-DB encoder construction or artifact-ingestion path. Until that exists, this lane cannot honestly claim:
+
+- successful `train(100)` over a populated NLHE abstraction map
+- exploitability improvement after real training iterations
+
+Those are the next proof targets once the encoder gap is resolved.
