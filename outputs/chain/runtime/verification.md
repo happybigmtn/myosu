@@ -1,45 +1,37 @@
-# `chain:runtime` Verification — Phase 0 Slice 1
+# `chain:runtime` Verification — Phase 1 Slice 2
 
 ## Automated Proof Commands
 
+All commands were run from the workspace root with an explicit
+`CARGO_TARGET_DIR=/tmp/myosu-cargo-target` because the default shared target
+path is read-only in this environment.
+
 | Command | Exit Code | Outcome |
 |---------|-----------|---------|
-| `cargo metadata --format-version 1 --no-deps` | 0 | Passed. The workspace now resolves with `crates/myosu-chain` as an admitted member. |
-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-chain` | 0 | Passed. The new workspace anchor package builds cleanly. |
-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-games` | 0 | Passed. Existing non-chain workspace members still check after the workspace wiring change. |
-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p pallet-game-solver` | 101 | Failed out of scope. The pallet still has pre-existing unresolved `subtensor_*`, `safe_math`, `substrate_fixed`, `log`, and newer Substrate API mismatches, which is consistent with the restart review. |
-
-Note: `cargo check` had to be run with a local `CARGO_TARGET_DIR` because the
-default shared target directory is read-only in this sandbox.
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo build -p myosu-runtime --release` | 0 | Passed. The admitted runtime crate now builds in release mode from the workspace root. |
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-runtime` | 0 | Passed. The minimal runtime source type-checks in the dev profile. |
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-runtime --lib` | 0 | Passed. Runtime unit tests and generated integrity tests both passed. |
 
 ## What This Slice Now Guarantees
 
-- The root workspace no longer treats the chain lane as a commented future
-  placeholder; it has a real `myosu-chain` package entry.
-- The owned manifest surfaces that were missing at restart time now exist:
-  `crates/myosu-chain/Cargo.toml`,
-  `crates/myosu-chain/runtime/Cargo.toml`,
-  `crates/myosu-chain/common/Cargo.toml`, and
-  `crates/myosu-chain/node/Cargo.toml`.
-- The root workspace now carries the reviewed `polkadot-sdk stable2407`
-  dependency line for the minimal runtime pallet set.
+- `myosu-runtime` is a real, root-buildable package instead of a manifest-only
+  placeholder.
+- The runtime now composes only the reviewed minimal pallet set:
+  `System`, `Timestamp`, `Balances`, and `Sudo`.
+- The runtime preserves the reviewed `NetUid` domain type and proves its compact
+  SCALE encoding round trip in tests.
 
 ## Residual Risks
 
-- `myosu-runtime`, `myosu-chain-common`, and `myosu-node` are still seeded
-  manifests only. Their source trees have not been rewritten to match the
-  minimal restart shape yet.
-- `cargo build -p myosu-runtime --release` is still not meaningful from the root
-  workspace because `crates/myosu-chain/runtime` has not been admitted as a
-  direct workspace member yet.
-- `pallet-game-solver` remains broken outside this slice, which means the wider
-  chain subtree still cannot be trusted as buildable despite the Phase 0
-  manifest recovery.
+- `build.rs` currently emits a dummy `wasm_binary.rs`, so this slice does **not**
+  claim that the full runtime WASM artifact path is restored yet.
+- `myosu-node` is still outside the current slice and is not admitted as a
+  direct workspace proof surface.
+- Node-facing runtime APIs, genesis presets, and chain-spec integration remain
+  future work.
 
-## Next Slice
+## Notes From Proof Execution
 
-**Phase 1 Slice 2 — rewrite `crates/myosu-chain/runtime/src/lib.rs` down to the
-minimal reviewed runtime, add the dependencies/build wiring that runtime
-actually needs, and add `crates/myosu-chain/runtime` as a direct workspace
-member so the lane proof `cargo build -p myosu-runtime --release` can run from
-the workspace root.**
+- The earlier `wasm-opt-sys` disk-quota failure is no longer on the proof path.
+- Cargo still reports a future-incompatibility warning in `trie-db v0.29.1`;
+  that warning did not block this slice’s proof commands.

@@ -4,15 +4,11 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 extern crate alloc;
-
-use alloc::borrow::Cow;
 use codec::{Compact, CompactAs, Decode, Encode};
 use core::fmt::{self, Display, Formatter};
-use frame::{
-    prelude::*,
-    runtime::{apis, prelude::*},
-};
+use frame_support::{construct_runtime, derive_impl, parameter_types};
 use scale_info::TypeInfo;
+use sp_version::{NativeVersion, RuntimeVersion, runtime_version};
 
 /// Domain subnet identifier retained from the prior runtime surface.
 #[repr(transparent)]
@@ -65,14 +61,14 @@ impl From<u16> for NetUid {
 
 #[runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: Cow::Borrowed("myosu"),
-    impl_name: Cow::Borrowed("myosu-node"),
+    spec_name: sp_version::create_runtime_str!("myosu"),
+    impl_name: sp_version::create_runtime_str!("myosu-runtime"),
     authoring_version: 1,
     spec_version: 1,
     impl_version: 1,
-    apis: RUNTIME_API_VERSIONS,
+    apis: sp_version::create_apis_vec!([]),
     transaction_version: 1,
-    system_version: 1,
+    state_version: 1,
 };
 
 #[cfg(feature = "std")]
@@ -84,7 +80,7 @@ pub fn native_version() -> NativeVersion {
 }
 
 construct_runtime!(
-    pub struct Runtime {
+    pub enum Runtime {
         System: frame_system,
         Timestamp: pallet_timestamp,
         Balances: pallet_balances,
@@ -92,11 +88,10 @@ construct_runtime!(
     }
 );
 
-type SignedExtra = frame::runtime::types_common::SystemTransactionExtensionsOf<Runtime>;
-type Block = frame::runtime::types_common::BlockOf<Runtime, SignedExtra>;
-type Header = HeaderFor<Runtime>;
-type RuntimeExecutive =
-    Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllPalletsWithSystem>;
+pub type Block = frame_system::mocking::MockBlock<Runtime>;
+pub type Header = <Block as sp_runtime::traits::Block>::Header;
+pub type RuntimeExecutive =
+    frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllPalletsWithSystem>;
 
 parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
@@ -120,93 +115,11 @@ impl pallet_sudo::Config for Runtime {}
 #[derive_impl(pallet_timestamp::config_preludes::TestDefaultConfig)]
 impl pallet_timestamp::Config for Runtime {}
 
-impl_runtime_apis! {
-    impl apis::Core<Block> for Runtime {
-        fn version() -> RuntimeVersion {
-            VERSION
-        }
-
-        fn execute_block(block: Block) {
-            RuntimeExecutive::execute_block(block)
-        }
-
-        fn initialize_block(header: &Header) -> ExtrinsicInclusionMode {
-            RuntimeExecutive::initialize_block(header)
-        }
-    }
-
-    impl apis::Metadata<Block> for Runtime {
-        fn metadata() -> OpaqueMetadata {
-            OpaqueMetadata::new(Runtime::metadata().into())
-        }
-
-        fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
-            Runtime::metadata_at_version(version)
-        }
-
-        fn metadata_versions() -> Vec<u32> {
-            Runtime::metadata_versions()
-        }
-    }
-
-    impl apis::BlockBuilder<Block> for Runtime {
-        fn apply_extrinsic(extrinsic: ExtrinsicFor<Runtime>) -> ApplyExtrinsicResult {
-            RuntimeExecutive::apply_extrinsic(extrinsic)
-        }
-
-        fn finalize_block() -> HeaderFor<Runtime> {
-            RuntimeExecutive::finalize_block()
-        }
-
-        fn inherent_extrinsics(data: InherentData) -> Vec<ExtrinsicFor<Runtime>> {
-            data.create_extrinsics()
-        }
-
-        fn check_inherents(block: Block, data: InherentData) -> CheckInherentsResult {
-            data.check_extrinsics(&block)
-        }
-    }
-
-    impl apis::TaggedTransactionQueue<Block> for Runtime {
-        fn validate_transaction(
-            source: TransactionSource,
-            tx: ExtrinsicFor<Runtime>,
-            block_hash: <Runtime as frame_system::Config>::Hash,
-        ) -> TransactionValidity {
-            RuntimeExecutive::validate_transaction(source, tx, block_hash)
-        }
-    }
-
-    impl apis::OffchainWorkerApi<Block> for Runtime {
-        fn offchain_worker(header: &HeaderFor<Runtime>) {
-            RuntimeExecutive::offchain_worker(header)
-        }
-    }
-
-    impl apis::SessionKeys<Block> for Runtime {
-        fn generate_session_keys(_seed: Option<Vec<u8>>) -> Vec<u8> {
-            Default::default()
-        }
-
-        fn decode_session_keys(_encoded: Vec<u8>) -> Option<Vec<(Vec<u8>, apis::KeyTypeId)>> {
-            Default::default()
-        }
-    }
-
-    impl apis::AccountNonceApi<Block, interface::AccountId, interface::Nonce> for Runtime {
-        fn account_nonce(account: interface::AccountId) -> interface::Nonce {
-            System::account_nonce(account)
-        }
-    }
-}
-
 /// Re-exports the node-side runtime interface types expected by future slices.
 pub mod interface {
     use super::Runtime;
-    use frame::runtime::prelude::*;
 
     pub type Block = super::Block;
-    pub use frame::runtime::types_common::OpaqueBlock;
     pub type AccountId = <Runtime as frame_system::Config>::AccountId;
     pub type Nonce = <Runtime as frame_system::Config>::Nonce;
     pub type Hash = <Runtime as frame_system::Config>::Hash;
@@ -219,8 +132,11 @@ mod tests {
 
     #[test]
     fn version_uses_myosu_identity() {
-        assert_eq!(VERSION.spec_name.as_ref(), "myosu");
-        assert_eq!(VERSION.impl_name.as_ref(), "myosu-node");
+        assert_eq!(core::str::from_utf8(VERSION.spec_name.as_ref()), Ok("myosu"));
+        assert_eq!(
+            core::str::from_utf8(VERSION.impl_name.as_ref()),
+            Ok("myosu-runtime")
+        );
         assert_eq!(VERSION.spec_version, 1);
     }
 

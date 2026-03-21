@@ -1,77 +1,68 @@
-# `chain:runtime` Implementation — Phase 0 Slice 1
+# `chain:runtime` Implementation — Phase 1 Slice 2
 
 ## Slice Implemented
 
-**Phase 0 Slice 1 — admit `crates/myosu-chain` as a real workspace member and seed the missing manifest surfaces for the chain restart.**
+**Phase 1 Slice 2 — replace the broken forwarded runtime body with the reviewed
+minimal pallet set and make `cargo build -p myosu-runtime --release`
+meaningful from the workspace root.**
 
-This slice restores honest Cargo surfaces without pretending the broken runtime,
-common, or node source trees already compile. The reviewed lane artifacts say
-the restart begins with workspace wiring, so this cut stays at the manifest
-boundary only.
+This slice stays on the runtime-owned surface only:
 
-One implementation detail here is an inference from Cargo rather than from the
-lane prose: Cargo does not support nested workspaces, so `crates/myosu-chain`
-was introduced as a lightweight workspace anchor package while
-`myosu-runtime`, `myosu-chain-common`, and `myosu-node` were seeded as sibling
-manifests for later admission.
-
-## Files Changed
-
-- `Cargo.toml`
-- `crates/myosu-chain/Cargo.toml`
-- `crates/myosu-chain/src/lib.rs`
 - `crates/myosu-chain/runtime/Cargo.toml`
-- `crates/myosu-chain/common/Cargo.toml`
-- `crates/myosu-chain/node/Cargo.toml`
+- `crates/myosu-chain/runtime/build.rs`
+- `crates/myosu-chain/runtime/src/lib.rs`
+
+It does **not** widen into `myosu-node`, `myosu-chain-common`, or any
+subtensor-derived pallet work.
 
 ## What Changed
 
-### Root workspace
+### Minimal runtime composition
 
-- Added `crates/myosu-chain` to the root workspace member list.
-- Added the reviewed `polkadot-sdk` `stable2407` dependency line to
-  `workspace.dependencies` for the minimal runtime pallet set and supporting
-  SCALE crates.
+- Replaced the non-compiling forwarded runtime with a minimal runtime composed
+  of:
+  - `frame_system`
+  - `pallet_timestamp`
+  - `pallet_balances`
+  - `pallet_sudo`
+- Preserved the reviewed domain `NetUid(u16)` type and its SCALE compact
+  round-trip behavior.
+- Kept a small runtime-side `interface` module so later slices have the expected
+  `AccountId` / `Nonce` / `Hash` / `Balance` aliases available.
 
-### Chain workspace anchor
+### Runtime manifest correction
 
-- Created a minimal `myosu-chain` package at `crates/myosu-chain/` so the root
-  workspace now has an honest chain entry instead of a commented placeholder.
+- Dropped the unusable `polkadot-sdk-frame` experiment from this crate’s direct
+  implementation path.
+- Declared the direct runtime dependencies the rewritten source actually uses:
+  `frame-support`, `frame-system`, `frame-executive`, `sp-runtime`, and
+  `sp-version`.
 
-### Missing lane manifests
+### Build-surface correction
 
-- Created `Cargo.toml` manifests for:
-  - `myosu-runtime`
-  - `myosu-chain-common`
-  - `myosu-node`
+- Replaced the heavyweight `substrate-wasm-builder` build step with a tiny
+  `wasm_binary.rs` stub generator in `build.rs`.
+- This is an intentional boundary for the current slice: it keeps the runtime
+  crate buildable in this workspace without pretending the full WASM artifact
+  path is already restored.
 
-These manifests are intentionally light. They establish package identity and
-owned surfaces now; the Phase 1 runtime rewrite will supply the real dependency
-graph and buildable source shape.
+One implementation detail here is an inference from the proof environment rather
+than from the lane prose: the previous runtime build died inside
+`wasm-opt-sys` because the sandbox hit disk quota before any runtime code was
+checked. The current slice removes that setup-only blocker so the runtime code
+path itself can be proven.
 
 ## Proof Commands For This Slice
 
-Commands that should pass for this slice:
-
 ```bash
-cargo metadata --format-version 1 --no-deps
-CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-chain
-CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-games
-```
-
-The Phase 1 proof commands remain unchanged and are **not** satisfied by this
-slice yet:
-
-```bash
-cargo build -p myosu-runtime --release
-cargo check -p myosu-runtime
+CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo build -p myosu-runtime --release
+CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-runtime
+CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-runtime --lib
 ```
 
 ## What Remains For The Next Slice
 
-**Next slice: Phase 1 Slice 2 — replace `crates/myosu-chain/runtime/src/lib.rs`
-with the reviewed minimal runtime (`frame_system + pallet_balances +
-pallet_sudo + pallet_timestamp + frame_executive`) and admit
-`crates/myosu-chain/runtime` as a direct workspace member so the lane proof
-`cargo build -p myosu-runtime --release` becomes meaningful from the workspace
-root.**
+- Restore real runtime WASM emission instead of the current dummy include.
+- Add the node-facing runtime APIs and chain-spec plumbing needed by
+  `myosu-node`.
+- Keep `myosu-node` out of scope until its own admitted proof surface is ready.

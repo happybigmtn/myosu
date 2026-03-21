@@ -1,39 +1,33 @@
-# `chain:runtime` Integration — Phase 0 Slice 1
+# `chain:runtime` Integration — Phase 1 Slice 2
 
 ## Integrated In This Slice
 
-- The root workspace now recognizes the chain runtime lane through the new
-  `myosu-chain` anchor package.
-- The runtime-owned manifest surfaces now exist at the paths called out by the
-  restart spec:
-  - `crates/myosu-chain/runtime/Cargo.toml`
-  - `crates/myosu-chain/common/Cargo.toml`
-  - `crates/myosu-chain/node/Cargo.toml`
+- The root-admitted `myosu-runtime` crate now owns a concrete minimal runtime
+  implementation instead of a forwarded, non-compiling subtensor surface.
+- The runtime build surface is small and explicit:
+  - `src/lib.rs` defines the minimal pallet composition and preserved domain
+    types.
+  - `Cargo.toml` matches the code that now exists.
+  - `build.rs` keeps the include contract for `WASM_BINARY*` constants without
+    pulling the full WASM optimizer stack into this slice.
 
 ## Intentionally Not Integrated Yet
 
-- `myosu-runtime` is **not** yet a direct workspace member.
-- `myosu-chain-common` is **not** yet wired into any admitted package.
-- `myosu-node` is **not** yet wired into the workspace build graph.
-- No subtensor-derived pallets were touched in this slice.
-
-This boundary is deliberate. The reviewed lane artifacts require Phase 0
-workspace honesty first, while the actual runtime rewrite belongs to the next
-approved slice.
+- Real runtime WASM artifact generation.
+- `myosu-node` as a workspace member or proof target.
+- `myosu-chain-common` cleanup and re-export work.
+- Any subtensor-derived pallet reintegration.
 
 ## Cross-Lane Notes
 
-- The failed `pallet-game-solver` check confirms there is still pallet-side
-  breakage outside `chain:runtime`. This slice records that evidence rather than
-  trying to repair pallet surfaces owned by a different lane.
-- The root `polkadot-sdk stable2407` dependency line now matches the working
-  dependency family already used by `pallet-game-solver`, which reduces drift
-  before the Phase 1 runtime rewrite.
+- This slice removes a setup-only runtime blocker without claiming progress on
+  the chain node or pallet restart lanes.
+- The runtime proof boundary is now honest enough for downstream work to build
+  on: later slices can restore WASM output and node APIs without first undoing a
+  broken forwarded runtime body.
 
 ## Next Integration Boundary
 
-The next runtime integration step is to admit `crates/myosu-chain/runtime` as a
-direct workspace member at the same time its source is rewritten to the minimal
-restart runtime. Doing those together keeps the root build graph honest and
-avoids surfacing the current broken subtensor-derived runtime as though it were
-already buildable.
+The next runtime integration step is to restore real WASM output and the
+runtime APIs needed by the node boundary, then admit `myosu-node` only when its
+own proof command is truthful from the workspace root.
