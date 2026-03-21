@@ -1,0 +1,13 @@
+diff --git a/outputs/tui/shell/verification.md b/outputs/tui/shell/verification.md
+index 468bc17..5e45bd2 100644
+--- a/outputs/tui/shell/verification.md
++++ b/outputs/tui/shell/verification.md
+@@ -4,7 +4,7 @@
+ 
+ | Gate | Command | Status |
+ |------|---------|--------|
+-| `cargo test events:: --no-ignore` | `cargo test -p myosu-tui events::` | **PASS** |
++| `cargo test events::` | `cargo test -p myosu-tui events::` | **PASS** |
+ 
+ ---
+ 
