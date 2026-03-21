@@ -1,51 +1,59 @@
-# `games:multi-game` Verification — Slice 1
+# `games:multi-game` Verification — Slice 1 Fixup
 
-## Proof Commands That Passed
+## Verification Scope
 
-The default environment exported `CARGO_TARGET_DIR=/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target`, which was read-only from this sandbox. To make the proof reproducible in this worktree, the commands below were run with a local writable target dir:
+This fixup revalidated the active Slice 1 proof gate and reproduced the first deterministic review-script blocker. It does not claim that Slice 2 through Slice 7 are complete.
 
-`CARGO_TARGET_DIR=/home/r/.fabro/runs/20260320-01KM71XNRG6FY2B05MJEVXYBBS/worktree/target/codex-multi-game`
+Compilation commands were run with `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup` because `cargo metadata` reports the default target directory as `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target`, which is outside the writable sandbox for this run.
 
-| Command | Exit Code | Result |
-|---------|-----------|--------|
-| `CARGO_TARGET_DIR=/home/r/.fabro/runs/20260320-01KM71XNRG6FY2B05MJEVXYBBS/worktree/target/codex-multi-game cargo build -p myosu-games-liars-dice` | 0 | Passed; new crate compiled successfully |
-| `CARGO_TARGET_DIR=/home/r/.fabro/runs/20260320-01KM71XNRG6FY2B05MJEVXYBBS/worktree/target/codex-multi-game cargo test -p myosu-games-liars-dice` | 0 | Passed; 2 unit tests passed, 0 doctests |
-| `CARGO_TARGET_DIR=/home/r/.fabro/runs/20260320-01KM71XNRG6FY2B05MJEVXYBBS/worktree/target/codex-multi-game cargo test -p myosu-games` | 0 | Passed; 10 unit tests and 4 doctests still passed after workspace update |
+## Automated Commands Run
 
-## Automated Outcomes
+| Command | Exit Code | Outcome |
+|---------|-----------|---------|
+| `cargo metadata --no-deps --format-version 1` | 0 | Workspace members resolve to `myosu-games`, `myosu-games-liars-dice`, `myosu-tui`, and `pallet-game-solver` |
+| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo build -p myosu-games-liars-dice` | 0 | Passed; the Slice 1 crate skeleton compiles |
+| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo test -p myosu-games-liars-dice` | 0 | Passed; 2 unit tests passed and 0 doctests ran |
+| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo test -p myosu-games` | 0 | Passed; 10 unit tests and 4 doctests still pass after the workspace change |
+| `cargo test -p myosu-play` | 101 | Failed immediately: `package ID specification 'myosu-play' did not match any packages` |
+| `cargo test -p myosu-games-poker` | 101 | Failed immediately: `package ID specification 'myosu-games-poker' did not match any packages` |
 
-- The new package is now recognized by Cargo and can be built by package name.
-- The crate's initial public surface compiles and its registry hook matches `GameType::LiarsDice`.
-- The existing `myosu-games` crate still passes its full current test suite after the workspace membership change.
+## Active Proof Gate Status
 
-## Environment Note
+The current slice's first proof gate is green:
 
-The first unmodified `cargo build -p myosu-games-liars-dice` attempt failed with:
+- `myosu-games-liars-dice` builds by package name
+- the crate's two Slice 1 smoke tests pass
+- `myosu-games` still passes its current suite after the workspace membership change
+
+That is the full approved proof surface for Slice 1.
+
+## Deterministic Review-Script Blocker
+
+The orchestrated `verify` stage ran the full review command list with `set -e`. In that run, commands through `cargo test -p myosu-games` completed successfully or returned clean filtered-test outputs. The first hard failure was:
 
 ```text
-error: failed to open: /home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/.cargo-lock
-
-Caused by:
-  Read-only file system (os error 30)
+cargo test -p myosu-play
+error: package ID specification `myosu-play` did not match any packages
 ```
 
-That failure was environmental, not code-related. Re-running with a writable local `CARGO_TARGET_DIR` resolved it.
+Because the script stops on the first non-zero exit, later review commands were not reachable in that gate run.
 
-## Risks Reduced
+Separate reproduction during this fixup confirms that `myosu-games-poker` is also absent from the current workspace snapshot and would fail for the same reason if reached.
 
-- **Critical blocker: missing `myosu-games-liars-dice` crate** — reduced. The crate now exists and is wired into the workspace.
-- **Bootstrap proof gap** — reduced. The reviewed Slice 1 proof command (`cargo build -p myosu-games-liars-dice`) now succeeds when run against a writable target directory.
-- **Public API churn risk** — reduced. The lane now has stable exported type names for later slices to fill in.
+## Current Workspace Constraint
 
-## Risks That Remain
+The current workspace snapshot does not include:
 
-- **MG-01 game engine work** is still pending. No `CfrGame: Copy` implementation exists yet.
-- **MG-02 solver and Nash verification** are still pending. No encoder or profile logic exists yet.
-- **CS-01 cross-game scoring** is still pending. `ExploitMetric` has not been added to `myosu-games`.
-- **SP-01/SP-02 spectator work** is still pending. No `myosu-play` or `myosu-tui` spectator surfaces were touched in this slice.
+- `myosu-play`
+- `myosu-games-poker`
 
-## Next Slice
+Those missing packages explain the deterministic review failure. This fixup does not create placeholder packages for them, because doing so would expand past the approved Slice 1 surface.
 
-**Slice 2 — `game.rs` + `edge.rs` + `turn.rs` + `info.rs`**
+## Remaining Work Beyond Slice 1
 
-That is the next approved implementation increment from `outputs/games/multi-game/spec.md` and `outputs/games/multi-game/review.md`.
+- Slice 2: implement `game.rs`, `edge.rs`, `turn.rs`, and `info.rs`
+- Slice 3: implement `encoder.rs`, `profile.rs`, and Nash verification tests
+- Slice 4: add `ExploitMetric` registration to `myosu-games`
+- Slice 5: add spectator relay surfaces for `myosu-play`
+- Slice 6: add spectator TUI surfaces for `myosu-tui`
+- Slice 7: run zero-change verification once the referenced packages exist in this workspace
