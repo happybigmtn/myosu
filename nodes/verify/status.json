@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 32,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T01:19:36.827962482+00:00",
+  "updated_at": "2026-03-21T01:19:36.827966907+00:00",
+  "failure_reason": "Script failed with exit code: 1\n\n## stderr\nerror: unexpected argument '--no-ignore' found\n\n  tip: a similar argument exists: '--no-run'\n  tip: to pass '--no-ignore' as a value, use '-- --no-ignore'\n\nUsage: cargo test --no-run <TESTNAME> [-- [ARGS]...]\n\nFor more information, try '--help'.\n"
+}
