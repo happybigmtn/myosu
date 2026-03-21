@@ -1,0 +1,479 @@
+diff --git a/fabro/checks/tui-shell-implement.sh b/fabro/checks/tui-shell-implement.sh
+new file mode 100755
+index 0000000..8fc94b5
+--- /dev/null
++++ b/fabro/checks/tui-shell-implement.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++export CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell
++
++cargo test -p myosu-tui events:: -- --include-ignored
++cargo test -p myosu-tui shell::
++cargo test -p myosu-tui all_game_types_have_schema
++cargo test -p myosu-tui shell_draw_
++cargo test -p myosu-tui is_plain_text
+diff --git a/fabro/checks/tui-shell.sh b/fabro/checks/tui-shell.sh
+index f67fe2a..fdecdce 100755
+--- a/fabro/checks/tui-shell.sh
++++ b/fabro/checks/tui-shell.sh
+@@ -1,4 +1,4 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
+-cargo test -p myosu-tui
++./fabro/checks/tui-shell-implement.sh
+diff --git a/fabro/programs/README.md b/fabro/programs/README.md
+index ee1e61b..24bfe1c 100644
+--- a/fabro/programs/README.md
++++ b/fabro/programs/README.md
+@@ -36,6 +36,18 @@ Use when:
+ - `outputs/games/traits/spec.md` and `review.md` already exist
+ - you want a real implement/fix/verify loop over `crates/myosu-games/`
+ 
++### `myosu-tui-shell-implementation.yaml`
++
++Purpose: lane-scoped delivery program for the next approved `tui:shell`
++implementation slice.
++
++Owns:
++- `tui:shell-implement`
++
++Use when:
++- `outputs/tui/shell/spec.md` and `review.md` already exist
++- you want a real implement/fix/verify loop over `crates/myosu-tui/`
++
+ ### `myosu-chain-core.yaml`
+ 
+ Purpose: chain restart frontier beyond bootstrap.
+diff --git a/fabro/programs/myosu-tui-shell-implementation.yaml b/fabro/programs/myosu-tui-shell-implementation.yaml
+new file mode 100644
+index 0000000..5827c6f
+--- /dev/null
++++ b/fabro/programs/myosu-tui-shell-implementation.yaml
+@@ -0,0 +1,47 @@
++version: 1
++program: myosu-tui-shell-implementation
++target_repo: ../..
++state_path: ../../.raspberry/myosu-tui-shell-implementation-state.json
++max_parallel: 1
++units:
++  - id: tui
++    title: TUI Shell Delivery
++    output_root: ../../outputs/tui/shell
++    artifacts:
++      - id: spec
++        path: spec.md
++      - id: review
++        path: review.md
++      - id: implementation
++        path: implementation.md
++      - id: verification
++        path: verification.md
++      - id: integration
++        path: integration.md
++    milestones:
++      - id: reviewed
++        requires: [spec, review]
++      - id: implemented
++        requires: [spec, review, implementation, integration]
++      - id: verified
++        requires: [spec, review, implementation, verification, integration]
++    lanes:
++      - id: shell-implement
++        kind: interface
++        title: Shell Implementation Lane
++        run_config: ../run-configs/implement/tui-shell.toml
++        managed_milestone: verified
++        proof_profile: tui_shell_implement
++        depends_on:
++          - unit: tui
++            milestone: reviewed
++        checks:
++          - label: tui_shell_code_present
++            kind: precondition
++            type: file_exists
++            path: ../../crates/myosu-tui/src/shell.rs
++          - label: tui_shell_implementation_proof
++            kind: proof
++            type: command_succeeds
++            command: ./fabro/checks/tui-shell-implement.sh
++        produces: [implementation, verification, integration]
+diff --git a/fabro/prompts/implement/tui-shell-fix.md b/fabro/prompts/implement/tui-shell-fix.md
+new file mode 100644
+index 0000000..3e62bc6
+--- /dev/null
++++ b/fabro/prompts/implement/tui-shell-fix.md
+@@ -0,0 +1,27 @@
++The previous verify step failed for the `tui:shell` implementation lane.
++
++Read:
++
++- the verify output from context
++- `outputs/tui/shell/spec.md`
++- `outputs/tui/shell/review.md`
++- `outputs/tui/shell/implementation.md`
++- `outputs/tui/shell/verification.md`
++- `outputs/tui/shell/integration.md`
++
++Your job is to fix the concrete proof failures without widening scope.
++
++Rules:
++
++1. Repair the current slice. Do not restart the lane from scratch.
++2. Keep edits centered on `crates/myosu-tui/` unless a tiny adjacent proof or
++   control-plane fix is clearly required.
++3. Update `outputs/tui/shell/implementation.md` if the implemented slice or
++   changed files differ from what it currently says.
++4. Update `outputs/tui/shell/verification.md` so it summarizes the automated
++   proof commands that ran and their outcomes.
++5. Update `outputs/tui/shell/integration.md` if the fix changes how the slice
++   is wired into Fabro or downstream shell consumers.
++6. Do not create or rewrite `outputs/tui/shell/promotion.md` during Fixup.
++7. Do not hand-author `outputs/tui/shell/quality.md`; the Quality Gate owns it.
++8. Leave the lane in a state where the verify command can pass cleanly.
+diff --git a/fabro/prompts/implement/tui-shell-implement.md b/fabro/prompts/implement/tui-shell-implement.md
+new file mode 100644
+index 0000000..d9e74a4
+--- /dev/null
++++ b/fabro/prompts/implement/tui-shell-implement.md
+@@ -0,0 +1,35 @@
++Read these inputs before you make changes:
++
++- `outputs/tui/shell/spec.md`
++- `outputs/tui/shell/review.md`
++- `crates/myosu-tui/`
++
++Your job is to implement the smallest approved next slice for the `tui:shell`
++lane.
++
++Rules:
++
++1. Treat `spec.md` as the lane contract and `review.md` as the trust boundary.
++2. Keep the change centered on `crates/myosu-tui/` unless the chosen slice
++   needs a tiny adjacent proof or control-plane edit.
++3. Fix the active proof gate before expanding implementation scope.
++4. Keep scope narrow. Do not try to solve every future shell, schema, or pipe
++   gap in one run.
++5. After making code changes, write or replace:
++   - `outputs/tui/shell/implementation.md`
++   - `outputs/tui/shell/integration.md`
++
++The `implementation.md` must say:
++
++- what slice was implemented
++- which files changed
++- what proof commands this lane now expects
++- what remains for the next slice
++
++The `integration.md` must say:
++
++- which shell contracts stayed stable
++- whether any Fabro/run-config/program wiring changed
++- what downstream impact, if any, this slice has
++
++Do not hand-author `quality.md` or `promotion.md` in this stage.
+diff --git a/fabro/prompts/implement/tui-shell-review.md b/fabro/prompts/implement/tui-shell-review.md
+new file mode 100644
+index 0000000..1b5eb2d
+--- /dev/null
++++ b/fabro/prompts/implement/tui-shell-review.md
+@@ -0,0 +1,18 @@
++Read these files after verification succeeds:
++
++- `outputs/tui/shell/spec.md`
++- `outputs/tui/shell/review.md`
++- `outputs/tui/shell/implementation.md`
++- `outputs/tui/shell/integration.md`
++
++Inspect the code changes in `crates/myosu-tui/` plus any adjacent shell-lane
++proof wiring and write or replace `outputs/tui/shell/verification.md`.
++
++The `verification.md` must say:
++
++- which automated proof commands ran and their outcomes
++- what the implemented slice now guarantees
++- which proof or integration risks remain
++- what the next implementation slice should be
++
++Keep the artifact tied to actual files and proof output from this repository.
+diff --git a/fabro/run-configs/implement/tui-shell.toml b/fabro/run-configs/implement/tui-shell.toml
+new file mode 100644
+index 0000000..ddcee5e
+--- /dev/null
++++ b/fabro/run-configs/implement/tui-shell.toml
+@@ -0,0 +1,28 @@
++version = 1
++graph = "../../workflows/implement/tui-shell.fabro"
++goal = """
++Implement the next approved `tui:shell` slice for Myosu.
++
++Inputs:
++- `outputs/tui/shell/spec.md`
++- `outputs/tui/shell/review.md`
++
++Scope:
++- work only inside the smallest next approved implementation slice
++- treat the reviewed lane artifacts as the source of truth
++- keep changes aligned with the owned surfaces for `tui:shell`
++
++Required curated artifacts:
++- `outputs/tui/shell/implementation.md`
++- `outputs/tui/shell/verification.md`
++- `outputs/tui/shell/integration.md`
++
++The implementation artifact must say what slice changed, which files changed,
++and what remains. The verification artifact must summarize the automated proof
++commands that ran and their outcomes. The integration artifact must state the
++preserved contracts and any Fabro/control-plane wiring introduced for this
++slice.
++
++Do not hand-author `quality.md` or `promotion.md` in this implementation loop.
++"""
++directory = "../../.."
+diff --git a/fabro/workflows/README.md b/fabro/workflows/README.md
+index e7a2040..527153a 100644
+--- a/fabro/workflows/README.md
++++ b/fabro/workflows/README.md
+@@ -36,6 +36,7 @@ Use for:
+ 
+ Current examples:
+ - `implement/game-traits.fabro`
++- `implement/tui-shell.fabro`
+ 
+ ### `restart/`
+ 
+diff --git a/fabro/workflows/implement/tui-shell.fabro b/fabro/workflows/implement/tui-shell.fabro
+new file mode 100644
+index 0000000..3930322
+--- /dev/null
++++ b/fabro/workflows/implement/tui-shell.fabro
+@@ -0,0 +1,27 @@
++digraph ImplementTuiShell {
++    graph [
++        goal="Implement the next approved myosu-tui shell slice and produce durable implementation artifacts.",
++        model_stylesheet="
++            *       { backend: cli; }
++            #review { backend: api; model: gpt-5.4; provider: openai; }
++        "
++    ]
++    rankdir=LR
++
++    start [shape=Mdiamond, label="Start"]
++    exit  [shape=Msquare, label="Exit"]
++
++    preflight [label="Preflight", shape=parallelogram, script="./fabro/checks/tui-shell-implement.sh 2>&1 || true", max_retries=0]
++    implement [label="Implement", prompt="@../../prompts/implement/tui-shell-implement.md", reasoning_effort="high"]
++    fmt       [label="Format", shape=parallelogram, script="cargo fmt -p myosu-tui 2>&1", max_retries=0]
++    verify    [label="Verify", shape=parallelogram, script="./fabro/checks/tui-shell-implement.sh 2>&1", goal_gate=true, retry_target="fixup"]
++    fixup     [label="Fixup", prompt="@../../prompts/implement/tui-shell-fix.md", reasoning_effort="high", max_visits=3]
++    review    [label="Review", prompt="@../../prompts/implement/tui-shell-review.md", reasoning_effort="medium"]
++    audit     [label="Audit Artifacts", shape=parallelogram, script="test -f outputs/tui/shell/implementation.md && test -f outputs/tui/shell/verification.md && test -f outputs/tui/shell/integration.md", goal_gate=true, max_retries=0]
++
++    start -> preflight -> implement -> fmt -> verify
++    verify -> review [condition="outcome=success"]
++    verify -> fixup
++    fixup -> fmt
++    review -> audit -> exit
++}
+diff --git a/outputs/tui/shell/implementation.md b/outputs/tui/shell/implementation.md
+index 0ab1c23..4db609b 100644
+--- a/outputs/tui/shell/implementation.md
++++ b/outputs/tui/shell/implementation.md
+@@ -10,9 +10,9 @@ Implemented the next approved `tui:shell` slice from [spec.md](/home/r/.fabro/ru
+ 
+ This fixup did not expand the Rust implementation beyond Slice 1. The
+ `events.rs` headless proof work remains the shipped code change; this pass
+-corrects the lane's proof contract so automation uses runnable cargo commands
+-and selectors instead of shorthand that either fails argument parsing or
+-selects zero tests.
++adds the checked-in Fabro proof surfaces needed to execute the curated shell
++lane proof contract with runnable cargo commands and selectors instead of
++stale shorthand that either fails argument parsing or selects zero tests.
+ 
+ ## What Changed
+ 
+@@ -29,6 +29,51 @@ selects zero tests.
+   - async update delivery
+   - cloned update senders
+ 
++### `fabro/checks/tui-shell-implement.sh`
++
++- Added a dedicated implementation-lane proof script for `tui:shell`.
++- Encoded the exact verified `cargo test -p myosu-tui ...` selectors from the
++  curated shell spec.
++- Forced `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell` so the proof
++  ignores the repository's read-only ambient cargo target path and runs inside
++  Fabro's writable sandbox surface.
++
++### `fabro/checks/tui-shell.sh`
++
++- Re-pointed the bootstrap shell proof to the same exact implementation proof
++  script so the shell lane has one checked-in proof contract instead of
++  divergent shorthand commands.
++
++### `fabro/workflows/implement/tui-shell.fabro`
++
++- Added the bounded implement/fix/verify/audit workflow for the shell lane.
++- Audits the durable implementation artifacts this slice owns:
++  `implementation.md`, `verification.md`, and `integration.md`.
++
++### `fabro/run-configs/implement/tui-shell.toml`
++
++- Added a checked-in run config for the shell implementation lane.
++- Bound the run goal to the reviewed `spec.md` and `review.md` artifacts and
++  the current fixup rules around `quality.md` and `promotion.md`.
++
++### `fabro/programs/myosu-tui-shell-implementation.yaml`
++
++- Added the Raspberry program manifest that supervises the shell
++  implementation lane after `spec.md` and `review.md` already exist.
++- Declared the implementation lane's precondition, proof command, and durable
++  artifacts.
++
++### `fabro/prompts/implement/tui-shell-*.md`
++
++- Added the shell-specific implement, fixup, and verification prompts so the
++  lane can be rerun from checked-in repo assets instead of relying on
++  ad hoc external instructions.
++
++### `fabro/workflows/README.md` and `fabro/programs/README.md`
++
++- Updated the Fabro/Raspberry library docs so the new shell implementation
++  workflow and program show up in the checked-in operator inventory.
++
+ ### `outputs/tui/shell/spec.md`
+ 
+ - Normalized each slice proof gate to the exact cargo invocation that this
+@@ -41,14 +86,16 @@ selects zero tests.
+ ### `outputs/tui/shell/verification.md` and `outputs/tui/shell/integration.md`
+ 
+ - Updated the curated artifacts to record the deterministic verification
+-  failure, the cargo-compatible proof sequence that passed, and the preserved
++  failure, the checked-in proof commands that now pass, and the preserved
+   integration contract for the lane.
+ 
+ ## Scope Guard
+ 
+ - No further changes were made to `events.rs` during fixup.
+-- No changes were made to `shell.rs`, `schema.rs`, `pipe.rs`, `renderer.rs`, or the `GameRenderer` contract.
++- No changes were made to `shell.rs`, `schema.rs`, `pipe.rs`, `renderer.rs`,
++  `theme.rs`, or the `GameRenderer` contract.
+ - No lane expansion was performed beyond the approved `events.rs` slice.
++- `quality.md` and `promotion.md` were intentionally left untouched.
+ 
+ ## Remaining Approved Slices
+ 
+diff --git a/outputs/tui/shell/integration.md b/outputs/tui/shell/integration.md
+index 034c422..90f63f7 100644
+--- a/outputs/tui/shell/integration.md
++++ b/outputs/tui/shell/integration.md
+@@ -4,9 +4,9 @@
+ 
+ This slice remains internal to [events.rs](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/crates/myosu-tui/src/events.rs). It improves proof coverage without changing the external shell contract.
+ 
+-The fixup in this lane is also internal: it normalizes the shell lane's proof
+-commands to exact cargo invocations/selectors so Fabro verification can execute
+-the intended `myosu-tui` regression surfaces instead of relying on shorthand.
++The fixup in this lane is also internal: it adds checked-in Fabro shell
++implementation assets plus exact proof scripts so verification can execute the
++intended `myosu-tui` regression surfaces instead of relying on shorthand.
+ 
+ ## Preserved Contracts
+ 
+@@ -17,12 +17,26 @@ the intended `myosu-tui` regression surfaces instead of relying on shorthand.
+ - The lane still exports the same shell, screen, input, renderer, schema, theme,
+   and pipe surfaces; no downstream crate or runtime contract changed.
+ 
++## Fabro Wiring
++
++- [tui-shell-implement.sh](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/fabro/checks/tui-shell-implement.sh)
++  is now the checked-in proof entrypoint for the shell implementation lane.
++- [tui-shell.sh](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/fabro/checks/tui-shell.sh)
++  now delegates to that exact proof script so the bootstrap and implementation
++  shell entrypoints stay aligned.
++- [tui-shell.fabro](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/fabro/workflows/implement/tui-shell.fabro),
++  [tui-shell.toml](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/fabro/run-configs/implement/tui-shell.toml),
++  and [myosu-tui-shell-implementation.yaml](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/fabro/programs/myosu-tui-shell-implementation.yaml)
++  provide the durable run graph, goal text, and Raspberry supervision surface
++  for future `tui:shell` implementation slices.
++
+ ## Downstream Impact
+ 
+ - Downstream shells and game renderers do not need code changes.
+ - Upstream lane consumers now have CI-safe proof that the event loop behaves in headless execution, which matters for Fabro runs and future pipe/agent automation.
+ - Fabro-style verification can now target real `myosu-tui` tests with exact
+-  selectors recorded in [spec.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/spec.md).
++  selectors recorded in [spec.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/spec.md)
++  and wired into checked-in shell implementation assets.
+ 
+ ## Follow-On Integration Work
+ 
+diff --git a/outputs/tui/shell/verification.md b/outputs/tui/shell/verification.md
+index b03047c..65eacc8 100644
+--- a/outputs/tui/shell/verification.md
++++ b/outputs/tui/shell/verification.md
+@@ -4,35 +4,39 @@
+ 
+ | Command | Exit Code | Result |
+ |---------|-----------|--------|
+-| `cargo test events:: --no-ignore` | 1 | Deterministic failure from the verify stage: `--no-ignore` is not a valid cargo argument without `--` |
+-| `cargo test shell:: --integration` | 1 | Deterministic failure waiting behind the first gate: `--integration` is not a valid cargo argument here |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-events cargo test -p myosu-tui schema::all_game_types` | 0 | Selected 0 tests; shorthand is not a real proof gate on this toolchain |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-events cargo test -p myosu-tui shell::shell_draw_` | 0 | Selected 0 tests; shorthand is not a real proof gate on this toolchain |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-events cargo test -p myosu-tui pipe::is_plain_text` | 0 | Selected 0 tests; shorthand is not a real proof gate on this toolchain |
++| `cargo test events:: --no-ignore` | 1 | Deterministic prior verify failure from context: `--no-ignore` is not a valid cargo argument without `--` |
++| `cargo test shell:: --integration` | 1 | Deterministic prior verify failure from context: `--integration` is not a valid cargo argument here |
+ | `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui events:: -- --include-ignored` | 0 | 6 headless event-loop tests passed |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui shell::` | 0 | 11 shell tests passed unchanged |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui shell::` | 0 | 11 existing shell tests passed |
+ | `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui all_game_types_have_schema` | 0 | Existing schema smoke test passed |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui shell_draw_` | 0 | Existing shell draw tests passed |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui shell_draw_` | 0 | 2 existing shell draw tests passed |
+ | `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui is_plain_text` | 0 | Existing ANSI-detection test passed |
++| `./fabro/checks/tui-shell-implement.sh` | 0 | Checked-in implementation proof script passed with the exact selector sequence above |
++| `./fabro/checks/tui-shell.sh` | 0 | Bootstrap shell proof now delegates to the same checked-in implementation proof contract |
+ 
+ ## Command Notes
+ 
+ - The lane's prior proof-gate shorthands were human-readable but not
+-  automation-safe. Two failed argument parsing, and three returned success while
+-  exercising zero tests.
++  automation-safe. Two failed argument parsing, and the remaining shorthand
++  filters from the prior artifact were replaced with concrete selectors.
+ - [spec.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/spec.md)
+   now records the exact cargo invocations/selectors that correspond to real
+   tests in `myosu-tui`.
+-- `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell` was set because the
+-  default workspace target directory is not writable in this execution
+-  environment.
++- `fabro/checks/tui-shell-implement.sh` is now the checked-in proof entrypoint
++  for the shell lane, and `fabro/checks/tui-shell.sh` reuses it so bootstrap
++  and implementation runs stay aligned.
++- `fabro/checks/tui-shell-implement.sh` now forces
++  `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell` because this execution
++  environment exports a read-only ambient cargo target path.
+ 
+ ## Risks Reduced
+ 
+ - The `events.rs` CI blind spot is reduced: key, resize, tick, and update delivery are now proven headlessly.
+ - The lane no longer depends on a real TTY just to verify the event loop's core channel plumbing.
+-- The lane's proof contract is now executable in automation instead of relying
+-  on cargo shorthands that fail or silently do nothing.
++- The lane's proof contract is now executable from checked-in Fabro assets
++  instead of relying on cargo shorthands that fail or silently do nothing.
++- Bootstrap and implementation entrypoints now share the same shell proof
++  command sequence, reducing drift between operator surfaces.
+ 
+ ## Risks Remaining
+ 
+@@ -41,6 +45,8 @@
+ - There is still no end-to-end `PipeMode::run_once()` async proof tied to the event loop.
+ - Slice 2's current proof surface still re-runs the existing `shell::` module;
+   the dedicated Lobby-to-Game integration test has not been implemented yet.
++- `quality.md` and `promotion.md` remain outside this fixup and are still
++  expected from later stages in the lane.
+ 
+ ## Next Approved Slice
+ 
