@@ -1,0 +1,5 @@
+{
+  "command": "test -f outputs/chain/pallet/implementation.md && test -f outputs/chain/pallet/verification.md && test -f outputs/chain/pallet/quality.md && test -f outputs/chain/pallet/promotion.md && test -f outputs/chain/pallet/integration.md && grep -Eq '^merge_ready: yes$' outputs/chain/pallet/promotion.md && grep -Eq '^manual_proof_pending: no$' outputs/chain/pallet/promotion.md && grep -Eq '^quality_ready: yes$' outputs/chain/pallet/quality.md && grep -Eq '^placeholder_debt: no$' outputs/chain/pallet/quality.md && grep -Eq '^warning_debt: no$' outputs/chain/pallet/quality.md && grep -Eq '^artifact_mismatch_risk: no$' outputs/chain/pallet/quality.md && grep -Eq '^manual_followup_required: no$' outputs/chain/pallet/quality.md",
+  "language": "shell",
+  "timeout_ms": null
+}
