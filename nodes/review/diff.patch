@@ -1,0 +1,782 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index b4e2118..a6743c4 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -282,6 +282,15 @@ version = "1.8.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
+ 
++[[package]]
++name = "bincode"
++version = "1.3.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
++dependencies = [
++ "serde",
++]
++
+ [[package]]
+ name = "bitcoin-internals"
+ version = "0.2.0"
+@@ -1727,10 +1736,13 @@ dependencies = [
+ name = "myosu-games-poker"
+ version = "0.1.0"
+ dependencies = [
++ "bincode",
+  "myosu-games",
++ "rbp-core",
+  "rbp-mccfr",
+  "rbp-nlhe",
+  "serde",
++ "thiserror 2.0.18",
+ ]
+ 
+ [[package]]
+diff --git a/Cargo.toml b/Cargo.toml
+index 795f342..13d6d97 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -31,5 +31,6 @@ crossterm = { version = "0.28", features = ["event-stream"] }
+ ratatui = "0.29"
+ futures = "0.3"
+ tokio-test = "0.4"
++rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+ rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+ rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+diff --git a/crates/myosu-games-poker/Cargo.toml b/crates/myosu-games-poker/Cargo.toml
+index 77c8390..51d66a5 100644
+--- a/crates/myosu-games-poker/Cargo.toml
++++ b/crates/myosu-games-poker/Cargo.toml
+@@ -11,5 +11,10 @@ crate-type = ["lib"]
+ [dependencies]
+ myosu-games = { path = "../myosu-games" }
+ serde = { workspace = true }
++thiserror = { workspace = true }
++bincode = "1"
+ rbp-nlhe = { workspace = true, features = ["serde"] }
+ rbp-mccfr = { workspace = true, features = ["serde"] }
++
++[dev-dependencies]
++rbp-core = { workspace = true }
+diff --git a/crates/myosu-games-poker/src/lib.rs b/crates/myosu-games-poker/src/lib.rs
+index ae5f4c5..6f6fb9c 100644
+--- a/crates/myosu-games-poker/src/lib.rs
++++ b/crates/myosu-games-poker/src/lib.rs
+@@ -1,22 +1,21 @@
+ //! NLHE poker engine integration surface for myosu.
+ //!
+-//! Slice 1 intentionally keeps this crate small: it registers the crate in the
+-//! workspace, pins the robopoker dependencies, and proves that `rbp-nlhe`
+-//! exposes serde-ready NLHE wire types for later slices.
++//! Slice 2 adds the solver wrapper surface and checkpoint format while keeping
++//! the remaining query, wire, exploit, and training-session work for later
++//! slices.
+ 
+ use std::marker::PhantomData;
+ 
+ pub use myosu_games::{GameConfig, GameType, StrategyQuery, StrategyResponse};
+-pub use rbp_nlhe::{Flagship, NlheEdge, NlheInfo};
++pub use rbp_nlhe::{NlheEdge, NlheEncoder, NlheInfo, NlheProfile};
++pub use solver::{CHECKPOINT_MAGIC, CHECKPOINT_VERSION, Flagship, PokerSolver, PokerSolverError};
++
++pub mod solver;
+ 
+ /// Marker type for the NLHE heads-up engine family.
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ pub struct Poker;
+ 
+-/// Public slot for the solver wrapper that lands in Slice 2.
+-#[derive(Debug)]
+-pub struct PokerSolver;
+-
+ /// Public slot for the training coordinator that lands in Slice 6.
+ #[derive(Debug)]
+ pub struct TrainingSession;
+diff --git a/crates/myosu-games-poker/src/solver.rs b/crates/myosu-games-poker/src/solver.rs
+new file mode 100644
+index 0000000..0f6b308
+--- /dev/null
++++ b/crates/myosu-games-poker/src/solver.rs
+@@ -0,0 +1,431 @@
++use std::any::Any;
++use std::fmt;
++use std::fs;
++use std::panic::{AssertUnwindSafe, catch_unwind};
++use std::path::{Path, PathBuf};
++
++use myosu_games::{StrategyResponse, Utility};
++use rbp_mccfr::{Profile as _, Solver as _};
++pub use rbp_nlhe::Flagship;
++use rbp_nlhe::{NlheEdge, NlheEncoder, NlheInfo, NlheProfile};
++use thiserror::Error;
++
++pub const CHECKPOINT_MAGIC: [u8; 4] = *b"MYOS";
++pub const CHECKPOINT_VERSION: u32 = 1;
++
++#[derive(Debug, Error)]
++pub enum PokerSolverError {
++    #[error("checkpoint read failed at {path}: {source}")]
++    CheckpointRead {
++        path: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("checkpoint write failed at {path}: {source}")]
++    CheckpointWrite {
++        path: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("checkpoint is too short: expected at least 8 bytes, found {found}")]
++    CheckpointTooShort { found: usize },
++    #[error("checkpoint magic mismatch: expected {expected:?}, found {found:?}")]
++    InvalidCheckpointMagic {
++        expected: [u8; 4],
++        found: [u8; 4],
++    },
++    #[error("checkpoint version mismatch: expected {expected}, found {found}")]
++    UnsupportedCheckpointVersion { expected: u32, found: u32 },
++    #[error("checkpoint encode failed: {source}")]
++    CheckpointEncode {
++        #[source]
++        source: Box<bincode::ErrorKind>,
++    },
++    #[error("checkpoint decode failed: {source}")]
++    CheckpointDecode {
++        #[source]
++        source: Box<bincode::ErrorKind>,
++    },
++    #[error(
++        "solver {operation} requires an encoder with abstraction data; the current encoder does not contain the needed lookup entries"
++    )]
++    MissingEncoderArtifacts {
++        operation: &'static str,
++        message: String,
++    },
++    #[error("solver {operation} failed: {message}")]
++    SolverPanicked {
++        operation: &'static str,
++        message: String,
++    },
++}
++
++pub struct PokerSolver {
++    inner: Flagship,
++}
++
++impl fmt::Debug for PokerSolver {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("PokerSolver")
++            .field("epochs", &self.epochs())
++            .finish()
++    }
++}
++
++impl PokerSolver {
++    pub fn new_empty() -> Self {
++        Self::from_parts(NlheProfile::default(), NlheEncoder::default())
++    }
++
++    pub fn from_parts(profile: NlheProfile, encoder: NlheEncoder) -> Self {
++        Self {
++            inner: Flagship::new(profile, encoder),
++        }
++    }
++
++    pub fn from_inner(inner: Flagship) -> Self {
++        Self { inner }
++    }
++
++    pub fn into_inner(self) -> Flagship {
++        self.inner
++    }
++
++    pub fn profile(&self) -> &NlheProfile {
++        &self.inner.profile
++    }
++
++    pub fn profile_mut(&mut self) -> &mut NlheProfile {
++        &mut self.inner.profile
++    }
++
++    pub fn encoder(&self) -> &NlheEncoder {
++        &self.inner.encoder
++    }
++
++    pub fn epochs(&self) -> usize {
++        self.profile().epochs()
++    }
++
++    pub fn strategy(&self, info: &NlheInfo) -> StrategyResponse<NlheEdge> {
++        StrategyResponse::new(self.profile().averaged_distribution(info).into_iter().collect())
++    }
++
++    pub fn train(&mut self, iterations: usize) -> Result<(), PokerSolverError> {
++        self.run_solver_mut("train", |solver| {
++            for _ in 0..iterations {
++                solver.step();
++            }
++        })
++    }
++
++    pub fn exploitability(&self) -> Result<Utility, PokerSolverError> {
++        self.run_solver("exploitability", |solver| solver.exploitability())
++    }
++
++    pub fn snapshot_profile(&self) -> Result<NlheProfile, PokerSolverError> {
++        let encoded =
++            bincode::serialize(self.profile()).map_err(|source| PokerSolverError::CheckpointEncode {
++                source,
++            })?;
++        bincode::deserialize(&encoded).map_err(|source| PokerSolverError::CheckpointDecode {
++            source,
++        })
++    }
++
++    pub fn save<P>(&self, path: P) -> Result<(), PokerSolverError>
++    where
++        P: AsRef<Path>,
++    {
++        save_profile(self.profile(), path)
++    }
++
++    pub fn load<P>(path: P, encoder: NlheEncoder) -> Result<Self, PokerSolverError>
++    where
++        P: AsRef<Path>,
++    {
++        let profile = Self::load_profile(path)?;
++        Ok(Self::from_parts(profile, encoder))
++    }
++
++    pub fn load_profile<P>(path: P) -> Result<NlheProfile, PokerSolverError>
++    where
++        P: AsRef<Path>,
++    {
++        load_profile(path)
++    }
++
++    fn run_solver<T, F>(&self, operation: &'static str, mut f: F) -> Result<T, PokerSolverError>
++    where
++        F: FnMut(&Flagship) -> T,
++    {
++        catch_unwind(AssertUnwindSafe(|| f(&self.inner)))
++            .map_err(|payload| map_solver_panic(operation, payload))
++    }
++
++    fn run_solver_mut<T, F>(
++        &mut self,
++        operation: &'static str,
++        mut f: F,
++    ) -> Result<T, PokerSolverError>
++    where
++        F: FnMut(&mut Flagship) -> T,
++    {
++        catch_unwind(AssertUnwindSafe(|| f(&mut self.inner)))
++            .map_err(|payload| map_solver_panic(operation, payload))
++    }
++}
++
++fn save_profile<P>(profile: &NlheProfile, path: P) -> Result<(), PokerSolverError>
++where
++    P: AsRef<Path>,
++{
++    let path = path.as_ref();
++    let payload =
++        bincode::serialize(profile).map_err(|source| PokerSolverError::CheckpointEncode {
++            source,
++        })?;
++    let mut bytes = Vec::with_capacity(CHECKPOINT_MAGIC.len() + std::mem::size_of::<u32>() + payload.len());
++    bytes.extend_from_slice(&CHECKPOINT_MAGIC);
++    bytes.extend_from_slice(&CHECKPOINT_VERSION.to_le_bytes());
++    bytes.extend_from_slice(&payload);
++    fs::write(path, bytes).map_err(|source| PokerSolverError::CheckpointWrite {
++        path: path.to_path_buf(),
++        source,
++    })
++}
++
++fn load_profile<P>(path: P) -> Result<NlheProfile, PokerSolverError>
++where
++    P: AsRef<Path>,
++{
++    let path = path.as_ref();
++    let bytes = fs::read(path).map_err(|source| PokerSolverError::CheckpointRead {
++        path: path.to_path_buf(),
++        source,
++    })?;
++    if bytes.len() < CHECKPOINT_MAGIC.len() + std::mem::size_of::<u32>() {
++        return Err(PokerSolverError::CheckpointTooShort { found: bytes.len() });
++    }
++
++    let found_magic: [u8; 4] = bytes[..4].try_into().expect("magic length matches");
++    if found_magic != CHECKPOINT_MAGIC {
++        return Err(PokerSolverError::InvalidCheckpointMagic {
++            expected: CHECKPOINT_MAGIC,
++            found: found_magic,
++        });
++    }
++
++    let found_version = u32::from_le_bytes(bytes[4..8].try_into().expect("version length matches"));
++    if found_version != CHECKPOINT_VERSION {
++        return Err(PokerSolverError::UnsupportedCheckpointVersion {
++            expected: CHECKPOINT_VERSION,
++            found: found_version,
++        });
++    }
++
++    bincode::deserialize(&bytes[8..]).map_err(|source| PokerSolverError::CheckpointDecode {
++        source,
++    })
++}
++
++fn map_solver_panic(operation: &'static str, payload: Box<dyn Any + Send>) -> PokerSolverError {
++    let message = panic_message(payload);
++    if message.contains("isomorphism not found in abstraction lookup") {
++        PokerSolverError::MissingEncoderArtifacts { operation, message }
++    } else {
++        PokerSolverError::SolverPanicked { operation, message }
++    }
++}
++
++fn panic_message(payload: Box<dyn Any + Send>) -> String {
++    match payload.downcast::<String>() {
++        Ok(message) => *message,
++        Err(payload) => match payload.downcast::<&'static str>() {
++            Ok(message) => (*message).to_string(),
++            Err(_) => "non-string panic payload".to_string(),
++        },
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    use std::time::{SystemTime, UNIX_EPOCH};
++
++    use myosu_games::CfrInfo;
++    use rbp_core::Arbitrary;
++    use rbp_mccfr::Encounter;
++
++    #[test]
++    fn create_empty_solver() {
++        let solver = PokerSolver::new_empty();
++
++        assert_eq!(solver.epochs(), 0);
++        assert!(solver.profile().encounters.is_empty());
++    }
++
++    #[test]
++    fn strategy_is_valid_distribution() {
++        let solver = PokerSolver::new_empty();
++        let info = NlheInfo::random();
++
++        let response = solver.strategy(&info);
++
++        assert!(response.is_valid());
++        assert_eq!(response.actions.len(), CfrInfo::choices(&info).len());
++    }
++
++    #[test]
++    fn checkpoint_roundtrip() {
++        let mut solver = PokerSolver::new_empty();
++        let info = NlheInfo::random();
++        let edge = CfrInfo::choices(&info)
++            .into_iter()
++            .next()
++            .expect("random infos always expose at least one action");
++        solver.profile_mut().iterations = 42;
++        solver
++            .profile_mut()
++            .encounters
++            .entry(info)
++            .or_default()
++            .insert(edge, Encounter::new(0.6, 0.3, 0.2, 7));
++
++        let path = temp_checkpoint_path("roundtrip");
++        solver.save(&path).expect("checkpoint write succeeds");
++        let loaded =
++            PokerSolver::load(&path, NlheEncoder::default()).expect("checkpoint load succeeds");
++
++        assert_eq!(loaded.epochs(), 42);
++        assert_eq!(loaded.profile().encounters.len(), 1);
++        assert_eq!(
++            loaded
++                .profile()
++                .encounters
++                .get(&info)
++                .and_then(|edges| edges.get(&edge))
++                .map(|encounter| encounter.counts),
++            Some(7)
++        );
++
++        fs::remove_file(path).expect("checkpoint cleanup succeeds");
++    }
++
++    #[test]
++    fn checkpoint_rejects_bad_magic() {
++        let path = temp_checkpoint_path("bad-magic");
++        fs::write(&path, b"NOPE\x01\x00\x00\x00payload").expect("fixture write succeeds");
++
++        let error = match PokerSolver::load_profile(&path) {
++            Ok(_) => panic!("invalid magic is rejected"),
++            Err(error) => error,
++        };
++        assert!(matches!(
++            error,
++            PokerSolverError::InvalidCheckpointMagic { .. }
++        ));
++
++        fs::remove_file(path).expect("fixture cleanup succeeds");
++    }
++
++    #[test]
++    fn checkpoint_rejects_unknown_version() {
++        let mut bytes = Vec::new();
++        bytes.extend_from_slice(&CHECKPOINT_MAGIC);
++        bytes.extend_from_slice(&999u32.to_le_bytes());
++        bytes.extend_from_slice(
++            &bincode::serialize(&NlheProfile::default()).expect("fixture encode succeeds"),
++        );
++
++        let path = temp_checkpoint_path("bad-version");
++        fs::write(&path, bytes).expect("fixture write succeeds");
++
++        let error = match PokerSolver::load_profile(&path) {
++            Ok(_) => panic!("unknown version is rejected"),
++            Err(error) => error,
++        };
++        assert!(matches!(
++            error,
++            PokerSolverError::UnsupportedCheckpointVersion { found: 999, .. }
++        ));
++
++        fs::remove_file(path).expect("fixture cleanup succeeds");
++    }
++
++    #[test]
++    fn train_surfaces_missing_encoder_artifacts() {
++        let mut solver = PokerSolver::new_empty();
++
++        let error = solver
++            .train(1)
++            .expect_err("training without abstraction data returns an error");
++
++        assert!(matches!(
++            error,
++            PokerSolverError::MissingEncoderArtifacts {
++                operation: "train",
++                ..
++            }
++        ));
++    }
++
++    #[test]
++    fn exploitability_surfaces_missing_encoder_artifacts() {
++        let solver = PokerSolver::new_empty();
++
++        let error = solver
++            .exploitability()
++            .expect_err("scoring without abstraction data returns an error");
++
++        assert!(matches!(
++            error,
++            PokerSolverError::MissingEncoderArtifacts {
++                operation: "exploitability",
++                ..
++            }
++        ));
++    }
++
++    #[test]
++    fn snapshot_profile_preserves_profile_data() {
++        let mut solver = PokerSolver::new_empty();
++        let info = NlheInfo::random();
++        let edge = CfrInfo::choices(&info)
++            .into_iter()
++            .next()
++            .expect("random infos always expose at least one action");
++        solver.profile_mut().iterations = 5;
++        solver
++            .profile_mut()
++            .encounters
++            .entry(info)
++            .or_default()
++            .insert(edge, Encounter::new(0.25, 0.5, 0.75, 3));
++
++        let snapshot = solver.snapshot_profile().expect("snapshot succeeds");
++
++        assert_eq!(snapshot.iterations, 5);
++        assert_eq!(snapshot.encounters.len(), 1);
++        assert_eq!(
++            snapshot
++                .encounters
++                .get(&info)
++                .and_then(|edges| edges.get(&edge))
++                .map(|encounter| encounter.weight),
++            Some(0.25)
++        );
++    }
++
++    fn temp_checkpoint_path(name: &str) -> PathBuf {
++        let nanos = SystemTime::now()
++            .duration_since(UNIX_EPOCH)
++            .expect("clock is after unix epoch")
++            .as_nanos();
++        std::env::temp_dir().join(format!(
++            "myosu-games-poker-{name}-{}-{nanos}.chk",
++            std::process::id()
++        ))
++    }
++}
+diff --git a/outputs/games/poker-engine/implementation.md b/outputs/games/poker-engine/implementation.md
+index f9af0c4..a63f41e 100644
+--- a/outputs/games/poker-engine/implementation.md
++++ b/outputs/games/poker-engine/implementation.md
+@@ -1,81 +1,73 @@
+-# `games:poker-engine` Implementation — Slice 1
++# `games:poker-engine` Implementation — Slice 2
+ 
+ ## Slice Implemented
+ 
+-**Slice 1 — Create `myosu-games-poker` Crate Skeleton**
++**Slice 2 — solver wrapper plus versioned checkpoint I/O**
+ 
+-This slice creates the greenfield `myosu-games-poker` crate, registers it in the workspace, and verifies that the pinned robopoker NLHE types compile with serde support enabled. No solver, wire, query, exploitability, or training-session logic was implemented yet; those remain in later approved slices.
++This increment adds the `PokerSolver` surface for `myosu-games-poker` and lands the file checkpoint format defined by the lane spec: 4-byte `MYOS` magic, `u32` version, then bincode-encoded `NlheProfile`.
++
++The reviewed robopoker pin still does not expose a non-DB path for building a populated `NlheEncoder`, so this slice focuses on the solver work that can be completed inside the owned `games:poker-engine` surfaces without mutating robopoker itself:
++
++- wrap `rbp_nlhe::Flagship`
++- expose profile-driven strategy lookup
++- persist and restore profiles with version checks
++- convert encoder-lookup panics into typed errors for `train()` and `exploitability()`
+ 
+ ## What Changed
+ 
+ ### Workspace root: `Cargo.toml`
+ 
+-- Added `crates/myosu-games-poker` to the workspace `members` list so `cargo build -p myosu-games-poker` can resolve the package.
+-- Added workspace dependency entries for:
+-  - `rbp-nlhe`
+-  - `rbp-mccfr`
+-
+-Both point at the reviewed robopoker git source and pinned rev `04716310143094ab41ec7172e6cea5a2a66744ef`.
+-
+-### New crate: `crates/myosu-games-poker/Cargo.toml`
+-
+-Created the new package with:
+-
+-- `name = "myosu-games-poker"`
+-- `crate-type = ["lib"]`
+-- dependency on `myosu-games`
+-- dependency on `serde`
+-- dependency on `rbp-nlhe` with `features = ["serde"]`
+-- dependency on `rbp-mccfr` with `features = ["serde"]`
+-
+-This is the minimal dependency surface required to prove the NLHE wire types are serde-ready before Slice 3.
+-
+-### New crate root: `crates/myosu-games-poker/src/lib.rs`
+-
+-Created a minimal public surface that:
+-
+-- re-exports `GameConfig`, `GameType`, `StrategyQuery`, and `StrategyResponse` from `myosu-games`
+-- re-exports `Flagship`, `NlheInfo`, and `NlheEdge` from `rbp-nlhe`
+-- reserves the `Poker`, `PokerSolver`, and `TrainingSession` public type names so later slices can fill in their behavior without reshaping the crate root
+-- adds a compile-time serde guard for `NlheInfo` and `NlheEdge`
+-- adds two narrow smoke tests:
+-  - serde support is enabled for the NLHE types
+-  - `GameType::NlheHeadsUp` is reachable through the re-export path
++- Added `rbp-core` to workspace dependencies at the same reviewed robopoker rev as the existing poker crates.
++- Kept the robopoker rev pinned to `04716310143094ab41ec7172e6cea5a2a66744ef`.
+ 
+ ### Lockfile: `Cargo.lock`
+ 
+-The new crate pulled the expected additional packages into the lockfile:
++- Recorded `bincode v1.3.3` for checkpoint serialization.
++- Recorded the added `rbp-core` and `thiserror` edges for `myosu-games-poker`.
+ 
+-- `myosu-games-poker`
+-- `rbp-nlhe`
+-- `rbp-cards`
+-- `rbp-gameplay`
+-- `petgraph 0.6.5`
+-- `fixedbitset 0.4.2`
++### Crate manifest: `crates/myosu-games-poker/Cargo.toml`
+ 
+-This lockfile update is part of the slice because the package did not previously exist in the workspace.
++- Added `bincode = "1"` for checkpoint payload encoding.
++- Added `thiserror` for a typed error surface.
++- Added a dev dependency on `rbp-core` so the unit tests can use `Arbitrary` with the same pinned rev as the rest of the poker stack.
+ 
+-## Proof Commands Run for This Slice
++### Crate root: `crates/myosu-games-poker/src/lib.rs`
+ 
+-```bash
+-CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo build -p myosu-games-poker --offline
+-CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline
+-cargo tree -p myosu-games-poker -e features --offline
+-```
++- Exported the new solver module.
++- Re-exported `PokerSolver`, `PokerSolverError`, `CHECKPOINT_MAGIC`, and `CHECKPOINT_VERSION`.
++- Re-exported `NlheEncoder` and `NlheProfile` alongside the existing NLHE types so later slices can compose on the same public surface.
+ 
+-All three commands exited 0.
++### New solver surface: `crates/myosu-games-poker/src/solver.rs`
+ 
+-## Stage-Owned Artifacts Left Untouched
++Added a concrete `PokerSolver` wrapper around `rbp_nlhe::Flagship` with:
+ 
+-- `outputs/games/poker-engine/quality.md` was not authored here; it is owned by the Quality Gate stage.
+-- `outputs/games/poker-engine/promotion.md` was not authored here; it is owned by the Review stage.
++- `new_empty()`, `from_parts()`, `from_inner()`, and `into_inner()`
++- `profile()`, `profile_mut()`, `encoder()`, and `epochs()`
++- `strategy(&NlheInfo) -> StrategyResponse<NlheEdge>` using the profile’s averaged distribution
++- `train(iterations)` and `exploitability()` with panic capture so missing encoder lookup data becomes `PokerSolverError::MissingEncoderArtifacts`
++- `snapshot_profile()` via bincode roundtrip, which gives the lane a practical profile-copy path even though robopoker does not derive `Clone` on `NlheProfile`
++- `save()`, `load()`, and `load_profile()` for the reviewed checkpoint format
+ 
+-## What Remains for Future Slices
++### Solver Tests
+ 
+-| Slice | Description | Status |
+-|-------|-------------|--------|
+-| Slice 2 | `solver.rs`: `PokerSolver` wrapper + checkpoint format | Pending |
+-| Slice 3 | `wire.rs`: bincode roundtrip for `NlheInfo` and `NlheEdge` | Pending |
+-| Slice 4 | `query.rs`: `handle_query` bridge | Pending |
+-| Slice 5 | `exploit.rs`: local + remote exploitability | Pending |
+-| Slice 6 | `training.rs`: `TrainingSession` | Pending |
++Added unit coverage for:
++
++- empty solver construction
++- strategy distributions derived from the profile surface
++- checkpoint roundtrip plus invalid magic and invalid version rejection
++- snapshot/profile copying
++- structured error mapping for encoder-dependent `train()` and `exploitability()` calls on an empty encoder
++
++## Scope Boundary Kept
++
++This slice does **not** claim successful encoder-backed training convergence. The reviewed robopoker pin still only hydrates `NlheEncoder` from the database path, so `NlheEncoder::default()` is enough for profile-only operations like `strategy()` and checkpoint I/O, but not for full tree traversal.
++
++That boundary is now explicit in code rather than hidden behind a panic.
++
++## What Remains After This Slice
++
++- Wire serialization in `wire.rs`
++- Query bridging in `query.rs`
++- Remote/local exploitability helpers in a dedicated `exploit.rs`
++- Batch/session orchestration in `training.rs`
++- A vetted non-DB encoder construction path or encoder artifact ingestion path so `train(100)` and exploitability decrease proofs can run against a populated NLHE abstraction map
+diff --git a/outputs/games/poker-engine/promotion.md b/outputs/games/poker-engine/promotion.md
+new file mode 100644
+index 0000000..7a5bc0f
+--- /dev/null
++++ b/outputs/games/poker-engine/promotion.md
+@@ -0,0 +1,4 @@
++merge_ready: no
++manual_proof_pending: no
++reason: The solver wrapper and checkpoint surface are in place, but the reviewed robopoker pin still lacks a non-DB encoder path, so full encoder-backed Slice 2 proof is not complete.
++next_action: Add an RF-02-style encoder construction or vetted encoder artifact ingestion path, then rerun the training and exploitability proofs for `myosu-games-poker`.
+diff --git a/outputs/games/poker-engine/quality.md b/outputs/games/poker-engine/quality.md
+index c05c152..af5ef1b 100644
+--- a/outputs/games/poker-engine/quality.md
++++ b/outputs/games/poker-engine/quality.md
+@@ -5,7 +5,15 @@ artifact_mismatch_risk: no
+ manual_followup_required: no
+ 
+ ## Touched Surfaces
+-- (none declared)
++- Cargo.toml
++- Cargo.lock
++- crates/myosu-games-poker/Cargo.toml
++- crates/myosu-games-poker/src/lib.rs
++- crates/myosu-games-poker/src/solver.rs
++- outputs/games/poker-engine/implementation.md
++- outputs/games/poker-engine/verification.md
++- outputs/games/poker-engine/quality.md
++- outputs/games/poker-engine/promotion.md
+ 
+ ## Placeholder Hits
+ 
+diff --git a/outputs/games/poker-engine/verification.md b/outputs/games/poker-engine/verification.md
+index e533014..824d5c2 100644
+--- a/outputs/games/poker-engine/verification.md
++++ b/outputs/games/poker-engine/verification.md
+@@ -1,44 +1,52 @@
+-# `games:poker-engine` Verification — Slice 1
++# `games:poker-engine` Verification — Slice 2
+ 
+ ## Proof Commands That Passed
+ 
+ | Command | Exit Code | Result |
+ |---------|-----------|--------|
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo build -p myosu-games-poker --offline` | 0 | Built the new crate and resolved `rbp-nlhe`, `rbp-cards`, and `rbp-gameplay` from the pinned robopoker git source |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline` | 0 | 2 unit tests passed; 0 failed |
+-| `cargo tree -p myosu-games-poker -e features --offline` | 0 | Confirmed `rbp-nlhe feature "serde"` and `rbp-mccfr feature "serde"` are active in the resolved feature graph |
+-
+-## Fixup Proof Commands That Passed
+-
+-| Command | Exit Code | Result |
+-|---------|-----------|--------|
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline` | 0 | Re-ran the crate test suite after the wording-only fixup; 2 unit tests passed and doc tests remained green |
+-| `quality gate script for outputs/games/poker-engine/{implementation,verification}.md` | 0 | Regenerated `quality.md` with `quality_ready: yes`; artifact scan, warning scan, and follow-up scan all came back clean |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo build -p myosu-games-poker --offline` | 0 | Built the updated crate, including the new solver module and checkpoint dependencies |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker --offline` | 0 | Full crate suite passed: 10 unit tests green, 0 failed |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker solver::tests::checkpoint_roundtrip --offline` | 0 | Confirmed `MYOS` checkpoint write/read roundtrip works |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker solver::tests::strategy_is_valid_distribution --offline` | 0 | Confirmed profile-driven strategy output remains a valid probability distribution |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker solver::tests::train_surfaces_missing_encoder_artifacts --offline` | 0 | Confirmed `train()` maps the encoder lookup panic into a typed error instead of crashing |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2 cargo test -p myosu-games-poker solver::tests::exploitability_surfaces_missing_encoder_artifacts --offline` | 0 | Confirmed `exploitability()` maps the same encoder lookup panic into a typed error |
+ 
+ ## Test Results
+ 
+ ```text
+-running 2 tests
+-test tests::game_type_reexport_includes_nlhe_heads_up ... ok
++running 10 tests
++test solver::tests::create_empty_solver ... ok
++test solver::tests::checkpoint_rejects_unknown_version ... ok
++test solver::tests::checkpoint_rejects_bad_magic ... ok
++test solver::tests::exploitability_surfaces_missing_encoder_artifacts ... ok
+ test tests::robopoker_nlhe_serde_surface_is_enabled ... ok
++test tests::game_type_reexport_includes_nlhe_heads_up ... ok
++test solver::tests::strategy_is_valid_distribution ... ok
++test solver::tests::train_surfaces_missing_encoder_artifacts ... ok
++test solver::tests::snapshot_profile_preserves_profile_data ... ok
++test solver::tests::checkpoint_roundtrip ... ok
+ 
+-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
++test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+ ```
+ 
+ ## Environment Notes
+ 
+-- A plain `cargo build -p myosu-games-poker` was attempted first and failed in this sandbox because Cargo tried to refresh the crates.io index and the environment has no DNS/network access.
+-- An offline build without overriding `CARGO_TARGET_DIR` also failed because the workspace default target path resolves to a read-only location outside the writable sandbox.
+-- The slice was therefore verified with `--offline` plus `CARGO_TARGET_DIR=/tmp/myosu-cargo-target`, which stays inside writable local storage and exercises the new package successfully.
++- A plain `cargo test -p myosu-games-poker` first attempted to refresh the crates.io index and failed because this sandbox has no DNS/network access.
++- An offline Cargo run without overriding `CARGO_TARGET_DIR` hit the workspace default target path, which resolves to a read-only location in this environment.
++- The passing proof path therefore used `--offline` plus `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-slice2`.
+ 
+-## Risks Reduced
++## Coverage Achieved By This Slice
+ 
+-- **Workspace package missing:** Reduced. `myosu-games-poker` now exists and is registered in the workspace, so the package is discoverable by Cargo.
+-- **Serde feature uncertainty on robopoker NLHE types:** Reduced. `NlheInfo` and `NlheEdge` now have both compile-time and runtime smoke-check coverage through the crate root and test suite.
+-- **Wire-slice ambiguity:** Reduced. `cargo tree -e features` confirms the exact serde feature path that Slice 3 depends on.
++- The new solver/checkpoint code compiles.
++- Checkpoint format validation and profile roundtrip are covered.
++- Strategy lookup over stored profile data is covered.
++- Encoder-dependent solver paths now fail with typed errors instead of an uncaught panic when the encoder has no abstraction lookup data.
+ 
+-## Risks That Remain
++## Coverage Still Outside This Slice
+ 
+-- **Shared robopoker rev is still duplicated:** Reduced but not eliminated. This slice pins the new crate to the same reviewed rev, but `crates/myosu-games/Cargo.toml` still carries its own identical literal pin because that crate is outside the poker-engine owned surface.
+-- **Solver/query/exploit/training surfaces remain unimplemented:** Unchanged. This slice intentionally stops at the crate skeleton.
+-- **Default workspace build path is not sandbox-friendly:** Unchanged. Proof in this environment still needs a writable `CARGO_TARGET_DIR`.
++The reviewed lane proof for a fully populated Slice 2 still depends on a non-DB encoder construction or artifact-ingestion path. Until that exists, this lane cannot honestly claim:
++
++- successful `train(100)` over a populated NLHE abstraction map
++- exploitability improvement after real training iterations
++
++Those are the next proof targets once the encoder gap is resolved.
