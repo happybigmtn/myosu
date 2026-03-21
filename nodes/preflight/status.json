@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "duration_ms": 9348,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-21T02:53:43.921786344+00:00",
+  "updated_at": "2026-03-21T02:53:43.921790643+00:00",
+  "notes": "Script completed: set +e\ncargo build -p myosu-games-poker\ncargo test -p myosu-games-poker\ncargo test -p myosu-games-poker solver::tests::create_empty_solver\ncargo test -p myosu-games-poker solver::tests::train_100_iterations\ncargo test -p myosu-games-poker solver::tests::strategy_is_valid_distribution\ncargo test -p myosu-games-poker solver::tests::checkpoint_roundtrip\ncargo test -p myosu-games-poker solver::tests::exploitability_decreases\ncargo test -p myosu-games-poker wire::tests::nlhe_info_roundtrip\ncargo test -p myosu-games-poker wire::tests::nlhe_edge_roundtrip\ncargo test -p myosu-games-poker wire::tests::all_edge_variants_serialize\ncargo test -p myosu-games-poker query::tests::handle_valid_query\ncargo test -p myosu-games-poker query::tests::handle_invalid_info_bytes\ncargo test -p myosu-games-poker query::tests::response_probabilities_sum_to_one\ncargo test -p myosu-games-poker exploit::tests::trained_strategy_low_exploit\ncargo test -p myosu-games-poker exploit::tests::random_strategy_high_exploit\ncargo test -p myosu-games-poker exploit::tests::remote_matches_local\ncargo test -p myosu-games-poker training::tests::session_checkpoint_frequency\ntrue"
+}
