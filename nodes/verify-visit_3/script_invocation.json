@@ -1,0 +1,5 @@
+{
+  "command": "set -e\ncargo test events:: --no-ignore\ncargo test shell:: --integration\ncargo test schema::all_game_types\ncargo test shell::shell_draw_\ncargo test pipe::is_plain_text",
+  "language": "shell",
+  "timeout_ms": null
+}

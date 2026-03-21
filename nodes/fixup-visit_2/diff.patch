@@ -1,0 +1,127 @@
+diff --git a/outputs/tui/shell/implementation.md b/outputs/tui/shell/implementation.md
+index ad487bc..0001084 100644
+--- a/outputs/tui/shell/implementation.md
++++ b/outputs/tui/shell/implementation.md
+@@ -5,14 +5,15 @@
+ **Slice 1 — Event Loop Headless Test**
+ 
+ The approved `events.rs` slice from [`outputs/tui/shell/spec.md`](./spec.md)
+-was already implemented: the event loop can be proven headlessly in CI without
+-requiring a real TTY.
++was already present at the start of this fixup: the event loop can be proven
++headlessly in CI without requiring a real TTY.
+ 
+-This fixup did not widen code scope. It repaired the implementation-lane proof
+-contract so the live proof gate matches the active slice and uses valid Cargo
+-syntax in this sandboxed workspace.
++No additional Rust source changes were required in this turn. The fixup work
++stays inside the current slice by refreshing the curated implementation records
++so they describe the active proof gate truthfully and do not misattribute the
++stale `cargo test events:: --no-ignore` failure to the current `spec.md`.
+ 
+-## Owned Surface
++## Lane Surfaces Considered
+ 
+ - `crates/myosu-tui/src/events.rs`
+ - `outputs/tui/shell/spec.md`
+@@ -20,7 +21,8 @@ syntax in this sandboxed workspace.
+ - `outputs/tui/shell/verification.md`
+ - `outputs/tui/shell/integration.md`
+ 
+-No additional lane-owned source files were changed.
++Only the curated implementation artifacts were updated in this fixup. The
++lane-owned source surface in `events.rs` was revalidated but not edited.
+ 
+ ## What Changed
+ 
+@@ -48,13 +50,13 @@ The two ignored tests that depended on a real terminal were replaced with headle
+ 
+ `update_sender_cloned` was also updated to use the headless harness so the `events::` suite no longer depends on terminal availability.
+ 
+-### Proof activation is now slice-scoped
++### Proof activation remains slice-scoped
+ 
+ `outputs/tui/shell/spec.md` now exposes only one live `**Proof gate**`, for the
+ currently approved Slice 1. Later slices keep `**Planned proof gate**` labels
+ until they are explicitly selected.
+ 
+-That fixup also corrects the command shape:
++The active command shape remains:
+ 
+ ```bash
+ env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::
+@@ -64,6 +66,10 @@ The `CARGO_TARGET_DIR` override is required in this workspace because the
+ default Cargo target path points at a read-only location outside the writable
+ run sandbox.
+ 
++The legacy `cargo test events:: --no-ignore` invocation is now treated as a
++stale verifier command from earlier stage logs, not as the current live proof
++gate for this slice.
++
+ ## Behavioral Outcome
+ 
+ This slice proves that the `EventLoop` channel bridge delivers the critical event classes required by the shell:
+diff --git a/outputs/tui/shell/integration.md b/outputs/tui/shell/integration.md
+index ee158ee..a7541f9 100644
+--- a/outputs/tui/shell/integration.md
++++ b/outputs/tui/shell/integration.md
+@@ -12,7 +12,9 @@ The only integration change in the original Slice 1 code was internal:
+ `events.rs` can now be exercised with a synthetic event stream in tests.
+ 
+ This fixup adds no new runtime integration behavior. It only clarifies which
+-proof command is live for the current implementation slice.
++proof command is live for the current implementation slice and records that the
++legacy `cargo test events:: --no-ignore` failure comes from stale verifier
++state rather than the current lane-owned runtime surfaces.
+ 
+ ## Upstream and Downstream Impact
+ 
+@@ -22,6 +24,9 @@ proof command is live for the current implementation slice.
+ - **Curated proof consumers:** clarified. `outputs/tui/shell/spec.md` now marks
+   only the active Slice 1 command as `**Proof gate**`; future slices stay
+   planned until their code is approved to land.
++- **Legacy verifier command:** isolated. The stale `--no-ignore` invocation is
++  not part of the current shell/runtime integration contract and cannot be
++  repaired from `events.rs`.
+ 
+ ## Slice Boundary Check
+ 
+diff --git a/outputs/tui/shell/verification.md b/outputs/tui/shell/verification.md
+index 76f0f59..a651c27 100644
+--- a/outputs/tui/shell/verification.md
++++ b/outputs/tui/shell/verification.md
+@@ -4,7 +4,7 @@
+ 
+ | Command | Exit Code | Result |
+ |---------|-----------|--------|
+-| `cargo test events:: --no-ignore` | 1 | The command in `spec.md` is not valid Cargo syntax. Cargo rejects `--no-ignore` unless test args are passed after `--`. |
++| `cargo test events:: --no-ignore` | 1 | Fails immediately. This is the stale verifier command from the prior stage logs, not the current live Slice 1 proof gate in `spec.md`. |
+ | `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::` | 0 | Passed. The live Slice 1 proof gate succeeded with 4 `events::` tests. |
+ | `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui schema::tests::all_game_types_have_schema` | 0 | Passed. The planned Slice 3 selector resolves to 1 real test once activated. |
+ | `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell::tests::shell_draw_` | 0 | Passed. The planned Slice 4 selector resolves to 2 existing render tests once activated. |
+@@ -39,10 +39,13 @@ test result: ok. 4 passed; 0 failed; 0 ignored
+ - Cargo in this environment defaults to a read-only target directory outside
+   the writable run sandbox. Verification used
+   `CARGO_TARGET_DIR=/tmp/myosu-cargo-target` to keep proof execution runnable.
+-- `outputs/tui/shell/spec.md` now exposes the active Slice 1 command as the only
++- `outputs/tui/shell/spec.md` exposes the active Slice 1 command as the only
+   live `**Proof gate**`. Later slices keep `**Planned proof gate**` labels until
+   they are selected, which prevents the implementation verifier from running
+   future-slice commands too early.
++- A repo search during this fixup found no remaining lane-owned source or spec
++  references to `cargo test events:: --no-ignore`; the stale command survives
++  only as historical verifier state outside the current slice contract.
+ - The planned Slice 3/4/5 commands were spot-checked with fully qualified test
+   selectors so those gates no longer rely on zero-match filters when they are
+   activated later.
+@@ -54,7 +57,9 @@ test result: ok. 4 passed; 0 failed; 0 ignored
+ - **Unproven async delivery path:** Reduced. Tick, key, resize, and async
+   update delivery all traverse the same event-loop channel in CI.
+ - **Deterministic proof-script failure:** Reduced. The live proof gate now uses
+-  valid Cargo syntax and the sandbox-safe target directory override.
++  valid Cargo syntax and the sandbox-safe target directory override. The only
++  remaining failure reproduced in this fixup is the stale legacy verifier
++  command.
+ 
+ ## Risks Remaining
+ 
