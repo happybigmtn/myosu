@@ -1,0 +1,369 @@
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..088b99e
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,167 @@
++# `agent-integration` Adapter
++
++**Frontier**: `product`  
++**Date**: 2026-03-20
++
++## Purpose
++
++This artifact translates the reviewed `agent:experience` lane into the next
++executable product move.
++
++The product frontier now has both reviewed bootstrap lanes checked in:
++
++- `outputs/play/tui/spec.md`
++- `outputs/play/tui/review.md`
++- `outputs/agent/experience/spec.md`
++- `outputs/agent/experience/review.md`
++
++The question is no longer "what should product own?" The question is "what is
++the smallest honest implementation sequence that turns those reviewed contracts
++into working code?"
++
++## Reviewed Inputs Used
++
++- `README.md`
++- `SPEC.md`
++- `PLANS.md`
++- `AGENTS.md`
++- `specs/031626-00-master-index.md`
++- `specs/031826-fabro-primary-executor-decision.md`
++- `outputs/play/tui/spec.md`
++- `outputs/play/tui/review.md`
++- `outputs/agent/experience/spec.md`
++- `outputs/agent/experience/review.md`
++- `fabro/programs/myosu-product.yaml`
++
++## Current Product Substrate
++
++The trustworthy substrate is stronger than the earlier bootstrap reviews alone
++suggested.
++
++### Trusted now
++
++| Surface | Current evidence | Why it matters |
++|---|---|---|
++| `crates/myosu-games/` | `cargo test -p myosu-games` passed on 2026-03-20: 10 unit tests + 4 doctests | Product-facing play code can depend on the shared game trait surface now |
++| `crates/myosu-tui/` | `cargo test -p myosu-tui` passed on 2026-03-20: 82 tests passed, 2 TTY-only tests ignored | Shell, renderer contract, pipe mode, schema, and navigation state machine remain trustworthy |
++| `docs/api/game-state.json` + `crates/myosu-tui/src/schema.rs` | Present and covered by the `myosu-tui` test suite | The machine-readable agent surface already exists |
++| `crates/myosu-tui/src/pipe.rs` | Present, minimal, and tested | Agent integration should extend this surface, not redesign it |
++| `crates/myosu-tui/src/screens.rs` | `Lobby` and `Spectate` states already exist in the navigation state machine | Spectator and lobby work have a shell foothold even though the full product flow is not implemented |
++
++### Still missing
++
++| Surface | Current state | Consequence |
++|---|---|---|
++| `crates/myosu-play/` | Missing | No consumer-facing product binary exists yet |
++| `crates/myosu-games-poker/` | Missing | No concrete NLHE renderer exists for the trusted shell to host |
++| `crates/myosu-tui/src/agent_context.rs` | Missing | No persistent agent identity/memory surface yet |
++| `crates/myosu-tui/src/journal.rs` | Missing | No append-only agent journal yet |
++| `crates/myosu-tui/src/narration.rs` | Missing | No `--narrate` mode yet |
++| Product implementation family assets in `fabro/` | Missing | Product has reviewed bootstrap lanes, but no checked-in implement loop like `games:traits` has |
++
++## What Changed Since the Earlier `agent:experience` Review
++
++The largest blocker named in `outputs/agent/experience/review.md` is now stale:
++the `robopoker` absolute-path coupling in `crates/myosu-games/` has already
++been fixed in the working tree.
++
++`crates/myosu-games/Cargo.toml` now uses pinned git dependencies:
++
++- `rbp-core = { git = ".../happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }`
++- `rbp-mccfr = { git = ".../happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }`
++
++That matters because it changes the product decision. The product frontier is
++not waiting on another upstream portability unblock before it can start.
++
++## Adapter Decision
++
++Product needs an implementation family next.
++
++Not another upstream bootstrap lane. Not another review-only pass. The missing
++thing is the checked-in delivery loop that can turn the reviewed `play:tui` and
++`agent:experience` contracts into `implementation.md` and `verification.md`
++artifacts.
++
++## Smallest Honest Product Sequence
++
++### Step 1: promote `play:tui` into the first product implementation lane
++
++Start with `play:tui`, not `agent:experience`.
++
++Reason:
++
++- `play:tui` owns the missing `myosu-play` binary
++- `play:tui` owns the missing poker renderer crate
++- `agent:experience` slices 3 and later explicitly depend on that binary
++- the first product proof should be "the product can render and host a game",
++  not "the agent layer has richer metadata over a nonexistent binary"
++
++The approved first slice remains the one already captured in
++`outputs/play/tui/spec.md`:
++
++- create `crates/myosu-play/`
++- wire a minimal `--train` flow into the trusted `myosu-tui` shell
++- prove the render loop compiles and runs
++
++### Step 2: once `myosu-play` exists, promote `agent:experience`
++
++After the binary skeleton exists, `agent:experience` becomes a normal
++implementation continuation rather than a blocked contract lane.
++
++Recommended early slice order:
++
++1. `agent_context.rs`
++2. `journal.rs`
++3. `--context` wiring through `pipe.rs` and the `myosu-play` CLI
++4. `reflect>` prompt after hand completion
++
++This keeps agent work attached to a real product binary instead of creating an
++agent-only abstraction layer with no live host.
++
++### Step 3: hold later product slices behind the right gates
++
++These remain deferred, but they are not reasons to delay the implementation
++family itself:
++
++- `--narrate` depends on real gameplay state being available through the binary
++- lobby detail can use Phase 0 stub data before chain discovery exists
++- spectator relay should wait until the play binary owns a real session loop
++- chain-connected play remains a later phase gated by `chain:runtime`
++
++## Practical Control-Plane Handoff
++
++The current `fabro/` tree already proves the pattern to copy:
++
++- bootstrap family for contract lanes
++- implement family for trusted code lanes
++
++`games:traits` already has:
++
++- `fabro/workflows/implement/game-traits.fabro`
++- `fabro/run-configs/implement/game-traits.toml`
++- `fabro/programs/myosu-games-traits-implementation.yaml`
++
++Product needs the same kind of handoff next, starting with a lane-scoped
++implementation program for `play:tui`. After that first product implementation
++slice lands, `agent:experience` should get its own implementation loop or join
++the same product delivery family with lane-specific milestones.
++
++## Recommended Product Decision
++
++### Choose implementation family next
++
++The honest next product move is:
++
++1. seed a `play:tui` implementation-family workflow/program
++2. execute `play:tui` Slice 1
++3. use that new binary surface to begin `agent:experience` implementation
++
++### Do not spend the next slice on another upstream unblock
++
++The remaining blockers are mostly product-local:
++
++- missing product crates
++- missing product implementation workflow assets
++- missing CLI wiring
++
++Those are implementation problems, not frontier-selection problems.
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..ec2bb9a
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,190 @@
++# `agent-integration` Review
++
++**Lane**: `agent-integration`  
++**Frontier**: `product`  
++**Date**: 2026-03-20  
++**Judgment**: **KEEP product moving; promote product into an implementation family next**
++
++---
++
++## 1. Decision
++
++### Decision: implementation family next, not another upstream unblock
++
++`agent:experience` was the last remaining ready reviewed lane in the product
++frontier. With that review complete, the product frontier is no longer blocked
++on missing contract artifacts. It is now blocked on missing implementation
++machinery and missing product crates.
++
++The right next move is to start a product implementation family beginning with
++`play:tui`, then follow immediately with `agent:experience` once the product
++binary exists.
++
++---
++
++## 2. Why this is the honest call
++
++### 2.1 Product already has the reviewed artifacts it needed
++
++`myosu-product.yaml` owns two seeded lanes:
++
++- `play:tui`
++- `agent:experience`
++
++Both now have reviewed artifacts under `outputs/`:
++
++- `outputs/play/tui/spec.md`
++- `outputs/play/tui/review.md`
++- `outputs/agent/experience/spec.md`
++- `outputs/agent/experience/review.md`
++
++That means the frontier-selection question has been answered. Product has a
++reviewed contract for both of its current lanes.
++
++### 2.2 The shared upstream substrate is currently healthy
++
++Fresh evidence from 2026-03-20:
++
++- `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-games cargo test -p myosu-games`
++  passed with 10 unit tests and 4 doctests.
++- `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-tui cargo test -p myosu-tui`
++  passed with 82 tests and 2 ignored real-TTY tests.
++
++This confirms the trusted product substrate is still intact:
++
++- game traits are working
++- the shell is working
++- the renderer contract is working
++- pipe mode exists
++- the schema exists
++
++### 2.3 The earlier highest-severity blocker is stale now
++
++`outputs/agent/experience/review.md` called out `robopoker` absolute-path
++coupling as a HIGH blocker. That is no longer current.
++
++`crates/myosu-games/Cargo.toml` now points to pinned git dependencies for
++`rbp-core` and `rbp-mccfr`, and the crate test suite passes against that
++configuration. So product no longer needs to wait on that upstream fix before
++starting its first implementation slice.
++
++---
++
++## 3. What is still blocked
++
++These blockers are real, but they are product-local implementation blockers,
++not reasons to send the frontier back for more upstream bootstrap work.
++
++### 3.1 `myosu-play` does not exist
++
++`crates/myosu-play/` is still absent. This blocks:
++
++- the product CLI
++- `--pipe` flag exposure at the binary level
++- `--context` / `--narrate` wiring
++- spectator relay ownership in a real executable
++
++Owner: `play:tui`
++
++### 3.2 `myosu-games-poker` does not exist
++
++`crates/myosu-games-poker/` is still absent. This blocks the first concrete
++NLHE renderer and therefore blocks proving that the trusted shell can host a
++real game.
++
++Owner: `play:tui`
++
++### 3.3 Agent-specific modules are still missing
++
++These files are still absent from `crates/myosu-tui/src/`:
++
++- `agent_context.rs`
++- `journal.rs`
++- `narration.rs`
++
++Owner: `agent:experience`
++
++### 3.4 Product has no implementation-family assets yet
++
++Unlike `games:traits`, product currently has no checked-in implement loop:
++
++- no `fabro/workflows/implement/play-tui.fabro`
++- no `fabro/run-configs/implement/play-tui.toml`
++- no lane-scoped product implementation manifest
++
++This is the main control-plane gap.
++
++---
++
++## 4. Recommended sequencing
++
++### First slice: `play:tui` Slice 1
++
++This should be the first product implementation slice because it unlocks the
++binary and renderer surfaces that `agent:experience` needs.
++
++The reviewed slice already exists in `outputs/play/tui/spec.md`:
++
++- create `crates/myosu-play/`
++- wire a minimal `--train` entry into `myosu-tui`
++- prove the render loop builds and runs
++
++### Second slice: early `agent:experience`
++
++Once `myosu-play` exists, begin the smallest agent slices:
++
++1. `agent_context.rs`
++2. `journal.rs`
++3. `--context` wiring
++4. `reflect>` prompt
++
++This keeps agent integration attached to a real executable product surface.
++
++### Later slices stay gated correctly
++
++These should remain later product work, not reasons to delay the
++implementation-family handoff:
++
++- narration mode
++- richer lobby data
++- spectator relay
++- chain-connected play APIs
++
++---
++
++## 5. Residual risks
++
++### Risk 1: stale reviewed blockers cause the wrong frontier choice
++
++If operators keep treating the resolved `robopoker` path issue as active, the
++product frontier will waste time asking for another upstream unblock instead of
++starting delivery.
++
++### Risk 2: `agent:experience` is promoted before `play:tui`
++
++That would create pressure to design richer agent surfaces before the product
++has a host binary. It would likely produce partial work in `myosu-tui` without
++an end-to-end product proof.
++
++### Risk 3: product copies the wrong implementation pattern
++
++The safe pattern already exists in `games:traits`: reviewed contract first,
++then lane-scoped implement/fix/verify loop with `implementation.md` and
++`verification.md`. Product should copy that pattern instead of inventing a new
++one-off workflow.
++
++---
++
++## 6. Recommendation
++
++**Promote product into an implementation family next.**
++
++Concretely:
++
++1. create the first product implementation-family assets for `play:tui`
++2. execute `play:tui` Slice 1
++3. follow with `agent:experience` implementation once the binary skeleton is
++   live
++
++**Do not spend the next slice on another upstream unblock.** The current
++frontier evidence says product is ready to build.
