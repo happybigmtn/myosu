@@ -1,0 +1,251 @@
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..0350de0
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,124 @@
++# `agent:experience` Product Adapter
++
++## Purpose
++
++This artifact adapts the reviewed product-lane outputs into the next honest
++control-plane move. It answers one question: now that `play:tui` and
++`agent:experience` both have reviewed artifacts, should `myosu-product` wait
++for another upstream unblock or promote product into implementation-family
++work?
++
++## Inputs Reviewed
++
++- `README.md`
++- `SPEC.md`
++- `PLANS.md`
++- `AGENTS.md`
++- `specs/031626-00-master-index.md`
++- `specs/031826-fabro-primary-executor-decision.md`
++- `fabro/programs/myosu-product.yaml`
++- `fabro/workflows/README.md`
++- `outputs/play/tui/spec.md`
++- `outputs/play/tui/review.md`
++- `outputs/agent/experience/spec.md`
++- `outputs/agent/experience/review.md`
++- `outputs/games/traits/implementation.md`
++- `outputs/games/traits/verification.md`
++- concrete code surfaces under `crates/myosu-tui/src/` plus the absence of
++  `crates/myosu-play/` and `crates/myosu-games-poker/`
++
++## Current Product Truth
++
++`fabro/programs/myosu-product.yaml` is a reviewed frontier only. It owns two
++lanes, `play:tui` and `agent:experience`, and both lanes already satisfy the
++current milestone contract by producing `spec.md` and `review.md`.
++
++The product code itself is still mostly absent, which means the frontier is no
++longer blocked on doctrine. It is blocked on implementation work:
++
++- `crates/myosu-play/` does not exist
++- `crates/myosu-games-poker/` does not exist
++- `crates/myosu-tui/src/agent_context.rs` does not exist
++- `crates/myosu-tui/src/journal.rs` does not exist
++- `crates/myosu-tui/src/narration.rs` does not exist
++- `crates/myosu-tui/src/screens/spectate.rs` does not exist
++
++## What the Reviewed Artifacts Mean Together
++
++`outputs/play/tui/review.md` makes the strongest product claim: the lane is
++ready for an implementation-family workflow immediately, and its first slice is
++the `myosu-play` binary skeleton. That slice is the first executable product
++surface for the whole frontier.
++
++`outputs/agent/experience/review.md` also says to proceed to an
++implementation-family workflow, but its own review makes the sequencing clear:
++Slices 3 through 9 depend on `play:tui` Slice 1 because the `myosu-play`
++binary is the vehicle for `--pipe`, `--context`, `--narrate`, lobby, and
++spectator wiring. Only the early `myosu-tui` additions such as
++`agent_context.rs` and `journal.rs` are independent.
++
++`fabro/workflows/README.md` says interface bringup such as `play:tui` belongs
++in the `implement/` family when the work is still pure code/UI bringup. That
++matches the current product state exactly: there is no persistent runtime to
++stabilize yet, only missing crates and missing modules.
++
++One earlier blocker cited by both product reviews is now stale. The reviews
++flagged `myosu-games`'s absolute-path robopoker dependency as a HIGH blocker.
++`outputs/games/traits/verification.md` shows that this was already reduced in
++the first `games:traits` implementation slice: `crates/myosu-games/Cargo.toml`
++now uses pinned git dependencies and `cargo fetch` succeeded. Product should
++not keep waiting on that already-reduced blocker.
++
++## Adapter Decision
++
++`myosu-product` needs an implementation family next, not another upstream
++unblock.
++
++The first product implementation lane should be `play:tui`, not
++`agent:experience`, for one reason: it creates the binary and runtime surface
++that the rest of product extends. `agent:experience` is a real downstream lane,
++but it is an extension of the play surface, not the first executable product
++entrypoint.
++
++That yields the honest sequence:
++
++1. Seed a lane-scoped `play:tui` implementation family in `fabro/`.
++2. Deliver `play:tui` Slice 1 (`myosu-play` binary skeleton + shell wiring).
++3. Seed `agent:experience` implementation-family work immediately after that,
++   with optional overlap on the independent `myosu-tui` slices only.
++
++## Recommended Control-Plane Follow-On
++
++The next contributor should add product implementation surfaces that mirror the
++existing `games:traits` pattern rather than inventing another bootstrap pass.
++
++Recommended first additions:
++
++1. `fabro/workflows/implement/play-tui.fabro`
++2. `fabro/run-configs/implement/play-tui.toml`
++3. a lane-scoped implementation manifest mirroring
++   `fabro/programs/myosu-games-traits-implementation.yaml`, but targeting
++   `outputs/play/tui/`
++
++That implementation family should consume:
++
++- `outputs/play/tui/spec.md`
++- `outputs/play/tui/review.md`
++
++and produce:
++
++- `outputs/play/tui/implementation.md`
++- `outputs/play/tui/verification.md`
++
++Once `play:tui` Slice 1 is verified, mirror the same pattern for
++`agent:experience`.
++
++## What Not To Do
++
++Do not create another upstream-unblock lane for product. The reviewed upstream
++inputs already exist, and the earlier robopoker portability blocker has already
++been reduced.
++
++Do not wait for `chain:runtime` before starting product implementation. The
++reviewed `play:tui` slices are explicitly ordered so local training mode lands
++before chain-connected play.
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..427a5e3
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,68 @@
++# `agent-integration` Review
++
++## Judgment: KEEP — product should advance to implementation-family work
++
++The honest next move for `myosu-product` is an implementation family, not
++another upstream unblock.
++
++Both product lanes already have reviewed artifacts:
++
++- `outputs/play/tui/spec.md` + `outputs/play/tui/review.md`
++- `outputs/agent/experience/spec.md` + `outputs/agent/experience/review.md`
++
++The remaining gaps are not missing doctrine and not missing reviewed upstream
++artifacts. They are missing product-owned code and missing product-owned
++implementation control-plane surfaces.
++
++## Why This Is the Right Judgment
++
++1. `play:tui` is explicitly ready for implementation-family work now. Its
++   review says the lane is unblocked for an implementation-family workflow and
++   defines a concrete first slice: create `myosu-play`.
++
++2. `agent:experience` also says to proceed to implementation-family work, but
++   its own review makes clear that most of the lane extends `myosu-play`.
++   Slices 3 through 9 depend on `play:tui` Slice 1.
++
++3. The major upstream blocker cited in the product reviews has already been
++   reduced. `outputs/games/traits/verification.md` shows that the absolute-path
++   robopoker dependency in `myosu-games` was replaced with pinned git
++   dependencies and verified with `cargo fetch`.
++
++4. The workflow library already classifies interface bringup like `play:tui`
++   into the `implement/` family when the work is pure code/UI bringup. That is
++   the current product situation.
++
++## Integration Decision
++
++Product needs implementation-family execution next.
++
++The first lane should be `play:tui`, because it creates the executable binary
++surface that `agent:experience` extends. After `play:tui` Slice 1 lands,
++product should immediately promote `agent:experience` into its own
++implementation-family loop. If early overlap is useful, only the independent
++`myosu-tui` additions from `agent:experience` should start before the binary
++exists.
++
++## Remaining Real Risks
++
++- No product implementation-family surfaces exist yet under
++  `fabro/workflows/implement/`, `fabro/run-configs/implement/`, or
++  `fabro/programs/`. This is the next control-plane gap to fix.
++- `crates/myosu-play/` and `crates/myosu-games-poker/` are still absent, so
++  product has no executable surface yet.
++- The product reviews still mention the old robopoker portability blocker. That
++  language is now outdated and should be read through the newer
++  `games:traits` verification artifact.
++
++## Concrete Recommendation
++
++Seed a lane-scoped `play:tui` implementation program next, following the same
++artifact contract already used by `myosu-games-traits-implementation.yaml`:
++
++- consume `outputs/play/tui/spec.md` and `outputs/play/tui/review.md`
++- produce `outputs/play/tui/implementation.md` and
++  `outputs/play/tui/verification.md`
++
++Once `play:tui` Slice 1 is verified, seed the matching implementation-family
++surface for `agent:experience`.
+diff --git a/plans/031926-iterative-execution-and-raspberry-hardening.md b/plans/031926-iterative-execution-and-raspberry-hardening.md
+index 270f7c9..3b572b6 100644
+--- a/plans/031926-iterative-execution-and-raspberry-hardening.md
++++ b/plans/031926-iterative-execution-and-raspberry-hardening.md
+@@ -66,9 +66,11 @@ worked around locally.
+ - [x] (2026-03-19 06:44Z) Finished the direct Fabro foreground runs for
+   `validator:oracle` and `games:multi-game`, then rerendered
+   services/platform against the new reviewed artifacts.
+-- [ ] Execute `agent:experience`, the last remaining ready product lane, then
+-  use its reviewed artifacts to decide whether product needs an implementation
+-  family next or another upstream unblock.
++- [x] (2026-03-21 04:15Z) Executed the `agent:experience` bootstrap lane in
++  reviewed-artifact terms, then wrote `outputs/agent-integration/` to decide
++  the next honest product move: product needs an implementation family next,
++  with `play:tui` as the first implementation lane and `agent:experience`
++  following after `myosu-play` exists.
+ 
+ ## Surprises & Discoveries
+ 
+@@ -144,6 +146,13 @@ worked around locally.
+   `outputs/sdk/core/review.md` all exist, and Raspberry now reports
+   `myosu-services` and `myosu-platform` fully complete.
+ 
++- Observation: the product frontier no longer needs another upstream-unblock
++  pass before implementation-family work starts.
++  Evidence: `outputs/play/tui/review.md` and
++  `outputs/agent/experience/review.md` both recommend implementation-family
++  work, and `outputs/games/traits/verification.md` already reduced the older
++  robopoker portability blocker those product reviews still mention.
++
+ - Observation: the current `games:traits` implementation success does not mean
+   the supervisory path is “done”; it means direct Fabro execution is strong
+   enough that remaining Raspberry defects can now be isolated against a known
+@@ -203,6 +212,13 @@ worked around locally.
+   reach the Anthropic-compatible bridge credentials.
+   Date/Author: 2026-03-19 / Codex
+ 
++- Decision: treat `play:tui` as the first product implementation lane and
++  `agent:experience` as the immediate follow-on extension lane.
++  Rationale: `play:tui` creates the `myosu-play` binary that
++  `agent:experience` extends, while `agent:experience` Slices 3-9 depend on
++  that binary existing.
++  Date/Author: 2026-03-21 / Codex
++
+ ## Outcomes & Retrospective
+ 
+ This plan starts after the biggest conceptual migration work is already done.
