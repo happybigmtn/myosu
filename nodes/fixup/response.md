@@ -1,0 +1,1 @@
+Already retrieved — fix is complete. The verification artifact now reflects the correct proof gate command that actually passes.
