@@ -1,0 +1,263 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 7e077fc..f509c83 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1717,6 +1717,14 @@ dependencies = [
+  "tokio-test",
+ ]
+ 
++[[package]]
++name = "myosu-games-liars-dice"
++version = "0.1.0"
++dependencies = [
++ "myosu-games",
++ "rbp-mccfr",
++]
++
+ [[package]]
+ name = "myosu-tui"
+ version = "0.1.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index e532e62..1d3ce31 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -2,6 +2,7 @@
+ resolver = "2"
+ members = [
+     "crates/myosu-games",
++    "crates/myosu-games-liars-dice",
+     "crates/myosu-tui",
+     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
+     # "crates/myosu-chain",      # Stage 1: Substrate chain fork
+diff --git a/crates/myosu-games-liars-dice/Cargo.toml b/crates/myosu-games-liars-dice/Cargo.toml
+new file mode 100644
+index 0000000..bb98bcb
+--- /dev/null
++++ b/crates/myosu-games-liars-dice/Cargo.toml
+@@ -0,0 +1,13 @@
++[package]
++name = "myosu-games-liars-dice"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++description = "Liar's Dice proof-of-architecture crate for the myosu multi-game lane"
++
++[lib]
++crate-type = ["lib"]
++
++[dependencies]
++myosu-games = { path = "../myosu-games" }
++rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+diff --git a/crates/myosu-games-liars-dice/src/lib.rs b/crates/myosu-games-liars-dice/src/lib.rs
+new file mode 100644
+index 0000000..a7ded8c
+--- /dev/null
++++ b/crates/myosu-games-liars-dice/src/lib.rs
+@@ -0,0 +1,43 @@
++//! Minimal public API skeleton for the multi-game Liar's Dice crate.
++//!
++//! Slice 1 intentionally stops at crate wiring. The CFR game state, action,
++//! turn, info-set, encoder, and profile implementations land in later slices.
++
++/// Placeholder for the future Liar's Dice CFR game state.
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct LiarsDiceGame;
++
++/// Placeholder for the future Liar's Dice action type.
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct LiarsDiceEdge;
++
++/// Placeholder for the future Liar's Dice turn marker.
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct LiarsDiceTurn;
++
++/// Placeholder for the future Liar's Dice information set.
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct LiarsDiceInfo;
++
++/// Placeholder for the future Liar's Dice encoder.
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct LiarsDiceEncoder;
++
++/// Placeholder for the future Liar's Dice solver profile.
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct LiarsDiceProfile;
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn public_api_stubs_exist() {
++        let _ = LiarsDiceGame;
++        let _ = LiarsDiceEdge;
++        let _ = LiarsDiceTurn;
++        let _ = LiarsDiceInfo;
++        let _ = LiarsDiceEncoder;
++        let _ = LiarsDiceProfile;
++    }
++}
+diff --git a/outputs/games/multi-game/implementation.md b/outputs/games/multi-game/implementation.md
+new file mode 100644
+index 0000000..aeeb236
+--- /dev/null
++++ b/outputs/games/multi-game/implementation.md
+@@ -0,0 +1,101 @@
++# `games:multi-game` Implementation — Slice 1
++
++## Slice Implemented
++
++**Slice 1 — Create `myosu-games-liars-dice` Crate Skeleton**
++
++Implemented the smallest approved `games:multi-game` slice from
++[`outputs/games/multi-game/spec.md`](./spec.md) and
++[`outputs/games/multi-game/review.md`](./review.md):
++
++- added `crates/myosu-games-liars-dice` as a new workspace member
++- created a minimal crate manifest pinned to the same robopoker git revision as `myosu-games`
++- created a narrow `src/lib.rs` that exposes the approved public Liar's Dice type names as placeholders for later slices
++
++This slice intentionally stops at crate wiring. It does not implement the game
++engine, solver, scoring registry, or spectator surfaces.
++
++## What Changed
++
++### `Cargo.toml`
++
++Added the new workspace member:
++
++```toml
++members = [
++    "crates/myosu-games",
++    "crates/myosu-games-liars-dice",
++    "crates/myosu-tui",
++    "crates/myosu-chain/pallets/game-solver",
++]
++```
++
++### `Cargo.lock`
++
++Recorded the new workspace package entry:
++
++```toml
++[[package]]
++name = "myosu-games-liars-dice"
++version = "0.1.0"
++dependencies = [
++  "myosu-games",
++  "rbp-mccfr",
++]
++```
++
++### `crates/myosu-games-liars-dice/Cargo.toml`
++
++Created the new package manifest with the approved dependency shape:
++
++```toml
++[package]
++name = "myosu-games-liars-dice"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++
++[lib]
++crate-type = ["lib"]
++
++[dependencies]
++myosu-games = { path = "../myosu-games" }
++rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
++```
++
++### `crates/myosu-games-liars-dice/src/lib.rs`
++
++Added placeholder public API types for the later Liar's Dice implementation:
++
++- `LiarsDiceGame`
++- `LiarsDiceEdge`
++- `LiarsDiceTurn`
++- `LiarsDiceInfo`
++- `LiarsDiceEncoder`
++- `LiarsDiceProfile`
++
++All six are zero-sized placeholder structs with basic derives (`Clone`, `Copy`,
++`Debug`, `Default`, `PartialEq`, `Eq`) so the crate exposes a stable surface
++without prematurely committing to slice-2 game-state details.
++
++A single smoke test, `tests::public_api_stubs_exist`, verifies the new crate can
++be compiled and tested in isolation.
++
++## Scope Guardrails Preserved
++
++- No edits were made to `crates/myosu-games/src/`.
++- No poker-engine surfaces were touched.
++- No spectator or scoring work was started.
++- `quality.md` and `promotion.md` were intentionally left untouched because the
++  implementation lane does not own those artifacts.
++
++## What Remains for Future Slices
++
++| Slice | Description | Status |
++|-------|-------------|--------|
++| Slice 2 | Add `game.rs`, `edge.rs`, `turn.rs`, and `info.rs` for the Liar's Dice CFR game engine | Pending |
++| Slice 3 | Add encoder/profile/solver behavior and Nash proof tests | Pending |
++| Slice 4 | Add `ExploitMetric` registration in `myosu-games` | Pending |
++| Slice 5 | Add `SpectatorRelay` in `myosu-play` | Pending |
++| Slice 6 | Add spectator TUI rendering in `myosu-tui` | Pending |
++| Slice 7 | Prove zero-change architecture across existing game crates | Pending |
+diff --git a/outputs/games/multi-game/verification.md b/outputs/games/multi-game/verification.md
+new file mode 100644
+index 0000000..cddb2ce
+--- /dev/null
++++ b/outputs/games/multi-game/verification.md
+@@ -0,0 +1,51 @@
++# `games:multi-game` Verification — Slice 1
++
++## Automated Proof Commands
++
++The default shared cargo target path in this sandbox is read-only, so the proof
++commands were executed with `CARGO_TARGET_DIR=/tmp/myosu-multi-game-target`.
++
++| Command | Exit Code | Result |
++|---------|-----------|--------|
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo build -p myosu-games-liars-dice` | 0 | Passed. New workspace member compiled successfully. |
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-games-liars-dice` | 0 | Passed. 1 unit test passed; 0 doctests ran. |
++
++## Observed Test Output
++
++```text
++running 1 test
++test tests::public_api_stubs_exist ... ok
++
++test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
++
++Doc-tests myosu_games_liars_dice
++running 0 tests
++test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
++```
++
++## Risks Reduced
++
++- **Greenfield crate blocker:** Reduced. `crates/myosu-games-liars-dice/` now exists and is wired into the workspace.
++- **Dependency pin drift:** Reduced. The new crate uses the same robopoker revision as `myosu-games`, avoiding an accidental fork mismatch at slice start.
++- **Lane boundary drift:** Reduced. The slice stayed within the approved `games:multi-game` surfaces and did not start later-slice work.
++
++## Risks That Remain
++
++- **No CFR implementation yet:** Unchanged. `LiarsDiceGame`, `LiarsDiceEdge`, `LiarsDiceTurn`, and `LiarsDiceInfo` are placeholders only.
++- **`CfrGame: Copy` implementation risk:** Unchanged. Slice 2 still needs to prove the fixed-size bid history approach works.
++- **Cross-game scoring and spectator work:** Unchanged. `ExploitMetric`, `SpectatorRelay`, and spectator TUI surfaces are still absent.
++
++## Next Approved Slice
++
++**Slice 2 — Liar's Dice game engine**
++
++Add `game.rs`, `edge.rs`, `turn.rs`, and `info.rs`, then satisfy the approved
++proof commands:
++
++```bash
++cargo test -p myosu-games-liars-dice game::tests::root_is_chance_node
++cargo test -p myosu-games-liars-dice game::tests::legal_bids_increase
++cargo test -p myosu-games-liars-dice game::tests::challenge_resolves_game
++cargo test -p myosu-games-liars-dice game::tests::payoff_is_zero_sum
++cargo test -p myosu-games-liars-dice game::tests::all_trait_bounds_satisfied
++```
