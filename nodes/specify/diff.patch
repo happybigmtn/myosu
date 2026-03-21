@@ -1,0 +1,1178 @@
+diff --git a/README.md b/README.md
+index f846bf3..b1ccc66 100644
+--- a/README.md
++++ b/README.md
+@@ -79,10 +79,10 @@ fabro run fabro/run-configs/bootstrap/tui-shell.toml
+ fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
+ fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
+ 
+-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
+-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
+-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- autodev --manifest fabro/programs/myosu.yaml
+-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
++/home/r/coding/fabro/target-local/debug/raspberry plan --manifest fabro/programs/myosu.yaml
++/home/r/coding/fabro/target-local/debug/raspberry status --manifest fabro/programs/myosu.yaml
++/home/r/coding/fabro/target-local/debug/raspberry autodev --manifest fabro/programs/myosu.yaml
++/home/r/coding/fabro/target-local/debug/raspberry tui --manifest fabro/programs/myosu.yaml
+ ```
+ 
+ Useful proof commands:
+diff --git a/fabro/README.md b/fabro/README.md
+index 394ac96..7803c90 100644
+--- a/fabro/README.md
++++ b/fabro/README.md
+@@ -31,6 +31,6 @@ Suggested local entrypoints once the Fabro CLI and Raspberry CLI are wired in:
+     fabro run fabro/run-configs/bootstrap/game-traits.toml
+     fabro run fabro/run-configs/bootstrap/tui-shell.toml
+     fabro run fabro/run-configs/implement/game-traits.toml
+-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
+-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
+-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry plan --manifest fabro/programs/myosu.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest fabro/programs/myosu.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry tui --manifest fabro/programs/myosu.yaml
+diff --git a/fabro/checks/fabro-local-dispatch.sh b/fabro/checks/fabro-local-dispatch.sh
+new file mode 100755
+index 0000000..1e3350b
+--- /dev/null
++++ b/fabro/checks/fabro-local-dispatch.sh
+@@ -0,0 +1,28 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
++run_dir="$repo_root/.raspberry/runs/foundations"
++log_dir="$repo_root/.raspberry/logs"
++fabro_bin="/home/r/coding/fabro/target-local/debug/fabro"
++
++mkdir -p "$run_dir" "$log_dir"
++
++args=()
++inserted_run_dir=false
++for arg in "$@"; do
++  args+=("$arg")
++  if [[ "$arg" == "run" && "$inserted_run_dir" == false ]]; then
++    args+=("--run-dir" "$run_dir")
++    inserted_run_dir=true
++  fi
++done
++
++if [[ "$inserted_run_dir" == false ]]; then
++  echo "expected fabro subcommand sequence containing 'run'" >&2
++  exit 2
++fi
++
++export FABRO_LOG_DIR="$log_dir"
++
++exec "$fabro_bin" "${args[@]}"
+diff --git a/fabro/checks/foundations-verify.sh b/fabro/checks/foundations-verify.sh
+new file mode 100755
+index 0000000..681216f
+--- /dev/null
++++ b/fabro/checks/foundations-verify.sh
+@@ -0,0 +1,7 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++test -f outputs/foundations/foundation-plan.md
++test -f outputs/foundations/review.md
++rg -q "^# Bootstrap Foundations Frontier and Revalidate Raspberry Truth$" outputs/foundations/foundation-plan.md
++rg -q "^# Foundations Frontier Review$" outputs/foundations/review.md
+diff --git a/fabro/checks/foundations-write-artifact.sh b/fabro/checks/foundations-write-artifact.sh
+new file mode 100755
+index 0000000..01803e7
+--- /dev/null
++++ b/fabro/checks/foundations-write-artifact.sh
+@@ -0,0 +1,366 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++artifact="${1:?usage: foundations-write-artifact.sh <foundation-plan|review>}"
++out_dir="outputs/foundations"
++mkdir -p "$out_dir"
++
++case "$artifact" in
++  foundation-plan)
++    cat > "$out_dir/foundation-plan.md" <<'EOF'
++# Bootstrap Foundations Frontier and Revalidate Raspberry Truth
++
++This ExecPlan is a living document. The sections `Progress`,
++`Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must
++be kept up to date as work proceeds.
++
++`PLANS.md` is checked into the repository root and this document must be
++maintained in accordance with it. This plan depends on `README.md`,
++`SPEC.md`, `PLANS.md`, `AGENTS.md`,
++`specs/031626-00-master-index.md`, and
++`specs/031826-fabro-primary-executor-decision.md`.
++
++## Purpose / Big Picture
++
++After this slice lands, Myosu has a dedicated foundations frontier that captures
++the current Fabro/Raspberry control-plane truth in durable artifacts and proves
++the local `execute/status/watch` path against a small, isolated lane instead of
++widening the existing bootstrap programs. A contributor should be able to read
++these two artifacts, inspect the historical `games:multi-game` false-submit,
++run the foundations lane, and understand whether current detached execution is
++trustworthy enough for the next frontier expansion.
++
++## Progress
++
++- [x] (2026-03-21 02:55Z) Read `README.md`, `SPEC.md`, `PLANS.md`, `AGENTS.md`,
++  `specs/031626-00-master-index.md`, and
++  `specs/031826-fabro-primary-executor-decision.md`.
++- [x] (2026-03-21 02:55Z) Re-read the active Fabro/Raspberry control-plane
++  surfaces under `fabro/programs/`, `fabro/run-configs/`, `fabro/workflows/`,
++  and the existing reviewed `outputs/` artifacts.
++- [x] (2026-03-21 02:55Z) Verified that the current `myosu-platform`,
++  `myosu-product`, and `myosu-recurring` programs render truthful `plan` and
++  `status` views from current artifact state rather than from the stale
++  historical `games:multi-game` false-submit.
++- [x] (2026-03-21 02:55Z) Inspected the historical `games:multi-game`
++  false-submit run directory and confirmed the raw detached-run failure still
++  exists on disk as evidence.
++- [x] (2026-03-21 02:55Z) Added an isolated `myosu-foundations` program plus a
++  small script-backed workflow so Myosu can probe current detached execution
++  truth without depending on external LLM networking.
++- [ ] Execute `raspberry execute --manifest fabro/programs/myosu-foundations.yaml`
++  and record the resulting run-truth evidence in this plan and in
++  `outputs/foundations/review.md`.
++- [ ] Decide whether the foundations probe is strong enough to close the
++  current false-submit concern or whether Fabro/Raspberry still needs another
++  hardening slice in the sibling repository.
++
++## Surprises & Discoveries
++
++- Observation: the repo-local command examples for Raspberry were stale.
++  Evidence: `cargo --manifest-path /home/r/coding/fabro/Cargo.toml run ...`
++  failed in this environment, while the already-built
++  `/home/r/coding/fabro/target-local/debug/raspberry` binary worked.
++
++- Observation: the historical `games:multi-game` false-submit is still present
++  as raw Fabro evidence, but it is not currently poisoning refreshed
++  `raspberry status` output for `myosu-platform`.
++  Evidence: the run directory
++  `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/` still contains
++  `status.json` with `submitted` plus a `detach.log` CLI parse failure, while
++  `raspberry status --manifest fabro/programs/myosu-platform.yaml` reports
++  `complete=3 ready=0 running=0 blocked=0 failed=0`.
++
++- Observation: `.raspberry/` state is rebuilt on demand from the checked-in
++  program manifests and current artifact truth.
++  Evidence: this worktree started without `.raspberry/`, and the first
++  `raspberry status` call recreated `.raspberry/myosu-platform-state.json`.
++
++## Decision Log
++
++- Decision: keep the foundations probe isolated in `myosu-foundations.yaml`
++  instead of widening `myosu-bootstrap.yaml`.
++  Rationale: `AGENTS.md` explicitly asks the bootstrap manifest to stay narrow.
++  A separate program gives us a truthful canary lane without perturbing the
++  trusted bootstrap frontier.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: make the foundations workflow script-backed rather than LLM-backed.
++  Rationale: this slice is about control-plane truth, not model quality. A
++  script-backed lane removes network/provider variance so a detached-run failure
++  points at Fabro/Raspberry plumbing, not at external API access.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: treat the historical `games:multi-game` false-submit as durable
++  evidence that still needs review, but not as current proof that status/watch
++  are wrong today.
++  Rationale: current `plan`, `status`, and `watch` surfaces render from current
++  artifact state and do not surface the stale submitted run.
++  Date/Author: 2026-03-21 / Codex
++
++## Outcomes & Retrospective
++
++This slice is complete only when the dedicated foundations lane has been run
++through Raspberry and the resulting artifacts capture both the historical
++failure evidence and the current live execution truth. Until that happens, the
++new foundations surface is only staged, not proven.
++
++## Context and Orientation
++
++The active control-plane package lives under `fabro/`. The relevant files for
++this slice are:
++
++- `fabro/programs/myosu-foundations.yaml` — isolated Raspberry program for this
++  frontier
++- `fabro/run-configs/bootstrap/foundations.toml` — Fabro run config describing
++  the scope and required artifacts
++- `fabro/workflows/bootstrap/foundations.fabro` — small workflow used as the
++  live execute/status/watch canary
++- `fabro/checks/foundations-write-artifact.sh` — script that writes the durable
++  foundations artifacts
++- `fabro/checks/foundations-verify.sh` — script that verifies those artifacts
++  exist and contain the expected headings
++- `outputs/foundations/foundation-plan.md` and `outputs/foundations/review.md`
++  — the durable outputs owned by this frontier
++
++The historical run evidence lives outside the repo under the user's Fabro run
++store:
++
++- `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/` — stale detached
++  `games:multi-game` false-submit
++- `~/.fabro/runs/20260319-01KM2CGPHAJ95J38TQ7SPN46NZ/` — direct foreground
++  `games:multi-game` run with normal manifest/run files
++
++In Raspberry terms, a **program** is a supervised frontier, a **lane** is one
++dispatchable stream inside that frontier, an **artifact** is a durable file
++under `outputs/`, and a **milestone** is a named set of artifacts that proves
++progress.
++
++## Plan of Work
++
++First, keep the foundations frontier small and explicit: one program, one lane,
++two durable artifacts. The new lane should not change ownership of any
++existing outputs and should not widen `myosu-bootstrap.yaml`.
++
++Next, use the local built Raspberry binary to render `plan`, `status`, and
++`watch` over the current Myosu programs so the plan reflects actual observed
++truth, not stale assumptions. Capture whether the historical false-submit still
++affects current observer surfaces.
++
++Then, dispatch `myosu-foundations.yaml` through `raspberry execute` and inspect
++the resulting Fabro run directory. The acceptance signal is a normal detached
++run with the usual metadata files (`manifest.json`, `run.toml`, `run.pid`,
++`status.json`, and progress events), not another submitted-only ghost run.
++
++Finally, tighten both durable artifacts so they record the observed live
++behavior, the remaining historical cleanup gap, and the next smallest honest
++actions for Myosu or the sibling Fabro repository.
++
++## Concrete Steps
++
++From the repository root, run:
++
++    /home/r/coding/fabro/target-local/debug/raspberry plan --manifest fabro/programs/myosu-platform.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest fabro/programs/myosu-platform.yaml
++    timeout 3 /home/r/coding/fabro/target-local/debug/raspberry watch --manifest fabro/programs/myosu-platform.yaml --interval-ms 500
++    /home/r/coding/fabro/target-local/debug/raspberry plan --manifest fabro/programs/myosu-foundations.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry execute --manifest fabro/programs/myosu-foundations.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest fabro/programs/myosu-foundations.yaml
++
++For the historical false-submit evidence, inspect:
++
++    sed -n '1,80p' ~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/status.json
++    sed -n '1,80p' ~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/detach.log
++
++## Validation and Acceptance
++
++This slice is accepted when all of the following are true:
++
++- `outputs/foundations/foundation-plan.md` and `outputs/foundations/review.md`
++  both exist and describe the same frontier truth.
++- `raspberry plan/status/watch` on `myosu-platform.yaml` reflect the current
++  completed platform artifacts and do not regress to the stale detached run.
++- `raspberry execute --manifest fabro/programs/myosu-foundations.yaml`
++  produces a real detached Fabro run with normal metadata files, not a
++  submitted-only directory.
++- The review artifact clearly says whether the historical `games:multi-game`
++  false-submit still requires upstream cleanup even if current observer
++  surfaces are healthy.
++
++## Idempotence and Recovery
++
++The foundations workflow is safe to rerun. It only writes the two files under
++`outputs/foundations/`. If the lane needs to be rerun from a clean control
++state, use a disposable checkout and remove only the foundations output files
++plus `.raspberry/myosu-foundations-state.json` before dispatching again.
++
++Do not mutate historical Fabro run directories unless the sibling Fabro repo
++has an explicit cleanup or tombstone flow. Those directories are evidence for
++this slice.
++
++## Artifacts and Notes
++
++Expected current observer transcript:
++
++    Program: myosu-platform
++    Counts: complete=3 ready=0 running=0 blocked=0 failed=0
++
++Historical false-submit evidence:
++
++    {
++      "status": "submitted",
++      "updated_at": "2026-03-19T06:16:00.090006038Z"
++    }
++
++    error: unexpected argument '/home/r/coding/myosu/fabro/programs/../run-configs/platform/multi-game.toml' found
++
++## Interfaces and Dependencies
++
++The foundations frontier ends with these checked-in interfaces:
++
++- `fabro/programs/myosu-foundations.yaml`
++- `fabro/run-configs/bootstrap/foundations.toml`
++- `fabro/workflows/bootstrap/foundations.fabro`
++- `fabro/checks/foundations-write-artifact.sh`
++- `fabro/checks/foundations-verify.sh`
++
++No production crate APIs change in this slice. The only runtime dependency is
++the local built Raspberry/Fabro pair in `/home/r/coding/fabro/target-local/debug/`.
++EOF
++    ;;
++  review)
++    cat > "$out_dir/review.md" <<'EOF'
++# Foundations Frontier Review
++
++**Lane:** `foundations:foundations`
++**Kind:** platform
++**Owning program:** `myosu-foundations`
++**Output root:** `outputs/foundations/`
++**Date:** 2026-03-21
++
++## Keep / Reopen / Reset Judgment
++
++**Judgment: KEEP WITH A REOPENED HISTORICAL CLEANUP GAP**
++
++Keep the current Fabro/Raspberry observer path. On 2026-03-21, fresh
++`raspberry plan`, `status`, and `watch` calls over the checked-in Myosu
++programs report the current artifact-backed truth and do not surface the stale
++`games:multi-game` false-submit as a running or blocked lane.
++
++Reopen the historical cleanup question, not the whole control plane. The raw
++false-submit evidence still exists under `~/.fabro/runs/` as a submitted-only
++detached run with no manifest or pid. That evidence should stay visible in this
++review until there is a clear upstream cleanup or tombstone policy.
++
++No broad reset is warranted today. The existing bootstrap, platform, product,
++and recurring programs are all currently rendering coherent status from the
++checked-in artifacts in this worktree.
++
++## What Is Trustworthy Enough To Keep
++
++### Current Raspberry Program Truth
++
++- `raspberry plan --manifest fabro/programs/myosu-platform.yaml` reports all
++  three platform lanes complete.
++- `raspberry status --manifest fabro/programs/myosu-platform.yaml` reports
++  `complete=3 ready=0 running=0 blocked=0 failed=0`.
++- `timeout 3 raspberry watch ...` repeats the same completed state rather than
++  inventing a stale running or submitted lane.
++
++These are the surfaces that matter for the current frontier task because the
++problem statement is about whether `execute/status/watch` truth is trustworthy
++again.
++
++### Current Artifact Backing
++
++- `outputs/games/multi-game/spec.md`
++- `outputs/games/multi-game/review.md`
++- `outputs/games/poker-engine/spec.md`
++- `outputs/games/poker-engine/review.md`
++- `outputs/sdk/core/spec.md`
++- `outputs/sdk/core/review.md`
++
++Those artifacts are present and sufficient for Raspberry to mark the platform
++frontier complete today.
++
++### Isolated Foundations Canary
++
++The new `myosu-foundations` program is the right kind of proving lane for this
++moment: it is isolated, script-backed, and artifact-oriented. It tests detached
++execution plumbing without conflating Fabro control-plane health with external
++LLM/provider availability.
++
++## What Must Be Reopened
++
++### Historical False-Submit Cleanup Policy
++
++The old detached `games:multi-game` run still exists on disk:
++
++- `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/status.json`
++- `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/detach.log`
++
++Evidence captured from those files:
++
++    {
++      "status": "submitted",
++      "updated_at": "2026-03-19T06:16:00.090006038Z"
++    }
++
++    error: unexpected argument '/home/r/coding/myosu/fabro/programs/../run-configs/platform/multi-game.toml' found
++
++That historical evidence no longer appears to poison current Myosu status
++surfaces, but it is still a real orphaned run record. The reopened question is
++not "does Myosu need a reset?" The reopened question is "what is the official
++cleanup/tombstone story for stale submitted-only detached runs in Fabro?"
++
++### Local Operator Command Surface
++
++The old repo-local command examples used a stale cargo invocation shape.
++Those examples were corrected in `README.md` and `fabro/README.md` to point at
++the verified local Raspberry binary.
++
++## What Should Be Reset
++
++Nothing in the checked-in Myosu programs needs a broad reset right now.
++
++Do not reset:
++
++- `myosu-bootstrap`
++- `myosu-platform`
++- `myosu-product`
++- `myosu-recurring`
++
++The historical false-submit evidence is not itself a reason to throw away the
++current artifact-backed state of those frontiers.
++
++## Immediate Next Actions
++
++1. Run `raspberry execute --manifest fabro/programs/myosu-foundations.yaml`
++   and confirm the resulting detached run has normal Fabro metadata files.
++2. Re-check `raspberry status --manifest fabro/programs/myosu-foundations.yaml`
++   and record whether the lane cleanly transitions to `complete`.
++3. If the foundations run detaches cleanly, treat the current false-submit as a
++   historical cleanup item rather than as a current blocker for Myosu control
++   truth.
++4. If the foundations run reproduces a submitted-only ghost run, stop and fix
++   the sibling Fabro/Raspberry repo before dispatching more Myosu frontiers.
++
++## Readiness Verdict
++
++**Ready for a live execute probe now.**
++
++The foundation lane is intentionally small enough that a failure will be
++diagnostic. If it succeeds, Myosu has a fresh truthful detached-run proof in
++this worktree. If it fails, the failure is narrow enough to carry back into the
++sibling Fabro repo without ambiguity about whether the issue belonged to a
++particular product lane.
++EOF
++    ;;
++  *)
++    echo "unknown artifact: $artifact" >&2
++    exit 1
++    ;;
++esac
++
++# Give the detached run enough lifetime for status/watch probes to see progress.
++sleep 2
+diff --git a/fabro/programs/README.md b/fabro/programs/README.md
+index ee1e61b..efa7d34 100644
+--- a/fabro/programs/README.md
++++ b/fabro/programs/README.md
+@@ -24,6 +24,19 @@ Use when:
+ - proving the Fabro/Raspberry control split
+ - supervising the first trusted and restart lanes
+ 
++### `myosu-foundations.yaml`
++
++Purpose: isolated foundations and control-plane trust frontier.
++
++Owns:
++- `foundations:foundations`
++
++Use when:
++- producing the first honest reviewed slice for a newly opened frontier
++- validating current Raspberry `execute/status/watch` truth without widening an
++  existing production program
++- capturing control-plane findings as durable `outputs/foundations/` artifacts
++
+ ### `myosu-games-traits-implementation.yaml`
+ 
+ Purpose: lane-scoped delivery program for the next approved `games:traits`
+@@ -109,6 +122,7 @@ Use when:
+ The current frontier map is now fully seeded at the manifest level:
+ 
+ - `myosu-bootstrap.yaml`
++- `myosu-foundations.yaml`
+ - `myosu-chain-core.yaml`
+ - `myosu-services.yaml`
+ - `myosu-product.yaml`
+diff --git a/fabro/programs/myosu-foundations.yaml b/fabro/programs/myosu-foundations.yaml
+new file mode 100644
+index 0000000..652492c
+--- /dev/null
++++ b/fabro/programs/myosu-foundations.yaml
+@@ -0,0 +1,35 @@
++version: 1
++program: myosu-foundations
++target_repo: ../..
++state_path: ../../.raspberry/myosu-foundations-state.json
++max_parallel: 1
++units:
++  - id: foundations
++    title: Foundations
++    output_root: ../../outputs/foundations
++    artifacts:
++      - id: foundation_plan
++        path: foundation-plan.md
++      - id: review
++        path: review.md
++    milestones:
++      - id: reviewed
++        requires: [foundation_plan, review]
++    lanes:
++      - id: foundations
++        kind: platform
++        title: Foundations Lane
++        run_config: ../run-configs/bootstrap/foundations.toml
++        managed_milestone: reviewed
++        proof_profile: foundations_bootstrap
++        run_dir: ../../.raspberry/runs/foundations
++        checks:
++          - label: repo_readme_present
++            kind: precondition
++            type: file_exists
++            path: ../../README.md
++          - label: doctrine_index_present
++            kind: precondition
++            type: file_exists
++            path: ../../specs/031626-00-master-index.md
++        produces: [foundation_plan, review]
+diff --git a/fabro/programs/myosu.yaml b/fabro/programs/myosu.yaml
+index 1d645d4..4100977 100644
+--- a/fabro/programs/myosu.yaml
++++ b/fabro/programs/myosu.yaml
+@@ -4,6 +4,17 @@ target_repo: ../..
+ state_path: ../../.raspberry/myosu-state.json
+ max_parallel: 2
+ units:
++  - id: foundations
++    title: Foundations Frontier
++    output_root: ../../.raspberry/portfolio/foundations
++    lanes:
++      - id: program
++        kind: orchestration
++        title: Foundations Program
++        run_config: ../programs/myosu-foundations.yaml
++        program_manifest: ../programs/myosu-foundations.yaml
++        managed_milestone: coordinated
++
+   - id: bootstrap
+     title: Bootstrap Frontier
+     output_root: ../../.raspberry/portfolio/bootstrap
+diff --git a/fabro/run-configs/bootstrap/foundations.toml b/fabro/run-configs/bootstrap/foundations.toml
+new file mode 100644
+index 0000000..c25b9e2
+--- /dev/null
++++ b/fabro/run-configs/bootstrap/foundations.toml
+@@ -0,0 +1,39 @@
++version = 1
++graph = "../../workflows/bootstrap/foundations.fabro"
++goal = """
++Bootstrap the first honest reviewed slice for the Myosu `foundations` frontier.
++
++Inputs:
++- `README.md`
++- `SPEC.md`
++- `PLANS.md`
++- `AGENTS.md`
++- `specs/031626-00-master-index.md`
++- `specs/031826-fabro-primary-executor-decision.md`
++
++Current frontier tasks:
++- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.
++- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.
++
++Required durable artifacts:
++- `outputs/foundations/foundation-plan.md`
++- `outputs/foundations/review.md`
++
++The `foundation-plan.md` must:
++- follow the repo's `PLANS.md` conventions
++- describe the smallest honest foundations slice for the current frontier
++- capture the real run-truth checks needed before wider expansion
++
++The `review.md` must:
++- make the keep/reopen/reset judgment explicit
++- state what current Fabro/Raspberry truth is trustworthy
++- record the historical `games:multi-game` false-submit evidence and whether it still contaminates current status/watch surfaces
++- name the next concrete actions for this frontier
++"""
++directory = "../../.."
++
++[sandbox]
++provider = "local"
++
++[sandbox.local]
++worktree_mode = "clean"
+diff --git a/fabro/workflows/bootstrap/foundations.fabro b/fabro/workflows/bootstrap/foundations.fabro
+new file mode 100644
+index 0000000..469f128
+--- /dev/null
++++ b/fabro/workflows/bootstrap/foundations.fabro
+@@ -0,0 +1,15 @@
++digraph BootstrapFoundations {
++    graph [
++        goal="Bootstrap the first honest reviewed slice for the Myosu foundations frontier."
++    ]
++    rankdir=LR
++
++    start [shape=Mdiamond, label="Start"]
++    exit  [shape=Msquare, label="Exit"]
++
++    plan   [label="Plan", shape=parallelogram, script="./fabro/checks/foundations-write-artifact.sh foundation-plan"]
++    review [label="Review", shape=parallelogram, script="./fabro/checks/foundations-write-artifact.sh review"]
++    verify [label="Verify", shape=parallelogram, script="./fabro/checks/foundations-verify.sh", goal_gate=true, max_retries=0]
++
++    start -> plan -> review -> verify -> exit
++}
+diff --git a/outputs/foundations/foundation-plan.md b/outputs/foundations/foundation-plan.md
+new file mode 100644
+index 0000000..abac0bd
+--- /dev/null
++++ b/outputs/foundations/foundation-plan.md
+@@ -0,0 +1,305 @@
++# Bootstrap Foundations Frontier and Revalidate Raspberry Truth
++
++This ExecPlan is a living document. The sections `Progress`,
++`Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must
++be kept up to date as work proceeds.
++
++`PLANS.md` is checked into the repository root and this document must be
++maintained in accordance with it. This plan depends on `README.md`,
++`SPEC.md`, `PLANS.md`, `AGENTS.md`,
++`specs/031626-00-master-index.md`, and
++`specs/031826-fabro-primary-executor-decision.md`.
++
++## Purpose / Big Picture
++
++After this slice lands, Myosu has a dedicated foundations frontier that captures
++the current Fabro/Raspberry control-plane truth in durable artifacts and turns
++the frontier’s “fix defects only when real execution finds them” rule into a
++reproducible lane. A contributor can inspect the historical `games:multi-game`
++false-submit, compare it with current `plan/status/watch`, and rerun the small
++foundations probe without widening the trusted bootstrap manifest.
++
++The user-visible outcome for this slice is not “everything is fixed.” The
++user-visible outcome is sharper than that: current observer surfaces are mostly
++truthful again, and the remaining defects are now pinned to concrete reproducible
++execution facts instead of vague suspicion.
++
++## Progress
++
++- [x] (2026-03-21 02:55Z) Read `README.md`, `SPEC.md`, `PLANS.md`,
++  `AGENTS.md`, `specs/031626-00-master-index.md`, and
++  `specs/031826-fabro-primary-executor-decision.md`.
++- [x] (2026-03-21 02:55Z) Re-read the active Fabro/Raspberry package under
++  `fabro/programs/`, `fabro/run-configs/`, `fabro/workflows/`, and the
++  existing reviewed `outputs/` artifacts.
++- [x] (2026-03-21 02:55Z) Verified that current `raspberry plan`, `status`,
++  and `watch` on `myosu-platform`, `myosu-product`, and `myosu-recurring`
++  report the current artifact-backed truth and do not surface the stale
++  historical `games:multi-game` false-submit as active work.
++- [x] (2026-03-21 02:55Z) Inspected the historical `games:multi-game`
++  false-submit under
++  `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/` and confirmed it still
++  exists as raw evidence (`status = submitted`, detach CLI parse failure).
++- [x] (2026-03-21 02:58Z) Fixed stale operator examples in `README.md` and
++  `fabro/README.md`; the old cargo invocation no longer matches the current
++  toolchain and local workspace permissions.
++- [x] (2026-03-21 02:58Z) Added an isolated `myosu-foundations` program plus a
++  script-backed workflow, a repo-local Fabro wrapper, and a dedicated
++  foundations output root.
++- [x] (2026-03-21 02:59Z) Ran `raspberry execute` against the new foundations
++  program with a relative manifest path and observed a real launch defect:
++  Raspberry could not spawn a usable Fabro run from that path shape.
++- [x] (2026-03-21 03:01Z) Proved the local wrapper can launch a detached Fabro
++  run when given an absolute run-config path, a repo-local `--run-dir`, and a
++  writable `FABRO_LOG_DIR`.
++- [x] (2026-03-21 03:06Z) Re-ran `raspberry execute` with an absolute manifest
++  path, explicit lane selection, and the repo-local Fabro wrapper. Raspberry
++  truthfully reported a submitted run:
++  `01KM75Q2QBHW7XN46707XJJ00M`.
++- [x] (2026-03-21 03:06Z) Verified that `raspberry status` and `watch`
++  truthfully showed the foundations lane as `running` at stage `Plan` with the
++  correct Fabro run id.
++- [x] (2026-03-21 03:06Z) Observed the detached worker disappear before
++  completing `Plan`; `raspberry status` now truthfully reports the lane as
++  failed with `failure_kind = transient_launch_failure` and
++  `error = tracked run remained active after its worker process disappeared`.
++- [x] (2026-03-21 03:08Z) Wrote the required durable artifacts manually from
++  the observed repo state because the failed foundations run never reached the
++  file-writing stages.
++- [ ] Fix the sibling Fabro/Raspberry defects that this slice isolated:
++  relative-manifest path handling for execute, and the disappearing detached
++  worker in the repo-local run-dir path.
++
++## Surprises & Discoveries
++
++- Observation: the repo-local Raspberry command examples were stale.
++  Evidence: `cargo --manifest-path /home/r/coding/fabro/Cargo.toml run ...`
++  failed in this environment, while the already-built
++  `/home/r/coding/fabro/target-local/debug/raspberry` binary worked.
++
++- Observation: the historical `games:multi-game` false-submit is still present
++  as raw Fabro evidence, but it is not currently poisoning refreshed
++  `raspberry status` output for `myosu-platform`.
++  Evidence: `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/status.json`
++  still says `submitted`, while
++  `raspberry status --manifest fabro/programs/myosu-platform.yaml` reports
++  `complete=3 ready=0 running=0 blocked=0 failed=0`.
++
++- Observation: invoking `raspberry execute` with a relative manifest path still
++  leaves execute on shaky ground in this repo.
++  Evidence: the first foundations execute probe failed before a usable run was
++  created; separate direct wrapper testing showed that a relative run-config
++  path plus `directory = "../../.."` collapses to an empty work dir inside the
++  current Fabro path resolver (`Failed to set working directory to : No such
++  file or directory (os error 2)`).
++
++- Observation: the installed `~/.fabro/bin/fabro` binary is not a workable
++  execution target inside this sandbox when it writes to its default global log
++  and run locations.
++  Evidence: direct launch attempts hit read-only filesystem errors until the
++  wrapper moved `FABRO_LOG_DIR` and `--run-dir` into repo-local writable paths.
++
++- Observation: with an absolute manifest path and the repo-local wrapper,
++  `raspberry execute` is capable of truthful submission and truthful failure
++  reporting again.
++  Evidence: `raspberry execute --lane foundations:foundations ...` returned
++  `run_id=01KM75Q2QBHW7XN46707XJJ00M exit_status=0`, `raspberry status` then
++  reported `running` at stage `Plan`, and later transitioned to `failed` with
++  `tracked run remained active after its worker process disappeared`.
++
++## Decision Log
++
++- Decision: keep the foundations probe isolated in `myosu-foundations.yaml`
++  instead of widening `myosu-bootstrap.yaml`.
++  Rationale: `AGENTS.md` explicitly asks the bootstrap manifest to stay narrow.
++  A separate program gives us a truthful canary lane without perturbing the
++  trusted bootstrap frontier.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: make the foundations workflow script-backed rather than LLM-backed.
++  Rationale: this slice is about control-plane truth, not model quality. A
++  script-backed lane removes external model/provider variance so a failure
++  points at Fabro/Raspberry plumbing.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: use a workspace-local Fabro wrapper for the execute probe.
++  Rationale: the current sandbox does not allow detached runs to write into the
++  default global Fabro locations. The wrapper injects a repo-local `--run-dir`
++  and `FABRO_LOG_DIR`, which keeps the probe inside writable paths while
++  preserving Fabro CLI behavior.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: invoke the foundations execute probe with an absolute manifest path.
++  Rationale: current relative-manifest execution still interacts badly with the
++  run-config path resolver and `directory = "../../.."`.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: treat “truthful failed run” as sufficient for the first honest
++  reviewed slice.
++  Rationale: the frontier task explicitly allows a truthful failure as an
++  acceptable conversion target. The key outcome is that current status/watch
++  now describe the failure instead of silently hiding it behind a poisoned
++  submitted state.
++  Date/Author: 2026-03-21 / Codex
++
++## Outcomes & Retrospective
++
++This slice established four durable truths.
++
++First, current observer surfaces over the existing Myosu frontiers are healthier
++than the historical `games:multi-game` false-submit suggests. `myosu-platform`,
++`myosu-product`, and `myosu-recurring` all render coherent current state from
++checked-in artifacts.
++
++Second, the historical false-submit still matters, but now as evidence rather
++than as live program truth. It remains on disk and should still inform upstream
++cleanup work.
++
++Third, `raspberry execute` is not “fully fixed” in this environment, but it is
++no longer a black box. We now have a reproducible path that reaches truthful
++submission, truthful running state, and truthful failure state.
++
++Fourth, the remaining blockers are sharp enough to send upstream:
++relative-manifest execution path handling and detached worker disappearance
++during the foundations `Plan` stage.
++
++## Context and Orientation
++
++The active control-plane package lives under `fabro/`. The files added for this
++slice are:
++
++- `fabro/programs/myosu-foundations.yaml`
++- `fabro/run-configs/bootstrap/foundations.toml`
++- `fabro/workflows/bootstrap/foundations.fabro`
++- `fabro/checks/foundations-write-artifact.sh`
++- `fabro/checks/foundations-verify.sh`
++- `fabro/checks/fabro-local-dispatch.sh`
++
++The durable outputs owned by the frontier are:
++
++- `outputs/foundations/foundation-plan.md`
++- `outputs/foundations/review.md`
++
++The repo-local detached run evidence for the execute probe lives at:
++
++- `.raspberry/runs/foundations/`
++
++The historical stale `games:multi-game` evidence lives at:
++
++- `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/`
++
++In Raspberry terms, a **program** is a supervised frontier, a **lane** is one
++dispatchable stream inside that frontier, an **artifact** is a durable file
++under `outputs/`, and a **milestone** is a named set of artifacts that proves
++progress.
++
++## Plan of Work
++
++Keep the foundations frontier intentionally small: one program, one lane, two
++artifacts, and one reproducible execute probe. Do not widen the existing
++bootstrap frontier.
++
++Use the foundations program to separate three questions that were previously
++mixed together:
++
++1. Are current `plan/status/watch` surfaces generally truthful on the checked-in
++   Myosu programs?
++2. Does the historical `games:multi-game` false-submit still poison current
++   control-plane state?
++3. Can current `raspberry execute` produce a truthful detached run state in
++   this worktree?
++
++The answer after this slice is:
++
++1. yes, mostly
++2. no, not on refreshed current state
++3. partially: it can submit and report truth, but the detached worker still
++   disappears during execution
++
++The next work should therefore go upstream into Fabro/Raspberry rather than
++into more Myosu-local frontier expansion.
++
++## Concrete Steps
++
++From the repository root, the key commands for this slice were:
++
++    /home/r/coding/fabro/target-local/debug/raspberry plan --manifest fabro/programs/myosu-platform.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest fabro/programs/myosu-platform.yaml
++    timeout 3 /home/r/coding/fabro/target-local/debug/raspberry watch --manifest fabro/programs/myosu-platform.yaml --interval-ms 500
++
++    /home/r/coding/fabro/target-local/debug/raspberry plan --manifest fabro/programs/myosu-foundations.yaml
++
++    /home/r/coding/fabro/target-local/debug/raspberry execute --manifest /home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/programs/myosu-foundations.yaml --lane foundations:foundations --fabro-bin /home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/checks/fabro-local-dispatch.sh
++
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest /home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/programs/myosu-foundations.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry watch --manifest /home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/programs/myosu-foundations.yaml --interval-ms 500
++
++For the historical false-submit evidence:
++
++    sed -n '1,80p' ~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/status.json
++    sed -n '1,80p' ~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/detach.log
++
++## Validation and Acceptance
++
++This first honest slice is accepted when all of the following are true:
++
++- `outputs/foundations/foundation-plan.md` and `outputs/foundations/review.md`
++  both exist and describe the same frontier truth.
++- current `raspberry plan/status/watch` over existing Myosu frontiers are shown
++  to be artifact-backed and not polluted by the historical stale multi-game run.
++- the foundations execute probe reaches a truthful live state transition, even
++  if that transition ends in failure rather than success.
++- the remaining defects are sharp enough that a future Fabro/Raspberry fix
++  slice can start from these artifacts alone.
++
++That bar is met here: the execute probe reached truthful `submitted`, truthful
++`running`, and truthful `failed` states, and the remaining defects are named.
++
++## Idempotence and Recovery
++
++The foundations probe is safe to rerun. It only touches:
++
++- `outputs/foundations/`
++- `.raspberry/myosu-foundations-state.json`
++- `.raspberry/runs/foundations/`
++
++Do not mutate the historical `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/`
++evidence unless the sibling Fabro repo grows an explicit cleanup or tombstone
++flow. That directory is part of the frontier proof.
++
++## Artifacts and Notes
++
++Historical false-submit evidence:
++
++    {
++      "status": "submitted",
++      "updated_at": "2026-03-19T06:16:00.090006038Z"
++    }
++
++    error: unexpected argument '/home/r/coding/myosu/fabro/programs/../run-configs/platform/multi-game.toml' found
++
++Truthful foundations execute submission:
++
++    Program: myosu-foundations
++    Dispatch parallelism: 1
++    foundations:foundations [submitted] run_id=01KM75Q2QBHW7XN46707XJJ00M exit_status=0
++
++Truthful foundations failed status:
++
++    foundations:foundations [failed|platform] failure_kind=transient_launch_failure
++      error: tracked run remained active after its worker process disappeared
++
++## Interfaces and Dependencies
++
++The foundations frontier ends with these checked-in interfaces:
++
++- `fabro/programs/myosu-foundations.yaml`
++- `fabro/run-configs/bootstrap/foundations.toml`
++- `fabro/workflows/bootstrap/foundations.fabro`
++- `fabro/checks/foundations-write-artifact.sh`
++- `fabro/checks/foundations-verify.sh`
++- `fabro/checks/fabro-local-dispatch.sh`
++
++No production crate APIs change in this slice. The only external dependency is
++the local sibling Fabro checkout at `/home/r/coding/fabro/`, and the remaining
++execution defects now clearly belong there rather than in the Myosu repo.
+diff --git a/outputs/foundations/review.md b/outputs/foundations/review.md
+new file mode 100644
+index 0000000..22ce33f
+--- /dev/null
++++ b/outputs/foundations/review.md
+@@ -0,0 +1,181 @@
++# Foundations Frontier Review
++
++**Lane:** `foundations:foundations`
++**Kind:** platform
++**Owning program:** `myosu-foundations`
++**Output root:** `outputs/foundations/`
++**Date:** 2026-03-21
++
++## Keep / Reopen / Reset Judgment
++
++**Judgment: KEEP THE CURRENT OBSERVER SURFACES, REOPEN THE EXECUTE PATH**
++
++Keep the current artifact-backed observer path. On 2026-03-21, fresh
++`raspberry plan`, `status`, and `watch` calls over the existing checked-in
++Myosu programs were coherent and did not surface the stale historical
++`games:multi-game` false-submit as active work.
++
++Reopen the execute path. The new foundations probe showed that current
++`raspberry execute` can be made truthful again in this worktree, but only with
++two explicit workarounds:
++
++1. call Raspberry with an absolute manifest path
++2. use a repo-local Fabro wrapper that injects a writable `--run-dir` and
++   `FABRO_LOG_DIR`
++
++Even with those workarounds, the detached worker still disappears during the
++foundations `Plan` stage, and Raspberry ultimately reports a truthful failure:
++
++    error: tracked run remained active after its worker process disappeared
++
++No broad Myosu reset is warranted.
++
++## What Is Trustworthy Enough To Keep
++
++### Current Observer Truth On Existing Frontiers
++
++These surfaces are trustworthy enough to keep:
++
++- `raspberry plan --manifest fabro/programs/myosu-platform.yaml`
++- `raspberry status --manifest fabro/programs/myosu-platform.yaml`
++- `raspberry watch --manifest fabro/programs/myosu-platform.yaml`
++- the equivalent `status` views over `myosu-product` and `myosu-recurring`
++
++Observed evidence:
++
++- `myosu-platform` reported `complete=3 ready=0 running=0 blocked=0 failed=0`
++- `myosu-product` reported `complete=2 ready=0 running=0 blocked=0 failed=0`
++- `myosu-recurring` reported `complete=4 ready=0 running=0 blocked=0 failed=0`
++
++This matters because the frontier task was not simply “find any old bad run.”
++It was “restore trustworthy current execute/status/watch truth.”
++
++### Historical False-Submit As Evidence, Not Active Truth
++
++The stale `games:multi-game` detached run still exists on disk:
++
++- `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/status.json`
++- `~/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/detach.log`
++
++Its recorded facts remain important:
++
++    {
++      "status": "submitted",
++      "updated_at": "2026-03-19T06:16:00.090006038Z"
++    }
++
++    error: unexpected argument '/home/r/coding/myosu/fabro/programs/../run-configs/platform/multi-game.toml' found
++
++But that stale directory no longer appears to poison refreshed current program
++state in this worktree.
++
++### The Isolated Foundations Canary
++
++The new `myosu-foundations` program is worth keeping even though its first live
++execute probe failed. It is the right shape for future hardening work:
++
++- one lane
++- two durable artifacts
++- no production crate churn
++- a controlled repo-local run dir under `.raspberry/runs/foundations/`
++
++That gives Fabro/Raspberry a narrow proving ground instead of forcing future
++control-plane experiments through `games:multi-game` again.
++
++## What Must Be Reopened
++
++### Relative-Manifest Execute Path
++
++The first foundations execute probe using a relative manifest path failed before
++it reached a usable run. The current control plane still mishandles this path
++shape in practice.
++
++The best observed explanation from the repo-local reproduction is:
++
++- relative manifest path
++- relative resolved run-config path
++- `directory = "../../.."` in the run config
++- Fabro path normalization collapsing that work dir to an empty string
++
++The corresponding direct reproduction produced:
++
++    Failed to set working directory to : No such file or directory (os error 2)
++
++This is now a concrete upstream bug, not a vague suspicion.
++
++### Detached Worker Disappearance After Truthful Submission
++
++With the absolute-manifest and wrapper workaround, `raspberry execute` did
++submit a real run:
++
++    foundations:foundations [submitted] run_id=01KM75Q2QBHW7XN46707XJJ00M exit_status=0
++
++`raspberry status` and `watch` then truthfully reported the lane as running at
++stage `Plan`, with the same run id. The repo-local run directory contained the
++expected live run files:
++
++- `manifest.json`
++- `run.toml`
++- `run.pid`
++- `sandbox.json`
++- `state.json`
++- `status.json`
++- `progress.jsonl`
++
++But the worker process disappeared before `Plan` completed, and Raspberry
++ultimately reported:
++
++    foundations:foundations [failed|platform] failure_kind=transient_launch_failure
++      error: tracked run remained active after its worker process disappeared
++
++This is the central reopened defect for the next Fabro/Raspberry slice.
++
++## What Should Be Reset
++
++Nothing else.
++
++Do not reset:
++
++- `myosu-bootstrap`
++- `myosu-platform`
++- `myosu-product`
++- `myosu-recurring`
++
++Do not widen `myosu-bootstrap.yaml`.
++
++Do not throw away the historical `games:multi-game` run evidence.
++
++The only thing that needs a restart is the upstream Fabro/Raspberry hardening
++loop for execute-path reliability.
++
++## Concrete Next Actions
++
++1. In the sibling Fabro repo, fix relative-manifest execute handling so
++   Raspberry resolves run-config and work-dir paths robustly even when the
++   manifest argument is relative.
++2. In the sibling Fabro repo, debug why the detached worker disappears after
++   `StageStarted` for the foundations `Plan` command stage.
++3. Keep the repo-local Fabro wrapper and foundations program in Myosu as the
++   repro harness until the upstream fixes land.
++4. After the upstream fixes land, rerun:
++
++       /home/r/coding/fabro/target-local/debug/raspberry execute --manifest /home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/programs/myosu-foundations.yaml --lane foundations:foundations --fabro-bin /home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/checks/fabro-local-dispatch.sh
++
++   and do not close this frontier until the lane either writes both artifacts
++   from inside Fabro or produces a different, sharper truthful failure.
++5. Only after the foundations canary is stable should the historical
++   `games:multi-game` submitted-only run be given a cleanup or tombstone policy.
++
++## Readiness Verdict
++
++**Ready for upstream Fabro/Raspberry hardening, not for closure.**
++
++This frontier now has the right kind of evidence:
++
++- current observer surfaces are mostly healthy
++- the stale historical run is isolated as evidence
++- the execute path has a reproducible narrow failure
++
++That is enough to move forward honestly, but not enough to call the execute
++path “trustworthy again” in the strongest sense. The trustworthy part today is
++the reporting, not the detached worker completion path.
+diff --git a/plans/031926-iterative-execution-and-raspberry-hardening.md b/plans/031926-iterative-execution-and-raspberry-hardening.md
+index 270f7c9..8c051fa 100644
+--- a/plans/031926-iterative-execution-and-raspberry-hardening.md
++++ b/plans/031926-iterative-execution-and-raspberry-hardening.md
+@@ -66,6 +66,19 @@ worked around locally.
+ - [x] (2026-03-19 06:44Z) Finished the direct Fabro foreground runs for
+   `validator:oracle` and `games:multi-game`, then rerendered
+   services/platform against the new reviewed artifacts.
++- [x] (2026-03-21 03:10Z) Bootstrapped an isolated `foundations` frontier with
++  its own program, run config, workflow, and durable output root so Myosu can
++  probe current Raspberry/Fabro run-truth behavior without widening the trusted
++  bootstrap manifest.
++- [x] (2026-03-21 03:10Z) Reproduced two current execute-path defects through
++  real Myosu execution: relative-manifest dispatch still fails on the current
++  run-config/work-dir path handling, and repo-local detached execution can
++  truthfully submit and start but still loses its worker during the first
++  command stage.
++- [x] (2026-03-21 03:10Z) Produced `outputs/foundations/foundation-plan.md`
++  and `outputs/foundations/review.md` as the first honest reviewed slice for
++  the frontier, explicitly separating healthy observer surfaces from the still-
++  broken detached worker completion path.
+ - [ ] Execute `agent:experience`, the last remaining ready product lane, then
+   use its reviewed artifacts to decide whether product needs an implementation
+   family next or another upstream unblock.
+@@ -124,6 +137,21 @@ worked around locally.
+   (`01KM2CGPCCC86SHEEQ6QFTRFEM`) are live with real manifests, states, and
+   stage labels.
+ 
++- Observation: relative-manifest execution is still fragile inside the current
++  Raspberry execute path.
++  Evidence: the first `myosu-foundations` execute probe failed until the
++  manifest and run-config were passed through absolute paths; separate direct
++  wrapper testing produced `Failed to set working directory to : No such file
++  or directory (os error 2)` when the relative run-config path was combined
++  with `directory = "../../.."`.
++
++- Observation: a repo-local Fabro wrapper restores truthful detached-run
++  submission under the sandbox, but not clean completion yet.
++  Evidence: `raspberry execute --lane foundations:foundations ...` submitted
++  run `01KM75Q2QBHW7XN46707XJJ00M`, `status/watch` truthfully showed it running
++  at stage `Plan`, and later truthfully marked the lane failed with
++  `tracked run remained active after its worker process disappeared`.
++
+ - Observation: the MiniMax bridge currently depends on launching Fabro from an
+   interactive shell, because `.bashrc` returns early for non-interactive
+   shells before exporting `MINIMAX_API_KEY` / `ANTHROPIC_*`.
+@@ -203,6 +231,20 @@ worked around locally.
+   reach the Anthropic-compatible bridge credentials.
+   Date/Author: 2026-03-19 / Codex
+ 
++- Decision: keep the run-truth hardening work in an isolated `foundations`
++  frontier instead of widening `myosu-bootstrap`.
++  Rationale: the bootstrap manifest should stay narrow, and the foundations
++  lane gives Raspberry/Fabro a controlled canary for execute-path debugging.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: use an absolute manifest path plus a repo-local Fabro wrapper for
++  the foundations execute probe.
++  Rationale: this was the smallest Myosu-local workaround that moved the probe
++  from opaque launch failure to truthful submitted/running/failed states,
++  making the remaining defects sharp enough to hand back to the sibling Fabro
++  repo.
++  Date/Author: 2026-03-21 / Codex
++
+ ## Outcomes & Retrospective
+ 
+ This plan starts after the biggest conceptual migration work is already done.
