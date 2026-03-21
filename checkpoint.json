@@ -1,42 +1,48 @@
 {
-  "timestamp": "2026-03-21T03:59:35.223137854Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-21T03:59:37.374607006Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
     "start": 1,
     "specify": 2,
     "review": 1,
-    "polish": 1
+    "polish": 1,
+    "verify": 1
   },
   "context_values": {
+    "command.output": "",
     "graph.rankdir": "LR",
+    "command.stderr": "",
     "thread.start.current_node": "specify",
     "response.specify": "Wrote the lane artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM784VTSZNNSS188H0D31JCJ/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320-01KM784VTSZNNSS188H0D31JCJ/worktree/outputs/agent-integration/review.md). They pin the decision to the current tree: `fabro/programs/myosu-product.yaml` only contains reviewed `play:tui` and `agent:experience` lanes, product still has no `implement/` family surfaces, the old robopoker path blocker is already cleared, and the remaining gaps are product-owned implementation work. The recommended next move is a separate product implementation family, not another upstream-unblock loop.\n\nVerification: `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games` passed with 10 unit tests and 4 doctests, and `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui` passed with 84 unit tests and 1 doctest. The artifacts also record one honesty constraint: there is no repo-local `.raspberry/` state in this worktree, so the conclusion is grounded in committed manifests, curated outputs, and fresh proof commands.",
     "thread.specify.current_node": "review",
-    "internal.thread_id": "review",
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "internal.thread_id": "polish",
+    "failure_signature": "",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
-    "outcome": "fail",
+    "outcome": "success",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
     "internal.run_id": "01KM784VTSZNNSS188H0D31JCJ",
     "internal.retry_count.review": 1,
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: gpt-5.4, 872.0k tokens in / 14.9k out\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
+    "internal.retry_count.verify": 1,
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: gpt-5.4, 872.0k tokens in / 14.9k out\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
     "last_response": "Wrote the lane artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM784VTSZNNSS188H0D31JCJ/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320",
     "last_stage": "specify",
     "thread.review.current_node": "polish",
     "internal.retry_count.specify": 2,
-    "current_node": "polish",
+    "current_node": "verify",
     "internal.node_visit_count": 1,
     "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM784VTSZNNSS188H0D31JCJ/worktree",
     "internal.retry_count.polish": 1,
     "internal.retry_count.start": 1,
-    "failure_class": "deterministic",
-    "internal.fidelity": "compact"
+    "failure_class": "",
+    "internal.fidelity": "compact",
+    "thread.polish.current_node": "verify"
   },
   "logs": [],
   "node_outcomes": {
@@ -77,14 +83,24 @@
         "failure_signature": "api_deterministic|openai|not_found"
       },
       "duration_ms": 4910
+    },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": ""
+      },
+      "notes": "Script completed: test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md",
+      "duration_ms": 2
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "review|deterministic|api_deterministic|openai|not_found": 1,
     "polish|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
+    "verify": 1,
     "specify": 1,
     "polish": 1,
     "start": 1,
