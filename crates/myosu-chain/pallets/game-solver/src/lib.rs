@@ -7,9 +7,8 @@
 // <https://docs.substrate.io/reference/frame-pallets/>
 
 use frame_system::{self as system, ensure_signed};
-pub use pallet::*;
 
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use frame_support::sp_runtime::transaction_validity::InvalidTransaction;
 use frame_support::{
     dispatch::{self, DispatchResult, DispatchResultWithPostInfo},
@@ -18,13 +17,10 @@ use frame_support::{
     pallet_prelude::*,
     traits::tokens::fungible,
 };
-use pallet_balances::Call as BalancesCall;
-// use pallet_scheduler as Scheduler;
 use scale_info::TypeInfo;
 use sp_core::Get;
 use sp_runtime::{DispatchError, transaction_validity::TransactionValidityError};
 use sp_std::marker::PhantomData;
-use subtensor_runtime_common::{AlphaCurrency, Currency, CurrencyReserve, NetUid, TaoCurrency};
 
 // ============================
 //	==== Benchmark Imports =====
@@ -45,10 +41,8 @@ pub mod staking;
 pub mod subnets;
 pub mod swap;
 pub mod utils;
-use crate::utils::rate_limiting::{Hyperparameter, TransactionType};
 use macros::{config, dispatches, errors, events, genesis, hooks};
 
-pub use extensions::*;
 pub use guards::*;
 
 #[cfg(test)]
@@ -65,6 +59,10 @@ pub const MAX_SUBNET_CLAIMS: usize = 5;
 
 pub const MAX_ROOT_CLAIM_THRESHOLD: u64 = 10_000_000;
 
+// Local type replacements for subtensor types
+pub type NetUid = u16;
+pub type Balance = u64;
+
 #[allow(deprecated)]
 #[deny(missing_docs)]
 #[import_section(errors::errors)]
@@ -72,13 +70,18 @@ pub const MAX_ROOT_CLAIM_THRESHOLD: u64 = 10_000_000;
 #[import_section(dispatches::dispatches)]
 #[import_section(genesis::genesis)]
 #[import_section(hooks::hooks)]
-#[import_section(config::config)]
+// #[import_section(config::config)] // TODO: fix config macro
 #[frame_support::pallet]
 #[allow(clippy::expect_used)]
 pub mod pallet {
     use crate::RateLimitKey;
     use crate::migrations;
-    use crate::subnets::leasing::{LeaseId, SubnetLeaseOf};
+
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        #[pallet::event]
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+    }
     use frame_support::Twox64Concat;
     use frame_support::{
         BoundedVec,
@@ -89,7 +92,6 @@ pub mod pallet {
         },
     };
     use frame_system::pallet_prelude::*;
-        use runtime_common::prod_or_fast;
     use sp_core::{ConstU32, H160, H256};
     use sp_runtime::traits::{Dispatchable, TrailingZeroInput};
     use sp_std::collections::btree_map::BTreeMap;
@@ -97,11 +99,6 @@ pub mod pallet {
     use sp_std::collections::vec_deque::VecDeque;
     use sp_std::vec;
     use sp_std::vec::Vec;
-    use substrate_fixed::types::{I64F64, I96F32, U64F64, U96F32};
-    use subtensor_macros::freeze_struct;
-    use subtensor_runtime_common::{
-        AlphaCurrency, Currency, MechId, NetUid, NetUidStorageIndex, TaoCurrency,
-    };
 
     /// Origin for the pallet
     pub type PalletsOriginOf<T> =
@@ -2365,26 +2362,6 @@ pub mod pallet {
     pub type PendingChildKeyCooldown<T: Config> =
         StorageValue<_, u64, ValueQuery, DefaultPendingChildKeyCooldown<T>>;
 
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        /// Stakes record in genesis.
-        pub stakes: Vec<(T::AccountId, Vec<(T::AccountId, (u64, u16))>)>,
-        /// The total issued balance in genesis
-        pub balances_issuance: TaoCurrency,
-        /// The delay before a subnet can call start
-        pub start_call_delay: Option<u64>,
-    }
-
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                stakes: Default::default(),
-                balances_issuance: TaoCurrency::ZERO,
-                start_call_delay: None,
-            }
-        }
-    }
-
     // ---- Subtensor helper functions.
     impl<T: Config> Pallet<T> {
         /// Is the caller allowed to set weights
@@ -2493,158 +2470,6 @@ impl From<CustomTransactionError> for TransactionValidityError {
     }
 }
 
-use sp_std::vec;
-
-// TODO: unravel this rats nest, for some reason rustc thinks this is unused even though it's
-// used not 25 lines below
-#[allow(unused)]
-use sp_std::vec::Vec;
-use subtensor_macros::freeze_struct;
-
-#[derive(Clone)]
-pub struct TaoCurrencyReserve<T: Config>(PhantomData<T>);
-
-impl<T: Config> CurrencyReserve<TaoCurrency> for TaoCurrencyReserve<T> {
-    #![deny(clippy::expect_used)]
-    fn reserve(netuid: NetUid) -> TaoCurrency {
-        SubnetTAO::<T>::get(netuid).saturating_add(SubnetTaoProvided::<T>::get(netuid))
-    }
-
-    fn increase_provided(netuid: NetUid, tao: TaoCurrency) {
-        Pallet::<T>::increase_provided_tao_reserve(netuid, tao);
-    }
-
-    fn decrease_provided(netuid: NetUid, tao: TaoCurrency) {
-        Pallet::<T>::decrease_provided_tao_reserve(netuid, tao);
-    }
-}
-
-#[derive(Clone)]
-pub struct AlphaCurrencyReserve<T: Config>(PhantomData<T>);
-
-impl<T: Config> CurrencyReserve<AlphaCurrency> for AlphaCurrencyReserve<T> {
-    #![deny(clippy::expect_used)]
-    fn reserve(netuid: NetUid) -> AlphaCurrency {
-        SubnetAlphaIn::<T>::get(netuid).saturating_add(SubnetAlphaInProvided::<T>::get(netuid))
-    }
-
-    fn increase_provided(netuid: NetUid, alpha: AlphaCurrency) {
-        Pallet::<T>::increase_provided_alpha_reserve(netuid, alpha);
-    }
-
-    fn decrease_provided(netuid: NetUid, alpha: AlphaCurrency) {
-        Pallet::<T>::decrease_provided_alpha_reserve(netuid, alpha);
-    }
-}
-
-pub type GetAlphaForTao<T> =
-    subtensor_swap_interface::GetAlphaForTao<TaoCurrencyReserve<T>, AlphaCurrencyReserve<T>>;
-pub type GetTaoForAlpha<T> =
-    subtensor_swap_interface::GetTaoForAlpha<AlphaCurrencyReserve<T>, TaoCurrencyReserve<T>>;
-
-impl<T: Config + pallet_balances::Config<Balance = u64>>
-    subtensor_runtime_common::SubnetInfo<T::AccountId> for Pallet<T>
-{
-    #![deny(clippy::expect_used)]
-    fn exists(netuid: NetUid) -> bool {
-        Self::if_subnet_exist(netuid)
-    }
-
-    fn mechanism(netuid: NetUid) -> u16 {
-        SubnetMechanism::<T>::get(netuid)
-    }
-
-    fn is_owner(account_id: &T::AccountId, netuid: NetUid) -> bool {
-        SubnetOwner::<T>::get(netuid) == *account_id
-    }
-
-    fn is_subtoken_enabled(netuid: NetUid) -> bool {
-        SubtokenEnabled::<T>::get(netuid)
-    }
-
-    fn get_validator_trust(netuid: NetUid) -> Vec<u16> {
-        ValidatorTrust::<T>::get(netuid)
-    }
-
-    fn get_validator_permit(netuid: NetUid) -> Vec<bool> {
-        ValidatorPermit::<T>::get(netuid)
-    }
-
-    fn hotkey_of_uid(netuid: NetUid, uid: u16) -> Option<T::AccountId> {
-        Keys::<T>::try_get(netuid, uid).ok()
-    }
-}
-
-impl<T: Config + pallet_balances::Config<Balance = u64>>
-    subtensor_runtime_common::BalanceOps<T::AccountId> for Pallet<T>
-{
-    #![deny(clippy::expect_used)]
-    fn tao_balance(account_id: &T::AccountId) -> TaoCurrency {
-        pallet_balances::Pallet::<T>::free_balance(account_id).into()
-    }
-
-    fn alpha_balance(
-        netuid: NetUid,
-        coldkey: &T::AccountId,
-        hotkey: &T::AccountId,
-    ) -> AlphaCurrency {
-        Self::get_stake_for_hotkey_and_coldkey_on_subnet(hotkey, coldkey, netuid)
-    }
-
-    fn increase_balance(coldkey: &T::AccountId, tao: TaoCurrency) {
-        Self::add_balance_to_coldkey_account(coldkey, tao.into())
-    }
-
-    fn decrease_balance(
-        coldkey: &T::AccountId,
-        tao: TaoCurrency,
-    ) -> Result<TaoCurrency, DispatchError> {
-        Self::remove_balance_from_coldkey_account(coldkey, tao.into())
-    }
-
-    fn increase_stake(
-        coldkey: &T::AccountId,
-        hotkey: &T::AccountId,
-        netuid: NetUid,
-        alpha: AlphaCurrency,
-    ) -> Result<(), DispatchError> {
-        ensure!(
-            Self::hotkey_account_exists(hotkey),
-            Error::<T>::HotKeyAccountNotExists
-        );
-
-        // Increse alpha out counter
-        SubnetAlphaOut::<T>::mutate(netuid, |total| {
-            *total = total.saturating_add(alpha);
-        });
-
-        Self::increase_stake_for_hotkey_and_coldkey_on_subnet(hotkey, coldkey, netuid, alpha);
-
-        Ok(())
-    }
-
-    fn decrease_stake(
-        coldkey: &T::AccountId,
-        hotkey: &T::AccountId,
-        netuid: NetUid,
-        alpha: AlphaCurrency,
-    ) -> Result<AlphaCurrency, DispatchError> {
-        ensure!(
-            Self::hotkey_account_exists(hotkey),
-            Error::<T>::HotKeyAccountNotExists
-        );
-
-        // Decrese alpha out counter
-        SubnetAlphaOut::<T>::mutate(netuid, |total| {
-            *total = total.saturating_sub(alpha);
-        });
-
-        Ok(Self::decrease_stake_for_hotkey_and_coldkey_on_subnet(
-            hotkey, coldkey, netuid, alpha,
-        ))
-    }
-}
-
 /// Enum that defines types of rate limited operations for
 /// storing last block when this operation occured
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo)]
@@ -2654,7 +2479,7 @@ pub enum RateLimitKey<AccountId> {
     SetSNOwnerHotkey(NetUid),
     // Generic rate limit for subnet-owner hyperparameter updates (per netuid)
     #[codec(index = 1)]
-    OwnerHyperparamUpdate(NetUid, Hyperparameter),
+    OwnerHyperparamUpdate(NetUid, u16),
     // Subnet registration rate limit
     #[codec(index = 2)]
     NetworkLastRegistered,

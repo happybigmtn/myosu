@@ -1,12 +1,1 @@
-use super::*;
-pub mod account;
-pub mod add_stake;
-mod claim_root;
-pub mod decrease_take;
-pub mod helpers;
-pub mod increase_take;
-pub mod move_stake;
-pub mod recycle_alpha;
-pub mod remove_stake;
-pub mod set_children;
-pub mod stake_utils;
+// Empty - subtensor staking modules use subtensor_runtime_common and subtensor_swap_interface

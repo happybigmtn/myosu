@@ -1,3 +1,1 @@
-mod check_coldkey_swap;
-
-pub use check_coldkey_swap::*;
+// Empty - subtensor coldkey swap guard uses DispatchGuard removed in stable2407
