@@ -1,0 +1,5 @@
+{
+  "command": "test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md",
+  "language": "shell",
+  "timeout_ms": null
+}
