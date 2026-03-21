@@ -1,60 +1,56 @@
-# `chain:runtime` Implementation — Restart Slice 1
+# `chain:runtime` Implementation — Restart Slice 1 Fixup
 
-## Slice Implemented
+## Slice Repaired
 
-**Restart Slice 1 — Runtime workspace wiring plus a minimal `myosu-runtime` crate**
+This fixup repairs the **proof contract** for Restart Slice 1 without widening
+the runtime implementation scope.
 
-This slice implements the smallest honest restart step that turns the runtime into a real workspace package and replaces the dead subtensor-derived `runtime/src/lib.rs` with a minimal FRAME runtime surface.
+The runtime code stays on the same approved Phase 1 surface:
 
-The implemented scope is:
+- workspace member `crates/myosu-chain/runtime`
+- minimal FRAME runtime in `crates/myosu-chain/runtime/src/lib.rs`
+- runtime-side genesis preset plumbing in `crates/myosu-chain/runtime/src/chain_spec.rs`
 
-- add `crates/myosu-chain/runtime` as a root workspace member
-- pin the minimal runtime dependency set to `polkadot-sdk` `stable2407`
-- create `crates/myosu-chain/runtime/Cargo.toml`
-- create `crates/myosu-chain/runtime/build.rs`
-- replace `crates/myosu-chain/runtime/src/lib.rs` with a four-pallet runtime:
-  `System`, `Timestamp`, `Balances`, `Sudo`
-- add `crates/myosu-chain/runtime/src/chain_spec.rs` with a runtime-side `development` preset hook for `sp_genesis_builder`
+The concrete failure was in verification, not runtime logic:
 
-This deliberately does **not** attempt the Phase 2 node/common port. The node and common crates remain outside this slice.
+- the slice proof in `outputs/chain/runtime/spec.md` was written as prose, which
+  produced a malformed shell script during verification
+- the same proof shape also let a future `myosu-node` command leak into the
+  active runtime-only slice
+- in this sandbox, raw `cargo` proof commands also default to a read-only shared
+  target directory unless `CARGO_TARGET_DIR` is set explicitly
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `Cargo.toml` | Added `crates/myosu-chain/runtime` to workspace members and introduced the minimal runtime dependency set pinned to `stable2407` |
-| `Cargo.lock` | Expanded to include the newly resolved runtime dependency graph |
-| `crates/myosu-chain/runtime/Cargo.toml` | New runtime manifest for `myosu-runtime` |
-| `crates/myosu-chain/runtime/build.rs` | Added WASM builder hook |
-| `crates/myosu-chain/runtime/src/lib.rs` | Replaced the non-buildable subtensor runtime with a minimal FRAME runtime plus runtime APIs |
-| `crates/myosu-chain/runtime/src/chain_spec.rs` | Added runtime preset plumbing for `GenesisBuilder` |
+| `outputs/chain/runtime/spec.md` | Added an explicit "current approved slice proof" section, restricted the active gate to Phase 1, and rewrote the runtime proof as executable commands using `CARGO_TARGET_DIR=.raspberry/cargo-target` |
+| `outputs/chain/runtime/implementation.md` | Replaced the prior implementation note with this fixup-specific slice description |
+| `outputs/chain/runtime/verification.md` | Replaced the verification note with the actual commands run during fixup and their outcomes |
+| `outputs/chain/runtime/integration.md` | Updated the integration contract to describe the Phase 1-only proof boundary and sandbox-local cargo target requirement |
 
-## Proof Commands For This Lane
+No runtime source files changed in this fixup because the observed failure was a
+deterministic proof-script problem, not a Rust compiler error in the runtime
+crate.
 
-The intended proof commands for this slice remain:
-
-```bash
-cargo check -p myosu-runtime
-cargo build -p myosu-runtime --release
-```
-
-In this sandbox, I also used lower-level proof commands that do not require a full online dependency fetch:
+## Proof Commands For The Active Slice
 
 ```bash
-cargo metadata --offline --no-deps --format-version 1 --manifest-path crates/myosu-chain/runtime/Cargo.toml
-rustfmt --check crates/myosu-chain/runtime/build.rs crates/myosu-chain/runtime/src/chain_spec.rs crates/myosu-chain/runtime/src/lib.rs
+env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime
+env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release
 ```
 
-The exact outcomes are recorded in `outputs/chain/runtime/verification.md`.
+These are the commands the active Slice 1 proof gate should run. Phase 2 node
+proof is deliberately out of scope for this fixup.
 
 ## What Remains Next
 
-| Next slice | Description |
+| Next step | Description |
 |-----------|-------------|
-| Slice 2 | Get `cargo check -p myosu-runtime` and `cargo build -p myosu-runtime --release` fully green in an environment with the required cached/online registry access, or flatten dependencies further if offline proof is mandatory |
-| Slice 3 | Bring `crates/myosu-chain/common/` into the workspace and rewrite its `freeze_struct` / `runtime_common` dependencies per the review boundary |
-| Slice 4 | Add the `myosu-node` manifest and begin the Phase 2 node wiring against this minimal runtime |
+| Finish Phase 1 proof | Let the env-prefixed runtime proof commands complete to a final exit status in a clean verification run |
+| Only then start Phase 2 | Add `myosu-node` after the runtime-only proof is fully green; do not mix node proof into Slice 1 again |
 
 ## Stage-Owned Outputs
 
-Per lane ownership rules, `outputs/chain/runtime/quality.md` and `outputs/chain/runtime/promotion.md` were **not** hand-authored in this implementation stage.
+Per fixup instructions, `outputs/chain/runtime/quality.md` was not hand-authored
+and `outputs/chain/runtime/promotion.md` was not created or rewritten here.

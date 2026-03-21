@@ -1,36 +1,32 @@
-# `chain:runtime` Integration — Restart Slice 1
+# `chain:runtime` Integration — Restart Slice 1 Fixup
 
-## Workspace Integration
+## Active Slice Boundary
 
-- `myosu-runtime` is now a first-class workspace member rooted at `crates/myosu-chain/runtime/`.
-- The root workspace dependency table now carries the minimal runtime dependency set pinned to `polkadot-sdk` `stable2407`.
-- `Cargo.lock` now includes the resolved runtime dependency graph needed for this new member.
+- the integrated runtime surface is still Phase 1 only:
+  `System`, `Timestamp`, `Balances`, `Sudo`
+- `crates/myosu-chain/node/` and `crates/myosu-chain/common/` remain outside the
+  active proof boundary
+- Phase 2 node proof must not be run as part of this slice
+
+## Proof Integration Contract
+
+- the runtime spec now carries a dedicated "current approved slice proof"
+  section so the active gate is unambiguous
+- the Phase 1 proof commands now use
+  `env CARGO_TARGET_DIR=.raspberry/cargo-target ...` because this sandbox’s
+  default shared Cargo target directory is read-only
+- the future Phase 2 node proof is described as future work instead of an active
+  command for this lane
 
 ## Runtime Surface Integration
 
-- The previous `crates/myosu-chain/runtime/src/lib.rs` was a non-buildable subtensor forward-port with unresolved imports across `subtensor_*`, Frontier, drand, and chain-specific pallets.
-- This slice replaces that surface with a minimal FRAME runtime that only composes:
-  - `System`
-  - `Timestamp`
-  - `Balances`
-  - `Sudo`
-- The runtime exposes the core runtime APIs plus `sp_genesis_builder::GenesisBuilder`.
-
-## Genesis / Chain-Spec Integration
-
-- `crates/myosu-chain/runtime/src/chain_spec.rs` now provides a named `development` runtime preset hook.
-- The current preset is intentionally minimal (`{}` patch over the default runtime genesis config). It is enough to prove the runtime-side preset plumbing exists without prematurely coupling this slice to node-side chain-spec decisions.
-
-## Downstream Boundary
-
-- `crates/myosu-chain/common/` is still outside the active compile path for this slice.
-- `crates/myosu-chain/node/` is still outside the active compile path for this slice.
-- No subtensor-derived pallets were pulled into the runtime composition in this slice.
+- `crates/myosu-chain/runtime/src/lib.rs` remains the minimal FRAME runtime
+  introduced in Slice 1
+- `crates/myosu-chain/runtime/src/chain_spec.rs` remains the runtime-side preset
+  hook for `sp_genesis_builder`
+- no subtensor-derived pallets were reintroduced during this fixup
 
 ## Next Integration Step
 
-The next `chain:runtime` slice should choose one of these paths:
-
-1. Finish runtime build proof in an environment that can satisfy the new dependency fetches.
-2. Flatten the runtime dependency surface further if fully-offline proof is a hard requirement here.
-3. Once the runtime build proof is green, start Phase 2 by wiring `common` and `node` against this minimized runtime surface.
+Run the Phase 1 proof commands to completion in a clean verification pass. Only
+after those finish green should the lane widen toward `myosu-node`.

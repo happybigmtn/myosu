@@ -1,41 +1,35 @@
-# `chain:runtime` Verification — Restart Slice 1
+# `chain:runtime` Verification — Restart Slice 1 Fixup
 
 ## Automated Commands Run
 
-| Command | Exit | Outcome |
-|---------|------|---------|
-| `cargo metadata --offline --no-deps --format-version 1 --manifest-path crates/myosu-chain/runtime/Cargo.toml` | 0 | Passed. Cargo recognizes `myosu-runtime` as a workspace package with `myosu_runtime` lib and `build-script-build` targets. |
-| `rustfmt --check crates/myosu-chain/runtime/build.rs crates/myosu-chain/runtime/src/chain_spec.rs crates/myosu-chain/runtime/src/lib.rs` | 0 | Passed. The new runtime files parse and format cleanly. |
-| `cargo check -p myosu-runtime` | 101 | Blocked by sandbox network restrictions. Cargo attempted to update `crates.io` and failed to resolve `index.crates.io`. |
-| `cargo check -p myosu-runtime --offline` | 101 | Blocked by missing cached registry artifacts for the newly resolved dependency graph. First missing crate reported: `finality-grandpa v0.16.3`. |
-| `cargo check -p myosu-runtime --no-default-features --offline` | 101 | Same blocker as above. The failure happens before Rust type-checking reaches the crate body. |
+| Command | Exit / State | Outcome |
+|---------|--------------|---------|
+| `cargo metadata --no-deps --format-version 1 --manifest-path crates/myosu-chain/runtime/Cargo.toml` | 0 | Passed. Cargo still recognizes `myosu-runtime` as a workspace package. |
+| `cargo check -p myosu-runtime` | 101 | Failed immediately in this sandbox because Cargo targeted `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/.../.cargo-lock`, which is read-only here. |
+| `cargo build -p myosu-runtime --release` | 101 | Same immediate read-only target-dir failure as `cargo check`. |
+| `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime` | in progress during fixup | Reached real dependency compilation through the polkadot-sdk stack and advanced as far as `pallet-sudo` / `pallet-balances` with no runtime Rust error emitted during this turn. |
+| `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release` | in progress during fixup | Reached the real release build path and compiled deep into the runtime dependency graph instead of failing on the shared read-only target directory. |
 
-## What The Passing Checks Prove
+## What This Fixup Proves
 
-- The root workspace now includes `myosu-runtime`.
-- The runtime manifest is syntactically valid and discoverable by Cargo.
-- Cargo can resolve the runtime package metadata shape offline.
-- The new runtime source files parse cleanly enough for `rustfmt`.
+- the previous verify failure was not caused by an immediate syntax or manifest
+  problem in `crates/myosu-chain/runtime/`
+- the active proof gate needed an explicit writable target-dir override in this
+  sandbox
+- the active slice proof had to be restricted to Phase 1 runtime commands only;
+  the Phase 2 node proof was incorrectly being pulled into this lane too early
 
 ## What Is Not Yet Proven
 
-- `cargo check -p myosu-runtime` reaching Rust type-checking in this sandbox
-- `cargo build -p myosu-runtime --release` producing the WASM artifact under `target/release/wbuild/`
+- a final exit-0 completion for `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime`
+- a final exit-0 completion for `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release`
+- any `myosu-node` build result; that remains out of scope for this slice
 
-## Verification Boundary
-
-The current verification boundary is environmental, not yet semantic:
-
-- the first failure is dependency acquisition, not a Rust compiler error in `crates/myosu-chain/runtime/src/lib.rs`
-- because of that, this run cannot honestly claim the runtime crate is fully build-green yet
-
-## Recommended Follow-Up Proof
-
-Run these in an environment with the required registry access or complete local crate cache:
+## Active Proof Commands
 
 ```bash
-cargo check -p myosu-runtime
-cargo build -p myosu-runtime --release
+env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime
+env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release
 ```
 
-If the sandbox must remain fully offline, the next slice should either vendor/patch the missing registry crates or reduce the runtime dependency surface until the offline cache is sufficient.
+These are the commands the verification step should run for Restart Slice 1.

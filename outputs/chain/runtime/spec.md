@@ -57,7 +57,17 @@ The only salvageable inputs from the current state are:
 
 ---
 
-## 3. Required Manifests
+## 3. Current Approved Slice Proof
+
+The active implementation slice is **Phase 1 only**. Its proof gate must run the
+runtime commands below and must **not** attempt the Phase 2 node proof yet.
+
+```bash
+env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime
+env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release
+```
+
+## 4. Required Manifests
 
 For each phase, the following files must exist before declaring the phase complete:
 
@@ -79,7 +89,12 @@ crates/myosu-chain/runtime/src/chain_spec.rs   # Basic chain spec
 crates/myosu-chain/runtime/Cargo.toml          # Runtime manifest with all dependencies pinned
 ```
 
-**Proof**: `cargo build -p myosu-runtime --release` exits 0; `cargo check` on runtime crate passes.
+**Proof commands for the active slice**:
+```bash
+env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime
+env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release
+```
+Both commands must exit 0.
 
 ### Phase 2 — Node + Common
 
@@ -93,11 +108,14 @@ crates/myosu-chain/common/src/currency.rs       # Rewritten without subtensor_ma
 crates/myosu-chain/common/src/evm_context.rs    # Cleaned but preserved
 ```
 
-**Proof**: `cargo build -p myosu-node --release` exits 0.
+**Future proof command (not part of the active slice)**:
+
+Once the node manifest and sources exist, Phase 2 is proven by building the
+`myosu-node` package successfully against the minimal runtime.
 
 ---
 
-## 4. Phase Definitions
+## 5. Phase Definitions
 
 ### Phase 0: Workspace Wiring
 
@@ -171,7 +189,7 @@ mysu-node 0.1.0
 
 ---
 
-## 5. What Is NOT Salvageable From Current `runtime/src/lib.rs`
+## 6. What Is NOT Salvageable From Current `runtime/src/lib.rs`
 
 | Element | Reason not salvageable |
 |---------|------------------------|
@@ -188,7 +206,7 @@ mysu-node 0.1.0
 
 ---
 
-## 6. Recommended Restart Approach
+## 7. Recommended Restart Approach
 
 1. **Fork no Substrate code on day one.** Start with raw `frame_system` + `pallet_balances` + `pallet_sudo` + `pallet_timestamp` pinned to `polkadot-sdk stable2407`.
 2. **Do not attempt to port the subtensor pallets yet.** They bring in a deep dependency graph that will block the build path. Establish the runtime first.
@@ -198,7 +216,7 @@ mysu-node 0.1.0
 
 ---
 
-## 7. Review Summary
+## 8. Review Summary
 
 The current `chain:runtime` effort is a **design document in code form**, not a buildable artifact. The `runtime/src/lib.rs` is a Substrate runtime definition that imports 15+ crates, none of which exist in the workspace. The node directory is a scaffold. The workspace explicitly marks the chain as "Stage 1" and keeps it commented out.
 
