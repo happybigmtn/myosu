@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "Fixed the current `tui:shell` fixup without widening past Slice 1. [spec.md](/home/r/.fabro/runs/20260320-01KM77EQZAB3EH21TY8VTT8988/worktree/outputs/tui/shell/spec.md) now exposes only the active Sli",
+    "response.fixup": "Fixed the current `tui:shell` fixup without widening past Slice 1. [spec.md](/home/r/.fabro/runs/20260320-01KM77EQZAB3EH21TY8VTT8988/worktree/outputs/tui/shell/spec.md) now exposes only the active Slice 1 command as a live `**Proof gate**`, and marks later slice commands as `**Planned proof gate**` so verification stays aligned with the approved scope. I also updated [implementation.md](/home/r/.fabro/runs/20260320-01KM77EQZAB3EH21TY8VTT8988/worktree/outputs/tui/shell/implementation.md), [verification.md](/home/r/.fabro/runs/20260320-01KM77EQZAB3EH21TY8VTT8988/worktree/outputs/tui/shell/verification.md), and [integration.md](/home/r/.fabro/runs/20260320-01KM77EQZAB3EH21TY8VTT8988/worktree/outputs/tui/shell/integration.md) to reflect that this was a proof-contract repair, not a new source edit. `crates/myosu-tui/src/events.rs` was left unchanged because the Slice 1 code already passed.\n\nVerified with:\n- `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::` -> 4 passed\n- `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui schema::tests::all_game_types_have_schema` -> 1 passed\n- `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell::tests::shell_draw_` -> 2 passed\n- `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui pipe::tests::is_plain_text_detects_ansi` -> 1 passed\n\nI did not author `quality.md` or `promotion.md`, per the lane ownership rules. The next approved code slice is still the `shell.rs` Lobby-to-Game integration test.",
+    "last_stage": "fixup"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 1269021,
+    "output_tokens": 20974,
+    "cost": 3.4871625
+  },
+  "files_written": [
+    "outputs/tui/shell/implementation.md",
+    "outputs/tui/shell/integration.md",
+    "outputs/tui/shell/spec.md",
+    "outputs/tui/shell/verification.md"
+  ],
+  "files_touched": [
+    "outputs/tui/shell/implementation.md",
+    "outputs/tui/shell/integration.md",
+    "outputs/tui/shell/spec.md",
+    "outputs/tui/shell/verification.md"
+  ],
+  "duration_ms": 446223,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T04:01:23.608068063+00:00",
+  "updated_at": "2026-03-21T04:01:23.608073795+00:00"
+}
