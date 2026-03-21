@@ -1,30 +1,33 @@
-# `chain:runtime` Integration — Phase 0
+# `chain:runtime` Integration — Phase 1
 
 ## Workspace Integration
 
-This slice integrates the chain restart surfaces into the root Cargo workspace
-without claiming that runtime execution works yet.
+The `myosu-runtime` package now integrates into the repo as a buildable,
+phase-1 runtime rather than a placeholder for the inherited subtensor fork.
 
-- `crates/myosu-chain` is now the workspace anchor for the chain restart lane.
-- `myosu-runtime`, `myosu-chain-common`, and `myosu-node` now exist as explicit
-  Cargo packages under that anchor.
-- Root `default-members` stay limited to the previously active crates plus the
-  new anchor crate, so ordinary repo-root builds do not automatically pull the
-  runtime implementation slice forward.
+- it stays on the reviewed `polkadot-sdk stable2407` line
+- it builds from the repo root as `-p myosu-runtime`
+- it emits the expected wasm runtime blobs through the standard
+  `substrate-wasm-builder` flow
+
+## Runtime Boundary After This Slice
+
+The runtime crate is now the stable base for downstream chain work:
+
+- the runtime surface is limited to standard FRAME pallets only
+- the subtensor/frontier dependency graph is no longer on the phase-1 build
+  path
+- the build script is aware of external target dirs via
+  `WASM_BUILD_WORKSPACE_HINT`, which keeps the wasm build reproducible in the
+  current Fabro sandbox layout
 
 ## Downstream Contract
 
 After this slice:
 
-- downstream commands can target `-p myosu-runtime` and `-p myosu-node`
-- Phase 1 runtime work no longer needs to create package manifests or fix root
-  workspace visibility first
-- the existing `pallet-game-solver` crate remains intact on the same
-  `polkadot-sdk` `stable2407` line
-
-## Expected Next Integration Step
-
-The next runtime slice should integrate a minimal runtime implementation into
-the already-wired `myosu-runtime` package. No further root-workspace surgery
-should be necessary unless the minimal runtime needs additional standard
-Substrate crates.
+- phase-2 node work can target a real `myosu-runtime` crate instead of a broken
+  inherited runtime definition
+- phase-2 common-crate cleanup can proceed independently of the runtime build
+  path
+- no additional root-workspace surgery should be required to keep advancing the
+  chain runtime lane

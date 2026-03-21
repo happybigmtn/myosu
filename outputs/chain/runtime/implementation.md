@@ -1,87 +1,92 @@
-# `chain:runtime` Implementation — Phase 0
+# `chain:runtime` Implementation — Phase 1
 
 ## Slice Implemented
 
-**Phase 0 — Workspace Wiring**
+**Phase 1 — Minimal Runtime**
 
-This slice made the chain restart surfaces honest Cargo packages without
-rewriting the inherited runtime, common, or node source. The workspace now
-recognizes `myosu-chain`, `myosu-runtime`, `myosu-chain-common`, and
-`myosu-node` as real package identities, which moves the restart boundary from
-"package not found" to the actual source-level blockers that Phase 1 is meant
-to replace.
+This slice replaces the inherited subtensor/frontier runtime definition with a
+minimal Substrate runtime that matches the reviewed restart boundary:
 
-## What Changed
+- `frame_system`
+- `pallet_timestamp`
+- `pallet_balances`
+- `pallet_sudo`
+- `frame_executive`
 
-### Root workspace activation
+The work stayed inside the runtime-owned surfaces plus the lockfile that Cargo
+updated while resolving the new runtime dependency set.
 
-`Cargo.toml` now:
+## Runtime-Owned Changes
 
-- activates `crates/myosu-chain` as a workspace member
-- keeps `default-members` limited to the previously active crates plus the new
-  `myosu-chain` anchor crate
-- pins the baseline `polkadot-sdk` `stable2407` dependency line for the
-  minimal runtime surface in `[workspace.dependencies]`
+### Minimal runtime source
 
-### Chain anchor crate
+`crates/myosu-chain/runtime/src/lib.rs` now contains a clean phase-1 runtime
+instead of the inherited 2500-line subtensor fork:
 
-Added:
+- defines a minimal runtime version and native-version surface
+- composes only `System`, `Timestamp`, `Balances`, and `Sudo`
+- uses standard FRAME default config preludes with the few required overrides
+- defines the signed extensions needed for a basic solochain transaction flow
+- implements the minimal runtime APIs for:
+  - core execution
+  - metadata
+  - block building
+  - transaction validation
+  - offchain worker
+  - account nonce
+  - genesis builder
+- exports a small `interface` module for downstream node wiring in the next
+  slice
 
-- `crates/myosu-chain/Cargo.toml`
-- `crates/myosu-chain/src/lib.rs`
+### WASM build path
 
-This crate is intentionally tiny. Its job is to give the root workspace a
-stable chain entrypoint while keeping the downstream restart crates addressable
-by package name.
+Added `crates/myosu-chain/runtime/build.rs` to generate the runtime wasm blob.
 
-### Explicit manifests for restart-owned crates
+The build script also sets `WASM_BUILD_WORKSPACE_HINT` to the repo root. This
+was necessary because proof commands in this environment use an external
+`CARGO_TARGET_DIR`, and the wasm builder otherwise fails to locate the
+workspace `Cargo.lock`.
 
-Added:
+### Runtime manifest alignment
 
-- `crates/myosu-chain/runtime/Cargo.toml`
-- `crates/myosu-chain/common/Cargo.toml`
-- `crates/myosu-chain/node/Cargo.toml`
+`crates/myosu-chain/runtime/Cargo.toml` now describes the actual phase-1
+runtime:
 
-These manifests establish the canonical package names and minimal dependency
-baselines for the approved restart plan:
+- adds `build = "build.rs"`
+- switches from the inherited direct runtime crate set to the
+  `polkadot-sdk-frame` runtime facade used by the current template stack
+- keeps the pallet set minimal: balances, sudo, timestamp
+- adds `sp-genesis-builder` and the wasm-builder std path needed by the new
+  runtime source
 
-- `myosu-runtime`
-- `myosu-chain-common`
-- `myosu-node`
+### Lockfile refresh
 
-The runtime manifest also defines empty `runtime-benchmarks` and `try-runtime`
-feature flags so verification output reflects the real blockers rather than
-manifest noise.
+`Cargo.lock` now records the additional phase-1 runtime dependencies pulled in
+by the minimal FRAME runtime surface, including:
 
-### Lockfile update
-
-`Cargo.lock` was refreshed by offline Cargo resolution so the new workspace
-shape and runtime dependency line are recorded in the repo.
+- `polkadot-sdk-frame`
+- `sp-block-builder`
+- `sp-offchain`
+- `sp-session`
+- `sp-transaction-pool`
+- `frame-system-rpc-runtime-api`
 
 ## What This Slice Guarantees Now
 
-- `cargo metadata` resolves the chain subtree as concrete packages.
-- `cargo build -p myosu-chain --release --offline` succeeds from the repo root.
-- `cargo check -p myosu-runtime --offline` now reaches
-  `crates/myosu-chain/runtime/src/lib.rs` and fails on the inherited
-  subtensor-era runtime source itself.
+- `myosu-runtime` is a real minimal runtime, not a non-buildable subtensor
+  forward-port.
+- the runtime builds through the wasm pipeline with an external target dir in
+  this sandboxed environment
+- the release build emits:
+  - `myosu_runtime.wasm`
+  - `myosu_runtime.compact.wasm`
+  - `myosu_runtime.compact.compressed.wasm`
 
-## What Remains For The Next Slice
+## Deliberate Non-Changes
 
-**Phase 1 — Minimal Runtime**
-
-The next approved slice should stay inside `crates/myosu-chain/runtime/` and
-replace the inherited runtime definition with the reviewed minimal runtime:
-
-- remove the missing local modules (`check_nonce`, `migrations`,
-  `sudo_wrapper`, `transaction_payment_wrapper`) unless the minimal runtime
-  actually needs replacements
-- add the real WASM build path (`build.rs` / `wasm_binary.rs`)
-- replace subtensor/frontier imports with the approved minimal pallet set:
-  `frame_system`, `pallet_balances`, `pallet_sudo`, `pallet_timestamp`,
-  `frame_executive`
-
-## Stage-Owned Artifacts Not Touched Here
-
-- `outputs/chain/runtime/quality.md` remains quality-gate owned.
-- `outputs/chain/runtime/promotion.md` remains review-stage owned.
+- `crates/myosu-chain/common/` was not advanced here; its cleanup remains a
+  later reviewed slice
+- `crates/myosu-chain/node/` was not rewritten here; node service wiring
+  remains phase 2 work
+- `outputs/chain/runtime/promotion.md` remains review-owned
+- `outputs/chain/runtime/quality.md` remains quality-gate owned
