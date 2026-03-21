@@ -1,40 +1,46 @@
 {
-  "timestamp": "2026-03-21T04:10:39.569948279Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-21T04:10:40.985613182Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
     "specify": 1,
     "review": 1,
     "start": 1,
+    "verify": 1,
     "polish": 1
   },
   "context_values": {
+    "thread.polish.current_node": "verify",
+    "command.stderr": "",
     "internal.retry_count.polish": 1,
-    "current_node": "polish",
+    "current_node": "verify",
     "internal.fidelity": "compact",
     "thread.specify.current_node": "review",
+    "command.output": "",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "internal.retry_count.verify": 1,
     "internal.node_visit_count": 1,
     "internal.retry_count.specify": 1,
-    "outcome": "fail",
+    "outcome": "success",
     "internal.run_id": "01KM792JM32MFHBGQ19CS7SE3F",
     "last_response": "Created the requested durable artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260321-01KM792JM32MFHBGQ19CS7SE3F/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabr",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: gpt-5.4, 1.5m tokens in / 13.8k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: gpt-5.4, 1.5m tokens in / 13.8k out\n  - Files: outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
+    "failure_signature": "",
     "graph.rankdir": "LR",
     "thread.start.current_node": "specify",
     "response.specify": "Created the requested durable artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260321-01KM792JM32MFHBGQ19CS7SE3F/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260321-01KM792JM32MFHBGQ19CS7SE3F/worktree/outputs/agent-integration/review.md). The adapter maps `agent:experience` onto the product frontier and sequences it honestly with `play:tui`; the review makes the product-level call explicit: product should start an implementation-family workflow next, not wait for another upstream unblock.\n\nThe key correction in the review is that the old robopoker absolute-path blocker in the product lane reviews is now stale. I verified current workspace truth: `crates/myosu-games` uses pinned git deps, `crates/myosu-play/` is still missing, and the real next blockers are product-owned implementation gaps like `myosu-play`, `myosu-games-poker`, `agent_context.rs`, `journal.rs`, and `narration.rs`.\n\nVerification: `cargo test -p myosu-games` passed and `cargo test -p myosu-tui` passed when run with `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-target`.",
     "internal.retry_count.start": 1,
     "internal.work_dir": "/home/r/.fabro/runs/20260321-01KM792JM32MFHBGQ19CS7SE3F/worktree",
-    "failure_class": "deterministic",
+    "failure_class": "",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "internal.retry_count.review": 1,
-    "internal.thread_id": "review",
+    "internal.thread_id": "polish",
     "thread.review.current_node": "polish",
     "last_stage": "specify"
   },
@@ -85,14 +91,24 @@
         "outputs/agent-integration/review.md"
       ],
       "duration_ms": 300063
+    },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.stderr": "",
+        "command.output": ""
+      },
+      "notes": "Script completed: test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md",
+      "duration_ms": 5
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "review|deterministic|api_deterministic|openai|not_found": 1,
     "polish|deterministic|api_deterministic|openai|not_found": 1
   },
   "node_visits": {
+    "verify": 1,
     "specify": 1,
     "review": 1,
     "polish": 1,
