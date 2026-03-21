@@ -32,6 +32,7 @@ macro_rules! config_trait {
         /// This trait defines the types and constants needed for the myosu
         /// game-solving subnet protocol. It is intentionally minimal and
         /// strips out subtensor-specific dependencies like drand and crowdloan.
+        #[pallet::config]
         pub trait Config: frame_system::Config {
             /// The overarching event type.
             type RuntimeEvent: From<Event<Self>>
@@ -144,16 +145,17 @@ macro_rules! config_trait {
 pub mod types {
     pub use frame_support::pallet_prelude::*;
     pub use frame_support::traits::{Currency, ReservableCurrency};
+    pub use scale_info::TypeInfo;
     pub use sp_runtime::traits::AtLeast32BitUnsigned;
 
     /// Trait alias for balance types used in the pallet.
     pub trait BalanceType:
-        Copy + Clone + Default + core::fmt::Debug + AtLeast32BitUnsigned + parity_scale_codec::Codec
+        Copy + Clone + Default + core::fmt::Debug + AtLeast32BitUnsigned + parity_scale_codec::Codec + TypeInfo + 'static
     {
     }
 
     impl<T> BalanceType for T where
-        T: Copy + Clone + Default + core::fmt::Debug + AtLeast32BitUnsigned + parity_scale_codec::Codec
+        T: Copy + Clone + Default + core::fmt::Debug + AtLeast32BitUnsigned + parity_scale_codec::Codec + TypeInfo + 'static
     {
     }
 }

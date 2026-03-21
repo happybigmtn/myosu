@@ -1952,12 +1952,14 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "log",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "substrate-fixed",
 ]
 
 [[package]]
@@ -3283,6 +3285,28 @@ dependencies = [
  "schnorrkel",
  "sha2 0.10.9",
  "zeroize",
+]
+
+[[package]]
+name = "substrate-fixed"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a58670b92bb23e63b32b32167ff4edf8a34a2d53a2bdfcd60a6d8ead57bd563"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "substrate-typenum",
+]
+
+[[package]]
+name = "substrate-typenum"
+version = "1.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cd64d3efe988228b8496698197ee60cfbfcedbf226961300e559870c1a3e8e0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
 ]
 
 [[package]]
