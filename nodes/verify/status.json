@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 420,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T01:49:34.417724197+00:00",
+  "updated_at": "2026-03-21T01:49:34.417728304+00:00",
+  "failure_reason": "Script failed with exit code: 1\n\n## stderr\n/bin/bash: line 2: exits: command not found\n/bin/bash: line 2: on: command not found\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-node` did not match any packages\nerror: unexpected argument '--releasecargo' found\n\n  tip: a similar argument exists: '--release'\n\nUsage: cargo build --package [<SPEC>] --release\n\nFor more information, try '--help'.\n"
+}
