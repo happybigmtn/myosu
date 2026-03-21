@@ -1,0 +1,1145 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index f509c83..9b1df06 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1723,6 +1723,7 @@ version = "0.1.0"
+ dependencies = [
+  "myosu-games",
+  "rbp-mccfr",
++ "rbp-transport",
+ ]
+ 
+ [[package]]
+diff --git a/crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs b/crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs
+index 0f866b9..935dec9 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs
+@@ -19,7 +19,6 @@ impl<T: Config> Pallet<T> {
+         );
+         log::debug!("Block emission: {block_emission:?}");
+ 
+-
+         // --- 4. Run emission through network.
+         Self::run_coinbase(block_emission);
+         // --- 5. Update moving prices AFTER using them for emissions.
+@@ -300,5 +299,4 @@ impl<T: Config> Pallet<T> {
+ 
+         root_proportion
+     }
+-
+ }
+diff --git a/crates/myosu-chain/pallets/game-solver/src/lib.rs b/crates/myosu-chain/pallets/game-solver/src/lib.rs
+index 16fda03..854da56 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/lib.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/lib.rs
+@@ -89,7 +89,7 @@ pub mod pallet {
+         },
+     };
+     use frame_system::pallet_prelude::*;
+-        use runtime_common::prod_or_fast;
++    use runtime_common::prod_or_fast;
+     use sp_core::{ConstU32, H160, H256};
+     use sp_runtime::traits::{Dispatchable, TrailingZeroInput};
+     use sp_std::collections::btree_map::BTreeMap;
+diff --git a/crates/myosu-chain/pallets/game-solver/src/macros/config.rs b/crates/myosu-chain/pallets/game-solver/src/macros/config.rs
+index 6a85571..4023f90 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/macros/config.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/macros/config.rs
+@@ -153,7 +153,12 @@ pub mod types {
+     }
+ 
+     impl<T> BalanceType for T where
+-        T: Copy + Clone + Default + core::fmt::Debug + AtLeast32BitUnsigned + parity_scale_codec::Codec
++        T: Copy
++            + Clone
++            + Default
++            + core::fmt::Debug
++            + AtLeast32BitUnsigned
++            + parity_scale_codec::Codec
+     {
+     }
+ }
+diff --git a/crates/myosu-games-liars-dice/Cargo.toml b/crates/myosu-games-liars-dice/Cargo.toml
+index bb98bcb..35e1cfa 100644
+--- a/crates/myosu-games-liars-dice/Cargo.toml
++++ b/crates/myosu-games-liars-dice/Cargo.toml
+@@ -11,3 +11,4 @@ crate-type = ["lib"]
+ [dependencies]
+ myosu-games = { path = "../myosu-games" }
+ rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
++rbp-transport = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+diff --git a/crates/myosu-games-liars-dice/src/edge.rs b/crates/myosu-games-liars-dice/src/edge.rs
+new file mode 100644
+index 0000000..d97ea5d
+--- /dev/null
++++ b/crates/myosu-games-liars-dice/src/edge.rs
+@@ -0,0 +1,82 @@
++use myosu_games::CfrEdge;
++use rbp_transport::Support;
++
++pub const NUM_PLAYERS: usize = 2;
++pub const NUM_FACES: u8 = 6;
++pub const MAX_QUANTITY: u8 = NUM_PLAYERS as u8;
++pub const MAX_BIDS: usize = (NUM_FACES as usize) * (MAX_QUANTITY as usize);
++pub(crate) const NO_DIE: u8 = 0;
++pub(crate) const NO_BID: u8 = 0;
++
++/// A chance outcome or player action in one-die-per-player Liar's Dice.
++#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
++pub enum LiarsDiceEdge {
++    /// Root chance event: both hidden dice are dealt at once.
++    Roll { player0: u8, player1: u8 },
++    /// A public bid of `quantity` dice showing `face`.
++    Bid { quantity: u8, face: u8 },
++    /// Challenge the previous bid.
++    Challenge,
++}
++
++impl LiarsDiceEdge {
++    pub fn is_roll(&self) -> bool {
++        matches!(self, Self::Roll { .. })
++    }
++
++    pub fn is_bid(&self) -> bool {
++        matches!(self, Self::Bid { .. })
++    }
++
++    pub(crate) fn all_rolls() -> Vec<Self> {
++        (1..=NUM_FACES)
++            .flat_map(|player0| (1..=NUM_FACES).map(move |player1| Self::Roll { player0, player1 }))
++            .collect()
++    }
++
++    pub(crate) fn all_bids() -> Vec<Self> {
++        (1..=MAX_QUANTITY)
++            .flat_map(|quantity| (1..=NUM_FACES).map(move |face| Self::Bid { quantity, face }))
++            .collect()
++    }
++
++    pub(crate) fn is_valid_roll(&self) -> bool {
++        match self {
++            Self::Roll { player0, player1 } => is_valid_die(*player0) && is_valid_die(*player1),
++            _ => false,
++        }
++    }
++
++    pub(crate) fn is_valid_bid(&self) -> bool {
++        match self {
++            Self::Bid { quantity, face } => {
++                (1..=MAX_QUANTITY).contains(quantity) && (1..=NUM_FACES).contains(face)
++            }
++            _ => false,
++        }
++    }
++
++    pub(crate) fn from_bid_rank(rank: u8) -> Self {
++        debug_assert!((1..=MAX_BIDS as u8).contains(&rank));
++        let zero_based = rank - 1;
++        let quantity = (zero_based / NUM_FACES) + 1;
++        let face = (zero_based % NUM_FACES) + 1;
++        Self::Bid { quantity, face }
++    }
++
++    pub(crate) fn bid_rank(&self) -> Option<u8> {
++        match self {
++            Self::Bid { quantity, face } if self.is_valid_bid() => {
++                Some((quantity - 1) * NUM_FACES + face)
++            }
++            _ => None,
++        }
++    }
++}
++
++impl Support for LiarsDiceEdge {}
++impl CfrEdge for LiarsDiceEdge {}
++
++pub(crate) fn is_valid_die(die: u8) -> bool {
++    (1..=NUM_FACES).contains(&die)
++}
+diff --git a/crates/myosu-games-liars-dice/src/game.rs b/crates/myosu-games-liars-dice/src/game.rs
+new file mode 100644
+index 0000000..c62c334
+--- /dev/null
++++ b/crates/myosu-games-liars-dice/src/game.rs
+@@ -0,0 +1,258 @@
++use crate::edge::{LiarsDiceEdge, MAX_BIDS, NO_BID, NO_DIE, is_valid_die};
++use crate::info::LiarsDiceInfo;
++use crate::turn::LiarsDiceTurn;
++use myosu_games::{CfrGame, Utility};
++
++const UNRESOLVED_WINNER: u8 = u8::MAX;
++
++/// Compact, `Copy`-safe game state for one-die-per-player Liar's Dice.
++#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
++pub struct LiarsDiceGame {
++    dice: [u8; 2],
++    bids: [u8; MAX_BIDS],
++    bid_count: u8,
++    turn: LiarsDiceTurn,
++    winner: u8,
++}
++
++impl LiarsDiceGame {
++    pub fn dealt(player0: u8, player1: u8) -> Self {
++        assert!(is_valid_die(player0), "player0 die must be 1..=6");
++        assert!(is_valid_die(player1), "player1 die must be 1..=6");
++        Self {
++            dice: [player0, player1],
++            bids: [NO_BID; MAX_BIDS],
++            bid_count: 0,
++            turn: LiarsDiceTurn::Player0,
++            winner: UNRESOLVED_WINNER,
++        }
++    }
++
++    pub fn die(&self, player: usize) -> u8 {
++        self.dice[player]
++    }
++
++    pub fn bid_count(&self) -> u8 {
++        self.bid_count
++    }
++
++    pub fn bid_ranks(&self) -> [u8; MAX_BIDS] {
++        self.bids
++    }
++
++    pub fn bid_history(&self) -> Vec<LiarsDiceEdge> {
++        self.bids[..self.bid_count as usize]
++            .iter()
++            .copied()
++            .filter(|rank| *rank != NO_BID)
++            .map(LiarsDiceEdge::from_bid_rank)
++            .collect()
++    }
++
++    pub fn info_set(&self) -> LiarsDiceInfo {
++        LiarsDiceInfo::from_game(self)
++    }
++
++    pub fn winner(&self) -> Option<usize> {
++        (self.turn == LiarsDiceTurn::Terminal).then_some(self.winner as usize)
++    }
++
++    fn last_bid_rank(&self) -> Option<u8> {
++        (self.bid_count > 0).then(|| self.bids[(self.bid_count - 1) as usize])
++    }
++
++    fn is_legal_bid(&self, edge: LiarsDiceEdge) -> bool {
++        let Some(rank) = edge.bid_rank() else {
++            return false;
++        };
++        match self.last_bid_rank() {
++            Some(last_rank) => rank > last_rank,
++            None => true,
++        }
++    }
++
++    fn next_player(turn: LiarsDiceTurn) -> LiarsDiceTurn {
++        match turn {
++            LiarsDiceTurn::Player0 => LiarsDiceTurn::Player1,
++            LiarsDiceTurn::Player1 => LiarsDiceTurn::Player0,
++            _ => panic!("only player turns have a next player"),
++        }
++    }
++
++    fn resolve_challenge(&self, challenger: usize) -> usize {
++        let LiarsDiceEdge::Bid { quantity, face } =
++            LiarsDiceEdge::from_bid_rank(self.last_bid_rank().expect("challenge after bid"))
++        else {
++            unreachable!("bid rank always decodes to a bid");
++        };
++
++        let actual = self.dice.iter().copied().filter(|die| *die == face).count() as u8;
++        let bidder = 1 - challenger;
++        if actual >= quantity {
++            bidder
++        } else {
++            challenger
++        }
++    }
++}
++
++impl CfrGame for LiarsDiceGame {
++    type E = LiarsDiceEdge;
++    type T = LiarsDiceTurn;
++
++    fn root() -> Self {
++        Self {
++            dice: [NO_DIE; 2],
++            bids: [NO_BID; MAX_BIDS],
++            bid_count: 0,
++            turn: LiarsDiceTurn::Chance,
++            winner: UNRESOLVED_WINNER,
++        }
++    }
++
++    fn turn(&self) -> Self::T {
++        self.turn
++    }
++
++    fn apply(&self, edge: Self::E) -> Self {
++        match (self.turn, edge) {
++            (LiarsDiceTurn::Chance, LiarsDiceEdge::Roll { player0, player1 })
++                if edge.is_valid_roll() =>
++            {
++                Self::dealt(player0, player1)
++            }
++            (LiarsDiceTurn::Player0 | LiarsDiceTurn::Player1, LiarsDiceEdge::Bid { .. })
++                if self.is_legal_bid(edge) =>
++            {
++                let mut next = *self;
++                next.bids[next.bid_count as usize] =
++                    edge.bid_rank().expect("validated bid has rank");
++                next.bid_count += 1;
++                next.turn = Self::next_player(self.turn);
++                next
++            }
++            (LiarsDiceTurn::Player0 | LiarsDiceTurn::Player1, LiarsDiceEdge::Challenge)
++                if self.bid_count > 0 =>
++            {
++                let mut next = *self;
++                let challenger = self
++                    .turn
++                    .actor_index()
++                    .expect("challenge only valid on player turns");
++                next.turn = LiarsDiceTurn::Terminal;
++                next.winner = self.resolve_challenge(challenger) as u8;
++                next
++            }
++            _ => panic!(
++                "invalid Liar's Dice transition: {:?} via {:?}",
++                self.turn, edge
++            ),
++        }
++    }
++
++    fn payoff(&self, turn: Self::T) -> Utility {
++        assert_eq!(
++            self.turn,
++            LiarsDiceTurn::Terminal,
++            "payoff only exists at terminal nodes"
++        );
++
++        let player = turn
++            .actor_index()
++            .expect("payoff must be queried for a player turn");
++        if self.winner == player as u8 {
++            1.0
++        } else {
++            -1.0
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::{LiarsDiceEdge, LiarsDiceTurn};
++    use myosu_games::{CfrEdge, CfrGame, CfrInfo, CfrTurn};
++    use rbp_mccfr::{CfrPublic, CfrSecret};
++
++    #[test]
++    fn root_is_chance_node() {
++        let root = LiarsDiceGame::root();
++        assert_eq!(root.turn(), LiarsDiceTurn::Chance);
++
++        let info = root.info_set();
++        assert_eq!(info.my_die(), None);
++        assert_eq!(info.choices().len(), 36);
++        assert!(info.choices().iter().all(LiarsDiceEdge::is_roll));
++    }
++
++    #[test]
++    fn legal_bids_increase() {
++        let dealt = LiarsDiceGame::dealt(2, 5);
++        let info = dealt.info_set();
++        let opening = info.choices();
++        assert_eq!(opening.len(), MAX_BIDS);
++        assert!(opening.iter().all(LiarsDiceEdge::is_bid));
++        assert!(!opening.contains(&LiarsDiceEdge::Challenge));
++
++        let after_open = dealt.apply(LiarsDiceEdge::Bid {
++            quantity: 1,
++            face: 3,
++        });
++        let reply_choices = after_open.info_set().choices();
++
++        assert_eq!(reply_choices.len(), 10);
++        assert_eq!(reply_choices.last(), Some(&LiarsDiceEdge::Challenge));
++        assert!(
++            reply_choices[..reply_choices.len() - 1]
++                .iter()
++                .all(|edge| edge.bid_rank().expect("reply choices are bids") > 3)
++        );
++    }
++
++    #[test]
++    fn challenge_resolves_game() {
++        let dealt = LiarsDiceGame::dealt(1, 2);
++        let bid = dealt.apply(LiarsDiceEdge::Bid {
++            quantity: 2,
++            face: 1,
++        });
++        let resolved = bid.apply(LiarsDiceEdge::Challenge);
++
++        assert_eq!(resolved.turn(), LiarsDiceTurn::Terminal);
++        assert_eq!(resolved.winner(), Some(1));
++    }
++
++    #[test]
++    fn payoff_is_zero_sum() {
++        let dealt = LiarsDiceGame::dealt(4, 4);
++        let bid = dealt.apply(LiarsDiceEdge::Bid {
++            quantity: 2,
++            face: 4,
++        });
++        let resolved = bid.apply(LiarsDiceEdge::Challenge);
++
++        let total =
++            resolved.payoff(LiarsDiceTurn::Player0) + resolved.payoff(LiarsDiceTurn::Player1);
++        assert_eq!(total, 0.0);
++        assert_eq!(resolved.payoff(LiarsDiceTurn::Player0), 1.0);
++        assert_eq!(resolved.payoff(LiarsDiceTurn::Player1), -1.0);
++    }
++
++    #[test]
++    fn all_trait_bounds_satisfied() {
++        fn assert_edge<E: CfrEdge>() {}
++        fn assert_turn<T: CfrTurn>() {}
++        fn assert_game<G: CfrGame<E = LiarsDiceEdge, T = LiarsDiceTurn>>() {}
++        fn assert_public<P: CfrPublic<E = LiarsDiceEdge, T = LiarsDiceTurn>>() {}
++        fn assert_secret<S: CfrSecret>() {}
++        fn assert_info<I: CfrInfo<E = LiarsDiceEdge, T = LiarsDiceTurn>>() {}
++
++        assert_edge::<LiarsDiceEdge>();
++        assert_turn::<LiarsDiceTurn>();
++        assert_game::<LiarsDiceGame>();
++        assert_public::<<LiarsDiceInfo as CfrInfo>::X>();
++        assert_secret::<<LiarsDiceInfo as CfrInfo>::Y>();
++        assert_info::<LiarsDiceInfo>();
++    }
++}
+diff --git a/crates/myosu-games-liars-dice/src/info.rs b/crates/myosu-games-liars-dice/src/info.rs
+new file mode 100644
+index 0000000..81b9434
+--- /dev/null
++++ b/crates/myosu-games-liars-dice/src/info.rs
+@@ -0,0 +1,108 @@
++use crate::edge::{LiarsDiceEdge, MAX_BIDS, NO_BID};
++use crate::game::LiarsDiceGame;
++use crate::turn::LiarsDiceTurn;
++use myosu_games::{CfrGame, CfrInfo};
++use rbp_mccfr::{CfrPublic, CfrSecret};
++use rbp_transport::Support;
++
++#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
++pub struct LiarsDicePublic {
++    turn: LiarsDiceTurn,
++    bids: [u8; MAX_BIDS],
++    bid_count: u8,
++}
++
++#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
++pub struct LiarsDiceSecret(u8);
++
++/// Acting player's information set: their private die plus the public bid path.
++#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
++pub struct LiarsDiceInfo {
++    public: LiarsDicePublic,
++    secret: LiarsDiceSecret,
++}
++
++impl LiarsDiceInfo {
++    pub fn from_game(game: &LiarsDiceGame) -> Self {
++        let secret = match game.turn().actor_index() {
++            Some(actor) => LiarsDiceSecret(game.die(actor)),
++            None => LiarsDiceSecret(0),
++        };
++
++        Self {
++            public: LiarsDicePublic {
++                turn: game.turn(),
++                bids: game.bid_ranks(),
++                bid_count: game.bid_count(),
++            },
++            secret,
++        }
++    }
++
++    pub fn my_die(&self) -> Option<u8> {
++        match self.secret.0 {
++            0 => None,
++            die => Some(die),
++        }
++    }
++
++    pub fn bid_history(&self) -> Vec<LiarsDiceEdge> {
++        self.public.history()
++    }
++}
++
++impl CfrPublic for LiarsDicePublic {
++    type E = LiarsDiceEdge;
++    type T = LiarsDiceTurn;
++
++    fn choices(&self) -> Vec<Self::E> {
++        match self.turn {
++            LiarsDiceTurn::Chance => LiarsDiceEdge::all_rolls(),
++            LiarsDiceTurn::Player0 | LiarsDiceTurn::Player1 => {
++                let last_rank = self.last_bid_rank().unwrap_or(NO_BID);
++                let mut choices: Vec<_> = LiarsDiceEdge::all_bids()
++                    .into_iter()
++                    .skip(last_rank as usize)
++                    .collect();
++                if self.bid_count > 0 {
++                    choices.push(LiarsDiceEdge::Challenge);
++                }
++                choices
++            }
++            LiarsDiceTurn::Terminal => Vec::new(),
++        }
++    }
++
++    fn history(&self) -> Vec<Self::E> {
++        self.bids[..self.bid_count as usize]
++            .iter()
++            .copied()
++            .filter(|rank| *rank != NO_BID)
++            .map(LiarsDiceEdge::from_bid_rank)
++            .collect()
++    }
++}
++
++impl LiarsDicePublic {
++    fn last_bid_rank(&self) -> Option<u8> {
++        (self.bid_count > 0).then(|| self.bids[(self.bid_count - 1) as usize])
++    }
++}
++
++impl Support for LiarsDiceSecret {}
++impl CfrSecret for LiarsDiceSecret {}
++
++impl CfrInfo for LiarsDiceInfo {
++    type E = LiarsDiceEdge;
++    type T = LiarsDiceTurn;
++    type X = LiarsDicePublic;
++    type Y = LiarsDiceSecret;
++
++    fn public(&self) -> Self::X {
++        self.public
++    }
++
++    fn secret(&self) -> Self::Y {
++        self.secret
++    }
++}
+diff --git a/crates/myosu-games-liars-dice/src/lib.rs b/crates/myosu-games-liars-dice/src/lib.rs
+index a7ded8c..710a76e 100644
+--- a/crates/myosu-games-liars-dice/src/lib.rs
++++ b/crates/myosu-games-liars-dice/src/lib.rs
+@@ -1,23 +1,22 @@
+-//! Minimal public API skeleton for the multi-game Liar's Dice crate.
++//! Liar's Dice proof-of-architecture crate for the multi-game lane.
+ //!
+-//! Slice 1 intentionally stops at crate wiring. The CFR game state, action,
+-//! turn, info-set, encoder, and profile implementations land in later slices.
++//! Slice 2 adds the fixed-size CFR game engine surface:
++//! - [`LiarsDiceGame`]
++//! - [`LiarsDiceEdge`]
++//! - [`LiarsDiceTurn`]
++//! - [`LiarsDiceInfo`]
++//!
++//! Encoder and profile behavior remain intentionally stubbed until slice 3.
+ 
+-/// Placeholder for the future Liar's Dice CFR game state.
+-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+-pub struct LiarsDiceGame;
++mod edge;
++mod game;
++mod info;
++mod turn;
+ 
+-/// Placeholder for the future Liar's Dice action type.
+-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+-pub struct LiarsDiceEdge;
+-
+-/// Placeholder for the future Liar's Dice turn marker.
+-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+-pub struct LiarsDiceTurn;
+-
+-/// Placeholder for the future Liar's Dice information set.
+-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+-pub struct LiarsDiceInfo;
++pub use edge::{LiarsDiceEdge, MAX_BIDS, NUM_FACES, NUM_PLAYERS};
++pub use game::LiarsDiceGame;
++pub use info::LiarsDiceInfo;
++pub use turn::LiarsDiceTurn;
+ 
+ /// Placeholder for the future Liar's Dice encoder.
+ #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+@@ -30,13 +29,14 @@ pub struct LiarsDiceProfile;
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    use myosu_games::CfrGame;
+ 
+     #[test]
+     fn public_api_stubs_exist() {
+-        let _ = LiarsDiceGame;
+-        let _ = LiarsDiceEdge;
+-        let _ = LiarsDiceTurn;
+-        let _ = LiarsDiceInfo;
++        let _ = LiarsDiceGame::root();
++        let _ = LiarsDiceEdge::Challenge;
++        let _ = LiarsDiceTurn::Terminal;
++        let _ = LiarsDiceInfo::from_game(&LiarsDiceGame::root());
+         let _ = LiarsDiceEncoder;
+         let _ = LiarsDiceProfile;
+     }
+diff --git a/crates/myosu-games-liars-dice/src/turn.rs b/crates/myosu-games-liars-dice/src/turn.rs
+new file mode 100644
+index 0000000..b271f44
+--- /dev/null
++++ b/crates/myosu-games-liars-dice/src/turn.rs
+@@ -0,0 +1,43 @@
++use myosu_games::CfrTurn;
++use rbp_transport::Support;
++
++/// Node classification for the one-die Liar's Dice game tree.
++#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
++pub enum LiarsDiceTurn {
++    Chance,
++    Player0,
++    Player1,
++    Terminal,
++}
++
++impl LiarsDiceTurn {
++    pub(crate) fn actor_index(self) -> Option<usize> {
++        match self {
++            Self::Player0 => Some(0),
++            Self::Player1 => Some(1),
++            Self::Chance | Self::Terminal => None,
++        }
++    }
++}
++
++impl From<usize> for LiarsDiceTurn {
++    fn from(player: usize) -> Self {
++        match player {
++            0 => Self::Player0,
++            1 => Self::Player1,
++            _ => panic!("Liar's Dice only has 2 players"),
++        }
++    }
++}
++
++impl Support for LiarsDiceTurn {}
++
++impl CfrTurn for LiarsDiceTurn {
++    fn chance() -> Self {
++        Self::Chance
++    }
++
++    fn terminal() -> Self {
++        Self::Terminal
++    }
++}
+diff --git a/crates/myosu-tui/src/events.rs b/crates/myosu-tui/src/events.rs
+index 797b481..22dca67 100644
+--- a/crates/myosu-tui/src/events.rs
++++ b/crates/myosu-tui/src/events.rs
+@@ -144,13 +144,13 @@ mod tests {
+     #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
+     async fn key_event_handled() {
+         let mut loop_handle = EventLoop::new(Duration::from_millis(10));
+-        
++
+         // Should receive tick events
+         let event = tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
+             .await
+             .expect("timeout waiting for event")
+             .expect("event loop closed");
+-        
++
+         assert_eq!(event, Event::Tick);
+     }
+ 
+@@ -169,7 +169,7 @@ mod tests {
+         // Collect events until we get our update
+         let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
+         let mut found = false;
+-        
++
+         while tokio::time::Instant::now() < deadline {
+             let timeout = deadline - tokio::time::Instant::now();
+             if let Ok(Some(event)) = tokio::time::timeout(timeout, loop_handle.next()).await {
+@@ -180,7 +180,7 @@ mod tests {
+                 }
+             }
+         }
+-        
++
+         assert!(found, "did not receive injected update");
+     }
+ 
+diff --git a/crates/myosu-tui/src/renderer.rs b/crates/myosu-tui/src/renderer.rs
+index 793211f..3a2df03 100644
+--- a/crates/myosu-tui/src/renderer.rs
++++ b/crates/myosu-tui/src/renderer.rs
+@@ -98,12 +98,7 @@ mod tests {
+ 
+         fn completions(&self) -> Vec<String> {
+             if self.hand_active {
+-                vec![
+-                    "fold".into(),
+-                    "call".into(),
+-                    "raise".into(),
+-                    "check".into(),
+-                ]
++                vec!["fold".into(), "call".into(), "raise".into(), "check".into()]
+             } else {
+                 vec!["new".into(), "quit".into()]
+             }
+@@ -162,7 +157,9 @@ mod tests {
+ 
+         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 4));
+         renderer.render_state(Rect::new(0, 0, 40, 4), &mut buf);
+-        let line: String = (0..9).map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' ')).collect();
++        let line: String = (0..9)
++            .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
++            .collect();
+         assert_eq!(line, "pot: 12bb");
+     }
+ 
+@@ -215,7 +212,9 @@ mod tests {
+         struct Stub;
+         impl Renderable for Stub {
+             fn render(&self, _area: Rect, _buf: &mut Buffer) {}
+-            fn desired_height(&self, _width: u16) -> u16 { 1 }
++            fn desired_height(&self, _width: u16) -> u16 {
++                1
++            }
+         }
+         let s = Stub;
+         assert!(s.cursor_pos(Rect::new(0, 0, 80, 24)).is_none());
+diff --git a/crates/myosu-tui/src/shell.rs b/crates/myosu-tui/src/shell.rs
+index 897f451..ca84240 100644
+--- a/crates/myosu-tui/src/shell.rs
++++ b/crates/myosu-tui/src/shell.rs
+@@ -147,7 +147,9 @@ impl Shell {
+         }
+ 
+         // Help toggle with '?' only when input buffer is empty
+-        if key.code == KeyCode::Char('?') && key.modifiers.is_empty() && self.input.text().is_empty()
++        if key.code == KeyCode::Char('?')
++            && key.modifiers.is_empty()
++            && self.input.text().is_empty()
+         {
+             self.show_help = !self.show_help;
+             return;
+@@ -295,11 +297,11 @@ impl Shell {
+ 
+         // Constraints for vertical layout
+         let constraints = [
+-            Constraint::Length(1),              // header
+-            Constraint::Min(3),                 // transcript (flexible)
+-            Constraint::Length(state_height),   // state (dynamic, can be 0)
+-            Constraint::Length(1),              // declaration
+-            Constraint::Length(1),              // input
++            Constraint::Length(1),            // header
++            Constraint::Min(3),               // transcript (flexible)
++            Constraint::Length(state_height), // state (dynamic, can be 0)
++            Constraint::Length(1),            // declaration
++            Constraint::Length(1),            // input
+         ];
+ 
+         let chunks = Layout::default()
+@@ -371,7 +373,12 @@ impl Shell {
+             .rev()
+             .take(area.height as usize)
+             .rev()
+-            .map(|text| Line::from(Span::styled(text.clone(), Style::default().fg(self.theme.fg))))
++            .map(|text| {
++                Line::from(Span::styled(
++                    text.clone(),
++                    Style::default().fg(self.theme.fg),
++                ))
++            })
+             .collect();
+ 
+         let paragraph = Paragraph::new(visible_lines)
+@@ -667,11 +674,7 @@ mod tests {
+         shell.draw(Rect::new(0, 0, 80, 24), &mut buf, &renderer);
+ 
+         // Should have rendered something (not empty buffer)
+-        let content: String = buf
+-            .content
+-            .iter()
+-            .map(|cell| cell.symbol())
+-            .collect();
++        let content: String = buf.content.iter().map(|cell| cell.symbol()).collect();
+         assert!(!content.trim().is_empty());
+     }
+ 
+@@ -683,11 +686,7 @@ mod tests {
+ 
+         shell.draw(Rect::new(0, 0, 10, 5), &mut buf, &renderer);
+ 
+-        let content: String = buf
+-            .content
+-            .iter()
+-            .map(|cell| cell.symbol())
+-            .collect();
++        let content: String = buf.content.iter().map(|cell| cell.symbol()).collect();
+         // Check for partial match since text wrapping may break up words in small buffer
+         assert!(
+             content.contains("small") || content.contains("Terminal"),
+@@ -716,7 +715,10 @@ mod tests {
+         assert_eq!(layout.state.height, 4);
+ 
+         // Transcript takes remaining space
+-        let used = layout.header.height + layout.declaration.height + layout.input.height + layout.state.height;
++        let used = layout.header.height
++            + layout.declaration.height
++            + layout.input.height
++            + layout.state.height;
+         assert_eq!(layout.transcript.height, area.height - used);
+     }
+ 
+@@ -755,5 +757,4 @@ mod tests {
+         let shell: Shell = Default::default();
+         assert!(!shell.is_running());
+     }
+-
+ }
+diff --git a/outputs/games/multi-game/implementation.md b/outputs/games/multi-game/implementation.md
+index dc81be7..5fd467c 100644
+--- a/outputs/games/multi-game/implementation.md
++++ b/outputs/games/multi-game/implementation.md
+@@ -1,123 +1,96 @@
+-# `games:multi-game` Implementation — Slice 1
++# `games:multi-game` Implementation — Slice 2
+ 
+ ## Slice Implemented
+ 
+-**Slice 1 — Create `myosu-games-liars-dice` Crate Skeleton**
++**Slice 2 — `game.rs` + `edge.rs` + `turn.rs` + `info.rs`: Liar's Dice game
++engine**
+ 
+-Implemented the smallest approved `games:multi-game` slice from
++This implementation follows the next approved slice from
+ [`outputs/games/multi-game/spec.md`](./spec.md) and
+-[`outputs/games/multi-game/review.md`](./review.md):
+-
+-- added `crates/myosu-games-liars-dice` as a new workspace member
+-- created a minimal crate manifest pinned to the same robopoker git revision as `myosu-games`
+-- created a narrow `src/lib.rs` that exposes the approved public Liar's Dice type names as placeholders for later slices
+-
+-This slice intentionally stops at crate wiring. It does not implement the game
+-engine, solver, scoring registry, or spectator surfaces.
+-
+-## Fixup Boundary
+-
+-This fixup keeps the lane on the same approved slice. No slice-2 game-engine
+-work was started.
+-
+-The package inventory in this checkout, confirmed via `cargo metadata --no-deps
+---format-version 1`, is currently:
+-
+-- `myosu-games`
+-- `myosu-games-liars-dice`
+-- `myosu-tui`
+-- `pallet-game-solver`
+-
+-That means the verify-stage failure was not a slice-1 defect in
+-`myosu-games-liars-dice`. It came from proof orchestration continuing into
+-later or absent surfaces such as `myosu-play`. This fixup preserves the slice-1
+-boundary instead of manufacturing later-slice crates just to satisfy an
+-out-of-scope command.
++[`outputs/games/multi-game/review.md`](./review.md). The work stays inside the
++owned `myosu-games-liars-dice` surfaces and stops before encoder/profile,
++registry, or spectator work.
+ 
+ ## What Changed
+ 
+-No source changes were needed during fixup. The slice-1 code remains:
++### `crates/myosu-games-liars-dice/Cargo.toml`
+ 
+-### `Cargo.toml`
+-
+-Added the new workspace member:
+-
+-```toml
+-members = [
+-    "crates/myosu-games",
+-    "crates/myosu-games-liars-dice",
+-    "crates/myosu-tui",
+-    "crates/myosu-chain/pallets/game-solver",
+-]
+-```
++- added a direct `rbp-transport` dependency at the same robopoker revision as
++  `rbp-mccfr`
++- kept the crate pinned to the existing workspace and robopoker revision
+ 
+ ### `Cargo.lock`
+ 
+-Recorded the new workspace package entry:
+-
+-```toml
+-[[package]]
+-name = "myosu-games-liars-dice"
+-version = "0.1.0"
+-dependencies = [
+-  "myosu-games",
+-  "rbp-mccfr",
+-]
+-```
+-
+-### `crates/myosu-games-liars-dice/Cargo.toml`
+-
+-Created the new package manifest with the approved dependency shape:
+-
+-```toml
+-[package]
+-name = "myosu-games-liars-dice"
+-version.workspace = true
+-edition.workspace = true
+-license.workspace = true
+-
+-[lib]
+-crate-type = ["lib"]
+-
+-[dependencies]
+-myosu-games = { path = "../myosu-games" }
+-rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+-```
++- updated the `myosu-games-liars-dice` package entry to record the new direct
++  `rbp-transport` dependency
+ 
+ ### `crates/myosu-games-liars-dice/src/lib.rs`
+ 
+-Added placeholder public API types for the later Liar's Dice implementation:
++- replaced the slice-1 public stubs for game/edge/turn/info with real module
++  wiring and re-exports
++- kept `LiarsDiceEncoder` and `LiarsDiceProfile` as placeholders so slice 2 does
++  not drift into solver work
+ 
+-- `LiarsDiceGame`
+-- `LiarsDiceEdge`
+-- `LiarsDiceTurn`
+-- `LiarsDiceInfo`
+-- `LiarsDiceEncoder`
+-- `LiarsDiceProfile`
++### `crates/myosu-games-liars-dice/src/edge.rs`
+ 
+-All six are zero-sized placeholder structs with basic derives (`Clone`, `Copy`,
+-`Debug`, `Default`, `PartialEq`, `Eq`) so the crate exposes a stable surface
+-without prematurely committing to slice-2 game-state details.
++- added `LiarsDiceEdge` with the three approved transition classes:
++  `Roll { player0, player1 }`, `Bid { quantity, face }`, and `Challenge`
++- added game constants for `NUM_PLAYERS`, `NUM_FACES`, and `MAX_BIDS`
++- encoded bids as an internal rank (`1..=12`) so the game state can store bid
++  history in a fixed-size `[u8; MAX_BIDS]` array with `0` as the empty-slot
++  sentinel
++- exposed deterministic helpers for enumerating all chance rolls and all legal
++  bid ranks
+ 
+-A single smoke test, `tests::public_api_stubs_exist`, verifies the new crate can
+-be compiled and tested in isolation.
++### `crates/myosu-games-liars-dice/src/turn.rs`
++
++- added `LiarsDiceTurn::{Chance, Player0, Player1, Terminal}`
++- implemented `From<usize>` and `CfrTurn`
++- added a small `actor_index()` helper so game logic and info projection can map
++  player turns back to `0` or `1`
++
++### `crates/myosu-games-liars-dice/src/info.rs`
++
++- added `LiarsDiceInfo` plus the supporting public/private info components
++- `LiarsDiceInfo::from_game(&LiarsDiceGame)` now projects the acting player's
++  hidden die while preserving the public bid path
++- chance nodes expose all 36 die-roll outcomes
++- player nodes expose only strictly increasing bids, with `Challenge` appended
++  only after at least one bid exists
++- terminal nodes expose no outgoing choices
++
++### `crates/myosu-games-liars-dice/src/game.rs`
++
++- added a compact, `Copy`-safe `LiarsDiceGame` state:
++  `dice: [u8; 2]`, `bids: [u8; MAX_BIDS]`, `bid_count`, `turn`, `winner`
++- implemented `CfrGame` with:
++  - `root()` as a chance node
++  - `apply()` transitions for roll, bid, and challenge
++  - terminal winner resolution based on whether the last bid is supported by the
++    revealed dice
++  - zero-sum `payoff()` returning `+1.0` to the winner and `-1.0` to the loser
++- added the slice-2 proof tests directly under `game::tests`
++
++## Slice-2 Proof Behavior
++
++The implementation now satisfies the review-approved slice-2 checks:
++
++- root is a chance node with 36 equiprobable roll branches
++- legal bids increase monotonically through the fixed-size bid ladder
++- challenge resolves immediately to a terminal winner
++- terminal utilities are zero-sum
++- all required robopoker trait bounds compile against the Liar's Dice types
+ 
+ ## Scope Guardrails Preserved
+ 
+-- No edits were made to `crates/myosu-games/src/`.
+-- No poker-engine surfaces were touched.
+-- No spectator or scoring work was started.
+-- This fixup does not author `quality.md` or `promotion.md`; those artifacts
+-  remain owned by the Quality and Review stages, and the fixup instructions
+-  explicitly forbid creating or rewriting them here.
++- no encoder or profile behavior was implemented
++- no `myosu-games` registry work was started
++- no spectator relay or TUI work was started
++- no edits were made under `crates/myosu-games/src/`
++- no poker-engine surfaces were touched
+ 
+-## What Remains for Future Slices
++## Remaining Approved Work
+ 
+-| Slice | Description | Status |
+-|-------|-------------|--------|
+-| Slice 2 | Add `game.rs`, `edge.rs`, `turn.rs`, and `info.rs` for the Liar's Dice CFR game engine | Pending |
+-| Slice 3 | Add encoder/profile/solver behavior and Nash proof tests | Pending |
+-| Slice 4 | Add `ExploitMetric` registration in `myosu-games` | Pending |
+-| Slice 5 | Add `SpectatorRelay` in `myosu-play` | Pending |
+-| Slice 6 | Add spectator TUI rendering in `myosu-tui` | Pending |
+-| Slice 7 | Prove zero-change architecture across existing game crates | Pending |
++The next approved slice is still **Slice 3 — `encoder.rs` + `profile.rs`** for
++solver integration and Nash verification. Slice 2 intentionally leaves those
++surfaces as placeholders.
+diff --git a/outputs/games/multi-game/verification.md b/outputs/games/multi-game/verification.md
+index 5d0f818..610c2a7 100644
+--- a/outputs/games/multi-game/verification.md
++++ b/outputs/games/multi-game/verification.md
+@@ -1,32 +1,26 @@
+-# `games:multi-game` Verification — Slice 1
++# `games:multi-game` Verification — Slice 2
+ 
+ ## Automated Proof Commands
+ 
+-The workspace default Cargo target path is read-only in this sandbox, so the
+-slice proof commands had to be rerun with
++The workspace default Cargo target directory is read-only in this sandbox, so
++the slice-2 proof commands were run with
+ `CARGO_TARGET_DIR=/tmp/myosu-multi-game-target`.
+ 
+ | Command | Exit Code | Result |
+ |---------|-----------|--------|
+-| `cargo build -p myosu-games-liars-dice` | 101 | Blocked by sandbox filesystem: Cargo could not open the default target-dir lockfile under `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/`. |
+-| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo build -p myosu-games-liars-dice` | 0 | Passed. New workspace member compiled successfully. |
+-| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-games-liars-dice` | 0 | Passed. 1 unit test passed; 0 doctests ran. |
+-| `cargo metadata --no-deps --format-version 1` | 0 | Passed. Workspace members in this checkout are `myosu-games`, `myosu-games-liars-dice`, `myosu-tui`, and `pallet-game-solver`. |
+-| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-play` | 101 | Confirms the verify-stage blocker is outside slice 1: `myosu-play` is not a package in this checkout yet. |
++| `cargo build -p myosu-games-liars-dice` | 101 | Blocked by the sandbox default target directory: Cargo could not open the default lockfile under `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/`. |
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo build -p myosu-games-liars-dice` | 0 | Passed. The slice-2 game-engine crate builds cleanly. |
++| `cargo test -p myosu-games-liars-dice` | 101 | Blocked by the same read-only default target directory. |
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-games-liars-dice` | 0 | Passed. All crate tests succeeded, including the new slice-2 game-engine proofs. |
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-games-liars-dice game::tests::root_is_chance_node` | 0 | Passed. Confirms the root state is a chance node with roll branches. |
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-games-liars-dice game::tests::legal_bids_increase` | 0 | Passed. Confirms bids advance monotonically and challenge unlocks only after the opening bid. |
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-games-liars-dice game::tests::challenge_resolves_game` | 0 | Passed. Confirms a challenge transitions directly to terminal resolution. |
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-games-liars-dice game::tests::payoff_is_zero_sum` | 0 | Passed. Confirms the terminal utility sum is zero. |
++| `env CARGO_TARGET_DIR=/tmp/myosu-multi-game-target cargo test -p myosu-games-liars-dice game::tests::all_trait_bounds_satisfied` | 0 | Passed. Confirms the new Liar's Dice types satisfy the robopoker trait bounds. |
++| `cargo fmt --all` | 0 | Passed. Formatting completed after the code changes. |
+ 
+ ## Observed Test Output
+ 
+-```text
+-running 1 test
+-test tests::public_api_stubs_exist ... ok
+-
+-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+-
+-Doc-tests myosu_games_liars_dice
+-running 0 tests
+-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+-```
+-
+ ```text
+ error: failed to open: /home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/.cargo-lock
+ 
+@@ -35,41 +29,56 @@ Caused by:
+ ```
+ 
+ ```text
+-error: package ID specification `myosu-play` did not match any packages
++running 6 tests
++test game::tests::all_trait_bounds_satisfied ... ok
++test game::tests::challenge_resolves_game ... ok
++test game::tests::legal_bids_increase ... ok
++test game::tests::payoff_is_zero_sum ... ok
++test game::tests::root_is_chance_node ... ok
++test tests::public_api_stubs_exist ... ok
++
++test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+ ```
+ 
+ ## Interpretation
+ 
+-Slice 1's own proof gate is green once Cargo writes to a sandbox-writable target
+-directory. The deterministic verify-stage failure came from the runner
+-continuing into later or absent package surfaces, not from the
+-`myosu-games-liars-dice` crate skeleton added in this slice.
++The active slice's first proof gate is green once Cargo writes to a
++sandbox-writable target directory. `myosu-games-liars-dice` builds, the
++fixed-size `Copy`-safe game state works, and all review-approved slice-2 checks
++pass.
+ 
+ ## Risks Reduced
+ 
+-- **Greenfield crate blocker:** Reduced. `crates/myosu-games-liars-dice/` now exists and is wired into the workspace.
+-- **Dependency pin drift:** Reduced. The new crate uses the same robopoker revision as `myosu-games`, avoiding an accidental fork mismatch at slice start.
+-- **Lane boundary drift:** Reduced. The slice stayed within the approved `games:multi-game` surfaces and did not start later-slice work.
+-- **Proof reproducibility in this sandbox:** Reduced. The artifact now records the required `CARGO_TARGET_DIR` override instead of implying the default target path is usable here.
++- **`CfrGame: Copy` blocker:** Reduced. Bid history now uses a fixed-size
++  sentinel-backed array instead of a heap allocation.
++- **Chance-node wiring risk:** Reduced. The root state exposes all 36 dice-roll
++  outcomes through the info-set choice surface.
++- **Terminal scoring ambiguity:** Reduced. Challenge resolution and zero-sum
++  payoff behavior are now covered by explicit tests.
++- **Trait-compatibility risk:** Reduced. The game, edge, turn, and info types
++  compile against the robopoker CFR trait bounds.
+ 
+ ## Risks That Remain
+ 
+-- **No CFR implementation yet:** Unchanged. `LiarsDiceGame`, `LiarsDiceEdge`, `LiarsDiceTurn`, and `LiarsDiceInfo` are placeholders only.
+-- **`CfrGame: Copy` implementation risk:** Unchanged. Slice 2 still needs to prove the fixed-size bid history approach works.
+-- **Cross-game scoring and spectator work:** Unchanged. `ExploitMetric`, `SpectatorRelay`, and spectator TUI surfaces are still absent.
+-- **Later package surfaces absent from this checkout:** Unchanged. `myosu-play` and `myosu-games-poker` proof lines from the review artifact cannot run until those packages exist in the workspace.
++- **No encoder/profile yet:** Unchanged. Slice 3 still needs to implement
++  `LiarsDiceEncoder`, `LiarsDiceProfile`, and the Nash proof tests.
++- **No cross-game metric registration yet:** Unchanged. `ExploitMetric` work is
++  still slice 4.
++- **No spectator surfaces yet:** Unchanged. `myosu-play` and the spectator TUI
++  remain later slices.
++- **Later proof-script lines remain outside this slice:** Unchanged. Commands
++  that reference packages not yet present in this checkout, such as
++  `myosu-play` or `myosu-games-poker`, are still blocked outside slice 2.
+ 
+ ## Next Approved Slice
+ 
+-**Slice 2 — Liar's Dice game engine**
++**Slice 3 — `encoder.rs` + `profile.rs`: solver and Nash verification**
+ 
+-Add `game.rs`, `edge.rs`, `turn.rs`, and `info.rs`, then satisfy the approved
+-proof commands:
++Approved next proof commands:
+ 
+ ```bash
+-cargo test -p myosu-games-liars-dice game::tests::root_is_chance_node
+-cargo test -p myosu-games-liars-dice game::tests::legal_bids_increase
+-cargo test -p myosu-games-liars-dice game::tests::challenge_resolves_game
+-cargo test -p myosu-games-liars-dice game::tests::payoff_is_zero_sum
+-cargo test -p myosu-games-liars-dice game::tests::all_trait_bounds_satisfied
++cargo test -p myosu-games-liars-dice solver::tests::train_to_nash
++cargo test -p myosu-games-liars-dice solver::tests::exploitability_near_zero
++cargo test -p myosu-games-liars-dice solver::tests::strategy_is_nontrivial
++cargo test -p myosu-games-liars-dice solver::tests::wire_serialization_works
+ ```
