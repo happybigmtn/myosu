@@ -1,0 +1,16 @@
+{
+  "mode": "cli",
+  "requested_provider": "openai",
+  "requested_model": "gpt-5.4",
+  "provider": "openai",
+  "model": "gpt-5.4",
+  "served_model": null,
+  "fallback_reason": null,
+  "codex_slot": {
+    "slot_name": "slot5",
+    "codex_home": "/home/r/.codex-slot5/.codex",
+    "config_path": "/home/r/.config/autonomy/codex-rotator.json",
+    "state_path": "/home/r/.config/autonomy/codex-rotator-state.json"
+  },
+  "command": "cat /tmp/fabro_cli_ac678d44-3d8d-4b01-b062-3d5c0da35f94_prompt.txt | codex exec --json --full-auto -m gpt-5.4"
+}
