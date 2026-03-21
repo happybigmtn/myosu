@@ -1,0 +1,5 @@
+Wrote the integration slice in [agent-adapter.md](/home/r/.fabro/runs/20260321-01KM79D8Y9HAD6PXDQPRMMV6M7/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260321-01KM79D8Y9HAD6PXDQPRMMV6M7/worktree/outputs/agent-integration/review.md), and updated the live exec plan in [plans/031926-iterative-execution-and-raspberry-hardening.md](/home/r/.fabro/runs/20260321-01KM79D8Y9HAD6PXDQPRMMV6M7/worktree/plans/031926-iterative-execution-and-raspberry-hardening.md).
+
+The decision is: product needs an implementation family next, not another upstream-unblock pass. The first implementation lane should be `play:tui`, because it creates `myosu-play`; `agent:experience` should follow once that binary exists. I also called out one stale blocker in the older product reviews: [outputs/games/traits/verification.md](/home/r/.fabro/runs/20260321-01KM79D8Y9HAD6PXDQPRMMV6M7/worktree/outputs/games/traits/verification.md) shows the robopoker absolute-path issue has already been reduced.
+
+Validation was doc-level only: I reread the new artifacts and `git diff --check` passed. I did not rerun Fabro/Raspberry in this turn.
