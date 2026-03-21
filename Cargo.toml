@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/myosu-games",
+    "crates/myosu-games-poker",
     "crates/myosu-tui",
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
     # "crates/myosu-chain",      # Stage 1: Substrate chain fork
@@ -30,3 +31,5 @@ crossterm = { version = "0.28", features = ["event-stream"] }
 ratatui = "0.29"
 futures = "0.3"
 tokio-test = "0.4"
+rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }

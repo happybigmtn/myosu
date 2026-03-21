@@ -1,0 +1,15 @@
+[package]
+name = "myosu-games-poker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "NLHE poker engine integration surface for the myosu game-solving chain"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+myosu-games = { path = "../myosu-games" }
+serde = { workspace = true }
+rbp-nlhe = { workspace = true, features = ["serde"] }
+rbp-mccfr = { workspace = true, features = ["serde"] }
