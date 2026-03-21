@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 154701,
+  "attempt": 4,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T03:26:30.327585536+00:00",
+  "updated_at": "2026-03-21T03:26:30.327591739+00:00",
+  "failure_reason": "Handler error: CLI command exited with code -1: Reading prompt from stdin...\n\nthread 'main' (3735470) panicked at library/std/src/io/stdio.rs:1165:9:\nfailed printing to stdout: Quota exceeded (os error 122)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nstdout: r` constructor is still absent, but because it’s a serde newtype over the same `BTreeMap` shape the clustering layer uses, there may be a clean artifact-ingestion route entirely inside `myosu-games-poker`. I’m checking the supporting card/abstraction types next so we can see whether a full fallback encoder is actually feasible for tests and proofs.\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_29\",\"type\":\"command_execution\",\"command\":\"/usr/bin/bash -lc \\\"sed -n '1,260p' /home/r/coding/robopoker/c"
+}

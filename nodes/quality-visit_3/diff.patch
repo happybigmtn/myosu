@@ -1,0 +1,21 @@
+diff --git a/outputs/games/poker-engine/quality.md b/outputs/games/poker-engine/quality.md
+index af5ef1b..c05c152 100644
+--- a/outputs/games/poker-engine/quality.md
++++ b/outputs/games/poker-engine/quality.md
+@@ -5,15 +5,7 @@ artifact_mismatch_risk: no
+ manual_followup_required: no
+ 
+ ## Touched Surfaces
+-- Cargo.toml
+-- Cargo.lock
+-- crates/myosu-games-poker/Cargo.toml
+-- crates/myosu-games-poker/src/lib.rs
+-- crates/myosu-games-poker/src/solver.rs
+-- outputs/games/poker-engine/implementation.md
+-- outputs/games/poker-engine/verification.md
+-- outputs/games/poker-engine/quality.md
+-- outputs/games/poker-engine/promotion.md
++- (none declared)
+ 
+ ## Placeholder Hits
+ 
