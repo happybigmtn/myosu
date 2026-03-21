@@ -66,9 +66,11 @@ worked around locally.
 - [x] (2026-03-19 06:44Z) Finished the direct Fabro foreground runs for
   `validator:oracle` and `games:multi-game`, then rerendered
   services/platform against the new reviewed artifacts.
-- [ ] Execute `agent:experience`, the last remaining ready product lane, then
-  use its reviewed artifacts to decide whether product needs an implementation
-  family next or another upstream unblock.
+- [x] (2026-03-21 04:25Z) Executed `agent:experience`, then wrote
+  `outputs/agent-integration/agent-adapter.md` and
+  `outputs/agent-integration/review.md` to capture the product-frontier
+  decision: product should open a `play:tui`-led implementation family next
+  instead of pausing for another upstream unblock.
 
 ## Surprises & Discoveries
 
@@ -152,6 +154,14 @@ worked around locally.
   `games:traits`, while some Raspberry detached-submit paths still required
   hardening in the sibling Fabro repo.
 
+- Observation: the last remaining reviewed product lane does not point to
+  another upstream review pass; it points to the first product implementation
+  family, led by `play:tui`.
+  Evidence: `outputs/play/tui/review.md` marks `play:tui` ready for an
+  implementation-family workflow immediately, while
+  `outputs/agent/experience/review.md` says `agent:experience` Slices 3+
+  depend on `play:tui` Slice 1 rather than on a new upstream contract lane.
+
 ## Decision Log
 
 - Decision: make the next plan execution-first rather than manifest-first.
@@ -203,6 +213,14 @@ worked around locally.
   reach the Anthropic-compatible bridge credentials.
   Date/Author: 2026-03-19 / Codex
 
+- Decision: treat `play:tui` as the first product implementation-family lane
+  and `agent:experience` as its immediate downstream consumer rather than
+  pausing the product frontier for another upstream-unblock-only round.
+  Rationale: the shared missing seam is the `myosu-play` binary owned by
+  `play:tui`; waiting for another upstream review would stall product delivery
+  without changing the next honest executable work.
+  Date/Author: 2026-03-21 / Codex
+
 ## Outcomes & Retrospective
 
 This plan starts after the biggest conceptual migration work is already done.
@@ -212,6 +230,12 @@ Myosu now has:
 - multiple Raspberry frontier manifests under `fabro/programs/`
 - durable artifact roots under `outputs/`
 - one fully proven bootstrap-to-implementation example in `games:traits`
+
+It now also has a fully reviewed product frontier. With
+`outputs/play/tui/review.md`, `outputs/agent/experience/review.md`, and the
+new `outputs/agent-integration/` decision artifacts in place, the next honest
+product move is no longer another bootstrap-style review pass. It is the first
+`implement/`-family product lane, starting with `play:tui`.
 
 So the next outcome worth chasing is not another design artifact. It is a
 repeatable execution loop:
@@ -491,3 +515,8 @@ same iterative execution loop.
 Revision Note: Created after reading all live Myosu plans and the expanded
 `fabro/` execution surface, to move the repo from frontier seeding into
 frontier execution and Raspberry hardening.
+
+Revision Note (2026-03-21): Marked the `agent:experience` frontier step
+complete and recorded the resulting product decision: open a `play:tui`-led
+implementation family next, using `outputs/agent-integration/` as the durable
+adapter/review surface.

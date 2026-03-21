@@ -18,5 +18,13 @@ Implementation-lane convention:
 - `implementation.md` records the concrete slice the lane changed
 - `verification.md` records the proof result, residual risks, and next slice
 
+Integration-decision convention:
+
+- `*-adapter.md` records how already-reviewed lane artifacts should be
+  consumed by the next frontier or workflow family
+- `review.md` records the keep/reopen/reset judgment for that integration
+  decision and states whether the next move is implementation or another
+  unblock
+
 Fabro run branches and `.fabro` runtime state remain execution-plane details.
 `outputs/` is the first durable control-plane artifact surface.
