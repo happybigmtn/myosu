@@ -1,0 +1,28 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "specify",
+    "last_response": "Wrote the durable artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM77CVP7HD6QR463J374ZPDF/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260",
+    "response.specify": "Wrote the durable artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM77CVP7HD6QR463J374ZPDF/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320-01KM77CVP7HD6QR463J374ZPDF/worktree/outputs/agent-integration/review.md).\n\nThey conclude product should move into an implementation-family workflow next, not another upstream unblock. The important fresh repo truth is that the old robopoker-path blocker is stale: [crates/myosu-games/Cargo.toml](/home/r/.fabro/runs/20260320-01KM77CVP7HD6QR463J374ZPDF/worktree/crates/myosu-games/Cargo.toml#L17) is already on pinned git deps, while [myosu-product.yaml](/home/r/.fabro/runs/20260320-01KM77CVP7HD6QR463J374ZPDF/worktree/fabro/programs/myosu-product.yaml#L15) still stops at `reviewed`, so the real gap is missing product implementation-family surfaces plus the missing `myosu-play` crate noted in [Cargo.toml](/home/r/.fabro/runs/20260320-01KM77CVP7HD6QR463J374ZPDF/worktree/Cargo.toml#L10).\n\nVerification: `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-target cargo test -p myosu-games --quiet` passed (`10` unit + `4` doctest), and `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-target cargo test -p myosu-tui --quiet` passed (`82` passed, `2` ignored, `1` doctest)."
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 1864188,
+    "output_tokens": 18702,
+    "cost": 4.941
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 407445,
+  "attempt": 2,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T03:42:23.880599380+00:00",
+  "updated_at": "2026-03-21T03:42:23.880612202+00:00"
+}
