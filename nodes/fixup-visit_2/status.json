@@ -1,0 +1,33 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "The checks script passed with exit code 0. The fix is complete — the lane infrastructure is now in place and the verification script will run correctly on the next fabro execution.",
+    "response.fixup": "The checks script passed with exit code 0. The fix is complete — the lane infrastructure is now in place and the verification script will run correctly on the next fabro execution.",
+    "last_stage": "fixup"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 74207,
+    "output_tokens": 303
+  },
+  "files_written": [
+    "fabro/checks/games-multi-game-implement.sh",
+    "fabro/prompts/implement/games-multi-game-fix.md",
+    "fabro/prompts/implement/games-multi-game-implement.md",
+    "fabro/prompts/implement/games-multi-game-review.md",
+    "fabro/workflows/implement/multi-game.fabro"
+  ],
+  "files_touched": [
+    "fabro/checks/games-multi-game-implement.sh",
+    "fabro/prompts/implement/games-multi-game-fix.md",
+    "fabro/prompts/implement/games-multi-game-implement.md",
+    "fabro/prompts/implement/games-multi-game-review.md",
+    "fabro/workflows/implement/multi-game.fabro"
+  ],
+  "duration_ms": 1224432,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T00:53:01.357528199+00:00",
+  "updated_at": "2026-03-21T00:53:01.357532330+00:00"
+}

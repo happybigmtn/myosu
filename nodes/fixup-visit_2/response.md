@@ -1,0 +1,1 @@
+The checks script passed with exit code 0. The fix is complete — the lane infrastructure is now in place and the verification script will run correctly on the next fabro execution.
