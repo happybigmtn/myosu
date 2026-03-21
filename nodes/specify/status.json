@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 299095,
+  "attempt": 4,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T03:23:54.814144016+00:00",
+  "updated_at": "2026-03-21T03:23:54.814149840+00:00",
+  "failure_reason": "Handler error: Failed to write prompt file: Failed to write /tmp/fabro_cli_71e1e6da-3b0c-4d0c-8233-6c4bc5efa384_prompt.txt: Disk quota exceeded (os error 122)"
+}

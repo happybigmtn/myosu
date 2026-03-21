@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-03-21T03:23:54.814574918Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "specify": 4,
+    "start": 1
+  },
+  "context_values": {
+    "failure_signature": "specify|budget_exhausted|handler error: failed to write prompt file: failed to write /tmp/fabro_cli_71e1e6da-3b0c-4d0c-<n>-6c4bc5efa384_prompt.txt: disk quota exceeded (os error <n>)",
+    "failure_class": "budget_exhausted",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.run_id": "01KM76E9WNXJKR2FGTTTQDSKCS",
+    "thread.start.current_node": "specify",
+    "internal.retry_count.start": 1,
+    "current.preamble": "Goal: Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n\n",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM76E9WNXJKR2FGTTTQDSKCS/worktree",
+    "current_node": "specify",
+    "internal.fidelity": "compact",
+    "graph.goal": "Foundations\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.\n- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.\n\nRequired durable artifacts:\n- `outputs/foundations/foundation-plan.md`\n- `outputs/foundations/review.md`\n",
+    "outcome": "fail",
+    "internal.retry_count.specify": 4,
+    "graph.rankdir": "LR",
+    "internal.thread_id": "start",
+    "internal.node_visit_count": 1
+  },
+  "logs": [],
+  "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "specify": {
+      "status": "fail",
+      "failure": {
+        "message": "Handler error: Failed to write prompt file: Failed to write /tmp/fabro_cli_71e1e6da-3b0c-4d0c-8233-6c4bc5efa384_prompt.txt: Disk quota exceeded (os error 122)",
+        "failure_class": "budget_exhausted"
+      },
+      "duration_ms": 299095
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}
