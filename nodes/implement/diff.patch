@@ -1,0 +1,355 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 7e077fc..b4e2118 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -942,6 +942,12 @@ dependencies = [
+  "static_assertions",
+ ]
+ 
++[[package]]
++name = "fixedbitset"
++version = "0.4.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
++
+ [[package]]
+ name = "fixedbitset"
+ version = "0.5.7"
+@@ -1717,6 +1723,16 @@ dependencies = [
+  "tokio-test",
+ ]
+ 
++[[package]]
++name = "myosu-games-poker"
++version = "0.1.0"
++dependencies = [
++ "myosu-games",
++ "rbp-mccfr",
++ "rbp-nlhe",
++ "serde",
++]
++
+ [[package]]
+ name = "myosu-tui"
+ version = "0.1.0"
+@@ -1926,13 +1942,23 @@ dependencies = [
+  "base64ct",
+ ]
+ 
++[[package]]
++name = "petgraph"
++version = "0.6.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b4c5cc86750666a3ed20bdaf5ca2a0344f9c67674cae0515bec2da16fbaa47db"
++dependencies = [
++ "fixedbitset 0.4.2",
++ "indexmap",
++]
++
+ [[package]]
+ name = "petgraph"
+ version = "0.7.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "3672b37090dbd86368a4145bc067582552b29c27377cad4e0a306c97f9bd7772"
+ dependencies = [
+- "fixedbitset",
++ "fixedbitset 0.5.7",
+  "indexmap",
+ ]
+ 
+@@ -2181,6 +2207,17 @@ dependencies = [
+  "unicode-width 0.2.0",
+ ]
+ 
++[[package]]
++name = "rbp-cards"
++version = "1.0.0"
++source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
++dependencies = [
++ "anyhow",
++ "rand 0.9.2",
++ "rbp-core",
++ "serde",
++]
++
+ [[package]]
+ name = "rbp-core"
+ version = "1.0.0"
+@@ -2190,16 +2227,47 @@ dependencies = [
+  "uuid",
+ ]
+ 
++[[package]]
++name = "rbp-gameplay"
++version = "1.0.0"
++source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
++dependencies = [
++ "anyhow",
++ "log",
++ "petgraph 0.6.5",
++ "rand 0.9.2",
++ "rbp-cards",
++ "rbp-core",
++ "serde",
++]
++
+ [[package]]
+ name = "rbp-mccfr"
+ version = "1.0.0"
+ source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
+ dependencies = [
+  "paste",
+- "petgraph",
++ "petgraph 0.7.1",
+  "rand 0.9.2",
+  "rbp-core",
+  "rbp-transport",
++ "serde",
++]
++
++[[package]]
++name = "rbp-nlhe"
++version = "1.0.0"
++source = "git+https://github.com/happybigmtn/robopoker?rev=04716310143094ab41ec7172e6cea5a2a66744ef#04716310143094ab41ec7172e6cea5a2a66744ef"
++dependencies = [
++ "anyhow",
++ "log",
++ "rand 0.9.2",
++ "rbp-cards",
++ "rbp-core",
++ "rbp-gameplay",
++ "rbp-mccfr",
++ "rbp-transport",
++ "serde",
+ ]
+ 
+ [[package]]
+diff --git a/Cargo.toml b/Cargo.toml
+index e532e62..795f342 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -2,6 +2,7 @@
+ resolver = "2"
+ members = [
+     "crates/myosu-games",
++    "crates/myosu-games-poker",
+     "crates/myosu-tui",
+     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
+     # "crates/myosu-chain",      # Stage 1: Substrate chain fork
+@@ -30,3 +31,5 @@ crossterm = { version = "0.28", features = ["event-stream"] }
+ ratatui = "0.29"
+ futures = "0.3"
+ tokio-test = "0.4"
++rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
++rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+diff --git a/crates/myosu-games-poker/Cargo.toml b/crates/myosu-games-poker/Cargo.toml
+new file mode 100644
+index 0000000..77c8390
+--- /dev/null
++++ b/crates/myosu-games-poker/Cargo.toml
+@@ -0,0 +1,15 @@
++[package]
++name = "myosu-games-poker"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++description = "NLHE poker engine integration surface for the myosu game-solving chain"
++
++[lib]
++crate-type = ["lib"]
++
++[dependencies]
++myosu-games = { path = "../myosu-games" }
++serde = { workspace = true }
++rbp-nlhe = { workspace = true, features = ["serde"] }
++rbp-mccfr = { workspace = true, features = ["serde"] }
+diff --git a/crates/myosu-games-poker/src/lib.rs b/crates/myosu-games-poker/src/lib.rs
+new file mode 100644
+index 0000000..98b777f
+--- /dev/null
++++ b/crates/myosu-games-poker/src/lib.rs
+@@ -0,0 +1,54 @@
++//! NLHE poker engine integration surface for myosu.
++//!
++//! Slice 1 intentionally keeps this crate small: it registers the crate in the
++//! workspace, pins the robopoker dependencies, and proves that `rbp-nlhe`
++//! exposes serde-ready NLHE wire types for later slices.
++
++use std::marker::PhantomData;
++
++pub use myosu_games::{GameConfig, GameType, StrategyQuery, StrategyResponse};
++pub use rbp_nlhe::{Flagship, NlheEdge, NlheInfo};
++
++/// Marker type for the NLHE heads-up engine family.
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub struct Poker;
++
++/// Placeholder for the solver wrapper that lands in Slice 2.
++#[derive(Debug)]
++pub struct PokerSolver;
++
++/// Placeholder for the training coordinator that lands in Slice 6.
++#[derive(Debug)]
++pub struct TrainingSession;
++
++// Compile-time guard for Slice 1: if serde is not enabled on `rbp-nlhe`, this
++// crate should fail to build before the later wire/query slices begin.
++struct SerdeReady<T>(PhantomData<T>)
++where
++    T: serde::Serialize + for<'de> serde::Deserialize<'de>;
++
++const _: SerdeReady<NlheInfo> = SerdeReady(PhantomData);
++const _: SerdeReady<NlheEdge> = SerdeReady(PhantomData);
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn robopoker_nlhe_serde_surface_is_enabled() {
++        fn assert_serde<T>()
++        where
++            T: serde::Serialize + for<'de> serde::Deserialize<'de>,
++        {
++        }
++
++        assert_serde::<NlheInfo>();
++        assert_serde::<NlheEdge>();
++        assert!(std::mem::size_of::<Flagship>() > 0);
++    }
++
++    #[test]
++    fn game_type_reexport_includes_nlhe_heads_up() {
++        assert_eq!(GameType::NlheHeadsUp.to_bytes(), b"nlhe_hu".to_vec());
++    }
++}
+diff --git a/outputs/games/poker-engine/implementation.md b/outputs/games/poker-engine/implementation.md
+new file mode 100644
+index 0000000..2965995
+--- /dev/null
++++ b/outputs/games/poker-engine/implementation.md
+@@ -0,0 +1,81 @@
++# `games:poker-engine` Implementation — Slice 1
++
++## Slice Implemented
++
++**Slice 1 — Create `myosu-games-poker` Crate Skeleton**
++
++This slice creates the greenfield `myosu-games-poker` crate, registers it in the workspace, and verifies that the pinned robopoker NLHE types compile with serde support enabled. No solver, wire, query, exploitability, or training-session logic was implemented yet; those remain in later approved slices.
++
++## What Changed
++
++### Workspace root: `Cargo.toml`
++
++- Added `crates/myosu-games-poker` to the workspace `members` list so `cargo build -p myosu-games-poker` can resolve the package.
++- Added workspace dependency entries for:
++  - `rbp-nlhe`
++  - `rbp-mccfr`
++
++Both point at the reviewed robopoker git source and pinned rev `04716310143094ab41ec7172e6cea5a2a66744ef`.
++
++### New crate: `crates/myosu-games-poker/Cargo.toml`
++
++Created the new package with:
++
++- `name = "myosu-games-poker"`
++- `crate-type = ["lib"]`
++- dependency on `myosu-games`
++- dependency on `serde`
++- dependency on `rbp-nlhe` with `features = ["serde"]`
++- dependency on `rbp-mccfr` with `features = ["serde"]`
++
++This is the minimal dependency surface required to prove the NLHE wire types are serde-ready before Slice 3.
++
++### New crate root: `crates/myosu-games-poker/src/lib.rs`
++
++Created a minimal public surface that:
++
++- re-exports `GameConfig`, `GameType`, `StrategyQuery`, and `StrategyResponse` from `myosu-games`
++- re-exports `Flagship`, `NlheInfo`, and `NlheEdge` from `rbp-nlhe`
++- introduces placeholder `Poker`, `PokerSolver`, and `TrainingSession` types for later slices
++- adds a compile-time serde guard for `NlheInfo` and `NlheEdge`
++- adds two narrow smoke tests:
++  - serde support is enabled for the NLHE types
++  - `GameType::NlheHeadsUp` is reachable through the re-export path
++
++### Lockfile: `Cargo.lock`
++
++The new crate pulled the expected additional packages into the lockfile:
++
++- `myosu-games-poker`
++- `rbp-nlhe`
++- `rbp-cards`
++- `rbp-gameplay`
++- `petgraph 0.6.5`
++- `fixedbitset 0.4.2`
++
++This lockfile update is part of the slice because the package did not previously exist in the workspace.
++
++## Proof Commands Run for This Slice
++
++```bash
++CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo build -p myosu-games-poker --offline
++CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline
++cargo tree -p myosu-games-poker -e features --offline
++```
++
++All three commands exited 0.
++
++## Stage-Owned Artifacts Left Untouched
++
++- `outputs/games/poker-engine/quality.md` was not authored here; it is owned by the Quality Gate stage.
++- `outputs/games/poker-engine/promotion.md` was not authored here; it is owned by the Review stage.
++
++## What Remains for Future Slices
++
++| Slice | Description | Status |
++|-------|-------------|--------|
++| Slice 2 | `solver.rs`: `PokerSolver` wrapper + checkpoint format | Pending |
++| Slice 3 | `wire.rs`: bincode roundtrip for `NlheInfo` and `NlheEdge` | Pending |
++| Slice 4 | `query.rs`: `handle_query` bridge | Pending |
++| Slice 5 | `exploit.rs`: local + remote exploitability | Pending |
++| Slice 6 | `training.rs`: `TrainingSession` | Pending |
+diff --git a/outputs/games/poker-engine/verification.md b/outputs/games/poker-engine/verification.md
+new file mode 100644
+index 0000000..eba1737
+--- /dev/null
++++ b/outputs/games/poker-engine/verification.md
+@@ -0,0 +1,37 @@
++# `games:poker-engine` Verification — Slice 1
++
++## Proof Commands That Passed
++
++| Command | Exit Code | Result |
++|---------|-----------|--------|
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo build -p myosu-games-poker --offline` | 0 | Built the new crate and resolved `rbp-nlhe`, `rbp-cards`, and `rbp-gameplay` from the pinned robopoker git source |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline` | 0 | 2 unit tests passed; 0 failed |
++| `cargo tree -p myosu-games-poker -e features --offline` | 0 | Confirmed `rbp-nlhe feature "serde"` and `rbp-mccfr feature "serde"` are active in the resolved feature graph |
++
++## Test Results
++
++```text
++running 2 tests
++test tests::game_type_reexport_includes_nlhe_heads_up ... ok
++test tests::robopoker_nlhe_serde_surface_is_enabled ... ok
++
++test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
++```
++
++## Environment Notes
++
++- A plain `cargo build -p myosu-games-poker` was attempted first and failed in this sandbox because Cargo tried to refresh the crates.io index and the environment has no DNS/network access.
++- An offline build without overriding `CARGO_TARGET_DIR` also failed because the workspace default target path resolves to a read-only location outside the writable sandbox.
++- The slice was therefore verified with `--offline` plus `CARGO_TARGET_DIR=/tmp/myosu-cargo-target`, which stays inside writable local storage and exercises the new package successfully.
++
++## Risks Reduced
++
++- **Workspace package missing:** Reduced. `myosu-games-poker` now exists and is registered in the workspace, so the package is discoverable by Cargo.
++- **Serde feature uncertainty on robopoker NLHE types:** Reduced. `NlheInfo` and `NlheEdge` now have both compile-time and runtime smoke-check coverage through the crate root and test suite.
++- **Wire-slice ambiguity:** Reduced. `cargo tree -e features` confirms the exact serde feature path that Slice 3 depends on.
++
++## Risks That Remain
++
++- **Shared robopoker rev is still duplicated:** Reduced but not eliminated. This slice pins the new crate to the same reviewed rev, but `crates/myosu-games/Cargo.toml` still carries its own identical literal pin because that crate is outside the poker-engine owned surface.
++- **Solver/query/exploit/training surfaces remain unimplemented:** Unchanged. This slice intentionally stops at the crate skeleton.
++- **Default workspace build path is not sandbox-friendly:** Unchanged. Proof in this environment still needs a writable `CARGO_TARGET_DIR`.
