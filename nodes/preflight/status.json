@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 600011,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-21T04:15:25.427121738+00:00",
+  "updated_at": "2026-03-21T04:15:25.427126506+00:00",
+  "failure_reason": "Handler error: Script timed out after 600000ms: set +e\ncargo test events:: --no-ignore\ncargo test shell:: --integration\ncargo test schema::all_game_types\ncargo test shell::shell_draw_\ncargo test pipe::is_plain_text\ntrue"
+}
