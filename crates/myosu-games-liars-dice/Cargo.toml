@@ -11,3 +11,4 @@ crate-type = ["lib"]
 [dependencies]
 myosu-games = { path = "../myosu-games" }
 rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-transport = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }

@@ -1,123 +1,96 @@
-# `games:multi-game` Implementation — Slice 1
+# `games:multi-game` Implementation — Slice 2
 
 ## Slice Implemented
 
-**Slice 1 — Create `myosu-games-liars-dice` Crate Skeleton**
+**Slice 2 — `game.rs` + `edge.rs` + `turn.rs` + `info.rs`: Liar's Dice game
+engine**
 
-Implemented the smallest approved `games:multi-game` slice from
+This implementation follows the next approved slice from
 [`outputs/games/multi-game/spec.md`](./spec.md) and
-[`outputs/games/multi-game/review.md`](./review.md):
-
-- added `crates/myosu-games-liars-dice` as a new workspace member
-- created a minimal crate manifest pinned to the same robopoker git revision as `myosu-games`
-- created a narrow `src/lib.rs` that exposes the approved public Liar's Dice type names as placeholders for later slices
-
-This slice intentionally stops at crate wiring. It does not implement the game
-engine, solver, scoring registry, or spectator surfaces.
-
-## Fixup Boundary
-
-This fixup keeps the lane on the same approved slice. No slice-2 game-engine
-work was started.
-
-The package inventory in this checkout, confirmed via `cargo metadata --no-deps
---format-version 1`, is currently:
-
-- `myosu-games`
-- `myosu-games-liars-dice`
-- `myosu-tui`
-- `pallet-game-solver`
-
-That means the verify-stage failure was not a slice-1 defect in
-`myosu-games-liars-dice`. It came from proof orchestration continuing into
-later or absent surfaces such as `myosu-play`. This fixup preserves the slice-1
-boundary instead of manufacturing later-slice crates just to satisfy an
-out-of-scope command.
+[`outputs/games/multi-game/review.md`](./review.md). The work stays inside the
+owned `myosu-games-liars-dice` surfaces and stops before encoder/profile,
+registry, or spectator work.
 
 ## What Changed
 
-No source changes were needed during fixup. The slice-1 code remains:
+### `crates/myosu-games-liars-dice/Cargo.toml`
 
-### `Cargo.toml`
-
-Added the new workspace member:
-
-```toml
-members = [
-    "crates/myosu-games",
-    "crates/myosu-games-liars-dice",
-    "crates/myosu-tui",
-    "crates/myosu-chain/pallets/game-solver",
-]
-```
+- added a direct `rbp-transport` dependency at the same robopoker revision as
+  `rbp-mccfr`
+- kept the crate pinned to the existing workspace and robopoker revision
 
 ### `Cargo.lock`
 
-Recorded the new workspace package entry:
-
-```toml
-[[package]]
-name = "myosu-games-liars-dice"
-version = "0.1.0"
-dependencies = [
-  "myosu-games",
-  "rbp-mccfr",
-]
-```
-
-### `crates/myosu-games-liars-dice/Cargo.toml`
-
-Created the new package manifest with the approved dependency shape:
-
-```toml
-[package]
-name = "myosu-games-liars-dice"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-
-[lib]
-crate-type = ["lib"]
-
-[dependencies]
-myosu-games = { path = "../myosu-games" }
-rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
-```
+- updated the `myosu-games-liars-dice` package entry to record the new direct
+  `rbp-transport` dependency
 
 ### `crates/myosu-games-liars-dice/src/lib.rs`
 
-Added placeholder public API types for the later Liar's Dice implementation:
+- replaced the slice-1 public stubs for game/edge/turn/info with real module
+  wiring and re-exports
+- kept `LiarsDiceEncoder` and `LiarsDiceProfile` as placeholders so slice 2 does
+  not drift into solver work
 
-- `LiarsDiceGame`
-- `LiarsDiceEdge`
-- `LiarsDiceTurn`
-- `LiarsDiceInfo`
-- `LiarsDiceEncoder`
-- `LiarsDiceProfile`
+### `crates/myosu-games-liars-dice/src/edge.rs`
 
-All six are zero-sized placeholder structs with basic derives (`Clone`, `Copy`,
-`Debug`, `Default`, `PartialEq`, `Eq`) so the crate exposes a stable surface
-without prematurely committing to slice-2 game-state details.
+- added `LiarsDiceEdge` with the three approved transition classes:
+  `Roll { player0, player1 }`, `Bid { quantity, face }`, and `Challenge`
+- added game constants for `NUM_PLAYERS`, `NUM_FACES`, and `MAX_BIDS`
+- encoded bids as an internal rank (`1..=12`) so the game state can store bid
+  history in a fixed-size `[u8; MAX_BIDS]` array with `0` as the empty-slot
+  sentinel
+- exposed deterministic helpers for enumerating all chance rolls and all legal
+  bid ranks
 
-A single smoke test, `tests::public_api_stubs_exist`, verifies the new crate can
-be compiled and tested in isolation.
+### `crates/myosu-games-liars-dice/src/turn.rs`
+
+- added `LiarsDiceTurn::{Chance, Player0, Player1, Terminal}`
+- implemented `From<usize>` and `CfrTurn`
+- added a small `actor_index()` helper so game logic and info projection can map
+  player turns back to `0` or `1`
+
+### `crates/myosu-games-liars-dice/src/info.rs`
+
+- added `LiarsDiceInfo` plus the supporting public/private info components
+- `LiarsDiceInfo::from_game(&LiarsDiceGame)` now projects the acting player's
+  hidden die while preserving the public bid path
+- chance nodes expose all 36 die-roll outcomes
+- player nodes expose only strictly increasing bids, with `Challenge` appended
+  only after at least one bid exists
+- terminal nodes expose no outgoing choices
+
+### `crates/myosu-games-liars-dice/src/game.rs`
+
+- added a compact, `Copy`-safe `LiarsDiceGame` state:
+  `dice: [u8; 2]`, `bids: [u8; MAX_BIDS]`, `bid_count`, `turn`, `winner`
+- implemented `CfrGame` with:
+  - `root()` as a chance node
+  - `apply()` transitions for roll, bid, and challenge
+  - terminal winner resolution based on whether the last bid is supported by the
+    revealed dice
+  - zero-sum `payoff()` returning `+1.0` to the winner and `-1.0` to the loser
+- added the slice-2 proof tests directly under `game::tests`
+
+## Slice-2 Proof Behavior
+
+The implementation now satisfies the review-approved slice-2 checks:
+
+- root is a chance node with 36 equiprobable roll branches
+- legal bids increase monotonically through the fixed-size bid ladder
+- challenge resolves immediately to a terminal winner
+- terminal utilities are zero-sum
+- all required robopoker trait bounds compile against the Liar's Dice types
 
 ## Scope Guardrails Preserved
 
-- No edits were made to `crates/myosu-games/src/`.
-- No poker-engine surfaces were touched.
-- No spectator or scoring work was started.
-- This fixup does not author `quality.md` or `promotion.md`; those artifacts
-  remain owned by the Quality and Review stages, and the fixup instructions
-  explicitly forbid creating or rewriting them here.
+- no encoder or profile behavior was implemented
+- no `myosu-games` registry work was started
+- no spectator relay or TUI work was started
+- no edits were made under `crates/myosu-games/src/`
+- no poker-engine surfaces were touched
 
-## What Remains for Future Slices
+## Remaining Approved Work
 
-| Slice | Description | Status |
-|-------|-------------|--------|
-| Slice 2 | Add `game.rs`, `edge.rs`, `turn.rs`, and `info.rs` for the Liar's Dice CFR game engine | Pending |
-| Slice 3 | Add encoder/profile/solver behavior and Nash proof tests | Pending |
-| Slice 4 | Add `ExploitMetric` registration in `myosu-games` | Pending |
-| Slice 5 | Add `SpectatorRelay` in `myosu-play` | Pending |
-| Slice 6 | Add spectator TUI rendering in `myosu-tui` | Pending |
-| Slice 7 | Prove zero-change architecture across existing game crates | Pending |
+The next approved slice is still **Slice 3 — `encoder.rs` + `profile.rs`** for
+solver integration and Nash verification. Slice 2 intentionally leaves those
+surfaces as placeholders.

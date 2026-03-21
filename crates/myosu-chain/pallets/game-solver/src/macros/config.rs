@@ -153,7 +153,12 @@ pub mod types {
     }
 
     impl<T> BalanceType for T where
-        T: Copy + Clone + Default + core::fmt::Debug + AtLeast32BitUnsigned + parity_scale_codec::Codec
+        T: Copy
+            + Clone
+            + Default
+            + core::fmt::Debug
+            + AtLeast32BitUnsigned
+            + parity_scale_codec::Codec
     {
     }
 }

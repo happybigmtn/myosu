@@ -1,23 +1,22 @@
-//! Minimal public API skeleton for the multi-game Liar's Dice crate.
+//! Liar's Dice proof-of-architecture crate for the multi-game lane.
 //!
-//! Slice 1 intentionally stops at crate wiring. The CFR game state, action,
-//! turn, info-set, encoder, and profile implementations land in later slices.
+//! Slice 2 adds the fixed-size CFR game engine surface:
+//! - [`LiarsDiceGame`]
+//! - [`LiarsDiceEdge`]
+//! - [`LiarsDiceTurn`]
+//! - [`LiarsDiceInfo`]
+//!
+//! Encoder and profile behavior remain intentionally stubbed until slice 3.
 
-/// Placeholder for the future Liar's Dice CFR game state.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct LiarsDiceGame;
+mod edge;
+mod game;
+mod info;
+mod turn;
 
-/// Placeholder for the future Liar's Dice action type.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct LiarsDiceEdge;
-
-/// Placeholder for the future Liar's Dice turn marker.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct LiarsDiceTurn;
-
-/// Placeholder for the future Liar's Dice information set.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct LiarsDiceInfo;
+pub use edge::{LiarsDiceEdge, MAX_BIDS, NUM_FACES, NUM_PLAYERS};
+pub use game::LiarsDiceGame;
+pub use info::LiarsDiceInfo;
+pub use turn::LiarsDiceTurn;
 
 /// Placeholder for the future Liar's Dice encoder.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -30,13 +29,14 @@ pub struct LiarsDiceProfile;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use myosu_games::CfrGame;
 
     #[test]
     fn public_api_stubs_exist() {
-        let _ = LiarsDiceGame;
-        let _ = LiarsDiceEdge;
-        let _ = LiarsDiceTurn;
-        let _ = LiarsDiceInfo;
+        let _ = LiarsDiceGame::root();
+        let _ = LiarsDiceEdge::Challenge;
+        let _ = LiarsDiceTurn::Terminal;
+        let _ = LiarsDiceInfo::from_game(&LiarsDiceGame::root());
         let _ = LiarsDiceEncoder;
         let _ = LiarsDiceProfile;
     }

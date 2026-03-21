@@ -98,12 +98,7 @@ mod tests {
 
         fn completions(&self) -> Vec<String> {
             if self.hand_active {
-                vec![
-                    "fold".into(),
-                    "call".into(),
-                    "raise".into(),
-                    "check".into(),
-                ]
+                vec!["fold".into(), "call".into(), "raise".into(), "check".into()]
             } else {
                 vec!["new".into(), "quit".into()]
             }
@@ -162,7 +157,9 @@ mod tests {
 
         let mut buf = Buffer::empty(Rect::new(0, 0, 40, 4));
         renderer.render_state(Rect::new(0, 0, 40, 4), &mut buf);
-        let line: String = (0..9).map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' ')).collect();
+        let line: String = (0..9)
+            .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
+            .collect();
         assert_eq!(line, "pot: 12bb");
     }
 
@@ -215,7 +212,9 @@ mod tests {
         struct Stub;
         impl Renderable for Stub {
             fn render(&self, _area: Rect, _buf: &mut Buffer) {}
-            fn desired_height(&self, _width: u16) -> u16 { 1 }
+            fn desired_height(&self, _width: u16) -> u16 {
+                1
+            }
         }
         let s = Stub;
         assert!(s.cursor_pos(Rect::new(0, 0, 80, 24)).is_none());

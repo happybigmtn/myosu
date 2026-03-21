@@ -19,7 +19,6 @@ impl<T: Config> Pallet<T> {
         );
         log::debug!("Block emission: {block_emission:?}");
 
-
         // --- 4. Run emission through network.
         Self::run_coinbase(block_emission);
         // --- 5. Update moving prices AFTER using them for emissions.
@@ -300,5 +299,4 @@ impl<T: Config> Pallet<T> {
 
         root_proportion
     }
-
 }
