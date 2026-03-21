@@ -8,6 +8,13 @@
 | `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline` | 0 | 2 unit tests passed; 0 failed |
 | `cargo tree -p myosu-games-poker -e features --offline` | 0 | Confirmed `rbp-nlhe feature "serde"` and `rbp-mccfr feature "serde"` are active in the resolved feature graph |
 
+## Fixup Proof Commands That Passed
+
+| Command | Exit Code | Result |
+|---------|-----------|--------|
+| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-games-poker --offline` | 0 | Re-ran the crate test suite after the wording-only fixup; 2 unit tests passed and doc tests remained green |
+| `quality gate script for outputs/games/poker-engine/{implementation,verification}.md` | 0 | Regenerated `quality.md` with `quality_ready: yes`; artifact scan, warning scan, and follow-up scan all came back clean |
+
 ## Test Results
 
 ```text

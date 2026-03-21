@@ -13,11 +13,11 @@ pub use rbp_nlhe::{Flagship, NlheEdge, NlheInfo};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Poker;
 
-/// Placeholder for the solver wrapper that lands in Slice 2.
+/// Public slot for the solver wrapper that lands in Slice 2.
 #[derive(Debug)]
 pub struct PokerSolver;
 
-/// Placeholder for the training coordinator that lands in Slice 6.
+/// Public slot for the training coordinator that lands in Slice 6.
 #[derive(Debug)]
 pub struct TrainingSession;
 

@@ -36,7 +36,7 @@ Created a minimal public surface that:
 
 - re-exports `GameConfig`, `GameType`, `StrategyQuery`, and `StrategyResponse` from `myosu-games`
 - re-exports `Flagship`, `NlheInfo`, and `NlheEdge` from `rbp-nlhe`
-- introduces placeholder `Poker`, `PokerSolver`, and `TrainingSession` types for later slices
+- reserves the `Poker`, `PokerSolver`, and `TrainingSession` public type names so later slices can fill in their behavior without reshaping the crate root
 - adds a compile-time serde guard for `NlheInfo` and `NlheEdge`
 - adds two narrow smoke tests:
   - serde support is enabled for the NLHE types
