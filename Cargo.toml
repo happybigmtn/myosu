@@ -4,6 +4,7 @@ members = [
     "crates/myosu-games",
     "crates/myosu-tui",
     "crates/myosu-chain",      # Phase 0: honest chain workspace anchor
+    "crates/myosu-chain/runtime", # Phase 1 Slice 2: direct runtime proof surface
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
     # "crates/myosu-miner",      # Stage 4: Miner binary
     # "crates/myosu-validator",   # Stage 4: Validator binary
@@ -32,6 +33,7 @@ futures = "0.3"
 tokio-test = "0.4"
 codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
 scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
+frame = { package = "polkadot-sdk-frame", git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
@@ -44,3 +46,4 @@ sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable24
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 sp-version = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = true }
