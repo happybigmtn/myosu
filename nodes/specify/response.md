@@ -1,0 +1,5 @@
+Created the requested durable artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260321-01KM792JM32MFHBGQ19CS7SE3F/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260321-01KM792JM32MFHBGQ19CS7SE3F/worktree/outputs/agent-integration/review.md). The adapter maps `agent:experience` onto the product frontier and sequences it honestly with `play:tui`; the review makes the product-level call explicit: product should start an implementation-family workflow next, not wait for another upstream unblock.
+
+The key correction in the review is that the old robopoker absolute-path blocker in the product lane reviews is now stale. I verified current workspace truth: `crates/myosu-games` uses pinned git deps, `crates/myosu-play/` is still missing, and the real next blockers are product-owned implementation gaps like `myosu-play`, `myosu-games-poker`, `agent_context.rs`, `journal.rs`, and `narration.rs`.
+
+Verification: `cargo test -p myosu-games` passed and `cargo test -p myosu-tui` passed when run with `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-target`.
