@@ -1,0 +1,339 @@
+diff --git a/crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs b/crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs
+index 0f866b9..935dec9 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs
+@@ -19,7 +19,6 @@ impl<T: Config> Pallet<T> {
+         );
+         log::debug!("Block emission: {block_emission:?}");
+ 
+-
+         // --- 4. Run emission through network.
+         Self::run_coinbase(block_emission);
+         // --- 5. Update moving prices AFTER using them for emissions.
+@@ -300,5 +299,4 @@ impl<T: Config> Pallet<T> {
+ 
+         root_proportion
+     }
+-
+ }
+diff --git a/crates/myosu-chain/pallets/game-solver/src/lib.rs b/crates/myosu-chain/pallets/game-solver/src/lib.rs
+index 16fda03..854da56 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/lib.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/lib.rs
+@@ -89,7 +89,7 @@ pub mod pallet {
+         },
+     };
+     use frame_system::pallet_prelude::*;
+-        use runtime_common::prod_or_fast;
++    use runtime_common::prod_or_fast;
+     use sp_core::{ConstU32, H160, H256};
+     use sp_runtime::traits::{Dispatchable, TrailingZeroInput};
+     use sp_std::collections::btree_map::BTreeMap;
+diff --git a/crates/myosu-chain/pallets/game-solver/src/macros/config.rs b/crates/myosu-chain/pallets/game-solver/src/macros/config.rs
+index 6a85571..4023f90 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/macros/config.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/macros/config.rs
+@@ -153,7 +153,12 @@ pub mod types {
+     }
+ 
+     impl<T> BalanceType for T where
+-        T: Copy + Clone + Default + core::fmt::Debug + AtLeast32BitUnsigned + parity_scale_codec::Codec
++        T: Copy
++            + Clone
++            + Default
++            + core::fmt::Debug
++            + AtLeast32BitUnsigned
++            + parity_scale_codec::Codec
+     {
+     }
+ }
+diff --git a/crates/myosu-tui/src/events.rs b/crates/myosu-tui/src/events.rs
+index 797b481..8339a31 100644
+--- a/crates/myosu-tui/src/events.rs
++++ b/crates/myosu-tui/src/events.rs
+@@ -1,6 +1,6 @@
+ use crossterm::event::{Event as CrosstermEvent, KeyEvent};
+-use futures::{FutureExt, StreamExt};
+-use std::time::Duration;
++use futures::{FutureExt, Stream, StreamExt, stream::BoxStream};
++use std::{io, time::Duration};
+ use tokio::sync::mpsc;
+ 
+ /// Terminal events that drive the TUI event loop.
+@@ -44,6 +44,8 @@ pub struct EventLoop {
+     _task: tokio::task::JoinHandle<()>,
+ }
+ 
++type TerminalEventStream = BoxStream<'static, io::Result<CrosstermEvent>>;
++
+ impl EventLoop {
+     /// Create a new event loop with the given tick rate.
+     ///
+@@ -60,11 +62,18 @@ impl EventLoop {
+     /// # });
+     /// ```
+     pub fn new(tick_rate: Duration) -> Self {
++        Self::from_stream(tick_rate, crossterm::event::EventStream::new())
++    }
++
++    fn from_stream<S>(tick_rate: Duration, reader: S) -> Self
++    where
++        S: Stream<Item = io::Result<CrosstermEvent>> + Send + 'static,
++    {
+         let (tx, rx) = mpsc::unbounded_channel();
+         let (update_tx, mut update_rx) = mpsc::unbounded_channel::<UpdateEvent>();
++        let mut reader: TerminalEventStream = reader.boxed();
+ 
+         let _task = tokio::spawn(async move {
+-            let mut reader = crossterm::event::EventStream::new();
+             let mut tick_interval = tokio::time::interval(tick_rate);
+ 
+             loop {
+@@ -80,13 +89,8 @@ impl EventLoop {
+                     maybe_event = crossterm_event => {
+                         match maybe_event {
+                             Some(Ok(evt)) => {
+-                                let event = match evt {
+-                                    CrosstermEvent::Key(key) => Event::Key(key),
+-                                    CrosstermEvent::Resize(w, h) => Event::Resize(w, h),
+-                                    CrosstermEvent::FocusGained => continue,
+-                                    CrosstermEvent::FocusLost => continue,
+-                                    CrosstermEvent::Mouse(_) => continue,
+-                                    CrosstermEvent::Paste(_) => continue,
++                                let Some(event) = map_crossterm_event(evt) else {
++                                    continue;
+                                 };
+                                 if tx.send(event).is_err() {
+                                     break;
+@@ -134,61 +138,90 @@ impl Drop for EventLoop {
+     }
+ }
+ 
++fn map_crossterm_event(evt: CrosstermEvent) -> Option<Event> {
++    match evt {
++        CrosstermEvent::Key(key) => Some(Event::Key(key)),
++        CrosstermEvent::Resize(w, h) => Some(Event::Resize(w, h)),
++        CrosstermEvent::FocusGained => None,
++        CrosstermEvent::FocusLost => None,
++        CrosstermEvent::Mouse(_) => None,
++        CrosstermEvent::Paste(_) => None,
++    }
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    use crossterm::event::{KeyCode, KeyModifiers};
++    use futures::stream;
++
++    async fn next_non_tick(loop_handle: &mut EventLoop) -> Event {
++        for _ in 0..8 {
++            let event = tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
++                .await
++                .expect("timeout waiting for event")
++                .expect("event loop closed");
++
++            if event != Event::Tick {
++                return event;
++            }
++        }
++
++        panic!("did not receive non-tick event before deadline");
++    }
+ 
+-    /// Test that key events are properly handled by the event loop.
+-    /// This verifies the crossterm event stream integration.
+     #[tokio::test]
+-    #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
+-    async fn key_event_handled() {
+-        let mut loop_handle = EventLoop::new(Duration::from_millis(10));
+-        
+-        // Should receive tick events
++    async fn tick_event_handled_headless() {
++        let mut loop_handle = EventLoop::from_stream(Duration::from_millis(10), stream::pending());
++
+         let event = tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
+             .await
+             .expect("timeout waiting for event")
+             .expect("event loop closed");
+-        
++
+         assert_eq!(event, Event::Tick);
+     }
+ 
+-    /// Test that async updates can be injected into the event loop
+-    /// from background tasks (e.g., miner responses).
+     #[tokio::test]
+-    #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
+-    async fn async_response_received() {
+-        let mut loop_handle = EventLoop::new(Duration::from_secs(1)); // Slow ticks
++    async fn key_event_handled_headless() {
++        let key = KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE);
++        let stream = stream::iter(vec![Ok(CrosstermEvent::Key(key))]).chain(stream::pending());
++        let mut loop_handle = EventLoop::from_stream(Duration::from_millis(10), stream);
++
++        let event = next_non_tick(&mut loop_handle).await;
++
++        assert_eq!(event, Event::Key(key));
++    }
++
++    #[tokio::test]
++    async fn resize_event_handled_headless() {
++        let stream =
++            stream::iter(vec![Ok(CrosstermEvent::Resize(120, 42))]).chain(stream::pending());
++        let mut loop_handle = EventLoop::from_stream(Duration::from_millis(10), stream);
++
++        let event = next_non_tick(&mut loop_handle).await;
++
++        assert_eq!(event, Event::Resize(120, 42));
++    }
++
++    #[tokio::test]
++    async fn async_response_received_headless() {
++        let mut loop_handle = EventLoop::from_stream(Duration::from_millis(10), stream::pending());
+         let update_tx = loop_handle.update_sender();
+ 
+-        // Send an update
+         let update = UpdateEvent::Message("test".into());
+         update_tx.send(update.clone()).expect("send failed");
+ 
+-        // Collect events until we get our update
+-        let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
+-        let mut found = false;
+-        
+-        while tokio::time::Instant::now() < deadline {
+-            let timeout = deadline - tokio::time::Instant::now();
+-            if let Ok(Some(event)) = tokio::time::timeout(timeout, loop_handle.next()).await {
+-                if let Event::Update(UpdateEvent::Message(msg)) = &event {
+-                    assert_eq!(msg, "test");
+-                    found = true;
+-                    break;
+-                }
+-            }
+-        }
+-        
+-        assert!(found, "did not receive injected update");
++        let event = next_non_tick(&mut loop_handle).await;
++
++        assert_eq!(event, Event::Update(update));
+     }
+ 
+     /// Test that the update sender can be cloned and used from multiple
+     /// background tasks concurrently.
+     #[tokio::test]
+     async fn update_sender_cloned() {
+-        let loop_handle = EventLoop::new(Duration::from_secs(1));
++        let loop_handle = EventLoop::from_stream(Duration::from_millis(10), stream::pending());
+         let tx1 = loop_handle.update_sender();
+         let tx2 = loop_handle.update_sender();
+ 
+diff --git a/outputs/tui/shell/implementation.md b/outputs/tui/shell/implementation.md
+new file mode 100644
+index 0000000..070334f
+--- /dev/null
++++ b/outputs/tui/shell/implementation.md
+@@ -0,0 +1,36 @@
++# `tui:shell` Implementation — Slice 1
++
++## Slice Implemented
++
++**Slice 1 — Event Loop Headless Test**
++
++Implemented the next approved `tui:shell` slice from [spec.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/spec.md): make the event loop provable in CI without a real TTY.
++
++## What Changed
++
++### `crates/myosu-tui/src/events.rs`
++
++- Kept the public `EventLoop::new(tick_rate)` API unchanged for production callers.
++- Added an internal `from_stream(...)` seam so tests can inject synthetic `crossterm` events instead of constructing a real terminal-backed `EventStream`.
++- Boxed the reader behind a single internal `TerminalEventStream` alias to keep the spawned task logic unchanged apart from the injectable source.
++- Extracted `map_crossterm_event(...)` so the filter behavior for focus, mouse, and paste events remains explicit and shared.
++- Replaced the previous ignored TTY-only tests with headless tokio tests covering:
++  - tick delivery
++  - key delivery
++  - resize delivery
++  - async update delivery
++  - cloned update senders
++
++## Scope Guard
++
++- No changes were made to `shell.rs`, `schema.rs`, `pipe.rs`, `renderer.rs`, or the `GameRenderer` contract.
++- No lane expansion was performed beyond the approved `events.rs` slice.
++
++## Remaining Approved Slices
++
++| Slice | Status | Notes |
++|-------|--------|-------|
++| Slice 2 — Shell Integration Test | Pending | `Lobby` input should prove `handle_key` -> `handle_submit` -> `screens.apply_command` |
++| Slice 3 — Schema Per-Game Coverage | Pending | `schema.rs` remains reopened in review |
++| Slice 4 — Screen Render Tests | Pending | Only `Game` and too-small render paths are currently proven |
++| Slice 5 — Pipe Mode ANSI Enforcement | Pending | Optional caveat remains in review |
+diff --git a/outputs/tui/shell/integration.md b/outputs/tui/shell/integration.md
+new file mode 100644
+index 0000000..2ae7293
+--- /dev/null
++++ b/outputs/tui/shell/integration.md
+@@ -0,0 +1,22 @@
++# `tui:shell` Integration — Slice 1
++
++## Integration Status
++
++This slice is internal to [events.rs](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/crates/myosu-tui/src/events.rs). It improves proof coverage without changing the external shell contract.
++
++## Preserved Contracts
++
++- `Shell::run()` still depends on `EventLoop::new(tick_rate)`.
++- `EventLoop::update_sender()` still exposes the same cloned `mpsc::UnboundedSender<UpdateEvent>` contract.
++- Key and resize events still surface as `Event::Key` and `Event::Resize`.
++- Focus, mouse, and paste events are still ignored.
++
++## Downstream Impact
++
++- Downstream shells and game renderers do not need code changes.
++- Upstream lane consumers now have CI-safe proof that the event loop behaves in headless execution, which matters for Fabro runs and future pipe/agent automation.
++
++## Follow-On Integration Work
++
++- Slice 2 should prove the shell-side integration from input handling into `ScreenManager`.
++- Later slices should add render coverage across non-Game screens and address the remaining schema proof gap called out in [review.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/review.md).
+diff --git a/outputs/tui/shell/verification.md b/outputs/tui/shell/verification.md
+new file mode 100644
+index 0000000..2e275d0
+--- /dev/null
++++ b/outputs/tui/shell/verification.md
+@@ -0,0 +1,34 @@
++# `tui:shell` Verification — Slice 1
++
++## Automated Proof Commands
++
++| Command | Exit Code | Result |
++|---------|-----------|--------|
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events:: -- --include-ignored` | 0 | 6 headless event-loop tests passed |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell::` | 0 | 11 shell tests passed unchanged |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui all_game_types_have_schema` | 0 | Existing schema smoke test passed |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell_draw_` | 0 | Existing shell draw tests passed |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui is_plain_text` | 0 | Existing ANSI-detection test passed |
++
++## Command Notes
++
++- The lane review/spec shorthand `cargo test events:: --no-ignore` is not accepted by this Cargo toolchain. The cargo-compatible equivalent is `cargo test ... -- --include-ignored`.
++- The preflight shorthand `cargo test shell:: --integration` does not map to a real Cargo flag or a dedicated integration target in `myosu-tui`; the closest implemented proof surface is the `shell::` test module itself.
++- `CARGO_TARGET_DIR=/tmp/myosu-cargo-target` was set because the default workspace target directory is not writable in this execution environment.
++
++## Risks Reduced
++
++- The `events.rs` CI blind spot is reduced: key, resize, tick, and update delivery are now proven headlessly.
++- The lane no longer depends on a real TTY just to verify the event loop's core channel plumbing.
++
++## Risks Remaining
++
++- `shell.rs` is still reopened in review because the shell input-to-screen transition chain remains unproven.
++- `schema.rs` is still reopened in review because per-game semantic coverage remains incomplete.
++- There is still no end-to-end `PipeMode::run_once()` async proof tied to the event loop.
++
++## Next Approved Slice
++
++**Slice 2 — Shell Integration Test**
++
++Add a shell-level proof for `Lobby` input routing: simulate typing `1` and Enter, then assert the shell transitions into `Screen::Game`.
