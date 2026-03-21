@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 58356,
+  "attempt": 4,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T02:27:46.835432915+00:00",
+  "updated_at": "2026-03-21T02:27:46.835440674+00:00",
+  "failure_reason": "Handler error: CLI command exited with code 1: WARNING: proceeding, even though we could not update PATH: CODEX_HOME points to \"/tmp/fabro_cli_8fff9f33-f909-49f3-b14c-75fd05e04118_codex_home\", but that path does not exist\nError finding codex home: CODEX_HOME points to \"/tmp/fabro_cli_8fff9f33-f909-49f3-b14c-75fd05e04118_codex_home\", but that path does not exist\n"
+}
