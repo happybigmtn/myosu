@@ -1,0 +1,1 @@
+All background tasks confirm exit code 0. The pallet is ready.
