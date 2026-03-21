@@ -1,0 +1,419 @@
+diff --git a/crates/myosu-tui/src/events.rs b/crates/myosu-tui/src/events.rs
+index 797b481..eba8314 100644
+--- a/crates/myosu-tui/src/events.rs
++++ b/crates/myosu-tui/src/events.rs
+@@ -1,5 +1,5 @@
+ use crossterm::event::{Event as CrosstermEvent, KeyEvent};
+-use futures::{FutureExt, StreamExt};
++use futures::{FutureExt, Stream, StreamExt};
+ use std::time::Duration;
+ use tokio::sync::mpsc;
+ 
+@@ -51,7 +51,7 @@ impl EventLoop {
+     /// * `tick_rate` - Duration between tick events for UI updates.
+     ///
+     /// # Example
+-    /// ```
++    /// ```no_run
+     /// use std::time::Duration;
+     /// use myosu_tui::events::EventLoop;
+     ///
+@@ -60,49 +60,18 @@ impl EventLoop {
+     /// # });
+     /// ```
+     pub fn new(tick_rate: Duration) -> Self {
++        Self::with_stream(tick_rate, crossterm::event::EventStream::new())
++    }
++
++    fn with_stream<S>(tick_rate: Duration, reader: S) -> Self
++    where
++        S: Stream<Item = std::io::Result<CrosstermEvent>> + Send + Unpin + 'static,
++    {
+         let (tx, rx) = mpsc::unbounded_channel();
+         let (update_tx, mut update_rx) = mpsc::unbounded_channel::<UpdateEvent>();
+ 
+         let _task = tokio::spawn(async move {
+-            let mut reader = crossterm::event::EventStream::new();
+-            let mut tick_interval = tokio::time::interval(tick_rate);
+-
+-            loop {
+-                let tick = tick_interval.tick().fuse();
+-                let crossterm_event = reader.next().fuse();
+-
+-                tokio::select! {
+-                    _ = tick => {
+-                        if tx.send(Event::Tick).is_err() {
+-                            break;
+-                        }
+-                    }
+-                    maybe_event = crossterm_event => {
+-                        match maybe_event {
+-                            Some(Ok(evt)) => {
+-                                let event = match evt {
+-                                    CrosstermEvent::Key(key) => Event::Key(key),
+-                                    CrosstermEvent::Resize(w, h) => Event::Resize(w, h),
+-                                    CrosstermEvent::FocusGained => continue,
+-                                    CrosstermEvent::FocusLost => continue,
+-                                    CrosstermEvent::Mouse(_) => continue,
+-                                    CrosstermEvent::Paste(_) => continue,
+-                                };
+-                                if tx.send(event).is_err() {
+-                                    break;
+-                                }
+-                            }
+-                            Some(Err(_)) => break,
+-                            None => break,
+-                        }
+-                    }
+-                    Some(update) = update_rx.recv() => {
+-                        if tx.send(Event::Update(update)).is_err() {
+-                            break;
+-                        }
+-                    }
+-                }
+-            }
++            Self::run_event_task(tx, &mut update_rx, tick_rate, reader).await;
+         });
+ 
+         Self {
+@@ -112,6 +81,60 @@ impl EventLoop {
+         }
+     }
+ 
++    async fn run_event_task<S>(
++        tx: mpsc::UnboundedSender<Event>,
++        update_rx: &mut mpsc::UnboundedReceiver<UpdateEvent>,
++        tick_rate: Duration,
++        mut reader: S,
++    ) where
++        S: Stream<Item = std::io::Result<CrosstermEvent>> + Unpin,
++    {
++        let mut tick_interval = tokio::time::interval(tick_rate);
++
++        loop {
++            let tick = tick_interval.tick().fuse();
++            let crossterm_event = reader.next().fuse();
++
++            tokio::select! {
++                _ = tick => {
++                    if tx.send(Event::Tick).is_err() {
++                        break;
++                    }
++                }
++                maybe_event = crossterm_event => {
++                    match maybe_event {
++                        Some(Ok(evt)) => {
++                            let Some(event) = Self::map_crossterm_event(evt) else {
++                                continue;
++                            };
++                            if tx.send(event).is_err() {
++                                break;
++                            }
++                        }
++                        Some(Err(_)) => break,
++                        None => break,
++                    }
++                }
++                Some(update) = update_rx.recv() => {
++                    if tx.send(Event::Update(update)).is_err() {
++                        break;
++                    }
++                }
++            }
++        }
++    }
++
++    fn map_crossterm_event(event: CrosstermEvent) -> Option<Event> {
++        match event {
++            CrosstermEvent::Key(key) => Some(Event::Key(key)),
++            CrosstermEvent::Resize(w, h) => Some(Event::Resize(w, h)),
++            CrosstermEvent::FocusGained => None,
++            CrosstermEvent::FocusLost => None,
++            CrosstermEvent::Mouse(_) => None,
++            CrosstermEvent::Paste(_) => None,
++        }
++    }
++
+     /// Receive the next event from the loop.
+     ///
+     /// Returns `None` if the event loop has shut down.
+@@ -137,58 +160,106 @@ impl Drop for EventLoop {
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    use crossterm::event::{KeyCode, KeyEventKind, KeyEventState, KeyModifiers};
++    use std::pin::Pin;
++    use std::task::{Context, Poll};
+ 
+-    /// Test that key events are properly handled by the event loop.
+-    /// This verifies the crossterm event stream integration.
+-    #[tokio::test]
+-    #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
+-    async fn key_event_handled() {
+-        let mut loop_handle = EventLoop::new(Duration::from_millis(10));
+-        
+-        // Should receive tick events
+-        let event = tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
++    struct MockEventStream {
++        rx: mpsc::UnboundedReceiver<std::io::Result<CrosstermEvent>>,
++    }
++
++    impl MockEventStream {
++        fn new() -> (Self, mpsc::UnboundedSender<std::io::Result<CrosstermEvent>>) {
++            let (tx, rx) = mpsc::unbounded_channel();
++            (Self { rx }, tx)
++        }
++    }
++
++    impl Stream for MockEventStream {
++        type Item = std::io::Result<CrosstermEvent>;
++
++        fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
++            self.rx.poll_recv(cx)
++        }
++    }
++
++    fn press(code: KeyCode) -> KeyEvent {
++        KeyEvent {
++            code,
++            modifiers: KeyModifiers::NONE,
++            kind: KeyEventKind::Press,
++            state: KeyEventState::NONE,
++        }
++    }
++
++    async fn next_event(loop_handle: &mut EventLoop) -> Event {
++        tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
+             .await
+             .expect("timeout waiting for event")
+-            .expect("event loop closed");
+-        
+-        assert_eq!(event, Event::Tick);
++            .expect("event loop closed")
++    }
++
++    #[tokio::test]
++    async fn tick_event_handled_headless() {
++        let (reader, _stream_tx) = MockEventStream::new();
++        let mut loop_handle = EventLoop::with_stream(Duration::from_secs(60), reader);
++
++        assert_eq!(next_event(&mut loop_handle).await, Event::Tick);
++    }
++
++    /// Test that key events are properly handled by the event loop
++    /// without requiring a real terminal.
++    #[tokio::test]
++    async fn key_event_handled() {
++        let (reader, stream_tx) = MockEventStream::new();
++        let mut loop_handle = EventLoop::with_stream(Duration::from_secs(60), reader);
++
++        assert_eq!(next_event(&mut loop_handle).await, Event::Tick);
++
++        let key = press(KeyCode::Enter);
++        stream_tx
++            .send(Ok(CrosstermEvent::Key(key)))
++            .expect("send failed");
++
++        assert_eq!(next_event(&mut loop_handle).await, Event::Key(key));
+     }
+ 
+     /// Test that async updates can be injected into the event loop
+     /// from background tasks (e.g., miner responses).
+     #[tokio::test]
+-    #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
+     async fn async_response_received() {
+-        let mut loop_handle = EventLoop::new(Duration::from_secs(1)); // Slow ticks
++        let (reader, _stream_tx) = MockEventStream::new();
++        let mut loop_handle = EventLoop::with_stream(Duration::from_secs(60), reader);
+         let update_tx = loop_handle.update_sender();
+ 
+-        // Send an update
++        assert_eq!(next_event(&mut loop_handle).await, Event::Tick);
++
+         let update = UpdateEvent::Message("test".into());
+         update_tx.send(update.clone()).expect("send failed");
+ 
+-        // Collect events until we get our update
+-        let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
+-        let mut found = false;
+-        
+-        while tokio::time::Instant::now() < deadline {
+-            let timeout = deadline - tokio::time::Instant::now();
+-            if let Ok(Some(event)) = tokio::time::timeout(timeout, loop_handle.next()).await {
+-                if let Event::Update(UpdateEvent::Message(msg)) = &event {
+-                    assert_eq!(msg, "test");
+-                    found = true;
+-                    break;
+-                }
+-            }
+-        }
+-        
+-        assert!(found, "did not receive injected update");
++        assert_eq!(next_event(&mut loop_handle).await, Event::Update(update));
++    }
++
++    #[tokio::test]
++    async fn resize_event_handled() {
++        let (reader, stream_tx) = MockEventStream::new();
++        let mut loop_handle = EventLoop::with_stream(Duration::from_secs(60), reader);
++
++        assert_eq!(next_event(&mut loop_handle).await, Event::Tick);
++
++        stream_tx
++            .send(Ok(CrosstermEvent::Resize(120, 40)))
++            .expect("send failed");
++
++        assert_eq!(next_event(&mut loop_handle).await, Event::Resize(120, 40));
+     }
+ 
+     /// Test that the update sender can be cloned and used from multiple
+     /// background tasks concurrently.
+     #[tokio::test]
+     async fn update_sender_cloned() {
+-        let loop_handle = EventLoop::new(Duration::from_secs(1));
++        let (reader, _stream_tx) = MockEventStream::new();
++        let loop_handle = EventLoop::with_stream(Duration::from_secs(60), reader);
+         let tx1 = loop_handle.update_sender();
+         let tx2 = loop_handle.update_sender();
+ 
+diff --git a/outputs/tui/shell/implementation.md b/outputs/tui/shell/implementation.md
+new file mode 100644
+index 0000000..07dcb32
+--- /dev/null
++++ b/outputs/tui/shell/implementation.md
+@@ -0,0 +1,53 @@
++# `tui:shell` Implementation — Slice 1
++
++## Slice Implemented
++
++**Slice 1 — Event Loop Headless Test**
++
++Implemented the next approved `tui:shell` slice from `outputs/tui/shell/spec.md` and `outputs/tui/shell/review.md` by making the `events.rs` event source injectable for tests and replacing the TTY-only ignored tests with headless proof.
++
++## What Changed
++
++### `crates/myosu-tui/src/events.rs`
++
++The public `EventLoop::new` API is unchanged, but the internal task setup now delegates through a private injected-stream constructor:
++
++- `EventLoop::new(...)` now calls private `with_stream(...)`
++- `run_event_task(...)` holds the async select loop so production and test streams share the same logic
++- `map_crossterm_event(...)` centralizes Crossterm-to-Myosu event mapping
++
++This keeps the implementation slice inside the owned `events.rs` surface while letting tests supply a synthetic stream.
++
++## Headless Proof Added
++
++Added a channel-backed `MockEventStream` in the `events.rs` test module and replaced the two ignored tests with deterministic headless coverage:
++
++- `tick_event_handled_headless`
++- `key_event_handled`
++- `resize_event_handled`
++- `async_response_received`
++
++The updated tests now prove that tick, key, resize, and async update events traverse the event loop without requiring a real terminal.
++
++## Nearby Fix Discovered While Verifying
++
++The `EventLoop::new` doctest executed the constructor in a headless environment and panicked inside `crossterm`. The example block is now marked `no_run`, so documentation still compiles without trying to open a terminal during doctest execution.
++
++## Scope Guard
++
++This slice touched only `crates/myosu-tui/src/events.rs`.
++
++No changes were made to:
++
++- `shell.rs`
++- `schema.rs`
++- `pipe.rs`
++- any downstream game renderer surfaces
++
++## Next Slice
++
++Per `outputs/tui/shell/spec.md`, the next approved implementation slice remains:
++
++**Slice 2 — Shell Integration Test**
++
++Add a `shell.rs` integration test covering Lobby input submission through `handle_key`/`handle_submit` into a Game screen transition.
+diff --git a/outputs/tui/shell/integration.md b/outputs/tui/shell/integration.md
+new file mode 100644
+index 0000000..456ec03
+--- /dev/null
++++ b/outputs/tui/shell/integration.md
+@@ -0,0 +1,31 @@
++# `tui:shell` Integration — Slice 1
++
++## Contract Preserved
++
++This slice preserves the runtime contract consumed by the rest of `myosu-tui`:
++
++- `EventLoop::new(Duration) -> EventLoop` is unchanged
++- `EventLoop::next()` is unchanged
++- `EventLoop::update_sender()` is unchanged
++
++`shell.rs` continues to construct the event loop exactly as before, with no call-site changes required.
++
++## Integration Effect
++
++The only integration change is internal testability:
++
++- production still uses `crossterm::event::EventStream`
++- tests can now inject a mock stream through the same event-task logic
++- the shell-facing event contract is now proven headlessly for tick, key, resize, and update events
++
++## Surfaces Intentionally Not Touched
++
++- `crates/myosu-tui/src/shell.rs`
++- `crates/myosu-tui/src/screens.rs`
++- `crates/myosu-tui/src/input.rs`
++- `crates/myosu-tui/src/schema.rs`
++- `crates/myosu-tui/src/pipe.rs`
++
++## Verification Signal
++
++The full `myosu-tui` crate test pass after this slice indicates the internal `events.rs` refactor did not break neighboring TUI surfaces or their current contracts.
+diff --git a/outputs/tui/shell/verification.md b/outputs/tui/shell/verification.md
+new file mode 100644
+index 0000000..4da4069
+--- /dev/null
++++ b/outputs/tui/shell/verification.md
+@@ -0,0 +1,39 @@
++# `tui:shell` Verification — Slice 1
++
++## Automated Proof Commands
++
++All commands were run from the workspace root. Because the default target directory resolves outside the writable sandbox in this run environment, Cargo commands were executed with `CARGO_TARGET_DIR=/tmp/myosu-target`.
++
++| Command | Exit Code | Result |
++|---------|-----------|--------|
++| `cargo fmt --all` | 0 | Formatting passed |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events::` | 0 | Focused `events` module proof passed: 6 tests |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events:: -- --include-ignored` | 0 | Current Cargo-compatible equivalent of the spec gate; 6 tests passed and no ignored `events` tests remain |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui` | 0 | Full crate regression pass: 86 unit tests + 1 doctest passed |
++
++## Proof Outcome
++
++The reopened `events.rs` proof gap is reduced for Slice 1:
++
++- headless tick delivery is proven
++- headless key delivery is proven
++- headless resize delivery is proven
++- headless async update injection is proven
++
++The original TTY-dependent ignored tests are no longer required for CI proof.
++
++## Residual Risks
++
++- The live terminal path still depends on `crossterm::event::EventStream` at runtime. This slice proves the shared event-loop logic headlessly, but it does not add an end-to-end live terminal harness.
++- `shell.rs` remains reopened for its separate integration and render-proof gaps.
++- `schema.rs` remains reopened for per-game coverage gaps.
++
++## Next Approved Slice
++
++**Slice 2 — Shell Integration Test**
++
++Proof gate from the lane spec:
++
++```bash
++cargo test shell:: --integration
++```
