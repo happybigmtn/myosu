@@ -19,6 +19,11 @@ std = [
     "substrate-fixed/std",
     "log/std",
 ]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "sp-runtime/try-runtime",
+]
 
 [dependencies]
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }

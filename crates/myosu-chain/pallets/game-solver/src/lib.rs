@@ -29,6 +29,7 @@ extern crate alloc;
 // ==== Pallet Definition =====
 // ============================
 
+#[allow(dead_code)]
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
