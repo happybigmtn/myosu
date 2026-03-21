@@ -1,0 +1,5 @@
+Created [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/outputs/agent-integration/review.md).
+
+They conclude the next honest move is a product implementation family, not another upstream unblock. The key integration finding is that the old `robopoker` path blocker cited in `agent:experience` is stale now that [Cargo.toml](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/crates/myosu-games/Cargo.toml) uses pinned git revs, so the real blockers are missing product-owned surfaces like `crates/myosu-play/` and the agent modules in `myosu-tui`. The recommended order is `play:tui` implementation first, then `agent:experience` as soon as the `myosu-play` skeleton exists.
+
+I verified the new artifacts and the diff. I could not rerun `cargo test` in this sandbox because the inherited cargo target path was read-only and forcing a local target dir hit `/tmp` disk quota, so that limitation is called out directly in the review.

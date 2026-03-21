@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-03-21T03:29:46.728565837Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "start": 1,
+    "specify": 1
+  },
+  "context_values": {
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree",
+    "internal.fidelity": "compact",
+    "internal.run_id": "01KM76RCVN2VJ5KA5F449F0JBQ",
+    "failure_class": "",
+    "internal.node_visit_count": 1,
+    "internal.retry_count.start": 1,
+    "failure_signature": "",
+    "internal.retry_count.specify": 1,
+    "last_stage": "specify",
+    "graph.rankdir": "LR",
+    "internal.thread_id": "start",
+    "current_node": "specify",
+    "response.specify": "Created [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/outputs/agent-integration/review.md).\n\nThey conclude the next honest move is a product implementation family, not another upstream unblock. The key integration finding is that the old `robopoker` path blocker cited in `agent:experience` is stale now that [Cargo.toml](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/crates/myosu-games/Cargo.toml) uses pinned git revs, so the real blockers are missing product-owned surfaces like `crates/myosu-play/` and the agent modules in `myosu-tui`. The recommended order is `play:tui` implementation first, then `agent:experience` as soon as the `myosu-play` skeleton exists.\n\nI verified the new artifacts and the diff. I could not rerun `cargo test` in this sandbox because the inherited cargo target path was read-only and forcing a local target dir hit `/tmp` disk quota, so that limitation is called out directly in the review.",
+    "thread.start.current_node": "specify",
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
+    "outcome": "success",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "last_response": "Created [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F4"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "specify": {
+      "status": "success",
+      "context_updates": {
+        "last_response": "Created [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F4",
+        "response.specify": "Created [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/outputs/agent-integration/review.md).\n\nThey conclude the next honest move is a product implementation family, not another upstream unblock. The key integration finding is that the old `robopoker` path blocker cited in `agent:experience` is stale now that [Cargo.toml](/home/r/.fabro/runs/20260320-01KM76RCVN2VJ5KA5F449F0JBQ/worktree/crates/myosu-games/Cargo.toml) uses pinned git revs, so the real blockers are missing product-owned surfaces like `crates/myosu-play/` and the agent modules in `myosu-tui`. The recommended order is `play:tui` implementation first, then `agent:experience` as soon as the `myosu-play` skeleton exists.\n\nI verified the new artifacts and the diff. I could not rerun `cargo test` in this sandbox because the inherited cargo target path was read-only and forcing a local target dir hit `/tmp` disk quota, so that limitation is called out directly in the review.",
+        "last_stage": "specify"
+      },
+      "notes": "Stage completed: specify",
+      "usage": {
+        "model": "gpt-5.4",
+        "input_tokens": 1154631,
+        "output_tokens": 15709,
+        "cost": 3.1222125
+      },
+      "files_written": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "files_touched": [
+        "outputs/agent-integration/agent-adapter.md",
+        "outputs/agent-integration/review.md"
+      ],
+      "duration_ms": 320869
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "specify": 1,
+    "start": 1
+  }
+}
