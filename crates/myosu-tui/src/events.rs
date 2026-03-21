@@ -1,6 +1,6 @@
 use crossterm::event::{Event as CrosstermEvent, KeyEvent};
 use futures::{FutureExt, StreamExt};
-use std::time::Duration;
+use std::{io, time::Duration};
 use tokio::sync::mpsc;
 
 /// Terminal events that drive the TUI event loop.
@@ -60,11 +60,18 @@ impl EventLoop {
     /// # });
     /// ```
     pub fn new(tick_rate: Duration) -> Self {
+        Self::from_stream(tick_rate, crossterm::event::EventStream::new())
+    }
+
+    fn from_stream<S>(tick_rate: Duration, event_stream: S) -> Self
+    where
+        S: futures::Stream<Item = io::Result<CrosstermEvent>> + Send + Unpin + 'static,
+    {
         let (tx, rx) = mpsc::unbounded_channel();
         let (update_tx, mut update_rx) = mpsc::unbounded_channel::<UpdateEvent>();
 
         let _task = tokio::spawn(async move {
-            let mut reader = crossterm::event::EventStream::new();
+            let mut reader = event_stream;
             let mut tick_interval = tokio::time::interval(tick_rate);
 
             loop {
@@ -137,39 +144,101 @@ impl Drop for EventLoop {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use futures::Stream;
+    use std::{
+        pin::Pin,
+        task::{Context, Poll},
+    };
 
-    /// Test that key events are properly handled by the event loop.
-    /// This verifies the crossterm event stream integration.
-    #[tokio::test]
-    #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
-    async fn key_event_handled() {
-        let mut loop_handle = EventLoop::new(Duration::from_millis(10));
-        
-        // Should receive tick events
-        let event = tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
-            .await
-            .expect("timeout waiting for event")
-            .expect("event loop closed");
-        
-        assert_eq!(event, Event::Tick);
+    struct MockEventStream {
+        rx: mpsc::UnboundedReceiver<io::Result<CrosstermEvent>>,
     }
 
-    /// Test that async updates can be injected into the event loop
-    /// from background tasks (e.g., miner responses).
+    impl MockEventStream {
+        fn new() -> (
+            mpsc::UnboundedSender<io::Result<CrosstermEvent>>,
+            MockEventStream,
+        ) {
+            let (tx, rx) = mpsc::unbounded_channel();
+            (tx, Self { rx })
+        }
+    }
+
+    impl Stream for MockEventStream {
+        type Item = io::Result<CrosstermEvent>;
+
+        fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            self.rx.poll_recv(cx)
+        }
+    }
+
+    fn headless_event_loop(
+        tick_rate: Duration,
+    ) -> (EventLoop, mpsc::UnboundedSender<io::Result<CrosstermEvent>>) {
+        let (stream_tx, stream) = MockEventStream::new();
+        (EventLoop::from_stream(tick_rate, stream), stream_tx)
+    }
+
     #[tokio::test]
-    #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
+    async fn headless_stream_delivers_tick_key_resize_and_update() {
+        let (mut loop_handle, stream_tx) = headless_event_loop(Duration::from_millis(10));
+        let update_tx = loop_handle.update_sender();
+        let expected_key = KeyEvent::new(KeyCode::Char('x'), KeyModifiers::SHIFT);
+
+        stream_tx
+            .send(Ok(CrosstermEvent::Key(expected_key)))
+            .expect("send key event");
+        stream_tx
+            .send(Ok(CrosstermEvent::Resize(120, 40)))
+            .expect("send resize event");
+        update_tx
+            .send(UpdateEvent::Message("headless update".into()))
+            .expect("send update event");
+
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
+        let mut saw_tick = false;
+        let mut saw_key = false;
+        let mut saw_resize = false;
+        let mut saw_update = false;
+
+        while tokio::time::Instant::now() < deadline
+            && !(saw_tick && saw_key && saw_resize && saw_update)
+        {
+            let timeout = deadline - tokio::time::Instant::now();
+            let event = tokio::time::timeout(timeout, loop_handle.next())
+                .await
+                .expect("timeout waiting for event")
+                .expect("event loop closed");
+
+            match event {
+                Event::Tick => saw_tick = true,
+                Event::Key(key) => saw_key = key == expected_key,
+                Event::Resize(width, height) => saw_resize = (width, height) == (120, 40),
+                Event::Update(UpdateEvent::Message(message)) => {
+                    saw_update = message == "headless update"
+                }
+                _ => {}
+            }
+        }
+
+        assert!(saw_tick, "did not receive tick event");
+        assert!(saw_key, "did not receive key event");
+        assert!(saw_resize, "did not receive resize event");
+        assert!(saw_update, "did not receive injected update");
+    }
+
+    #[tokio::test]
     async fn async_response_received() {
-        let mut loop_handle = EventLoop::new(Duration::from_secs(1)); // Slow ticks
+        let (mut loop_handle, _stream_tx) = headless_event_loop(Duration::from_secs(1));
         let update_tx = loop_handle.update_sender();
 
-        // Send an update
         let update = UpdateEvent::Message("test".into());
         update_tx.send(update.clone()).expect("send failed");
 
-        // Collect events until we get our update
         let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
         let mut found = false;
-        
+
         while tokio::time::Instant::now() < deadline {
             let timeout = deadline - tokio::time::Instant::now();
             if let Ok(Some(event)) = tokio::time::timeout(timeout, loop_handle.next()).await {
@@ -180,7 +249,7 @@ mod tests {
                 }
             }
         }
-        
+
         assert!(found, "did not receive injected update");
     }
 
@@ -188,7 +257,7 @@ mod tests {
     /// background tasks concurrently.
     #[tokio::test]
     async fn update_sender_cloned() {
-        let loop_handle = EventLoop::new(Duration::from_secs(1));
+        let (loop_handle, _stream_tx) = headless_event_loop(Duration::from_secs(1));
         let tx1 = loop_handle.update_sender();
         let tx2 = loop_handle.update_sender();
 
