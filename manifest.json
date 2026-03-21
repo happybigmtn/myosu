@@ -1,0 +1,13 @@
+{
+  "run_id": "01KM71ZMKXKTA8K2MZZG2XYZGP",
+  "workflow_name": "ChainRuntimeRestart",
+  "goal": "Implement the next approved `chain:runtime` slice.\n\nInputs:\n- `runtime/spec.md`\n- `runtime/review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `chain:runtime`\n\nRequired curated artifacts:\n- `runtime/implementation.md`\n- `runtime/verification.md`\n- `runtime/quality.md`\n- `runtime/promotion.md`\n- `runtime/integration.md`\n",
+  "start_time": "2026-03-21T02:01:00.538061328Z",
+  "node_count": 9,
+  "edge_count": 12,
+  "run_branch": "fabro/run/01KM71ZMKXKTA8K2MZZG2XYZGP",
+  "base_sha": "6b547323ccdc1c2a06e82f6e47111495a7630ab2",
+  "base_branch": "autodev-live",
+  "workflow_slug": "implement",
+  "host_repo_path": "/home/r/coding/myosu/.worktrees/autodev-live"
+}
