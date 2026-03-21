@@ -71,10 +71,22 @@ The runtime now has:
 - the standard core, metadata, block-builder, tx-queue, offchain, runtime-payment, and genesis APIs
 - a working `substrate-wasm-builder` path that emits Wasm artifacts
 
+### Executable proof gate
+
+- `fabro/checks/chain-runtime-reset.sh`
+
+Replaced the old file-existence stub with the approved Slice 1 proof entrypoint.
+Fabro and Raspberry can now validate the current runtime lane by running the
+same commands that the verification artifact reports, including the non-zero
+Wasm artifact checks. The script intentionally pins Cargo's target directory to
+`/tmp/myosu-chain-target` (override with `MYOSU_CHAIN_TARGET_DIR`) so sandbox
+sessions do not inherit a read-only ambient `CARGO_TARGET_DIR`.
+
 ## Owned Surfaces Changed
 
 - `Cargo.toml`
 - `Cargo.lock`
+- `fabro/checks/chain-runtime-reset.sh`
 - `crates/myosu-chain/Cargo.toml`
 - `crates/myosu-chain/src/lib.rs`
 - `crates/myosu-chain/common/Cargo.toml`
@@ -102,10 +114,19 @@ validated by this fixup.
 ## Automated Proof Commands For This Slice
 
 ```bash
+./fabro/checks/chain-runtime-reset.sh
+
+# Under the hood, the check runs:
 CARGO_TARGET_DIR=/tmp/myosu-chain-target cargo check --offline -p myosu-chain-common
 CARGO_TARGET_DIR=/tmp/myosu-chain-target cargo check --offline -p myosu-chain
 WASM_BUILD_WORKSPACE_HINT="$PWD" CARGO_NET_OFFLINE=true CARGO_TARGET_DIR=/tmp/myosu-chain-target cargo check --offline -p myosu-runtime
 WASM_BUILD_WORKSPACE_HINT="$PWD" CARGO_NET_OFFLINE=true CARGO_TARGET_DIR=/tmp/myosu-chain-target cargo build --offline --release -p myosu-runtime
+test -s /tmp/myosu-chain-target/release/wbuild/myosu-runtime/myosu_runtime.wasm
+test -s /tmp/myosu-chain-target/release/wbuild/myosu-runtime/myosu_runtime.compact.wasm
+test -s /tmp/myosu-chain-target/release/wbuild/myosu-runtime/myosu_runtime.compact.compressed.wasm
+
+# To override the writable proof target dir:
+MYOSU_CHAIN_TARGET_DIR=/some/writable/path ./fabro/checks/chain-runtime-reset.sh
 ```
 
 ## What Remains

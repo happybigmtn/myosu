@@ -19,6 +19,8 @@ rather than "node/devnet ready."
 
 ## Integration Notes
 
+- `./fabro/checks/chain-runtime-reset.sh` is now the canonical Slice 1 proof entrypoint for Fabro/Raspberry automation. Downstream lanes should invoke that script instead of inferring commands from prose.
+- The proof script ignores the shell's ambient `CARGO_TARGET_DIR` and uses `/tmp/myosu-chain-target` by default so automation stays inside a writable sandbox path. Set `MYOSU_CHAIN_TARGET_DIR` if a different writable target dir is required.
 - In sandboxed or offline environments, run the runtime proof with `WASM_BUILD_WORKSPACE_HINT="$PWD"` and `CARGO_NET_OFFLINE=true` so the nested Wasm builder uses the workspace lockfile and local dependency cache.
 - The verified Wasm outputs live under `/tmp/myosu-chain-target/release/wbuild/myosu-runtime/`; no repo-local target directory assumptions are required.
 - The earlier implementation run also carried adjacent edits outside the runtime-owned proof boundary. This fixup does not broaden integration claims to cover those surfaces.

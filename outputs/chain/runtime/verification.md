@@ -4,6 +4,7 @@
 
 | Command | Exit Code | Outcome | Notes |
 |---------|-----------|---------|-------|
+| `./fabro/checks/chain-runtime-reset.sh` | 0 | Passed | Fabro/Raspberry proof entrypoint now runs the Slice 1 build checks and Wasm artifact assertions end to end, while forcing a writable target dir instead of inheriting the sandbox's read-only ambient `CARGO_TARGET_DIR` |
 | `CARGO_TARGET_DIR=/tmp/myosu-chain-target cargo check --offline -p myosu-chain-common` | 0 | Passed | Emits a future-incompat warning for `trie-db v0.29.1` |
 | `CARGO_TARGET_DIR=/tmp/myosu-chain-target cargo check --offline -p myosu-chain` | 0 | Passed | Marker crate compiles cleanly |
 | `WASM_BUILD_WORKSPACE_HINT="$PWD" CARGO_NET_OFFLINE=true CARGO_TARGET_DIR=/tmp/myosu-chain-target cargo check --offline -p myosu-runtime` | 0 | Passed | Runtime crate compiles, including nested Wasm build setup |
@@ -27,6 +28,7 @@ The release build produced these non-zero artifacts under
 
 - The runtime lane is no longer a dead code scaffold. `myosu-runtime` is a real workspace package with a repeatable release build.
 - The Wasm build path is now proven instead of assumed.
+- Fabro and Raspberry now have an executable runtime proof entrypoint instead of a path-existence stub.
 - The preserved common surface no longer depends on missing `subtensor_*` support crates.
 - The current slice proof is now explicit and bounded to runtime-owned surfaces instead of bleeding into future node work.
 
@@ -38,6 +40,7 @@ The release build produced these non-zero artifacts under
 - The common crate was reduced to the subset needed to compile honestly in this restart slice. If downstream work needs removed fixed-point or subtensor-era helpers, they must be restored intentionally later.
 - The proof logs still emit a future-incompat warning for `trie-db v0.29.1`.
 - In this network-restricted environment, the runtime proof depends on `WASM_BUILD_WORKSPACE_HINT` and `CARGO_NET_OFFLINE=true` so the nested Wasm build uses the checked-in lockfile and local cache.
+- The proof script must override the shell's ambient `CARGO_TARGET_DIR`, which points at a read-only `.raspberry` path in this sandbox.
 
 ## Next Slice
 
