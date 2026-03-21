@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 3,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T02:12:47.300782391+00:00",
+  "updated_at": "2026-03-21T02:12:47.300788609+00:00",
+  "failure_reason": "Script failed with exit code: 1"
+}
