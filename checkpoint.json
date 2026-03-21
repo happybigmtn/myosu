@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-03-21T03:06:01.674746099Z",
+  "current_node": "preflight",
+  "completed_nodes": [
+    "start",
+    "preflight"
+  ],
+  "node_retries": {
+    "preflight": 1,
+    "start": 1
+  },
+  "context_values": {
+    "internal.thread_id": "start",
+    "internal.fidelity": "compact",
+    "outcome": "success",
+    "internal.run_id": "01KM755GFB9SS6HFPKZYFWVJDP",
+    "command.stderr": "file:///home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/artifacts/values/command.stderr.json",
+    "thread.start.current_node": "preflight",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: cli; model: gpt-5.4; provider: openai; }\n        ",
+    "failure_signature": "",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree",
+    "internal.retry_count.start": 1,
+    "current_node": "preflight",
+    "current.preamble": "Goal: Implement the next approved `tui:shell` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `tui:shell`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `quality.md`\n- `promotion.md`\n- `integration.md`\n\n",
+    "internal.node_visit_count": 1,
+    "failure_class": "",
+    "graph.rankdir": "LR",
+    "internal.retry_count.preflight": 1,
+    "graph.goal": "Implement the next approved `tui:shell` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `tui:shell`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `quality.md`\n- `promotion.md`\n- `integration.md`\n",
+    "command.output": ""
+  },
+  "logs": [],
+  "node_outcomes": {
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    },
+    "preflight": {
+      "status": "success",
+      "context_updates": {
+        "command.stderr": "file:///home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/artifacts/values/command.stderr.json",
+        "command.output": ""
+      },
+      "notes": "Script completed: set +e\ncargo test events:: --no-ignore\ncargo test shell:: --integration\ncargo test schema::all_game_types\ncargo test shell::shell_draw_\ncargo test pipe::is_plain_text\ntrue",
+      "duration_ms": 563025
+    }
+  },
+  "next_node_id": "implement",
+  "node_visits": {
+    "preflight": 1,
+    "start": 1
+  }
+}
