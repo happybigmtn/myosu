@@ -1,59 +1,53 @@
-# `games:multi-game` Verification — Slice 1 Fixup
+# `games:multi-game` Verification — Slice 2
 
 ## Verification Scope
 
-This fixup revalidated the active Slice 1 proof gate and reproduced the first deterministic review-script blocker. It does not claim that Slice 2 through Slice 7 are complete.
+This verification covers the Slice 1 + Slice 2 proof surface that belongs to the newly implemented Liar's Dice game engine. It does not claim Slice 3 through Slice 7 are complete.
 
-Compilation commands were run with `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup` because `cargo metadata` reports the default target directory as `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target`, which is outside the writable sandbox for this run.
+Commands were run with `CARGO_TARGET_DIR=/tmp/myosu-mg-slice2` because the workspace metadata still points Cargo at a target directory outside this run's writable sandbox.
 
 ## Automated Commands Run
 
 | Command | Exit Code | Outcome |
 |---------|-----------|---------|
-| `cargo metadata --no-deps --format-version 1` | 0 | Workspace members resolve to `myosu-games`, `myosu-games-liars-dice`, `myosu-tui`, and `pallet-game-solver` |
-| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo build -p myosu-games-liars-dice` | 0 | Passed; the Slice 1 crate skeleton compiles |
-| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo test -p myosu-games-liars-dice` | 0 | Passed; 2 unit tests passed and 0 doctests ran |
-| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo test -p myosu-games` | 0 | Passed; 10 unit tests and 4 doctests still pass after the workspace change |
-| `cargo test -p myosu-play` | 101 | Failed immediately: `package ID specification 'myosu-play' did not match any packages` |
-| `cargo test -p myosu-games-poker` | 101 | Failed immediately: `package ID specification 'myosu-games-poker' did not match any packages` |
+| `cargo build -p myosu-games-liars-dice` | 0 | Passed; the Slice 2 crate compiles with the real game-engine modules |
+| `cargo test -p myosu-games-liars-dice` | 0 | Passed; 7 unit tests passed and 0 doctests ran |
+| `cargo test -p myosu-games-liars-dice game::tests::root_is_chance_node` | 0 | Passed |
+| `cargo test -p myosu-games-liars-dice game::tests::legal_bids_increase` | 0 | Passed |
+| `cargo test -p myosu-games-liars-dice game::tests::challenge_resolves_game` | 0 | Passed |
+| `cargo test -p myosu-games-liars-dice game::tests::payoff_is_zero_sum` | 0 | Passed |
+| `cargo test -p myosu-games-liars-dice game::tests::all_trait_bounds_satisfied` | 0 | Passed |
+| `cargo test -p myosu-games` | 0 | Passed; existing `myosu-games` unit tests and doctests still pass unchanged |
 
-## Active Proof Gate Status
+## Slice 2 Proof Status
 
-The current slice's first proof gate is green:
+The approved MG-01 proof gate is green:
 
-- `myosu-games-liars-dice` builds by package name
-- the crate's two Slice 1 smoke tests pass
-- `myosu-games` still passes its current suite after the workspace membership change
+- root state is a chance node
+- applying a root roll transitions to Player 0
+- legal bids strictly increase
+- challenge resolution handles both truthful bids and bluffs
+- terminal payoffs are zero-sum
+- `LiarsDiceGame` satisfies the required trait bounds, including `Copy`
 
-That is the full approved proof surface for Slice 1.
+## Current Test Totals Observed
 
-## Deterministic Review-Script Blocker
+- `myosu-games-liars-dice`: 7 unit tests passed
+- `myosu-games`: 10 unit tests passed, 4 doctests passed
 
-The orchestrated `verify` stage ran the full review command list with `set -e`. In that run, commands through `cargo test -p myosu-games` completed successfully or returned clean filtered-test outputs. The first hard failure was:
+## Known Remaining Lane Blockers
 
-```text
-cargo test -p myosu-play
-error: package ID specification `myosu-play` did not match any packages
-```
+The full review command list was not rerun in this slice because its first deterministic failure remains outside the Slice 2 surface:
 
-Because the script stops on the first non-zero exit, later review commands were not reachable in that gate run.
+- `myosu-play` is still absent from the current workspace snapshot
+- `myosu-games-poker` is still absent from the current workspace snapshot
 
-Separate reproduction during this fixup confirms that `myosu-games-poker` is also absent from the current workspace snapshot and would fail for the same reason if reached.
+Those package-not-found failures were already documented in the prior fixup and are unchanged by this Slice 2 implementation.
 
-## Current Workspace Constraint
+## Not Yet Verified
 
-The current workspace snapshot does not include:
-
-- `myosu-play`
-- `myosu-games-poker`
-
-Those missing packages explain the deterministic review failure. This fixup does not create placeholder packages for them, because doing so would expand past the approved Slice 1 surface.
-
-## Remaining Work Beyond Slice 1
-
-- Slice 2: implement `game.rs`, `edge.rs`, `turn.rs`, and `info.rs`
-- Slice 3: implement `encoder.rs`, `profile.rs`, and Nash verification tests
-- Slice 4: add `ExploitMetric` registration to `myosu-games`
-- Slice 5: add spectator relay surfaces for `myosu-play`
-- Slice 6: add spectator TUI surfaces for `myosu-tui`
-- Slice 7: run zero-change verification once the referenced packages exist in this workspace
+- Slice 3 solver/Nash tests
+- Slice 4 `ExploitMetric` registration
+- Slice 5 spectator relay tests
+- Slice 6 spectator TUI tests
+- Slice 7 zero-change verification against `myosu-games-poker`
