@@ -59,7 +59,7 @@
 | `cargo test -p myosu-tui` | 0 | 90 passed, 2 ignored |
 | `cargo build -p myosu-games -p myosu-games-liars-dice -p myosu-play -p myosu-tui` | 0 | All 4 crates compile |
 
-> **Note:** The review artifact's Slice 7 listed `cargo test -p myosu-games-poker` as a proof command, but `myosu-games-poker` is not a workspace member. The workspace contains `myosu-games` (traits + registry) and `myosu-games-liars-dice` (liar's dice engine) as separate crates. The zero-change verification for `crates/myosu-games/src/` is covered by `cargo test -p myosu-games` above.
+> **Note:** The review artifact's Slice 7 originally listed `cargo test -p myosu-games-poker` as a proof command, but `myosu-games-poker` is not a workspace member. The review was corrected to remove this invalid command. The workspace contains `myosu-games` (traits + registry) and `myosu-games-liars-dice` (liar's dice engine) as separate crates. The zero-change verification for `crates/myosu-games/src/` is covered by `cargo test -p myosu-games` above.
 
 ## Zero-Change Verification
 

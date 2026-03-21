@@ -41,7 +41,7 @@ cargo test -p myosu-games registry::tests::good_threshold_less_than_baseline
 cargo test -p myosu-play spectate::tests::relay_emits_events
 cargo test -p myosu-play spectate::tests::relay_handles_disconnected_listener
 cargo test -p myosu-play spectate::tests::events_are_valid_json
-cargo test -p myosu-play spectate::tests::discover_local_sessions
+cargo test -p myosu-play spectate::tests::discover_local_sessions_test
 
 # Slice 6 — spectator TUI (SP-02)
 cargo test -p myosu-tui spectate::tests::renders_fog_of_war
@@ -50,9 +50,8 @@ cargo test -p myosu-tui spectate::tests::reveal_blocked_during_play
 
 # Slice 7 — zero-change verification (MG-03)
 cargo test -p myosu-games
-cargo test -p myosu-games-poker
 cargo test -p myosu-games-liars-dice
-# git diff crates/myosu-games/src/ crates/myosu-games-poker/src/  # must be empty
+# git diff crates/myosu-games/src/  # must be empty (zero changes to traits/registry)
 ```
 
 ---
