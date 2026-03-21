@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 173382,
+  "attempt": 4,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T02:49:28.478704167+00:00",
+  "updated_at": "2026-03-21T02:49:28.478710294+00:00",
+  "failure_reason": "Handler error: CLI command exited with code 1: ponses_websocket: failed to connect to websocket: HTTP error: 500 Internal Server Error, url: wss://api.openai.com/v1/responses\n2026-03-21T02:49:11.147083Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 500 Internal Server Error, url: wss://api.openai.com/v1/responses\n2026-03-21T02:49:14.991522Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 500 Internal Server Error, url: wss://api.openai.com/v1/responses\n\nstdout: 887c635a33c3d9da\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"unexpected status 401 Unauthorized: You have insufficient permissions for this operation. Missing scopes: api.responses.write. Check that you have the correct role in your organization (Reader, Writer, Owner) and project (Member, Owner), and if you're using a restricted API key, that it has the necessary scopes., url: https://api.openai.com/v1/responses, cf-ray: 9df9a4b8ad9fb544-EWR, request id: req_710a7a38633f4ae2887c635a33c3d9da\"}}\n"
+}

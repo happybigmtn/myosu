@@ -1,0 +1,11 @@
+{
+  "mode": "cli",
+  "requested_provider": "openai",
+  "requested_model": "gpt-5.4",
+  "provider": "openai",
+  "model": "gpt-5.4",
+  "served_model": null,
+  "fallback_reason": null,
+  "codex_slot": null,
+  "command": "cat /tmp/fabro_cli_73ba72e8-9dc9-4c23-a810-43858df0edc4_prompt.txt | codex exec --json --full-auto -m gpt-5.4"
+}
