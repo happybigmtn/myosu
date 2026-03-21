@@ -1,0 +1,13 @@
+[package]
+name = "myosu-games-liars-dice"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Liar's Dice proof-of-architecture crate for the myosu multi-game lane"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+myosu-games = { path = "../myosu-games" }
+rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
