@@ -1,1 +1,2 @@
-//! Phase 1 restart placeholder for subnet surfaces.
+pub mod registration;
+pub mod serving;

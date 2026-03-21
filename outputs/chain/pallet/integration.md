@@ -2,35 +2,28 @@
 
 Date: 2026-03-20
 Lane: `chain:pallet`
-Slice: `Phase 1 restart scaffolding`
+Slice: `Phase 2 restore core storage and registration/serving`
 
 ## Integration effect
 
-The `pallet-game-solver` crate is back to a clean standalone compile and test
-state with a Myosu-owned module graph. This gives the restart lane a stable
-base for the next approved pallet slices instead of continuing to patch the
-subtensor forward-port in place.
+`pallet-game-solver` now exposes a coherent minimal runtime surface instead of a
+compile-only shell. The pallet can allocate subnet ids, register hotkeys with
+stable coldkey ownership, and persist serving metadata for registered hotkeys.
 
-## Surfaces now safe to build on
+## What downstream work can rely on now
 
-- The pallet exports local `NetUid`, `Balance`, `Currency`, `Hyperparameter`,
-  and `RateLimitKey` types.
-- `AxonInfo`, `PrometheusInfo`, and `NeuronCertificate` remain available as
-  clean pallet-owned data types.
-- `stubs.rs` and `swap_stub.rs` stay live and verified.
-- The reduced rate-limit helpers can be extended without depending on any
-  `subtensor_*` workspace crates.
+- Runtime integration can build against the restored pallet `Config`, events,
+  errors, and core storage in
+  [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L147).
+- Pallet callers can use the new registration and serving extrinsics in
+  [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L254).
+- Subnet logic is now Myosu-owned in
+  [registration.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs#L8)
+  and [serving.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs#L6),
+  with no revived `subtensor_*` workspace dependencies.
 
-## Still pending before deeper chain integration
+## Next integration blocker
 
-- Restore the minimal Myosu `Config` surface needed by the runtime.
-- Reintroduce pallet storage beyond rate limiting.
-- Restore registration / serving dispatchables.
-- Replace the `epoch/math.rs` placeholder with real fixed-point logic.
-- Wire staking and subnet modules back in slice-by-slice.
-
-## Stage ownership note
-
-`quality.md` is owned by the Quality Gate and `promotion.md` is owned by the
-Review stage. They were intentionally not hand-authored in this implementation
-slice.
+The next approved blocker remains Phase 3: restore `epoch/math.rs` to the
+reviewed fixed-point shape so later staking, subnet, and emission slices have
+the math surface they depend on.

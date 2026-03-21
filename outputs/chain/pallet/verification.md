@@ -2,37 +2,30 @@
 
 Date: 2026-03-20
 Lane: `chain:pallet`
-Slice: `Phase 1 restart scaffolding`
+Slice: `Phase 2 restore core storage and registration/serving`
 
 ## Automated proof
 
-1. `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p pallet-game-solver`
+1. `CARGO_TARGET_DIR=/tmp/myosu-pallet-target cargo check -p pallet-game-solver`
    - Result: passed
-   - Outcome: `pallet-game-solver` finished the `dev` profile successfully.
-   - Notes: cargo emitted a future-incompatibility warning for `trie-db v0.29.1`.
+   - Outcome: the restored Phase 2 pallet compiled successfully.
+   - Notes: cargo emitted a future-incompatibility note for transitive
+     dependency `trie-db v0.29.1`; no touched pallet source emitted compiler
+     warnings.
 
-2. `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p pallet-game-solver --lib`
+2. `CARGO_TARGET_DIR=/tmp/myosu-pallet-target cargo test -p pallet-game-solver --lib`
    - Result: passed
-   - Outcome: 13 tests passed, 0 failed.
-   - Notes: cargo briefly waited on the shared artifact lock and then completed
-     successfully; the same `trie-db v0.29.1` future-incompatibility warning was
-     emitted during the test run.
-   - Covered tests:
-     - `stubs::tests::*`
-     - `swap_stub::tests::*`
+   - Outcome: 20 tests passed, 0 failed.
+   - Covered areas:
+     - existing `stubs::tests::*`
+     - existing `swap_stub::tests::*`
+     - new `phase2_tests::*`
+     - generated runtime integrity / genesis checks from the test runtime
 
-3. `test -f ./outputs/chain/pallet/implementation.md && test -f ./outputs/chain/pallet/verification.md && test -f ./outputs/chain/pallet/quality.md && test -f ./outputs/chain/pallet/promotion.md && test -f ./outputs/chain/pallet/integration.md`
-   - Result: passed
-   - Outcome: all five lane artifact files are now present, so the implement
-     lane clears its first proof gate.
+## Proof notes
 
-4. Lane quality-gate shell from `../graph.fabro`
-   - Result: passed
-   - Outcome: `outputs/chain/pallet/quality.md` was regenerated with
-     `quality_ready: yes`.
-
-## Verification notes
-
-- The default workspace target directory was not writable inside the current
-  sandbox, so verification used `CARGO_TARGET_DIR=/tmp/myosu-cargo-target`.
-- The warning on `trie-db v0.29.1` did not block the slice.
+- The default workspace target directory is not writable in this sandbox, so
+  proof commands used `CARGO_TARGET_DIR=/tmp/myosu-pallet-target`.
+- The Phase 2 tests exercised the trust-boundary behavior that matters for this
+  slice: signed subnet creation, signed hotkey registration, coldkey ownership
+  consistency, endpoint persistence, and invalid network endpoint rejection.

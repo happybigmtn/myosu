@@ -2,64 +2,44 @@
 
 Date: 2026-03-20
 Lane: `chain:pallet`
-Slice: `Phase 1 restart scaffolding`
+Slice: `Phase 2 restore core storage and registration/serving`
 
 ## Implemented in this slice
 
-This implementation takes the smallest approved restart cut that makes
-`pallet-game-solver` compile as a Myosu-owned pallet core again.
+This slice advances the reviewed restart plan from the Phase 1 compile-only
+boundary into the next approved cut: a minimal Myosu-owned pallet core with
+restored config, core storage, and basic registration / serving dispatchables.
 
-- Replaced the forward-ported subtensor `lib.rs` with a minimal FRAME pallet core.
-- Added local Myosu-owned domain types:
-  - `NetUid = u16`
-  - `Balance = u64`
-  - `Currency` + `SingleTokenCurrency`
-  - `Hyperparameter`
-  - `RateLimitKey`
-  - preserved `AxonInfo`, `PrometheusInfo`, and `NeuronCertificate`
-- Restored only the storage needed by the stripped rate-limit helpers:
-  - `RateLimitedLastBlock`
-  - `NetworkLastLockBlock`
-- Kept the approved salvageable modules in build:
-  - `stubs.rs`
-  - `swap_stub.rs`
-  - a reduced `utils/rate_limiting.rs`
-- Stripped the broken subtensor-forwarded surfaces from the active build by
-  narrowing the module graph:
-  - `macros/` now exposes only the trait definitions used by `stubs.rs`
-  - `guards/check_coldkey_swap.rs` is now a local no-op guard
-  - `staking/mod.rs` and `subnets/mod.rs` are reduced restart surfaces
-  - `epoch/math.rs` is a local checked-arithmetic surface for the restart cut
-  - `epoch/run_epoch.rs`, `extensions/`, `migrations/`, `rpc_info/`, `swap/`,
-    and `coinbase/` are no longer on the active compile path
-- Updated `Cargo.toml` to add `log` and declare local `runtime-benchmarks` /
-  `try-runtime` features for the stripped crate shape.
-- Preserved the downstream-owned handoff artifacts as file surfaces:
-  - `outputs/chain/pallet/quality.md`
-  - `outputs/chain/pallet/promotion.md`
-  These are carried as empty files in this slice so later gates can take
-  ownership and overwrite them.
+- Extended the pallet `Config` with `RuntimeEvent` and kept the single-token
+  `Balance` surface in [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L147).
+- Restored the approved storage subset in [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L186):
+  `Keys`, `Axons`, `Prometheus`, `NeuronCertificates`, `Owner`, `Delegates`,
+  `SubnetOwner`, `NextSubnetUid`, and `NextNeuronUid`.
+- Added the minimal dispatchable surface in [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L254):
+  `register_subnet`, `register_hotkey`, `serve_axon`, and `serve_prometheus`.
+- Replaced the dormant forwarded subnet logic with Myosu-owned helpers in
+  [registration.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs#L8)
+  and [serving.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs#L6).
+- Preserved the reviewed trust boundary for hotkey ownership by rejecting
+  attempts to bind an already-owned hotkey to a different coldkey in
+  [registration.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs#L30).
+- Added focused pallet tests in
+  [phase2_tests.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs#L44)
+  covering subnet registration, hotkey registration, ownership conflicts,
+  serving persistence, and invalid endpoint input rejection.
 
-## Notes
+## Touched surfaces
 
-- The reviewed spec called for `parity-scale-codec` `encode` / `decode` feature
-  flags, but the workspace lock resolves to `3.7.5`, which does not expose
-  those features. The manifest keeps the lock-compatible `derive` feature.
-- The fixed-point `substrate-fixed` reintroduction is still deferred. This slice
-  keeps `epoch/math.rs` as a local checked-arithmetic restart surface so the crate
-  compiles cleanly at the Phase 1 boundary without pulling the old subtensor
-  math back into scope.
+- [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs)
+- [subnets/mod.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs)
+- [subnets/registration.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs)
+- [subnets/serving.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs)
+- [phase2_tests.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs)
 
-## Files touched
+## Remaining blockers before the next slice
 
-- `crates/myosu-chain/pallets/game-solver/Cargo.toml`
-- `crates/myosu-chain/pallets/game-solver/src/lib.rs`
-- `crates/myosu-chain/pallets/game-solver/src/macros/mod.rs`
-- `crates/myosu-chain/pallets/game-solver/src/macros/config.rs`
-- `crates/myosu-chain/pallets/game-solver/src/guards/check_coldkey_swap.rs`
-- `crates/myosu-chain/pallets/game-solver/src/utils/mod.rs`
-- `crates/myosu-chain/pallets/game-solver/src/utils/rate_limiting.rs`
-- `crates/myosu-chain/pallets/game-solver/src/epoch/mod.rs`
-- `crates/myosu-chain/pallets/game-solver/src/epoch/math.rs`
-- `crates/myosu-chain/pallets/game-solver/src/staking/mod.rs`
-- `crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs`
+- `epoch/math.rs` is still on the reduced checked-arithmetic surface and has not
+  yet been restored to the reviewed fixed-point design.
+- `staking/` remains outside the active Phase 2 write set.
+- The runtime has not yet wired this restored pallet surface into broader chain
+  flows beyond standalone compile and pallet-local tests.

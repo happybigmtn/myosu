@@ -5,7 +5,11 @@ artifact_mismatch_risk: no
 manual_followup_required: no
 
 ## Touched Surfaces
-- (none declared)
+- crates/myosu-chain/pallets/game-solver/src/lib.rs
+- crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs
+- crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs
+- crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs
+- crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs
 
 ## Placeholder Hits
 
