@@ -1,0 +1,5 @@
+Created [agent-adapter.md](/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree/outputs/agent-integration/review.md) for the new `agent-integration` frontier. They make the product decision explicit: the next honest move is an implementation-family workflow, led by `play:tui`, not another upstream unblock. The docs preserve the `robopoker` dependency risk, but treat it as a later gate rather than a reason to stall product Slice 1.
+
+I also updated [plans/031926-iterative-execution-and-raspberry-hardening.md](/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree/plans/031926-iterative-execution-and-raspberry-hardening.md) to mark this frontier step complete and documented the new adapter artifact type in [outputs/README.md](/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree/outputs/README.md).
+
+Verification was docs-only: I confirmed both required artifacts exist and encode the same decision. No code tests were run.
