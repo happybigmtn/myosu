@@ -1,0 +1,180 @@
+diff --git a/outputs/tui/shell/implementation.md b/outputs/tui/shell/implementation.md
+index 070334f..0ab1c23 100644
+--- a/outputs/tui/shell/implementation.md
++++ b/outputs/tui/shell/implementation.md
+@@ -6,6 +6,14 @@
+ 
+ Implemented the next approved `tui:shell` slice from [spec.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/spec.md): make the event loop provable in CI without a real TTY.
+ 
++## Fixup Summary
++
++This fixup did not expand the Rust implementation beyond Slice 1. The
++`events.rs` headless proof work remains the shipped code change; this pass
++corrects the lane's proof contract so automation uses runnable cargo commands
++and selectors instead of shorthand that either fails argument parsing or
++selects zero tests.
++
+ ## What Changed
+ 
+ ### `crates/myosu-tui/src/events.rs`
+@@ -21,8 +29,24 @@ Implemented the next approved `tui:shell` slice from [spec.md](/home/r/.fabro/ru
+   - async update delivery
+   - cloned update senders
+ 
++### `outputs/tui/shell/spec.md`
++
++- Normalized each slice proof gate to the exact cargo invocation that this
++  toolchain can execute.
++- Recorded the `/tmp` target-dir override needed in Fabro's sandbox because the
++  default workspace target directory is read-only here.
++- Tightened the proof selectors so schema, shell draw, and pipe checks target
++  the real test names instead of zero-test shorthands.
++
++### `outputs/tui/shell/verification.md` and `outputs/tui/shell/integration.md`
++
++- Updated the curated artifacts to record the deterministic verification
++  failure, the cargo-compatible proof sequence that passed, and the preserved
++  integration contract for the lane.
++
+ ## Scope Guard
+ 
++- No further changes were made to `events.rs` during fixup.
+ - No changes were made to `shell.rs`, `schema.rs`, `pipe.rs`, `renderer.rs`, or the `GameRenderer` contract.
+ - No lane expansion was performed beyond the approved `events.rs` slice.
+ 
+diff --git a/outputs/tui/shell/integration.md b/outputs/tui/shell/integration.md
+index 2ae7293..034c422 100644
+--- a/outputs/tui/shell/integration.md
++++ b/outputs/tui/shell/integration.md
+@@ -2,7 +2,11 @@
+ 
+ ## Integration Status
+ 
+-This slice is internal to [events.rs](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/crates/myosu-tui/src/events.rs). It improves proof coverage without changing the external shell contract.
++This slice remains internal to [events.rs](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/crates/myosu-tui/src/events.rs). It improves proof coverage without changing the external shell contract.
++
++The fixup in this lane is also internal: it normalizes the shell lane's proof
++commands to exact cargo invocations/selectors so Fabro verification can execute
++the intended `myosu-tui` regression surfaces instead of relying on shorthand.
+ 
+ ## Preserved Contracts
+ 
+@@ -10,11 +14,15 @@ This slice is internal to [events.rs](/home/r/.fabro/runs/20260320-01KM755GFB9SS
+ - `EventLoop::update_sender()` still exposes the same cloned `mpsc::UnboundedSender<UpdateEvent>` contract.
+ - Key and resize events still surface as `Event::Key` and `Event::Resize`.
+ - Focus, mouse, and paste events are still ignored.
++- The lane still exports the same shell, screen, input, renderer, schema, theme,
++  and pipe surfaces; no downstream crate or runtime contract changed.
+ 
+ ## Downstream Impact
+ 
+ - Downstream shells and game renderers do not need code changes.
+ - Upstream lane consumers now have CI-safe proof that the event loop behaves in headless execution, which matters for Fabro runs and future pipe/agent automation.
++- Fabro-style verification can now target real `myosu-tui` tests with exact
++  selectors recorded in [spec.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/spec.md).
+ 
+ ## Follow-On Integration Work
+ 
+diff --git a/outputs/tui/shell/spec.md b/outputs/tui/shell/spec.md
+index 0a007ab..8fca05b 100644
+--- a/outputs/tui/shell/spec.md
++++ b/outputs/tui/shell/spec.md
+@@ -121,27 +121,33 @@ The lane is **proven** when:
+ 
+ ## Next Implementation Slices
+ 
++Proof gate note: use exact cargo invocations here, not human shorthand. On this
++toolchain, `cargo test events:: --no-ignore` and `cargo test shell:: --integration`
++fail fast, while filters such as `cargo test schema::all_game_types`,
++`cargo test shell::shell_draw_`, and `cargo test pipe::is_plain_text` select
++zero tests.
++
+ ### Slice 1: Event Loop Headless Test
+ **File**: `crates/myosu-tui/src/events.rs`
+ **Action**: Add `MockEventStream` test helper that produces synthetic `CrosstermEvent` values without requiring a TTY. Replace `#[ignore]` tests with mocked versions.
+-**Proof gate**: `cargo test events:: --no-ignore`
++**Proof gate**: `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui events:: -- --include-ignored`
+ 
+ ### Slice 2: Shell Integration Test
+ **File**: `crates/myosu-tui/src/shell.rs`
+ **Action**: Add test that creates Shell with Lobby screen, simulates typing "1" followed by Enter, verifies `current_screen()` returns Game.
+-**Proof gate**: `cargo test shell:: --integration`
++**Proof gate**: `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui shell::`
+ 
+ ### Slice 3: Schema Per-Game Coverage
+ **File**: `crates/myosu-tui/src/schema.rs`
+ **Action**: For each game_type in `all_game_types_have_schema`, either add full roundtrip test or add `#[unimplemented]` comment with tracking issue. At minimum, add NLHE heads-up and 6-max variants.
+-**Proof gate**: `cargo test schema::all_game_types`
++**Proof gate**: `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui all_game_types_have_schema`
+ 
+ ### Slice 4: Screen Render Tests
+ **File**: `crates/myosu-tui/src/shell.rs`
+ **Action**: Add `shell_draw_lobby`, `shell_draw_onboarding`, `shell_draw_stats`, etc. verifying buffer content for each screen.
+-**Proof gate**: `cargo test shell::shell_draw_`
++**Proof gate**: `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui shell_draw_`
+ 
+ ### Slice 5: Pipe Mode ANSI Enforcement
+ **File**: `crates/myosu-tui/src/pipe.rs`
+ **Action**: Add property test: for all inputs, `pipe_output()` result passed through `is_plain_text()` returns true.
+-**Proof gate**: `cargo test pipe::is_plain_text`
++**Proof gate**: `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui is_plain_text`
+diff --git a/outputs/tui/shell/verification.md b/outputs/tui/shell/verification.md
+index 2e275d0..b03047c 100644
+--- a/outputs/tui/shell/verification.md
++++ b/outputs/tui/shell/verification.md
+@@ -1,31 +1,46 @@
+ # `tui:shell` Verification — Slice 1
+ 
+-## Automated Proof Commands
++## Automated Proof Commands That Ran
+ 
+ | Command | Exit Code | Result |
+ |---------|-----------|--------|
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events:: -- --include-ignored` | 0 | 6 headless event-loop tests passed |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell::` | 0 | 11 shell tests passed unchanged |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui all_game_types_have_schema` | 0 | Existing schema smoke test passed |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell_draw_` | 0 | Existing shell draw tests passed |
+-| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui is_plain_text` | 0 | Existing ANSI-detection test passed |
++| `cargo test events:: --no-ignore` | 1 | Deterministic failure from the verify stage: `--no-ignore` is not a valid cargo argument without `--` |
++| `cargo test shell:: --integration` | 1 | Deterministic failure waiting behind the first gate: `--integration` is not a valid cargo argument here |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-events cargo test -p myosu-tui schema::all_game_types` | 0 | Selected 0 tests; shorthand is not a real proof gate on this toolchain |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-events cargo test -p myosu-tui shell::shell_draw_` | 0 | Selected 0 tests; shorthand is not a real proof gate on this toolchain |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-events cargo test -p myosu-tui pipe::is_plain_text` | 0 | Selected 0 tests; shorthand is not a real proof gate on this toolchain |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui events:: -- --include-ignored` | 0 | 6 headless event-loop tests passed |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui shell::` | 0 | 11 shell tests passed unchanged |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui all_game_types_have_schema` | 0 | Existing schema smoke test passed |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui shell_draw_` | 0 | Existing shell draw tests passed |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell cargo test -p myosu-tui is_plain_text` | 0 | Existing ANSI-detection test passed |
+ 
+ ## Command Notes
+ 
+-- The lane review/spec shorthand `cargo test events:: --no-ignore` is not accepted by this Cargo toolchain. The cargo-compatible equivalent is `cargo test ... -- --include-ignored`.
+-- The preflight shorthand `cargo test shell:: --integration` does not map to a real Cargo flag or a dedicated integration target in `myosu-tui`; the closest implemented proof surface is the `shell::` test module itself.
+-- `CARGO_TARGET_DIR=/tmp/myosu-cargo-target` was set because the default workspace target directory is not writable in this execution environment.
++- The lane's prior proof-gate shorthands were human-readable but not
++  automation-safe. Two failed argument parsing, and three returned success while
++  exercising zero tests.
++- [spec.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/spec.md)
++  now records the exact cargo invocations/selectors that correspond to real
++  tests in `myosu-tui`.
++- `CARGO_TARGET_DIR=/tmp/myosu-cargo-target-tui-shell` was set because the
++  default workspace target directory is not writable in this execution
++  environment.
+ 
+ ## Risks Reduced
+ 
+ - The `events.rs` CI blind spot is reduced: key, resize, tick, and update delivery are now proven headlessly.
+ - The lane no longer depends on a real TTY just to verify the event loop's core channel plumbing.
++- The lane's proof contract is now executable in automation instead of relying
++  on cargo shorthands that fail or silently do nothing.
+ 
+ ## Risks Remaining
+ 
+ - `shell.rs` is still reopened in review because the shell input-to-screen transition chain remains unproven.
+ - `schema.rs` is still reopened in review because per-game semantic coverage remains incomplete.
+ - There is still no end-to-end `PipeMode::run_once()` async proof tied to the event loop.
++- Slice 2's current proof surface still re-runs the existing `shell::` module;
++  the dedicated Lobby-to-Game integration test has not been implemented yet.
+ 
+ ## Next Approved Slice
+ 
