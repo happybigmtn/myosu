@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-03-21T02:41:23.726060831Z",
+  "current_node": "specify",
+  "completed_nodes": [
+    "start",
+    "specify"
+  ],
+  "node_retries": {
+    "specify": 4,
+    "start": 1
+  },
+  "context_values": {
+    "graph.rankdir": "LR",
+    "failure_class": "transient_infra",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n",
+    "thread.start.current_node": "specify",
+    "internal.run_id": "01KM745J1DFMT2X5QW1EE1RE0A",
+    "internal.node_visit_count": 1,
+    "failure_signature": "specify|transient_infra|handler error: cli command exited with code <n>: ponses_websocket: failed to connect to websocket: http error: <n> internal server error,url: wss://api.openai.com/v1/responses <n>-<n>-21t02:<n>:<n>.479714z error codex_api::endpoint::respons",
+    "current_node": "specify",
+    "outcome": "fail",
+    "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
+    "internal.retry_count.specify": 4,
+    "internal.fidelity": "compact",
+    "internal.retry_count.start": 1,
+    "internal.thread_id": "start",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM745J1DFMT2X5QW1EE1RE0A/worktree",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        "
+  },
+  "logs": [],
+  "node_outcomes": {
+    "specify": {
+      "status": "fail",
+      "failure": {
+        "message": "Handler error: CLI command exited with code 1: ponses_websocket: failed to connect to websocket: HTTP error: 500 Internal Server Error, url: wss://api.openai.com/v1/responses\n2026-03-21T02:41:06.479714Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 500 Internal Server Error, url: wss://api.openai.com/v1/responses\n2026-03-21T02:41:10.451302Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 500 Internal Server Error, url: wss://api.openai.com/v1/responses\n\nstdout: b170691d0db3d36a\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"unexpected status 401 Unauthorized: You have insufficient permissions for this operation. Missing scopes: api.responses.write. Check that you have the correct role in your organization (Reader, Writer, Owner) and project (Member, Owner), and if you're using a restricted API key, that it has the necessary scopes., url: https://api.openai.com/v1/responses, cf-ray: 9df998caafb64301-EWR, request id: req_06bafdaff95d4132b170691d0db3d36a\"}}\n",
+        "failure_class": "transient_infra"
+      },
+      "duration_ms": 132272
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "review",
+  "node_visits": {
+    "start": 1,
+    "specify": 1
+  }
+}
