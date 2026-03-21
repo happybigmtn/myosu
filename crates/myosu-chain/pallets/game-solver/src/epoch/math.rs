@@ -1,7 +1,6 @@
 // we get a compiler warning for this , even though  the trait is used in the
 // quantile function.
 use crate::alloc::borrow::ToOwned;
-use safe_math::*;
 use sp_runtime::traits::CheckedAdd;
 
 use sp_std::vec;
@@ -9,6 +8,42 @@ use substrate_fixed::transcendental::{exp, ln};
 use substrate_fixed::types::{I32F32, I64F64};
 
 use sp_std::vec::Vec;
+
+/// Safe division trait — returns zero on divide-by-zero instead of panicking.
+pub trait SafeDiv<Rhs = Self> {
+    fn safe_div(self, rhs: Rhs) -> Self;
+}
+
+impl SafeDiv for I32F32 {
+    fn safe_div(self, rhs: Self) -> Self {
+        if rhs == Self::saturating_from_num(0) {
+            Self::saturating_from_num(0)
+        } else {
+            // I32F32 implements Div<Self, Output = Self>
+            self / rhs
+        }
+    }
+}
+
+impl SafeDiv for I64F64 {
+    fn safe_div(self, rhs: Self) -> Self {
+        if rhs == Self::saturating_from_num(0) {
+            Self::saturating_from_num(0)
+        } else {
+            self / rhs
+        }
+    }
+}
+
+impl SafeDiv<usize> for usize {
+    fn safe_div(self, rhs: usize) -> Self {
+        if rhs == 0 {
+            0
+        } else {
+            self / rhs
+        }
+    }
+}
 
 pub fn get_safe<T: Copy + Default>(slice: &[T], idx: usize) -> T {
     slice.get(idx).copied().unwrap_or_default()

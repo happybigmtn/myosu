@@ -1,3 +1,1 @@
-use super::*;
-pub mod swap_coldkey;
-pub mod swap_hotkey;
+// Swap module stripped — subtensor AMM not relevant to Myosu single-token model.

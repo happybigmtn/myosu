@@ -1,3 +1,1 @@
-mod check_coldkey_swap;
-
-pub use check_coldkey_swap::*;
+// Guards module stripped — subtensor-specific coldkey swap guards not needed for Myosu.

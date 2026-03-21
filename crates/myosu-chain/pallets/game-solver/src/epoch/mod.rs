@@ -1,3 +1,2 @@
-use super::*;
 pub mod math;
-pub mod run_epoch;
+// Stripped — subtensor-specific epoch runner not needed for Myosu genesis.
