@@ -1,0 +1,238 @@
+Goal: Implement the next approved `games:poker-engine` slice.
+
+Inputs:
+- `poker-engine/spec.md`
+- `poker-engine/review.md`
+
+Scope:
+- work only inside the smallest next approved implementation slice
+- treat the reviewed lane artifacts as the source of truth
+- keep changes aligned with the owned surfaces for `games:poker-engine`
+
+Required curated artifacts:
+- `poker-engine/implementation.md`
+- `poker-engine/verification.md`
+- `poker-engine/quality.md`
+- `poker-engine/promotion.md`
+
+
+## Completed stages
+- **preflight**: success
+  - Script: `set +e
+cargo build -p myosu-games-poker
+cargo test -p myosu-games-poker
+cargo test -p myosu-games-poker solver::tests::create_empty_solver
+cargo test -p myosu-games-poker solver::tests::train_100_iterations
+cargo test -p myosu-games-poker solver::tests::strategy_is_valid_distribution
+cargo test -p myosu-games-poker solver::tests::checkpoint_roundtrip
+cargo test -p myosu-games-poker solver::tests::exploitability_decreases
+cargo test -p myosu-games-poker wire::tests::nlhe_info_roundtrip
+cargo test -p myosu-games-poker wire::tests::nlhe_edge_roundtrip
+cargo test -p myosu-games-poker wire::tests::all_edge_variants_serialize
+cargo test -p myosu-games-poker query::tests::handle_valid_query
+cargo test -p myosu-games-poker query::tests::handle_invalid_info_bytes
+cargo test -p myosu-games-poker query::tests::response_probabilities_sum_to_one
+cargo test -p myosu-games-poker exploit::tests::trained_strategy_low_exploit
+cargo test -p myosu-games-poker exploit::tests::random_strategy_high_exploit
+cargo test -p myosu-games-poker exploit::tests::remote_matches_local
+cargo test -p myosu-games-poker training::tests::session_checkpoint_frequency
+true`
+  - Stdout: (empty)
+  - Stderr:
+    ```
+    (18 lines omitted)
+    error: package ID specification `myosu-games-poker` did not match any packages
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+    error: package ID specification `myosu-games-poker` did not match any packages
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+    error: package ID specification `myosu-games-poker` did not match any packages
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+    error: package ID specification `myosu-games-poker` did not match any packages
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+    error: package ID specification `myosu-games-poker` did not match any packages
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+    error: package ID specification `myosu-games-poker` did not match any packages
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+    error: package ID specification `myosu-games-poker` did not match any packages
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+    error: package ID specification `myosu-games-poker` did not match any packages
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+    error: package ID specification `myosu-games-poker` did not match any packages
+    ```
+- **implement**: success
+  - Model: gpt-5.4, 1.2m tokens in / 16.1k out
+  - Files: Cargo.lock, Cargo.toml, crates/myosu-games-poker/Cargo.toml, crates/myosu-games-poker/src/lib.rs, outputs/games/poker-engine/implementation.md, outputs/games/poker-engine/verification.md
+- **verify**: success
+  - Script: `set -e
+cargo build -p myosu-games-poker
+cargo test -p myosu-games-poker
+cargo test -p myosu-games-poker solver::tests::create_empty_solver
+cargo test -p myosu-games-poker solver::tests::train_100_iterations
+cargo test -p myosu-games-poker solver::tests::strategy_is_valid_distribution
+cargo test -p myosu-games-poker solver::tests::checkpoint_roundtrip
+cargo test -p myosu-games-poker solver::tests::exploitability_decreases
+cargo test -p myosu-games-poker wire::tests::nlhe_info_roundtrip
+cargo test -p myosu-games-poker wire::tests::nlhe_edge_roundtrip
+cargo test -p myosu-games-poker wire::tests::all_edge_variants_serialize
+cargo test -p myosu-games-poker query::tests::handle_valid_query
+cargo test -p myosu-games-poker query::tests::handle_invalid_info_bytes
+cargo test -p myosu-games-poker query::tests::response_probabilities_sum_to_one
+cargo test -p myosu-games-poker exploit::tests::trained_strategy_low_exploit
+cargo test -p myosu-games-poker exploit::tests::random_strategy_high_exploit
+cargo test -p myosu-games-poker exploit::tests::remote_matches_local
+cargo test -p myosu-games-poker training::tests::session_checkpoint_frequency`
+  - Stdout:
+    ```
+    (60 lines omitted)
+    
+    
+    running 0 tests
+    
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+    
+    
+    running 0 tests
+    
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+    
+    
+    running 0 tests
+    
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+    
+    
+    running 0 tests
+    
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+    
+    
+    running 0 tests
+    
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+    ```
+  - Stderr:
+    ```
+    (36 lines omitted)
+        Blocking waiting for file lock on package cache
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.49s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.27s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.25s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.51s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Blocking waiting for file lock on package cache
+        Blocking waiting for file lock on package cache
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.50s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.25s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
+         Running unittests src/lib.rs (/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/deps/myosu_games_poker-3547fe3e5b50963c)
+    ```
+- **quality**: fail
+  - Script: `set -e
+QUALITY_PATH='outputs/games/poker-engine/quality.md'
+IMPLEMENTATION_PATH='outputs/games/poker-engine/implementation.md'
+VERIFICATION_PATH='outputs/games/poker-engine/verification.md'
+placeholder_hits=""
+scan_placeholder() {
+  surface="$1"
+  if [ ! -e "$surface" ]; then
+    return 0
+  fi
+  if [ -f "$surface" ]; then
+    surface="$(dirname "$surface")"
+  fi
+  hits="$(rg -n -i -g '*.rs' -g '*.py' -g '*.js' -g '*.ts' -g '*.tsx' -g '*.md' -g 'Cargo.toml' -g '*.toml' 'TODO|stub|placeholder|not yet implemented|compile-only|for now|will implement|todo!|unimplemented!' "$surface" || true)"
+  if [ -n "$hits" ]; then
+    if [ -n "$placeholder_hits" ]; then
+      placeholder_hits="$(printf '%s\n%s' "$placeholder_hits" "$hits")"
+    else
+      placeholder_hits="$hits"
+    fi
+  fi
+}
+true
+artifact_hits="$(rg -n -i 'manual proof still required|placeholder|stub implementation|not yet fully implemented|todo!|unimplemented!' "$IMPLEMENTATION_PATH" "$VERIFICATION_PATH" 2>/dev/null || true)"
+warning_hits="$(rg -n 'warning:' "$IMPLEMENTATION_PATH" "$VERIFICATION_PATH" 2>/dev/null || true)"
+manual_hits="$(rg -n -i 'manual proof still required|manual;' "$VERIFICATION_PATH" 2>/dev/null || true)"
+placeholder_debt=no
+warning_debt=no
+artifact_mismatch_risk=no
+manual_followup_required=no
+[ -n "$placeholder_hits" ] && placeholder_debt=yes
+[ -n "$warning_hits" ] && warning_debt=yes
+[ -n "$artifact_hits" ] && artifact_mismatch_risk=yes
+[ -n "$manual_hits" ] && manual_followup_required=yes
+quality_ready=yes
+if [ "$placeholder_debt" = yes ] || [ "$warning_debt" = yes ] || [ "$artifact_mismatch_risk" = yes ] || [ "$manual_followup_required" = yes ]; then
+  quality_ready=no
+fi
+mkdir -p "$(dirname "$QUALITY_PATH")"
+cat > "$QUALITY_PATH" <<EOF
+quality_ready: $quality_ready
+placeholder_debt: $placeholder_debt
+warning_debt: $warning_debt
+artifact_mismatch_risk: $artifact_mismatch_risk
+manual_followup_required: $manual_followup_required
+
+## Touched Surfaces
+- (none declared)
+
+## Placeholder Hits
+$placeholder_hits
+
+## Artifact Consistency Hits
+$artifact_hits
+
+## Warning Hits
+$warning_hits
+
+## Manual Followup Hits
+$manual_hits
+EOF
+test "$quality_ready" = yes`
+  - Stdout: (empty)
+  - Stderr: (empty)
+
+## Context
+- failure_class: deterministic
+- failure_signature: quality|deterministic|script failed with exit code: <n>
+
+
+# Poker Engine Implementation Lane — Fixup
+
+Fix only the current slice for `poker-engine-implement`.
+
+Current Slice Contract:
+Inspect the relevant repo surfaces, preserve existing doctrine, and produce the lane artifacts honestly.
+
+
+Verification artifact must cover
+- summarize the automated proof commands that ran and their outcomes
+
+Priorities:
+- unblock the active slice's first proof gate
+- stay within the named slice and touched surfaces
+- preserve setup constraints before expanding implementation scope
+- keep implementation and verification artifacts durable and specific
+- do not create or rewrite `promotion.md` during Fixup; that file is owned by the Review stage
+- do not hand-author `quality.md`; the Quality Gate rewrites it after verification
