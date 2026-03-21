@@ -1,0 +1,11 @@
+[package]
+name = "myosu-chain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Workspace anchor crate for the myosu chain restart lane"
+publish = false
+
+[lib]
+path = "src/lib.rs"

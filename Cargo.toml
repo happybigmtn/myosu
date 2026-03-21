@@ -3,8 +3,8 @@ resolver = "2"
 members = [
     "crates/myosu-games",
     "crates/myosu-tui",
+    "crates/myosu-chain",      # Phase 0: honest chain workspace anchor
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
-    # "crates/myosu-chain",      # Stage 1: Substrate chain fork
     # "crates/myosu-miner",      # Stage 4: Miner binary
     # "crates/myosu-validator",   # Stage 4: Validator binary
     # "crates/myosu-play",       # Stage 5: Gameplay CLI
@@ -30,3 +30,17 @@ crossterm = { version = "0.28", features = ["event-stream"] }
 ratatui = "0.29"
 futures = "0.3"
 tokio-test = "0.4"
+codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
+frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-version = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }

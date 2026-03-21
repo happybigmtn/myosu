@@ -1,0 +1,12 @@
+[package]
+name = "myosu-chain-common"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/happybigmtn/myosu"
+description = "Shared chain types and helpers for the myosu chain restart"
+publish = false
+
+[lib]
+name = "myosu_chain_common"
+path = "src/lib.rs"

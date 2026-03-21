@@ -1,0 +1,13 @@
+[package]
+name = "myosu-runtime"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/happybigmtn/myosu"
+description = "Runtime crate for the myosu chain restart"
+publish = false
+
+[lib]
+name = "myosu_runtime"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]

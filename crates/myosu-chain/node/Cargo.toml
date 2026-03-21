@@ -1,0 +1,16 @@
+[package]
+name = "myosu-node"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/happybigmtn/myosu"
+description = "Node crate for the myosu chain restart"
+publish = false
+
+[lib]
+name = "myosu_node"
+path = "src/lib.rs"
+
+[[bin]]
+name = "myosu-node"
+path = "src/main.rs"
