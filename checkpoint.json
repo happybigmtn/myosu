@@ -1,13 +1,15 @@
 {
-  "timestamp": "2026-03-21T04:29:44.077214692Z",
-  "current_node": "polish",
+  "timestamp": "2026-03-21T04:29:45.523761359Z",
+  "current_node": "verify",
   "completed_nodes": [
     "start",
     "specify",
     "review",
-    "polish"
+    "polish",
+    "verify"
   ],
   "node_retries": {
+    "verify": 1,
     "start": 1,
     "polish": 1,
     "review": 1,
@@ -18,7 +20,11 @@
     "last_stage": "specify",
     "internal.retry_count.review": 1,
     "thread.specify.current_node": "review",
-    "internal.thread_id": "review",
+    "thread.polish.current_node": "verify",
+    "internal.retry_count.verify": 1,
+    "command.output": "",
+    "internal.thread_id": "polish",
+    "command.stderr": "",
     "thread.review.current_node": "polish",
     "internal.node_visit_count": 1,
     "internal.work_dir": "/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree",
@@ -29,12 +35,12 @@
     "response.specify": "Created [agent-adapter.md](/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree/outputs/agent-integration/review.md) for the new `agent-integration` frontier. They make the product decision explicit: the next honest move is an implementation-family workflow, led by `play:tui`, not another upstream unblock. The docs preserve the `robopoker` dependency risk, but treat it as a later gate rather than a reason to stall product Slice 1.\n\nI also updated [plans/031926-iterative-execution-and-raspberry-hardening.md](/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree/plans/031926-iterative-execution-and-raspberry-hardening.md) to mark this frontier step complete and documented the new adapter artifact type in [outputs/README.md](/home/r/.fabro/runs/20260321-01KM7A3VP0BR5KQJFDR3PYBY45/worktree/outputs/README.md).\n\nVerification was docs-only: I confirmed both required artifacts exist and encode the same decision. No code tests were run.",
     "internal.retry_count.polish": 1,
     "internal.retry_count.start": 1,
-    "failure_signature": "polish|deterministic|api_deterministic|openai|not_found",
-    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: gpt-5.4, 1.6m tokens in / 16.4k out\n  - Files: outputs/README.md, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md, plans/031926-iterative-execution-and-raspberry-hardening.md\n- **review**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: review|deterministic|api_deterministic|openai|not_found\n",
-    "current_node": "polish",
+    "failure_signature": "",
+    "current.preamble": "Goal: Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n\n\n## Completed stages\n- **specify**: success\n  - Model: gpt-5.4, 1.6m tokens in / 16.4k out\n  - Files: outputs/README.md, outputs/agent-integration/agent-adapter.md, outputs/agent-integration/review.md, plans/031926-iterative-execution-and-raspberry-hardening.md\n- **review**: fail\n- **polish**: fail\n\n## Context\n- failure_class: deterministic\n- failure_signature: polish|deterministic|api_deterministic|openai|not_found\n",
+    "current_node": "verify",
     "graph.goal": "Agent Integration\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `specs/031626-00-master-index.md`\n- `specs/031826-fabro-primary-executor-decision.md`\n\nCurrent frontier tasks:\n- Execute `agent:experience`, the last remaining ready product lane, then use its reviewed artifacts to decide whether product needs an implementation family next or another upstream unblock.\n\nRequired durable artifacts:\n- `outputs/agent-integration/agent-adapter.md`\n- `outputs/agent-integration/review.md`\n",
-    "failure_class": "deterministic",
-    "outcome": "fail",
+    "failure_class": "",
+    "outcome": "success",
     "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: api; model: gpt-5.4; provider: openai; }\n            #polish { backend: api; model: gpt-5.4; provider: openai; }\n        ",
     "graph.rankdir": "LR"
   },
@@ -81,6 +87,15 @@
       "status": "success",
       "duration_ms": 0
     },
+    "verify": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": ""
+      },
+      "notes": "Script completed: test -f ./outputs/agent-integration/agent-adapter.md && test -f ./outputs/agent-integration/review.md",
+      "duration_ms": 4
+    },
     "review": {
       "status": "fail",
       "failure": {
@@ -91,7 +106,7 @@
       "duration_ms": 15134
     }
   },
-  "next_node_id": "verify",
+  "next_node_id": "exit",
   "loop_failure_signatures": {
     "review|deterministic|api_deterministic|openai|not_found": 1,
     "polish|deterministic|api_deterministic|openai|not_found": 1
@@ -99,6 +114,7 @@
   "node_visits": {
     "review": 1,
     "specify": 1,
+    "verify": 1,
     "start": 1,
     "polish": 1
   }
