@@ -1,0 +1,32 @@
+digraph TuiShell {
+    graph [
+        goal="Implement the next approved `tui:shell` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `tui:shell`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `quality.md`\n- `promotion.md`\n- `integration.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #settle { backend: cli; model: gpt-5.4; provider: openai; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    preflight [label="Preflight", shape=parallelogram, script="set +e\ncargo test events:: --no-ignore\ncargo test shell:: --integration\ncargo test schema::all_game_types\ncargo test shell::shell_draw_\ncargo test pipe::is_plain_text\ntrue", max_retries=0]
+    implement [label="Implement", prompt="@../../prompts/implement/tui-shell/plan.md", reasoning_effort="high"]
+    verify [label="Verify", shape=parallelogram, script="set -e\ncargo test events:: --no-ignore\ncargo test shell:: --integration\ncargo test schema::all_game_types\ncargo test shell::shell_draw_\ncargo test pipe::is_plain_text", goal_gate=true, retry_target="fixup"]
+    quality [label="Quality Gate", shape=parallelogram, script="set -e\nQUALITY_PATH='outputs/tui/shell/quality.md'\nIMPLEMENTATION_PATH='outputs/tui/shell/implementation.md'\nVERIFICATION_PATH='outputs/tui/shell/verification.md'\nplaceholder_hits=\"\"\nscan_placeholder() {\n  surface=\"$1\"\n  if [ ! -e \"$surface\" ]; then\n    return 0\n  fi\n  if [ -f \"$surface\" ]; then\n    surface=\"$(dirname \"$surface\")\"\n  fi\n  hits=\"$(rg -n -i -g '*.rs' -g '*.py' -g '*.js' -g '*.ts' -g '*.tsx' -g '*.md' -g 'Cargo.toml' -g '*.toml' 'TODO|stub|placeholder|not yet implemented|compile-only|for now|will implement|todo!|unimplemented!' \"$surface\" || true)\"\n  if [ -n \"$hits\" ]; then\n    if [ -n \"$placeholder_hits\" ]; then\n      placeholder_hits=\"$(printf '%s\\n%s' \"$placeholder_hits\" \"$hits\")\"\n    else\n      placeholder_hits=\"$hits\"\n    fi\n  fi\n}\nscan_placeholder 'crates/myosu-tui/src/events.rs'\nartifact_hits=\"$(rg -n -i 'manual proof still required|placeholder|stub implementation|not yet fully implemented|todo!|unimplemented!' \"$IMPLEMENTATION_PATH\" \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nwarning_hits=\"$(rg -n 'warning:' \"$IMPLEMENTATION_PATH\" \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nmanual_hits=\"$(rg -n -i 'manual proof still required|manual;' \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nplaceholder_debt=no\nwarning_debt=no\nartifact_mismatch_risk=no\nmanual_followup_required=no\n[ -n \"$placeholder_hits\" ] && placeholder_debt=yes\n[ -n \"$warning_hits\" ] && warning_debt=yes\n[ -n \"$artifact_hits\" ] && artifact_mismatch_risk=yes\n[ -n \"$manual_hits\" ] && manual_followup_required=yes\nquality_ready=yes\nif [ \"$placeholder_debt\" = yes ] || [ \"$warning_debt\" = yes ] || [ \"$artifact_mismatch_risk\" = yes ] || [ \"$manual_followup_required\" = yes ]; then\n  quality_ready=no\nfi\nmkdir -p \"$(dirname \"$QUALITY_PATH\")\"\ncat > \"$QUALITY_PATH\" <<EOF\nquality_ready: $quality_ready\nplaceholder_debt: $placeholder_debt\nwarning_debt: $warning_debt\nartifact_mismatch_risk: $artifact_mismatch_risk\nmanual_followup_required: $manual_followup_required\n\n## Touched Surfaces\n- crates/myosu-tui/src/events.rs\n\n## Placeholder Hits\n$placeholder_hits\n\n## Artifact Consistency Hits\n$artifact_hits\n\n## Warning Hits\n$warning_hits\n\n## Manual Followup Hits\n$manual_hits\nEOF\ntest \"$quality_ready\" = yes", goal_gate=true, retry_target="fixup"]
+    fixup [label="Fixup", prompt="@../../prompts/implement/tui-shell/polish.md", reasoning_effort="high", max_visits=3]
+    settle [label="Settle", prompt="@../../prompts/implement/tui-shell/promote.md", reasoning_effort="high"]
+    audit [label="Audit Artifacts", shape=parallelogram, script="test -f outputs/tui/shell/implementation.md && test -f outputs/tui/shell/verification.md && test -f outputs/tui/shell/quality.md && test -f outputs/tui/shell/promotion.md && test -f outputs/tui/shell/integration.md && grep -Eq '^merge_ready: yes$' outputs/tui/shell/promotion.md && grep -Eq '^manual_proof_pending: no$' outputs/tui/shell/promotion.md && grep -Eq '^quality_ready: yes$' outputs/tui/shell/quality.md && grep -Eq '^placeholder_debt: no$' outputs/tui/shell/quality.md && grep -Eq '^warning_debt: no$' outputs/tui/shell/quality.md && grep -Eq '^artifact_mismatch_risk: no$' outputs/tui/shell/quality.md && grep -Eq '^manual_followup_required: no$' outputs/tui/shell/quality.md", goal_gate=true, retry_target="fixup", max_retries=0]
+
+    start -> preflight -> implement -> verify
+    verify -> quality [condition="outcome=success"]
+    verify -> fixup
+    quality -> settle [condition="outcome=success"]
+    quality -> fixup
+    settle -> audit [condition="outcome=success"]
+    settle -> fixup
+    audit -> exit [condition="outcome=success"]
+    audit -> fixup
+    fixup -> verify
+}
