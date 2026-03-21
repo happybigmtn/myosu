@@ -1,35 +1,34 @@
 # `chain:runtime` Verification — Restart Slice 1 Fixup
 
-## Automated Commands Run
+## Automated Proof Commands
 
-| Command | Exit / State | Outcome |
-|---------|--------------|---------|
-| `cargo metadata --no-deps --format-version 1 --manifest-path crates/myosu-chain/runtime/Cargo.toml` | 0 | Passed. Cargo still recognizes `myosu-runtime` as a workspace package. |
-| `cargo check -p myosu-runtime` | 101 | Failed immediately in this sandbox because Cargo targeted `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/.../.cargo-lock`, which is read-only here. |
-| `cargo build -p myosu-runtime --release` | 101 | Same immediate read-only target-dir failure as `cargo check`. |
-| `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime` | in progress during fixup | Reached real dependency compilation through the polkadot-sdk stack and advanced as far as `pallet-sudo` / `pallet-balances` with no runtime Rust error emitted during this turn. |
-| `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release` | in progress during fixup | Reached the real release build path and compiled deep into the runtime dependency graph instead of failing on the shared read-only target directory. |
+| Command | Exit | Outcome |
+|---------|------|---------|
+| `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime` | 0 | Passed in `8.87s`. The approved Phase 1 runtime-only proof command completed successfully in the sandbox-local target directory. |
+| `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release` | 0 | Passed in `13.22s`. The release build completed successfully and produced the runtime WASM outputs. |
 
-## What This Fixup Proves
+## Observed Artifacts
 
-- the previous verify failure was not caused by an immediate syntax or manifest
-  problem in `crates/myosu-chain/runtime/`
-- the active proof gate needed an explicit writable target-dir override in this
-  sandbox
-- the active slice proof had to be restricted to Phase 1 runtime commands only;
-  the Phase 2 node proof was incorrectly being pulled into this lane too early
+The release proof emitted these runtime artifacts:
 
-## What Is Not Yet Proven
+| Path | Size |
+|------|------|
+| `.raspberry/cargo-target/release/wbuild/myosu-runtime/myosu_runtime.wasm` | `906767` bytes |
+| `.raspberry/cargo-target/release/wbuild/myosu-runtime/myosu_runtime.compact.wasm` | `859513` bytes |
+| `.raspberry/cargo-target/release/wbuild/myosu-runtime/myosu_runtime.compact.compressed.wasm` | `211415` bytes |
 
-- a final exit-0 completion for `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime`
-- a final exit-0 completion for `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release`
-- any `myosu-node` build result; that remains out of scope for this slice
+## Verification Notes
 
-## Active Proof Commands
+- The active slice proof is Phase 1 only and does not include `myosu-node`.
+- The sandbox-local `CARGO_TARGET_DIR=.raspberry/cargo-target` override remains
+  required for honest, reproducible proof in this environment.
+- After removing the unused `alloc::vec` import from the runtime crate, the
+  local runtime proof completed without a crate-local warning.
+- Both commands still emit Cargo's future-incompatibility note for upstream
+  dependency `trie-db v0.29.1`; this did not block the approved proof gate and
+  no local fix was made in this slice.
 
-```bash
-env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime
-env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release
-```
+## Slice Result
 
-These are the commands the verification step should run for Restart Slice 1.
+The first approved proof gate for `chain:runtime` is now unblocked and green on
+the approved commands.

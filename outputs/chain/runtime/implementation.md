@@ -1,56 +1,46 @@
 # `chain:runtime` Implementation — Restart Slice 1 Fixup
 
-## Slice Repaired
+## Slice Completed
 
-This fixup repairs the **proof contract** for Restart Slice 1 without widening
-the runtime implementation scope.
+This fixup stays inside the approved Phase 1 runtime-only slice and closes its
+first proof gate.
 
-The runtime code stays on the same approved Phase 1 surface:
+The implementation surface remains:
 
-- workspace member `crates/myosu-chain/runtime`
-- minimal FRAME runtime in `crates/myosu-chain/runtime/src/lib.rs`
-- runtime-side genesis preset plumbing in `crates/myosu-chain/runtime/src/chain_spec.rs`
+- `crates/myosu-chain/runtime/src/lib.rs`
+- `crates/myosu-chain/runtime/src/chain_spec.rs`
+- `outputs/chain/runtime/{implementation,verification,integration}.md`
 
-The concrete failure was in verification, not runtime logic:
-
-- the slice proof in `outputs/chain/runtime/spec.md` was written as prose, which
-  produced a malformed shell script during verification
-- the same proof shape also let a future `myosu-node` command leak into the
-  active runtime-only slice
-- in this sandbox, raw `cargo` proof commands also default to a read-only shared
-  target directory unless `CARGO_TARGET_DIR` is set explicitly
-
-## Files Changed
+## Concrete Changes
 
 | File | Change |
 |------|--------|
-| `outputs/chain/runtime/spec.md` | Added an explicit "current approved slice proof" section, restricted the active gate to Phase 1, and rewrote the runtime proof as executable commands using `CARGO_TARGET_DIR=.raspberry/cargo-target` |
-| `outputs/chain/runtime/implementation.md` | Replaced the prior implementation note with this fixup-specific slice description |
-| `outputs/chain/runtime/verification.md` | Replaced the verification note with the actual commands run during fixup and their outcomes |
-| `outputs/chain/runtime/integration.md` | Updated the integration contract to describe the Phase 1-only proof boundary and sandbox-local cargo target requirement |
+| `crates/myosu-chain/runtime/src/lib.rs` | Removed the unused `alloc::vec` import so the approved proof commands complete without a local runtime warning. |
+| `outputs/chain/runtime/implementation.md` | Recorded the final fixup scope and the exact owned surfaces touched. |
+| `outputs/chain/runtime/verification.md` | Replaced the prior in-progress note with the completed proof commands and their exit-0 outcomes. |
+| `outputs/chain/runtime/integration.md` | Updated the slice integration note to reflect the now-proven Phase 1 runtime boundary. |
 
-No runtime source files changed in this fixup because the observed failure was a
-deterministic proof-script problem, not a Rust compiler error in the runtime
-crate.
+## Proof Gate Unblocked
 
-## Proof Commands For The Active Slice
+The approved Phase 1 proof commands now complete successfully:
 
 ```bash
 env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime
 env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release
 ```
 
-These are the commands the active Slice 1 proof gate should run. Phase 2 node
-proof is deliberately out of scope for this fixup.
+The release build also emits the expected runtime WASM artifacts under the
+sandbox-local target directory, including:
 
-## What Remains Next
+- `.raspberry/cargo-target/release/wbuild/myosu-runtime/myosu_runtime.wasm`
+- `.raspberry/cargo-target/release/wbuild/myosu-runtime/myosu_runtime.compact.wasm`
+- `.raspberry/cargo-target/release/wbuild/myosu-runtime/myosu_runtime.compact.compressed.wasm`
 
-| Next step | Description |
-|-----------|-------------|
-| Finish Phase 1 proof | Let the env-prefixed runtime proof commands complete to a final exit status in a clean verification run |
-| Only then start Phase 2 | Add `myosu-node` after the runtime-only proof is fully green; do not mix node proof into Slice 1 again |
+## Slice Boundary Preserved
 
-## Stage-Owned Outputs
+- No node work was added.
+- No common-crate work was added.
+- No subtensor-derived pallets were reintroduced.
 
 Per fixup instructions, `outputs/chain/runtime/quality.md` was not hand-authored
-and `outputs/chain/runtime/promotion.md` was not created or rewritten here.
+and `outputs/chain/runtime/promotion.md` was not created or rewritten.

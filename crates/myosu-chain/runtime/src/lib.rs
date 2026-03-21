@@ -7,7 +7,7 @@ extern crate alloc;
 
 mod chain_spec;
 
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 use frame::{
     deps::frame_support::{
         genesis_builder_helper::{build_state, get_preset},
