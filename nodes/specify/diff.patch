@@ -1,0 +1,596 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 422a549..158d833 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -286,9 +286,11 @@ fabro run fabro/run-configs/bootstrap/tui-shell.toml
+ fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
+ fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
+ 
+-raspberry plan --manifest fabro/programs/myosu-bootstrap.yaml
+-raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
+-raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml
++BOOTSTRAP_MANIFEST="$PWD"/fabro/programs/myosu-bootstrap.yaml
++
++raspberry plan --manifest "$BOOTSTRAP_MANIFEST"
++raspberry status --manifest "$BOOTSTRAP_MANIFEST"
++raspberry execute --manifest "$BOOTSTRAP_MANIFEST"
+ ```
+ 
+ Preferred runtime truth sources:
+diff --git a/README.md b/README.md
+index f846bf3..3eb02f7 100644
+--- a/README.md
++++ b/README.md
+@@ -79,10 +79,12 @@ fabro run fabro/run-configs/bootstrap/tui-shell.toml
+ fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
+ fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
+ 
+-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
+-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
+-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- autodev --manifest fabro/programs/myosu.yaml
+-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
++MYOSU_MANIFEST="$PWD"/fabro/programs/myosu.yaml
++
++cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- plan --manifest "$MYOSU_MANIFEST"
++cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- status --manifest "$MYOSU_MANIFEST"
++cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- autodev --manifest "$MYOSU_MANIFEST"
++cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- tui --manifest "$MYOSU_MANIFEST"
+ ```
+ 
+ Useful proof commands:
+diff --git a/fabro/README.md b/fabro/README.md
+index 394ac96..e77f8f2 100644
+--- a/fabro/README.md
++++ b/fabro/README.md
+@@ -31,6 +31,7 @@ Suggested local entrypoints once the Fabro CLI and Raspberry CLI are wired in:
+     fabro run fabro/run-configs/bootstrap/game-traits.toml
+     fabro run fabro/run-configs/bootstrap/tui-shell.toml
+     fabro run fabro/run-configs/implement/game-traits.toml
+-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
+-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
+-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
++    MYOSU_MANIFEST="$PWD"/fabro/programs/myosu.yaml
++    cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- plan --manifest "$MYOSU_MANIFEST"
++    cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- status --manifest "$MYOSU_MANIFEST"
++    cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- tui --manifest "$MYOSU_MANIFEST"
+diff --git a/fabro/checks/chain-pallet-reset.sh b/fabro/checks/chain-pallet-reset.sh
+index 7927dd1..03044f5 100755
+--- a/fabro/checks/chain-pallet-reset.sh
++++ b/fabro/checks/chain-pallet-reset.sh
+@@ -1,5 +1,9 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
++SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
++cd "$REPO_ROOT"
++
+ test -f crates/myosu-chain/pallets/game-solver/src/lib.rs
+ test -f crates/myosu-chain/pallets/game-solver/Cargo.toml
+diff --git a/fabro/checks/chain-runtime-reset.sh b/fabro/checks/chain-runtime-reset.sh
+index ce4d796..44dd0b9 100755
+--- a/fabro/checks/chain-runtime-reset.sh
++++ b/fabro/checks/chain-runtime-reset.sh
+@@ -1,6 +1,10 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
++SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
++cd "$REPO_ROOT"
++
+ test -f crates/myosu-chain/runtime/src/lib.rs
+ test -d crates/myosu-chain/node/src
+ test -d crates/myosu-chain/common/src
+diff --git a/fabro/checks/games-traits-implement.sh b/fabro/checks/games-traits-implement.sh
+index 944ecf8..c157ffe 100755
+--- a/fabro/checks/games-traits-implement.sh
++++ b/fabro/checks/games-traits-implement.sh
+@@ -1,6 +1,13 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
++SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
++cd "$REPO_ROOT"
++
++CARGO_TARGET_DIR="${MYOSU_CARGO_TARGET_DIR:-/tmp/myosu-cargo-target}"
++export CARGO_TARGET_DIR
++
+ test -f outputs/games/traits/spec.md
+ test -f outputs/games/traits/review.md
+ 
+diff --git a/fabro/checks/games-traits.sh b/fabro/checks/games-traits.sh
+index 3df999b..3d002e5 100755
+--- a/fabro/checks/games-traits.sh
++++ b/fabro/checks/games-traits.sh
+@@ -1,4 +1,11 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
++SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
++cd "$REPO_ROOT"
++
++CARGO_TARGET_DIR="${MYOSU_CARGO_TARGET_DIR:-/tmp/myosu-cargo-target}"
++export CARGO_TARGET_DIR
++
+ cargo test -p myosu-games
+diff --git a/fabro/checks/tui-shell.sh b/fabro/checks/tui-shell.sh
+index f67fe2a..9b919a4 100755
+--- a/fabro/checks/tui-shell.sh
++++ b/fabro/checks/tui-shell.sh
+@@ -1,4 +1,11 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
++SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
++cd "$REPO_ROOT"
++
++CARGO_TARGET_DIR="${MYOSU_CARGO_TARGET_DIR:-/tmp/myosu-cargo-target}"
++export CARGO_TARGET_DIR
++
+ cargo test -p myosu-tui
+diff --git a/outputs/foundations/foundation-plan.md b/outputs/foundations/foundation-plan.md
+new file mode 100644
+index 0000000..59d6b3c
+--- /dev/null
++++ b/outputs/foundations/foundation-plan.md
+@@ -0,0 +1,309 @@
++# Foundations Frontier — First Honest Reviewed Slice
++
++This ExecPlan is a living document. The sections `Progress`,
++`Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must
++be kept up to date as work proceeds.
++
++`PLANS.md` is checked into the repository root and this document must be
++maintained in accordance with it. This plan depends on `README.md`,
++`SPEC.md`, `PLANS.md`, `AGENTS.md`,
++`specs/031626-00-master-index.md`, and
++`specs/031826-fabro-primary-executor-decision.md`.
++
++## Purpose / Big Picture
++
++After this slice lands, Myosu has a truthful foundations artifact pair that
++records what the Fabro/Raspberry control plane can be trusted to say today and
++what still belongs to upstream repair work. The operator-visible outcome is
++concrete:
++
++1. `raspberry plan/status/watch` are truthful for the current Myosu portfolio
++   when they are invoked with absolute manifest paths.
++2. The Myosu-side proof scripts no longer depend on a particular shell working
++   directory and no longer inherit the poisoned read-only cargo target path
++   from this sandbox.
++3. The historical `games:multi-game` false-submit is preserved as evidence,
++   not mistaken for current frontier truth.
++
++This slice does not claim the entire Fabro detach path is fixed. It narrows the
++remaining defect to one sharp boundary: relative manifest path handling in the
++sibling Fabro/Raspberry toolchain, plus the still-unresolved rerun of the
++historical detached `games:multi-game` submission.
++
++## Progress
++
++- [x] (2026-03-21 04:15Z) Re-read the governing doctrine surfaces:
++  `README.md`, `SPEC.md`, `PLANS.md`, `AGENTS.md`,
++  `specs/031626-00-master-index.md`, and
++  `specs/031826-fabro-primary-executor-decision.md`.
++- [x] (2026-03-21 04:18Z) Confirmed the historical `games:multi-game`
++  false-submit still exists at
++  `/home/r/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/` with
++  `status = submitted` and a detach CLI parse failure.
++- [x] (2026-03-21 04:22Z) Verified that relative-manifest `raspberry status`
++  is not trustworthy for proof-backed programs in this checkout:
++  `myosu-bootstrap`, `myosu-chain-core`, and
++  `myosu-games-traits-implementation` rendered as blocked even though their
++  proof scripts succeed when run directly.
++- [x] (2026-03-21 04:24Z) Hardened the Myosu proof scripts under
++  `fabro/checks/` so they self-locate the repository root and force a writable
++  cargo target directory in this sandbox.
++- [x] (2026-03-21 04:28Z) Re-ran the proof scripts directly and confirmed all
++  bootstrap, chain-core, and traits-implementation checks now exit 0 from both
++  the repo root and the `fabro/programs/` directory.
++- [x] (2026-03-21 04:31Z) Re-ran `raspberry status`, `watch`, and `plan` with
++  absolute manifest paths and confirmed the truthful current state:
++  `myosu-bootstrap` complete=4, `myosu-chain-core` complete=2,
++  `myosu-games-traits-implementation` complete=1, and top-level
++  `myosu` complete=7.
++- [x] (2026-03-21 04:33Z) Updated the operator-facing command examples in
++  `README.md`, `fabro/README.md`, and `AGENTS.md` so they use the correct
++  cargo syntax and absolute-manifest variable pattern.
++- [x] (2026-03-21 04:36Z) Wrote the required durable artifacts under
++  `outputs/foundations/`.
++- [ ] Convert the historical Raspberry-dispatched `games:multi-game`
++  false-submit into a new truthful detached failure or successful live run once
++  the sibling Fabro/Raspberry relative-manifest and detach-path defects are
++  repaired upstream.
++
++## Surprises & Discoveries
++
++- Observation: the current control-plane mismatch was two defects layered on top
++  of each other.
++  Evidence: Myosu's proof scripts were brittle about repo-root assumptions and
++  sandbox cargo target paths, but even after fixing those scripts, relative
++  manifest paths still produced false blocked state while absolute manifest
++  paths rendered truthful completion.
++
++- Observation: `raspberry status` is trustworthy for artifact-only frontiers
++  even with relative manifest paths, but not for command-proof frontiers in this
++  checkout.
++  Evidence: relative-path `status` showed `myosu-platform`, `myosu-product`,
++  `myosu-recurring`, and `myosu-services` as complete, while
++  `myosu-bootstrap`, `myosu-chain-core`, and
++  `myosu-games-traits-implementation` were falsely blocked until the same
++  command was rerun with absolute manifest paths.
++
++- Observation: the historical `games:multi-game` false-submit no longer poisons
++  the current portfolio view once the operator uses absolute manifest paths.
++  Evidence: absolute-path `raspberry watch --manifest "$PWD"/fabro/programs/myosu.yaml`
++  reports `complete=7 ready=0 running=0 blocked=0 failed=0`, while the old run
++  directory still independently shows `status = submitted`.
++
++- Observation: the checked-in operator docs had become part of the problem.
++  Evidence: `README.md` and `fabro/README.md` still used the invalid
++  `cargo --manifest-path ... run` ordering, and `AGENTS.md` still showed
++  relative-manifest Raspberry commands that reproduce the current path bug.
++
++## Decision Log
++
++- Decision: keep this slice focused on truthful operator surfaces and durable
++  evidence rather than widening the repo with a new checked-in foundations
++  program.
++  Rationale: the user only required `outputs/foundations/` artifacts, and the
++  current Myosu checkout can already prove the control-plane mismatch without a
++  new frontier manifest.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: fix Myosu-local proof script defects immediately once real execution
++  exposed them.
++  Rationale: these defects lived in the checked-in Myosu execution surface, were
++  cheap to correct, and were directly responsible for false proof failures in
++  this sandbox.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: treat absolute manifest paths as the current honest operator
++  contract until the sibling Fabro/Raspberry relative-path resolver is repaired.
++  Rationale: absolute manifest paths produced consistent `plan/status/watch`
++  truth in this checkout, while relative manifest paths still produced false
++  blocked state for proof-backed programs.
++  Date/Author: 2026-03-21 / Codex
++
++- Decision: preserve the historical `games:multi-game` false-submit as evidence
++  rather than mutating or deleting it locally.
++  Rationale: the detached run directory is still the cleanest proof of the
++  earlier false-submit behavior and should survive until upstream repair work
++  defines a cleanup or tombstone policy.
++  Date/Author: 2026-03-21 / Codex
++
++## Outcomes & Retrospective
++
++This slice produced an honest frontier baseline.
++
++What is now true:
++
++- Myosu's proof scripts are self-anchored and sandbox-safe.
++- The operator docs now point at command forms that work in this environment.
++- Absolute-path `raspberry plan/status/watch` over the current portfolio render
++  coherent truth.
++- The current portfolio can be shown as fully complete in reviewed-artifact
++  terms without hand-waving around blocked proof checks.
++
++What is not yet true:
++
++- Relative manifest path handling is still trustworthy.
++- The historical detached `games:multi-game` false-submit has not yet been
++  rerun through a repaired detach path in this checkout.
++- `execute` has not been given a new local foundations canary in the current
++  tree.
++
++That is acceptable for a first honest reviewed slice. The frontier is now sharp
++enough that the remaining work is clearly upstream Fabro/Raspberry hardening,
++not Myosu-local archaeology.
++
++## Context and Orientation
++
++The foundations frontier in this checkout is artifact-first, not manifest-first.
++Its durable outputs are:
++
++- `outputs/foundations/foundation-plan.md`
++- `outputs/foundations/review.md`
++
++The Myosu execution surfaces touched by this slice are:
++
++- `fabro/checks/games-traits.sh`
++- `fabro/checks/tui-shell.sh`
++- `fabro/checks/games-traits-implement.sh`
++- `fabro/checks/chain-runtime-reset.sh`
++- `fabro/checks/chain-pallet-reset.sh`
++- `README.md`
++- `fabro/README.md`
++- `AGENTS.md`
++
++The key historical evidence surface remains:
++
++- `/home/r/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/`
++
++The key live operator surfaces are the checked-in program manifests under
++`fabro/programs/`, especially:
++
++- `fabro/programs/myosu.yaml`
++- `fabro/programs/myosu-bootstrap.yaml`
++- `fabro/programs/myosu-chain-core.yaml`
++- `fabro/programs/myosu-games-traits-implementation.yaml`
++
++In this repository, a "truthful" operator command means the command's printed
++lane state matches the current checked-in artifacts, proof checks, and known run
++metadata. A "false-submit" means Raspberry or Fabro emitted a run id or status
++that looked actionable even though the underlying detached execution never
++became a valid live run.
++
++## Plan of Work
++
++The work for this slice is intentionally narrow.
++
++First, preserve the historical false-submit exactly as evidence. Do not edit or
++delete the old run directory.
++
++Second, keep Myosu-local proof scripts robust against the current environment by
++making them resolve the repository root themselves and by forcing a writable
++cargo target path. This prevents sandbox-specific file-system failures from
++looking like product or proof failures.
++
++Third, standardize the operator contract around absolute manifest paths for
++Raspberry commands. This is the smallest honest workaround for the current
++relative-path resolver defect in the sibling Fabro/Raspberry toolchain.
++
++Fourth, use the durable artifacts in `outputs/foundations/` to tell future
++operators exactly how to reproduce both the broken and the truthful states.
++
++## Concrete Steps
++
++From the repository root, the key commands for this slice are:
++
++    MYOSU_MANIFEST="$PWD"/fabro/programs/myosu.yaml
++    BOOTSTRAP_MANIFEST="$PWD"/fabro/programs/myosu-bootstrap.yaml
++    CHAIN_CORE_MANIFEST="$PWD"/fabro/programs/myosu-chain-core.yaml
++    TRAITS_IMPL_MANIFEST="$PWD"/fabro/programs/myosu-games-traits-implementation.yaml
++
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest "$BOOTSTRAP_MANIFEST"
++
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest "$CHAIN_CORE_MANIFEST"
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest "$TRAITS_IMPL_MANIFEST"
++    /home/r/coding/fabro/target-local/debug/raspberry plan --manifest "$MYOSU_MANIFEST"
++    timeout 3 /home/r/coding/fabro/target-local/debug/raspberry watch --manifest "$MYOSU_MANIFEST" --interval-ms 500
++
++    ./fabro/checks/games-traits.sh
++    ./fabro/checks/tui-shell.sh
++    ./fabro/checks/games-traits-implement.sh
++    ./fabro/checks/chain-runtime-reset.sh
++    ./fabro/checks/chain-pallet-reset.sh
++
++To inspect the historical false-submit:
++
++    sed -n '1,40p' /home/r/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/status.json
++    sed -n '1,40p' /home/r/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/detach.log
++
++## Validation and Acceptance
++
++This first honest slice is accepted when all of the following are true:
++
++- `outputs/foundations/foundation-plan.md` and `outputs/foundations/review.md`
++  both exist and describe the same current frontier truth.
++- The five Myosu proof scripts under `fabro/checks/` all succeed in this
++  checkout.
++- Relative-path `raspberry status --manifest fabro/programs/myosu-bootstrap.yaml`
++  still demonstrates the current path-resolution defect.
++- Absolute-path `raspberry plan/status/watch` over the same manifests render the
++  truthful current state:
++  `myosu-bootstrap` complete=4,
++  `myosu-chain-core` complete=2,
++  `myosu-games-traits-implementation` complete=1,
++  and top-level `myosu` complete=7.
++- The historical `games:multi-game` false-submit is documented with both its
++  stale `submitted` status and its detach CLI parse failure.
++
++## Idempotence and Recovery
++
++This slice is safe to rerun.
++
++- Re-running the proof scripts only re-tests the current checkout.
++- Re-running `raspberry plan/status/watch` only refreshes `.raspberry/*.json`
++  state files in the current worktree.
++- The doc changes are additive and can be re-applied cleanly.
++
++Do not edit or remove the historical run directory under `/home/r/.fabro/runs/`
++as part of normal reruns. It is part of the evidence set.
++
++## Artifacts and Notes
++
++Representative failure evidence:
++
++    Program: myosu-bootstrap
++    Counts: complete=0 ready=0 running=0 blocked=4 failed=0
++    games:traits [blocked|platform] ... proof_state=failed
++
++Representative truthful state after switching to absolute manifest paths:
++
++    Program: myosu-bootstrap
++    Counts: complete=4 ready=0 running=0 blocked=0 failed=0
++    games:traits [complete|platform] ... proof_state=met
++
++Representative top-level truthful state:
++
++    Program: myosu
++    Counts: complete=7 ready=0 running=0 blocked=0 failed=0
++
++Historical false-submit evidence:
++
++    {
++      "status": "submitted",
++      "updated_at": "2026-03-19T06:16:00.090006038Z"
++    }
++
++    error: unexpected argument '/home/r/coding/myosu/fabro/programs/../run-configs/platform/multi-game.toml' found
++
++## Interfaces and Dependencies
++
++The Myosu-side surfaces that must remain stable after this slice are:
++
++- `fabro/checks/*.sh` as the proof interface for Raspberry `command_succeeds`
++  checks
++- `fabro/programs/*.yaml` as the control-plane manifest interface
++- `outputs/` as the durable reviewed-artifact contract
++
++The sibling-tool dependency that remains open is the Fabro/Raspberry manifest
++path resolver. This slice deliberately does not patch `/home/r/coding/fabro/`;
++it captures the repro clearly enough that an upstream fix can start from these
++artifacts.
+diff --git a/outputs/foundations/review.md b/outputs/foundations/review.md
+new file mode 100644
+index 0000000..aca3551
+--- /dev/null
++++ b/outputs/foundations/review.md
+@@ -0,0 +1,141 @@
++# Foundations Frontier Review
++
++**Frontier:** `foundations`
++**Output root:** `outputs/foundations/`
++**Date:** 2026-03-21
++
++## Keep / Reopen / Reset Judgment
++
++**Judgment: KEEP this reviewed slice, REOPEN relative-manifest and detach-path hardening upstream.**
++
++This slice is honest and worth keeping. It establishes a truthful current
++operator contract:
++
++- use absolute manifest paths for Raspberry commands
++- trust the current portfolio state rendered through that path shape
++- preserve the historical `games:multi-game` false-submit as evidence
++
++What still needs reopening is upstream Fabro/Raspberry behavior, not the Myosu
++artifact layer:
++
++- relative manifest path handling still produces false blocked state for
++  proof-backed programs
++- the historical detached `games:multi-game` submission has not yet been rerun
++  through a repaired detach path in this checkout
++
++## What Is Trustworthy Today
++
++### 1. Absolute-path `plan/status/watch` over the current portfolio
++
++Using absolute manifest paths, the current checked-in Myosu frontiers render
++coherent truth:
++
++- `myosu-bootstrap`: complete=4
++- `myosu-chain-core`: complete=2
++- `myosu-games-traits-implementation`: complete=1
++- `myosu-platform`: complete=3
++- `myosu-product`: complete=2
++- `myosu-recurring`: complete=4
++- `myosu-services`: complete=2
++- top-level `myosu`: complete=7
++
++`raspberry watch --manifest "$PWD"/fabro/programs/myosu.yaml` also reports the
++same state, so the truthful path is not limited to one command variant.
++
++### 2. The Myosu proof scripts after hardening
++
++The following proof interfaces now exit 0 in this sandbox:
++
++- `fabro/checks/games-traits.sh`
++- `fabro/checks/tui-shell.sh`
++- `fabro/checks/games-traits-implement.sh`
++- `fabro/checks/chain-runtime-reset.sh`
++- `fabro/checks/chain-pallet-reset.sh`
++
++They no longer depend on a repo-root shell by accident, and the cargo-based
++ones no longer inherit the poisoned read-only cargo target path.
++
++### 3. The historical false-submit as evidence only
++
++The old detached `games:multi-game` run still shows:
++
++- `status.json`: `status = submitted`
++- `detach.log`: `unexpected argument .../run-configs/platform/multi-game.toml`
++
++That evidence is still useful, but it is no longer the best description of the
++current portfolio state when the operator uses the truthful absolute-path
++contract.
++
++## What Is Not Yet Trustworthy
++
++### 1. Relative-manifest Raspberry commands
++
++Relative manifest paths still misrender proof-backed frontiers in this checkout.
++The clearest repro is:
++
++    /home/r/coding/fabro/target-local/debug/raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
++
++That command reports:
++
++- `complete=0 blocked=4`
++- `proof_state=failed` for all four lanes
++
++The same binary against the same manifest via an absolute path reports:
++
++- `complete=4 blocked=0`
++- `proof_state=met` for all four lanes
++
++This is a real control-plane defect, not a documentation typo.
++
++### 2. Detached execute reruns for the old multi-game incident
++
++This slice did not rerun `execute` against a new local foundations canary or a
++repaired `games:multi-game` lane. The historical false-submit is documented, but
++the detached execute path still needs an upstream repair slice before we can
++claim the original incident has been fully converted into a new truthful live
++run or truthful live failure inside this checkout.
++
++## Concrete Findings
++
++### Finding 1: The current false truth is path-shaped, not artifact-shaped
++
++The current reviewed artifacts under `outputs/` are internally coherent. The
++same repo renders blocked or complete depending on whether Raspberry receives a
++relative or absolute manifest path. That pins the remaining defect to manifest
++path resolution in the sibling Fabro/Raspberry toolchain.
++
++### Finding 2: Myosu had local proof-script fragility that worsened diagnosis
++
++Before this slice, the proof scripts mixed cwd-sensitive file tests with cargo
++commands that inherited a read-only target directory. Those defects are now
++fixed locally, which means future failures are more likely to reflect the
++control plane rather than the shell wrapper.
++
++### Finding 3: The historical `games:multi-game` false-submit is still real
++
++The stale run directory under `/home/r/.fabro/runs/20260319-01KM2BS4ASVRXVT2ND1GVVMKJ0/`
++remains the durable proof that Raspberry once emitted a detached submission
++whose worker never became a truthful run. That evidence should stay intact.
++
++### Finding 4: The operator docs were previously teaching the broken path
++
++`README.md`, `fabro/README.md`, and `AGENTS.md` all pointed operators at
++relative-manifest Raspberry commands, and two of them also used stale cargo
++syntax. Those docs now use absolute-manifest variables and the correct
++`cargo run --manifest-path ...` ordering.
++
++## Recommendation
++
++Keep the current slice and use it as the baseline for future frontier work.
++
++The next repair slice should happen in the sibling Fabro/Raspberry repo and
++should do two things:
++
++1. Fix relative manifest path resolution so `target_repo: ../..` does not
++   collapse the command working directory when the manifest argument is relative.
++2. Re-run a detached canary lane, then re-run the historical
++   `games:multi-game` scenario or an equivalent foundations canary until
++   `execute/status/watch` all agree on the live result.
++
++Until that upstream repair lands, Myosu operators should treat absolute manifest
++paths as mandatory for truthful Raspberry interaction in this environment.
