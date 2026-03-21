@@ -1,0 +1,22 @@
+# `tui:shell` Integration — Slice 1
+
+## Integration Status
+
+This slice is internal to [events.rs](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/crates/myosu-tui/src/events.rs). It improves proof coverage without changing the external shell contract.
+
+## Preserved Contracts
+
+- `Shell::run()` still depends on `EventLoop::new(tick_rate)`.
+- `EventLoop::update_sender()` still exposes the same cloned `mpsc::UnboundedSender<UpdateEvent>` contract.
+- Key and resize events still surface as `Event::Key` and `Event::Resize`.
+- Focus, mouse, and paste events are still ignored.
+
+## Downstream Impact
+
+- Downstream shells and game renderers do not need code changes.
+- Upstream lane consumers now have CI-safe proof that the event loop behaves in headless execution, which matters for Fabro runs and future pipe/agent automation.
+
+## Follow-On Integration Work
+
+- Slice 2 should prove the shell-side integration from input handling into `ScreenManager`.
+- Later slices should add render coverage across non-Game screens and address the remaining schema proof gap called out in [review.md](/home/r/.fabro/runs/20260320-01KM755GFB9SS6HFPKZYFWVJDP/worktree/outputs/tui/shell/review.md).
