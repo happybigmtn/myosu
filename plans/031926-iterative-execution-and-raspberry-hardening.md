@@ -66,6 +66,19 @@ worked around locally.
 - [x] (2026-03-19 06:44Z) Finished the direct Fabro foreground runs for
   `validator:oracle` and `games:multi-game`, then rerendered
   services/platform against the new reviewed artifacts.
+- [x] (2026-03-21 03:10Z) Bootstrapped an isolated `foundations` frontier with
+  its own program, run config, workflow, and durable output root so Myosu can
+  probe current Raspberry/Fabro run-truth behavior without widening the trusted
+  bootstrap manifest.
+- [x] (2026-03-21 03:10Z) Reproduced two current execute-path defects through
+  real Myosu execution: relative-manifest dispatch still fails on the current
+  run-config/work-dir path handling, and repo-local detached execution can
+  truthfully submit and start but still loses its worker during the first
+  command stage.
+- [x] (2026-03-21 03:10Z) Produced `outputs/foundations/foundation-plan.md`
+  and `outputs/foundations/review.md` as the first honest reviewed slice for
+  the frontier, explicitly separating healthy observer surfaces from the still-
+  broken detached worker completion path.
 - [ ] Execute `agent:experience`, the last remaining ready product lane, then
   use its reviewed artifacts to decide whether product needs an implementation
   family next or another upstream unblock.
@@ -123,6 +136,21 @@ worked around locally.
   (`01KM2CGPHAJ95J38TQ7SPN46NZ`) and `validator:oracle`
   (`01KM2CGPCCC86SHEEQ6QFTRFEM`) are live with real manifests, states, and
   stage labels.
+
+- Observation: relative-manifest execution is still fragile inside the current
+  Raspberry execute path.
+  Evidence: the first `myosu-foundations` execute probe failed until the
+  manifest and run-config were passed through absolute paths; separate direct
+  wrapper testing produced `Failed to set working directory to : No such file
+  or directory (os error 2)` when the relative run-config path was combined
+  with `directory = "../../.."`.
+
+- Observation: a repo-local Fabro wrapper restores truthful detached-run
+  submission under the sandbox, but not clean completion yet.
+  Evidence: `raspberry execute --lane foundations:foundations ...` submitted
+  run `01KM75Q2QBHW7XN46707XJJ00M`, `status/watch` truthfully showed it running
+  at stage `Plan`, and later truthfully marked the lane failed with
+  `tracked run remained active after its worker process disappeared`.
 
 - Observation: the MiniMax bridge currently depends on launching Fabro from an
   interactive shell, because `.bashrc` returns early for non-interactive
@@ -202,6 +230,20 @@ worked around locally.
   interactive-shell early return, so non-interactive Fabro launches do not
   reach the Anthropic-compatible bridge credentials.
   Date/Author: 2026-03-19 / Codex
+
+- Decision: keep the run-truth hardening work in an isolated `foundations`
+  frontier instead of widening `myosu-bootstrap`.
+  Rationale: the bootstrap manifest should stay narrow, and the foundations
+  lane gives Raspberry/Fabro a controlled canary for execute-path debugging.
+  Date/Author: 2026-03-21 / Codex
+
+- Decision: use an absolute manifest path plus a repo-local Fabro wrapper for
+  the foundations execute probe.
+  Rationale: this was the smallest Myosu-local workaround that moved the probe
+  from opaque launch failure to truthful submitted/running/failed states,
+  making the remaining defects sharp enough to hand back to the sibling Fabro
+  repo.
+  Date/Author: 2026-03-21 / Codex
 
 ## Outcomes & Retrospective
 

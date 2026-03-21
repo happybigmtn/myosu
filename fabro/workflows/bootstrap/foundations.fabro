@@ -1,0 +1,15 @@
+digraph BootstrapFoundations {
+    graph [
+        goal="Bootstrap the first honest reviewed slice for the Myosu foundations frontier."
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    plan   [label="Plan", shape=parallelogram, script="./fabro/checks/foundations-write-artifact.sh foundation-plan"]
+    review [label="Review", shape=parallelogram, script="./fabro/checks/foundations-write-artifact.sh review"]
+    verify [label="Verify", shape=parallelogram, script="./fabro/checks/foundations-verify.sh", goal_gate=true, max_retries=0]
+
+    start -> plan -> review -> verify -> exit
+}

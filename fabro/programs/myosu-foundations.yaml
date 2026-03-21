@@ -1,0 +1,35 @@
+version: 1
+program: myosu-foundations
+target_repo: ../..
+state_path: ../../.raspberry/myosu-foundations-state.json
+max_parallel: 1
+units:
+  - id: foundations
+    title: Foundations
+    output_root: ../../outputs/foundations
+    artifacts:
+      - id: foundation_plan
+        path: foundation-plan.md
+      - id: review
+        path: review.md
+    milestones:
+      - id: reviewed
+        requires: [foundation_plan, review]
+    lanes:
+      - id: foundations
+        kind: platform
+        title: Foundations Lane
+        run_config: ../run-configs/bootstrap/foundations.toml
+        managed_milestone: reviewed
+        proof_profile: foundations_bootstrap
+        run_dir: ../../.raspberry/runs/foundations
+        checks:
+          - label: repo_readme_present
+            kind: precondition
+            type: file_exists
+            path: ../../README.md
+          - label: doctrine_index_present
+            kind: precondition
+            type: file_exists
+            path: ../../specs/031626-00-master-index.md
+        produces: [foundation_plan, review]

@@ -1,0 +1,39 @@
+version = 1
+graph = "../../workflows/bootstrap/foundations.fabro"
+goal = """
+Bootstrap the first honest reviewed slice for the Myosu `foundations` frontier.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `specs/031626-00-master-index.md`
+- `specs/031826-fabro-primary-executor-decision.md`
+
+Current frontier tasks:
+- Fix Raspberry/Fabro defects only when they are discovered by real Myosu execution, then rerun the affected frontier until `execute/status/watch` truth is trustworthy again.
+- Convert the current Raspberry-dispatched `games:multi-game` false-submit into a truthful failure or successful live run, then rerun the lane with the repaired Fabro detach path.
+
+Required durable artifacts:
+- `outputs/foundations/foundation-plan.md`
+- `outputs/foundations/review.md`
+
+The `foundation-plan.md` must:
+- follow the repo's `PLANS.md` conventions
+- describe the smallest honest foundations slice for the current frontier
+- capture the real run-truth checks needed before wider expansion
+
+The `review.md` must:
+- make the keep/reopen/reset judgment explicit
+- state what current Fabro/Raspberry truth is trustworthy
+- record the historical `games:multi-game` false-submit evidence and whether it still contaminates current status/watch surfaces
+- name the next concrete actions for this frontier
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

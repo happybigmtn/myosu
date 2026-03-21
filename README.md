@@ -79,10 +79,10 @@ fabro run fabro/run-configs/bootstrap/tui-shell.toml
 fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
 fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
 
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- autodev --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
+/home/r/coding/fabro/target-local/debug/raspberry plan --manifest fabro/programs/myosu.yaml
+/home/r/coding/fabro/target-local/debug/raspberry status --manifest fabro/programs/myosu.yaml
+/home/r/coding/fabro/target-local/debug/raspberry autodev --manifest fabro/programs/myosu.yaml
+/home/r/coding/fabro/target-local/debug/raspberry tui --manifest fabro/programs/myosu.yaml
 ```
 
 Useful proof commands:

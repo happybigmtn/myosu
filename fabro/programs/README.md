@@ -24,6 +24,19 @@ Use when:
 - proving the Fabro/Raspberry control split
 - supervising the first trusted and restart lanes
 
+### `myosu-foundations.yaml`
+
+Purpose: isolated foundations and control-plane trust frontier.
+
+Owns:
+- `foundations:foundations`
+
+Use when:
+- producing the first honest reviewed slice for a newly opened frontier
+- validating current Raspberry `execute/status/watch` truth without widening an
+  existing production program
+- capturing control-plane findings as durable `outputs/foundations/` artifacts
+
 ### `myosu-games-traits-implementation.yaml`
 
 Purpose: lane-scoped delivery program for the next approved `games:traits`
@@ -109,6 +122,7 @@ Use when:
 The current frontier map is now fully seeded at the manifest level:
 
 - `myosu-bootstrap.yaml`
+- `myosu-foundations.yaml`
 - `myosu-chain-core.yaml`
 - `myosu-services.yaml`
 - `myosu-product.yaml`

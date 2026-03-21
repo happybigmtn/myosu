@@ -4,6 +4,17 @@ target_repo: ../..
 state_path: ../../.raspberry/myosu-state.json
 max_parallel: 2
 units:
+  - id: foundations
+    title: Foundations Frontier
+    output_root: ../../.raspberry/portfolio/foundations
+    lanes:
+      - id: program
+        kind: orchestration
+        title: Foundations Program
+        run_config: ../programs/myosu-foundations.yaml
+        program_manifest: ../programs/myosu-foundations.yaml
+        managed_milestone: coordinated
+
   - id: bootstrap
     title: Bootstrap Frontier
     output_root: ../../.raspberry/portfolio/bootstrap
