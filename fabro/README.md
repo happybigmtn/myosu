@@ -31,6 +31,7 @@ Suggested local entrypoints once the Fabro CLI and Raspberry CLI are wired in:
     fabro run fabro/run-configs/bootstrap/game-traits.toml
     fabro run fabro/run-configs/bootstrap/tui-shell.toml
     fabro run fabro/run-configs/implement/game-traits.toml
-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
-    cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
+    MYOSU_MANIFEST="$PWD"/fabro/programs/myosu.yaml
+    cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- plan --manifest "$MYOSU_MANIFEST"
+    cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- status --manifest "$MYOSU_MANIFEST"
+    cargo run --manifest-path /home/r/coding/fabro/Cargo.toml -p raspberry-cli -- tui --manifest "$MYOSU_MANIFEST"

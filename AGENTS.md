@@ -286,9 +286,11 @@ fabro run fabro/run-configs/bootstrap/tui-shell.toml
 fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
 fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
 
-raspberry plan --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml
+BOOTSTRAP_MANIFEST="$PWD"/fabro/programs/myosu-bootstrap.yaml
+
+raspberry plan --manifest "$BOOTSTRAP_MANIFEST"
+raspberry status --manifest "$BOOTSTRAP_MANIFEST"
+raspberry execute --manifest "$BOOTSTRAP_MANIFEST"
 ```
 
 Preferred runtime truth sources:
