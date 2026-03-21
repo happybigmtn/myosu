@@ -1,0 +1,5 @@
+Wrote the durable foundations artifacts at [outputs/foundations/foundation-plan.md](/home/r/.fabro/runs/20260320-01KM76WFCESMPGMFMP21WPFQPQ/worktree/outputs/foundations/foundation-plan.md) and [outputs/foundations/review.md](/home/r/.fabro/runs/20260320-01KM76WFCESMPGMFMP21WPFQPQ/worktree/outputs/foundations/review.md).
+
+The review lands on `REOPEN`, based on live execution evidence rather than repo intent: `raspberry execute/status/watch` all timed out without rendering trustworthy output, detached Fabro failed first on the sandbox-unwritable default `~/.fabro/runs`, then on relative run-config path resolution, and then on a stale `starting/sandbox_initializing` run even after returning a real run id. I also confirmed the `games:multi-game` lane itself can start under a foreground Fabro run with an absolute run-config path plus writable `/tmp` run dir, so the current blocker is supervision truth, not lane scope.
+
+I did not patch the upstream Fabro/Raspberry code in `/home/r/coding/fabro` because this sandbox only allows writes inside the current Myosu worktree. The plan artifact calls out the exact upstream fixes and rerun sequence needed next.
