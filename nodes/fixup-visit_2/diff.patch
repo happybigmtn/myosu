@@ -1,0 +1,165 @@
+diff --git a/fabro/checks/games-multi-game-implement.sh b/fabro/checks/games-multi-game-implement.sh
+new file mode 100755
+index 0000000..026bf2d
+--- /dev/null
++++ b/fabro/checks/games-multi-game-implement.sh
+@@ -0,0 +1,29 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++test -f outputs/games/multi-game/spec.md
++test -f outputs/games/multi-game/review.md
++
++cargo build -p myosu-games-liars-dice
++cargo test -p myosu-games-liars-dice
++cargo test -p myosu-games-liars-dice game::tests::root_is_chance_node
++cargo test -p myosu-games-liars-dice game::tests::legal_bids_increase
++cargo test -p myosu-games-liars-dice game::tests::challenge_resolves_game
++cargo test -p myosu-games-liars-dice game::tests::payoff_is_zero_sum
++cargo test -p myosu-games-liars-dice game::tests::all_trait_bounds_satisfied
++cargo test -p myosu-games-liars-dice profile::tests::train_to_nash
++cargo test -p myosu-games-liars-dice profile::tests::exploitability_near_zero
++cargo test -p myosu-games-liars-dice profile::tests::strategy_is_nontrivial
++cargo test -p myosu-games-liars-dice profile::tests::wire_serialization_works
++cargo test -p myosu-games registry::tests::all_game_types_have_metrics
++cargo test -p myosu-games registry::tests::random_baseline_positive
++cargo test -p myosu-games registry::tests::good_threshold_less_than_baseline
++cargo test -p myosu-play spectate::tests::relay_emits_events
++cargo test -p myosu-play spectate::tests::relay_handles_disconnected_listener
++cargo test -p myosu-play spectate::tests::events_are_valid_json
++cargo test -p myosu-play spectate::tests::discover_local_sessions
++cargo test -p myosu-tui spectate::tests::renders_fog_of_war
++cargo test -p myosu-tui spectate::tests::reveal_shows_hole_cards_after_showdown
++cargo test -p myosu-tui spectate::tests::reveal_blocked_during_play
++cargo test -p myosu-games
++cargo test -p myosu-games-liars-dice
+\ No newline at end of file
+diff --git a/fabro/prompts/implement/games-multi-game-fix.md b/fabro/prompts/implement/games-multi-game-fix.md
+new file mode 100644
+index 0000000..3f8bc54
+--- /dev/null
++++ b/fabro/prompts/implement/games-multi-game-fix.md
+@@ -0,0 +1,20 @@
++The previous verify step failed for the `games:multi-game` implementation lane.
++
++Read:
++
++- the verify output from context
++- `outputs/games/multi-game/spec.md`
++- `outputs/games/multi-game/review.md`
++- `outputs/games/multi-game/implementation.md`
++
++Your job is to fix the concrete proof failures without widening scope.
++
++Rules:
++
++1. Repair the current slice. Do not restart the lane from scratch.
++2. Keep edits centered on the owned surfaces for `games:multi-game` unless a tiny adjacent fix is
++   clearly required.
++3. Update `outputs/games/multi-game/implementation.md` and
++   `outputs/games/multi-game/verification.md` if the implemented slice or
++   changed files differ from what they currently say.
++4. Leave the lane in a state where the verify command can pass cleanly.
+\ No newline at end of file
+diff --git a/fabro/prompts/implement/games-multi-game-implement.md b/fabro/prompts/implement/games-multi-game-implement.md
+new file mode 100644
+index 0000000..1b1057e
+--- /dev/null
++++ b/fabro/prompts/implement/games-multi-game-implement.md
+@@ -0,0 +1,33 @@
++Read these inputs before you make changes:
++
++- `outputs/games/multi-game/spec.md`
++- `outputs/games/multi-game/review.md`
++- `crates/myosu-games-liars-dice/`
++- `crates/myosu-games/src/registry.rs`
++- `crates/myosu-play/src/spectate.rs`
++- `crates/myosu-tui/src/screens/spectate.rs`
++
++Your job is to implement the smallest approved next slice for the
++`games:multi-game` lane.
++
++Rules:
++
++1. Treat `spec.md` as the lane contract and `review.md` as the trust boundary.
++2. Keep the change centered on the owned surfaces for `games:multi-game`:
++   - `crates/myosu-games-liars-dice/` (Liar's Dice game engine)
++   - `crates/myosu-games/src/registry.rs` (ExploitMetric registration)
++   - `crates/myosu-play/src/spectate.rs` (spectator relay)
++   - `crates/myosu-tui/src/screens/spectate.rs` (spectator TUI)
++3. Do real code changes, not only analysis or planning.
++4. Keep scope narrow. Do not try to implement every future game or feature in one run.
++5. After making code changes, write or replace
++   `outputs/games/multi-game/implementation.md`.
++
++The `implementation.md` must say:
++
++- what slice was implemented
++- which files changed
++- what proof commands are expected for this lane
++- what remains for the next slice
++
++Do not leave placeholders.
+\ No newline at end of file
+diff --git a/fabro/prompts/implement/games-multi-game-review.md b/fabro/prompts/implement/games-multi-game-review.md
+new file mode 100644
+index 0000000..3847781
+--- /dev/null
++++ b/fabro/prompts/implement/games-multi-game-review.md
+@@ -0,0 +1,22 @@
++Read these files after verification succeeds:
++
++- `outputs/games/multi-game/spec.md`
++- `outputs/games/multi-game/review.md`
++- `outputs/games/multi-game/implementation.md`
++
++Inspect the code changes across the owned surfaces:
++- `crates/myosu-games-liars-dice/`
++- `crates/myosu-games/src/registry.rs`
++- `crates/myosu-play/src/spectate.rs`
++- `crates/myosu-tui/src/screens/spectate.rs`
++
++Write or replace `outputs/games/multi-game/verification.md`.
++
++The `verification.md` must say:
++
++- which proof commands passed
++- what the implemented slice now guarantees
++- which portability or follow-on risks remain
++- what the next implementation slice should be
++
++Keep the artifact tied to actual files and proof output from this repository.
+\ No newline at end of file
+diff --git a/fabro/workflows/implement/multi-game.fabro b/fabro/workflows/implement/multi-game.fabro
+new file mode 100644
+index 0000000..9c5a38a
+--- /dev/null
++++ b/fabro/workflows/implement/multi-game.fabro
+@@ -0,0 +1,27 @@
++digraph ImplementMultiGame {
++    graph [
++        goal="Implement the next approved games:multi-game slice and produce durable implementation artifacts.",
++        model_stylesheet="
++            *       { backend: cli; }
++            #review { backend: api; model: gpt-5.4; provider: openai; }
++        "
++    ]
++    rankdir=LR
++
++    start [shape=Mdiamond, label="Start"]
++    exit  [shape=Msquare, label="Exit"]
++
++    preflight [label="Preflight", shape=parallelogram, script="./fabro/checks/games-multi-game-implement.sh 2>&1 || true", max_retries=0]
++    implement [label="Implement", prompt="@../../prompts/implement/games-multi-game-implement.md", reasoning_effort="high"]
++    fmt       [label="Format", shape=parallelogram, script="cargo fmt -p myosu-games-liars-dice -p myosu-games -p myosu-play -p myosu-tui 2>&1", max_retries=0]
++    verify    [label="Verify", shape=parallelogram, script="./fabro/checks/games-multi-game-implement.sh 2>&1", goal_gate=true, retry_target="fixup"]
++    fixup     [label="Fixup", prompt="@../../prompts/implement/games-multi-game-fix.md", reasoning_effort="high", max_visits=3]
++    review    [label="Review", prompt="@../../prompts/implement/games-multi-game-review.md", reasoning_effort="medium"]
++    audit     [label="Audit Artifacts", shape=parallelogram, script="test -f outputs/games/multi-game/implementation.md && test -f outputs/games/multi-game/verification.md && test -f outputs/games/multi-game/quality.md", goal_gate=true, max_retries=0]
++
++    start -> preflight -> implement -> fmt -> verify
++    verify -> review [condition="outcome=success"]
++    verify -> fixup
++    fixup -> fmt
++    review -> audit -> exit
++}
