@@ -1,0 +1,9 @@
+[package]
+name = "myosu-chain"
+version = "0.1.0"
+edition = "2024"
+description = "Myosu chain — runtime + node + common"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"

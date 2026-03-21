@@ -4,7 +4,8 @@ members = [
     "crates/myosu-games",
     "crates/myosu-tui",
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
-    # "crates/myosu-chain",      # Stage 1: Substrate chain fork
+    "crates/myosu-chain",       # Stage 1: Substrate chain fork
+    "crates/myosu-chain/runtime", # Runtime WASM (Phase 1)
     # "crates/myosu-miner",      # Stage 4: Miner binary
     # "crates/myosu-validator",   # Stage 4: Validator binary
     # "crates/myosu-play",       # Stage 5: Gameplay CLI
