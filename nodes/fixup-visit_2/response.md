@@ -1,0 +1,7 @@
+The approved `chain:runtime` Phase 1 slice is now green. I made the minimal runtime cleanup in [lib.rs](/home/r/.fabro/runs/20260320-01KM71ZMKXKTA8K2MZZG2XYZGP/worktree/crates/myosu-chain/runtime/src/lib.rs#L10) and refreshed the owned lane artifacts in [implementation.md](/home/r/.fabro/runs/20260320-01KM71ZMKXKTA8K2MZZG2XYZGP/worktree/outputs/chain/runtime/implementation.md#L1), [verification.md](/home/r/.fabro/runs/20260320-01KM71ZMKXKTA8K2MZZG2XYZGP/worktree/outputs/chain/runtime/verification.md#L1), and [integration.md](/home/r/.fabro/runs/20260320-01KM71ZMKXKTA8K2MZZG2XYZGP/worktree/outputs/chain/runtime/integration.md#L1). The only code change was removing the unused `alloc::vec` import so the local runtime proof runs cleanly.
+
+Proof run:
+- `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo check -p myosu-runtime` -> exit `0` in `8.87s`
+- `env CARGO_TARGET_DIR=.raspberry/cargo-target cargo build -p myosu-runtime --release` -> exit `0` in `13.22s`
+
+The release build emitted the expected WASM artifacts under `.raspberry/cargo-target/release/wbuild/myosu-runtime/`, including `myosu_runtime.wasm`, `myosu_runtime.compact.wasm`, and `myosu_runtime.compact.compressed.wasm`. The only remaining note is Cargo’s upstream future-incompat warning for `trie-db v0.29.1`, which did not block this slice. I did not create or rewrite `outputs/chain/runtime/quality.md` or `outputs/chain/runtime/promotion.md` because this Fixup stage explicitly forbids hand-authoring those stage-owned artifacts.
