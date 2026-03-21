@@ -1,0 +1,314 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 7e077fc..7fc0c48 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1704,6 +1704,10 @@ dependencies = [
+  "windows-sys 0.61.2",
+ ]
+ 
++[[package]]
++name = "myosu-chain"
++version = "0.1.0"
++
+ [[package]]
+ name = "myosu-games"
+ version = "0.1.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index e532e62..4de12b7 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -3,8 +3,8 @@ resolver = "2"
+ members = [
+     "crates/myosu-games",
+     "crates/myosu-tui",
++    "crates/myosu-chain",      # Phase 0: honest chain workspace anchor
+     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
+-    # "crates/myosu-chain",      # Stage 1: Substrate chain fork
+     # "crates/myosu-miner",      # Stage 4: Miner binary
+     # "crates/myosu-validator",   # Stage 4: Validator binary
+     # "crates/myosu-play",       # Stage 5: Gameplay CLI
+@@ -30,3 +30,17 @@ crossterm = { version = "0.28", features = ["event-stream"] }
+ ratatui = "0.29"
+ futures = "0.3"
+ tokio-test = "0.4"
++codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
++scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
++frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
++sp-version = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+diff --git a/crates/myosu-chain/Cargo.toml b/crates/myosu-chain/Cargo.toml
+new file mode 100644
+index 0000000..b45e3f7
+--- /dev/null
++++ b/crates/myosu-chain/Cargo.toml
+@@ -0,0 +1,11 @@
++[package]
++name = "myosu-chain"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++repository.workspace = true
++description = "Workspace anchor crate for the myosu chain restart lane"
++publish = false
++
++[lib]
++path = "src/lib.rs"
+diff --git a/crates/myosu-chain/common/Cargo.toml b/crates/myosu-chain/common/Cargo.toml
+new file mode 100644
+index 0000000..51de0a7
+--- /dev/null
++++ b/crates/myosu-chain/common/Cargo.toml
+@@ -0,0 +1,12 @@
++[package]
++name = "myosu-chain-common"
++version = "0.1.0"
++edition = "2024"
++license = "MIT"
++repository = "https://github.com/happybigmtn/myosu"
++description = "Shared chain types and helpers for the myosu chain restart"
++publish = false
++
++[lib]
++name = "myosu_chain_common"
++path = "src/lib.rs"
+diff --git a/crates/myosu-chain/node/Cargo.toml b/crates/myosu-chain/node/Cargo.toml
+new file mode 100644
+index 0000000..09cac6c
+--- /dev/null
++++ b/crates/myosu-chain/node/Cargo.toml
+@@ -0,0 +1,16 @@
++[package]
++name = "myosu-node"
++version = "0.1.0"
++edition = "2024"
++license = "MIT"
++repository = "https://github.com/happybigmtn/myosu"
++description = "Node crate for the myosu chain restart"
++publish = false
++
++[lib]
++name = "myosu_node"
++path = "src/lib.rs"
++
++[[bin]]
++name = "myosu-node"
++path = "src/main.rs"
+diff --git a/crates/myosu-chain/runtime/Cargo.toml b/crates/myosu-chain/runtime/Cargo.toml
+new file mode 100644
+index 0000000..6183aae
+--- /dev/null
++++ b/crates/myosu-chain/runtime/Cargo.toml
+@@ -0,0 +1,13 @@
++[package]
++name = "myosu-runtime"
++version = "0.1.0"
++edition = "2024"
++license = "MIT"
++repository = "https://github.com/happybigmtn/myosu"
++description = "Runtime crate for the myosu chain restart"
++publish = false
++
++[lib]
++name = "myosu_runtime"
++path = "src/lib.rs"
++crate-type = ["cdylib", "rlib"]
+diff --git a/crates/myosu-chain/src/lib.rs b/crates/myosu-chain/src/lib.rs
+new file mode 100644
+index 0000000..89d8244
+--- /dev/null
++++ b/crates/myosu-chain/src/lib.rs
+@@ -0,0 +1,6 @@
++#![cfg_attr(not(test), deny(unsafe_code))]
++
++//! Workspace anchor for the `chain:runtime` restart lane.
++//!
++//! The runtime, node, and common crates are introduced as sibling manifests in
++//! this slice, then admitted to the active build graph in later approved slices.
+diff --git a/outputs/chain/runtime/implementation.md b/outputs/chain/runtime/implementation.md
+new file mode 100644
+index 0000000..67c325e
+--- /dev/null
++++ b/outputs/chain/runtime/implementation.md
+@@ -0,0 +1,77 @@
++# `chain:runtime` Implementation — Phase 0 Slice 1
++
++## Slice Implemented
++
++**Phase 0 Slice 1 — admit `crates/myosu-chain` as a real workspace member and seed the missing manifest surfaces for the chain restart.**
++
++This slice restores honest Cargo surfaces without pretending the broken runtime,
++common, or node source trees already compile. The reviewed lane artifacts say
++the restart begins with workspace wiring, so this cut stays at the manifest
++boundary only.
++
++One implementation detail here is an inference from Cargo rather than from the
++lane prose: Cargo does not support nested workspaces, so `crates/myosu-chain`
++was introduced as a lightweight workspace anchor package while
++`myosu-runtime`, `myosu-chain-common`, and `myosu-node` were seeded as sibling
++manifests for later admission.
++
++## Files Changed
++
++- `Cargo.toml`
++- `crates/myosu-chain/Cargo.toml`
++- `crates/myosu-chain/src/lib.rs`
++- `crates/myosu-chain/runtime/Cargo.toml`
++- `crates/myosu-chain/common/Cargo.toml`
++- `crates/myosu-chain/node/Cargo.toml`
++
++## What Changed
++
++### Root workspace
++
++- Added `crates/myosu-chain` to the root workspace member list.
++- Added the reviewed `polkadot-sdk` `stable2407` dependency line to
++  `workspace.dependencies` for the minimal runtime pallet set and supporting
++  SCALE crates.
++
++### Chain workspace anchor
++
++- Created a minimal `myosu-chain` package at `crates/myosu-chain/` so the root
++  workspace now has an honest chain entry instead of a commented placeholder.
++
++### Missing lane manifests
++
++- Created `Cargo.toml` manifests for:
++  - `myosu-runtime`
++  - `myosu-chain-common`
++  - `myosu-node`
++
++These manifests are intentionally light. They establish package identity and
++owned surfaces now; the Phase 1 runtime rewrite will supply the real dependency
++graph and buildable source shape.
++
++## Proof Commands For This Slice
++
++Commands that should pass for this slice:
++
++```bash
++cargo metadata --format-version 1 --no-deps
++CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-chain
++CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-games
++```
++
++The Phase 1 proof commands remain unchanged and are **not** satisfied by this
++slice yet:
++
++```bash
++cargo build -p myosu-runtime --release
++cargo check -p myosu-runtime
++```
++
++## What Remains For The Next Slice
++
++**Next slice: Phase 1 Slice 2 — replace `crates/myosu-chain/runtime/src/lib.rs`
++with the reviewed minimal runtime (`frame_system + pallet_balances +
++pallet_sudo + pallet_timestamp + frame_executive`) and admit
++`crates/myosu-chain/runtime` as a direct workspace member so the lane proof
++`cargo build -p myosu-runtime --release` becomes meaningful from the workspace
++root.**
+diff --git a/outputs/chain/runtime/integration.md b/outputs/chain/runtime/integration.md
+new file mode 100644
+index 0000000..7355685
+--- /dev/null
++++ b/outputs/chain/runtime/integration.md
+@@ -0,0 +1,39 @@
++# `chain:runtime` Integration — Phase 0 Slice 1
++
++## Integrated In This Slice
++
++- The root workspace now recognizes the chain runtime lane through the new
++  `myosu-chain` anchor package.
++- The runtime-owned manifest surfaces now exist at the paths called out by the
++  restart spec:
++  - `crates/myosu-chain/runtime/Cargo.toml`
++  - `crates/myosu-chain/common/Cargo.toml`
++  - `crates/myosu-chain/node/Cargo.toml`
++
++## Intentionally Not Integrated Yet
++
++- `myosu-runtime` is **not** yet a direct workspace member.
++- `myosu-chain-common` is **not** yet wired into any admitted package.
++- `myosu-node` is **not** yet wired into the workspace build graph.
++- No subtensor-derived pallets were touched in this slice.
++
++This boundary is deliberate. The reviewed lane artifacts require Phase 0
++workspace honesty first, while the actual runtime rewrite belongs to the next
++approved slice.
++
++## Cross-Lane Notes
++
++- The failed `pallet-game-solver` check confirms there is still pallet-side
++  breakage outside `chain:runtime`. This slice records that evidence rather than
++  trying to repair pallet surfaces owned by a different lane.
++- The root `polkadot-sdk stable2407` dependency line now matches the working
++  dependency family already used by `pallet-game-solver`, which reduces drift
++  before the Phase 1 runtime rewrite.
++
++## Next Integration Boundary
++
++The next runtime integration step is to admit `crates/myosu-chain/runtime` as a
++direct workspace member at the same time its source is rewritten to the minimal
++restart runtime. Doing those together keeps the root build graph honest and
++avoids surfacing the current broken subtensor-derived runtime as though it were
++already buildable.
+diff --git a/outputs/chain/runtime/verification.md b/outputs/chain/runtime/verification.md
+new file mode 100644
+index 0000000..3ab0cba
+--- /dev/null
++++ b/outputs/chain/runtime/verification.md
+@@ -0,0 +1,45 @@
++# `chain:runtime` Verification — Phase 0 Slice 1
++
++## Automated Proof Commands
++
++| Command | Exit Code | Outcome |
++|---------|-----------|---------|
++| `cargo metadata --format-version 1 --no-deps` | 0 | Passed. The workspace now resolves with `crates/myosu-chain` as an admitted member. |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-chain` | 0 | Passed. The new workspace anchor package builds cleanly. |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p myosu-games` | 0 | Passed. Existing non-chain workspace members still check after the workspace wiring change. |
++| `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p pallet-game-solver` | 101 | Failed out of scope. The pallet still has pre-existing unresolved `subtensor_*`, `safe_math`, `substrate_fixed`, `log`, and newer Substrate API mismatches, which is consistent with the restart review. |
++
++Note: `cargo check` had to be run with a local `CARGO_TARGET_DIR` because the
++default shared target directory is read-only in this sandbox.
++
++## What This Slice Now Guarantees
++
++- The root workspace no longer treats the chain lane as a commented future
++  placeholder; it has a real `myosu-chain` package entry.
++- The owned manifest surfaces that were missing at restart time now exist:
++  `crates/myosu-chain/Cargo.toml`,
++  `crates/myosu-chain/runtime/Cargo.toml`,
++  `crates/myosu-chain/common/Cargo.toml`, and
++  `crates/myosu-chain/node/Cargo.toml`.
++- The root workspace now carries the reviewed `polkadot-sdk stable2407`
++  dependency line for the minimal runtime pallet set.
++
++## Residual Risks
++
++- `myosu-runtime`, `myosu-chain-common`, and `myosu-node` are still seeded
++  manifests only. Their source trees have not been rewritten to match the
++  minimal restart shape yet.
++- `cargo build -p myosu-runtime --release` is still not meaningful from the root
++  workspace because `crates/myosu-chain/runtime` has not been admitted as a
++  direct workspace member yet.
++- `pallet-game-solver` remains broken outside this slice, which means the wider
++  chain subtree still cannot be trusted as buildable despite the Phase 0
++  manifest recovery.
++
++## Next Slice
++
++**Phase 1 Slice 2 — rewrite `crates/myosu-chain/runtime/src/lib.rs` down to the
++minimal reviewed runtime, add the dependencies/build wiring that runtime
++actually needs, and add `crates/myosu-chain/runtime` as a direct workspace
++member so the lane proof `cargo build -p myosu-runtime --release` can run from
++the workspace root.**
