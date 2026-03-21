@@ -1,0 +1,1744 @@
+diff --git a/crates/myosu-chain/pallets/game-solver/src/lib.rs b/crates/myosu-chain/pallets/game-solver/src/lib.rs
+index e725158..b5d6dba 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/lib.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/lib.rs
+@@ -11,6 +11,8 @@ use sp_core::ConstU32;
+ pub mod epoch;
+ pub mod guards;
+ pub mod macros;
++#[cfg(test)]
++mod phase2_tests;
+ pub mod staking;
+ pub mod stubs;
+ pub mod subnets;
+@@ -133,13 +135,18 @@ pub struct PrometheusInfo {
+ 
+ #[frame_support::pallet]
+ pub mod pallet {
+-    use super::RateLimitKey;
+-    use frame_support::pallet_prelude::*;
++    use super::{AxonInfo, NetUid, NeuronCertificate, PrometheusInfo, RateLimitKey};
++    use alloc::vec::Vec;
++    use frame_support::{pallet_prelude::*, weights::Weight};
++    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+     use scale_info::TypeInfo;
+-    use sp_runtime::traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize, SaturatedConversion};
++    use sp_runtime::traits::{
++        AtLeast32BitUnsigned, MaybeSerializeDeserialize, SaturatedConversion,
++    };
+ 
+     #[pallet::config]
+     pub trait Config: frame_system::Config {
++        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+         type Balance: Parameter
+             + Member
+             + AtLeast32BitUnsigned
+@@ -154,6 +161,89 @@ pub mod pallet {
+     #[pallet::without_storage_info]
+     pub struct Pallet<T>(_);
+ 
++    #[pallet::event]
++    #[pallet::generate_deposit(pub(super) fn deposit_event)]
++    pub enum Event<T: Config> {
++        SubnetRegistered(NetUid, T::AccountId),
++        NeuronRegistered(NetUid, u16, T::AccountId),
++        AxonServed(NetUid, T::AccountId),
++        PrometheusServed(NetUid, T::AccountId),
++    }
++
++    #[pallet::error]
++    pub enum Error<T> {
++        SubnetNotFound,
++        NetUidExhausted,
++        HotkeyAlreadyRegistered,
++        HotkeyOwnedByDifferentColdkey,
++        HotkeyNotRegisteredInSubnet,
++        InvalidIpType,
++        InvalidIpAddress,
++        InvalidPort,
++        InvalidCertificate,
++    }
++
++    #[pallet::storage]
++    #[pallet::getter(fn hotkey_uid)]
++    pub type Keys<T: Config> =
++        StorageDoubleMap<_, Blake2_128Concat, NetUid, Blake2_128Concat, T::AccountId, u16>;
++
++    #[pallet::storage]
++    #[pallet::getter(fn axon_info)]
++    pub type Axons<T: Config> = StorageDoubleMap<
++        _,
++        Blake2_128Concat,
++        NetUid,
++        Blake2_128Concat,
++        T::AccountId,
++        AxonInfo,
++        OptionQuery,
++    >;
++
++    #[pallet::storage]
++    #[pallet::getter(fn prometheus_info)]
++    pub type Prometheus<T: Config> = StorageDoubleMap<
++        _,
++        Blake2_128Concat,
++        NetUid,
++        Blake2_128Concat,
++        T::AccountId,
++        PrometheusInfo,
++        OptionQuery,
++    >;
++
++    #[pallet::storage]
++    #[pallet::getter(fn neuron_certificate)]
++    pub type NeuronCertificates<T: Config> = StorageDoubleMap<
++        _,
++        Blake2_128Concat,
++        NetUid,
++        Blake2_128Concat,
++        T::AccountId,
++        NeuronCertificate,
++        OptionQuery,
++    >;
++
++    #[pallet::storage]
++    #[pallet::getter(fn owner)]
++    pub type Owner<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId>;
++
++    #[pallet::storage]
++    #[pallet::getter(fn delegate_take)]
++    pub type Delegates<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery>;
++
++    #[pallet::storage]
++    #[pallet::getter(fn subnet_owner)]
++    pub type SubnetOwner<T: Config> = StorageMap<_, Blake2_128Concat, NetUid, T::AccountId>;
++
++    #[pallet::storage]
++    #[pallet::getter(fn next_subnet_uid)]
++    pub type NextSubnetUid<T: Config> = StorageValue<_, NetUid, ValueQuery>;
++
++    #[pallet::storage]
++    #[pallet::getter(fn next_neuron_uid)]
++    pub type NextNeuronUid<T: Config> = StorageMap<_, Blake2_128Concat, NetUid, u16, ValueQuery>;
++
+     #[pallet::storage]
+     pub type RateLimitedLastBlock<T: Config> =
+         StorageMap<_, Blake2_128Concat, RateLimitKey<T::AccountId>, u64, ValueQuery>;
+@@ -161,11 +251,97 @@ pub mod pallet {
+     #[pallet::storage]
+     pub type NetworkLastLockBlock<T: Config> = StorageValue<_, u64, ValueQuery>;
+ 
++    #[pallet::call]
++    impl<T: Config> Pallet<T> {
++        #[pallet::call_index(0)]
++        #[pallet::weight(Weight::from_parts(10_000, 0))]
++        pub fn register_subnet(origin: OriginFor<T>) -> DispatchResult {
++            let owner = ensure_signed(origin)?;
++            let netuid = Self::do_register_subnet(&owner)?;
++            Self::deposit_event(Event::SubnetRegistered(netuid, owner));
++            Ok(())
++        }
++
++        #[pallet::call_index(1)]
++        #[pallet::weight(Weight::from_parts(10_000, 0))]
++        pub fn register_hotkey(
++            origin: OriginFor<T>,
++            netuid: NetUid,
++            hotkey: T::AccountId,
++        ) -> DispatchResult {
++            let coldkey = ensure_signed(origin)?;
++            let uid = Self::do_register_hotkey(netuid, &coldkey, &hotkey)?;
++            Self::deposit_event(Event::NeuronRegistered(netuid, uid, hotkey));
++            Ok(())
++        }
++
++        #[pallet::call_index(2)]
++        #[pallet::weight(Weight::from_parts(10_000, 0))]
++        pub fn serve_axon(
++            origin: OriginFor<T>,
++            netuid: NetUid,
++            version: u32,
++            ip: u128,
++            port: u16,
++            ip_type: u8,
++            protocol: u8,
++            placeholder1: u8,
++            placeholder2: u8,
++            certificate: Option<Vec<u8>>,
++        ) -> DispatchResult {
++            let hotkey = ensure_signed(origin)?;
++            let certificate = certificate
++                .map(NeuronCertificate::try_from)
++                .transpose()
++                .map_err(|_| Error::<T>::InvalidCertificate)?;
++            let axon = AxonInfo {
++                block: Self::get_current_block_as_u64(),
++                version,
++                ip,
++                port,
++                ip_type,
++                protocol,
++                placeholder1,
++                placeholder2,
++            };
++            Self::do_serve_axon(netuid, &hotkey, axon, certificate)?;
++            Self::deposit_event(Event::AxonServed(netuid, hotkey));
++            Ok(())
++        }
++
++        #[pallet::call_index(3)]
++        #[pallet::weight(Weight::from_parts(10_000, 0))]
++        pub fn serve_prometheus(
++            origin: OriginFor<T>,
++            netuid: NetUid,
++            version: u32,
++            ip: u128,
++            port: u16,
++            ip_type: u8,
++        ) -> DispatchResult {
++            let hotkey = ensure_signed(origin)?;
++            let info = PrometheusInfo {
++                block: Self::get_current_block_as_u64(),
++                version,
++                ip,
++                port,
++                ip_type,
++            };
++            Self::do_serve_prometheus(netuid, &hotkey, info)?;
++            Self::deposit_event(Event::PrometheusServed(netuid, hotkey));
++            Ok(())
++        }
++    }
++
+     impl<T: Config> Pallet<T> {
+         pub fn get_current_block_as_u64() -> u64 {
+             frame_system::Pallet::<T>::block_number().saturated_into::<u64>()
+         }
+ 
++        pub fn subnet_exists(netuid: NetUid) -> bool {
++            SubnetOwner::<T>::contains_key(netuid)
++        }
++
+         pub fn set_rate_limited_last_block(key: &RateLimitKey<T::AccountId>, block: u64) {
+             RateLimitedLastBlock::<T>::insert(key, block);
+         }
+diff --git a/crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs b/crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs
+new file mode 100644
+index 0000000..2747823
+--- /dev/null
++++ b/crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs
+@@ -0,0 +1,167 @@
++#![cfg(test)]
++
++use crate as pallet_game_solver;
++use frame_support::{assert_noop, assert_ok, derive_impl};
++use sp_core::H256;
++use sp_runtime::{
++    BuildStorage,
++    traits::{BlakeTwo256, IdentityLookup},
++};
++
++type Block = frame_system::mocking::MockBlock<Test>;
++
++frame_support::construct_runtime!(
++    pub enum Test {
++        System: frame_system = 1,
++        GameSolver: pallet_game_solver = 2,
++    }
++);
++
++#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
++impl frame_system::Config for Test {
++    type Block = Block;
++    type AccountId = u64;
++    type Lookup = IdentityLookup<Self::AccountId>;
++    type Hash = H256;
++    type Hashing = BlakeTwo256;
++}
++
++impl crate::pallet::Config for Test {
++    type RuntimeEvent = RuntimeEvent;
++    type Balance = u64;
++}
++
++fn new_test_ext() -> sp_io::TestExternalities {
++    let mut ext = sp_io::TestExternalities::new(
++        frame_system::GenesisConfig::<Test>::default()
++            .build_storage()
++            .expect("frame system storage builds"),
++    );
++    ext.execute_with(|| System::set_block_number(1));
++    ext
++}
++
++#[test]
++fn register_subnet_tracks_owner_and_next_id() {
++    new_test_ext().execute_with(|| {
++        assert_ok!(GameSolver::register_subnet(RuntimeOrigin::signed(7)));
++        assert_eq!(GameSolver::subnet_owner(0), Some(7));
++        assert_eq!(GameSolver::next_subnet_uid(), 1);
++    });
++}
++
++#[test]
++fn register_hotkey_assigns_uid_and_owner() {
++    new_test_ext().execute_with(|| {
++        assert_ok!(GameSolver::register_subnet(RuntimeOrigin::signed(10)));
++        assert_ok!(GameSolver::register_hotkey(
++            RuntimeOrigin::signed(10),
++            0,
++            42
++        ));
++
++        assert_eq!(GameSolver::hotkey_uid(0, 42), Some(0));
++        assert_eq!(GameSolver::owner(42), Some(10));
++        assert_eq!(GameSolver::delegate_take(42), 0);
++        assert_eq!(GameSolver::next_neuron_uid(0), 1);
++    });
++}
++
++#[test]
++fn register_hotkey_rejects_owner_conflicts() {
++    new_test_ext().execute_with(|| {
++        assert_ok!(GameSolver::register_subnet(RuntimeOrigin::signed(10)));
++        assert_ok!(GameSolver::register_hotkey(
++            RuntimeOrigin::signed(10),
++            0,
++            42
++        ));
++
++        assert_ok!(GameSolver::register_subnet(RuntimeOrigin::signed(11)));
++        assert_noop!(
++            GameSolver::register_hotkey(RuntimeOrigin::signed(11), 1, 42),
++            crate::pallet::Error::<Test>::HotkeyOwnedByDifferentColdkey
++        );
++    });
++}
++
++#[test]
++fn serving_updates_registered_hotkey_metadata() {
++    new_test_ext().execute_with(|| {
++        assert_ok!(GameSolver::register_subnet(RuntimeOrigin::signed(10)));
++        assert_ok!(GameSolver::register_hotkey(
++            RuntimeOrigin::signed(10),
++            0,
++            42
++        ));
++
++        assert_ok!(GameSolver::serve_axon(
++            RuntimeOrigin::signed(42),
++            0,
++            3,
++            0x7f00_0001,
++            3030,
++            4,
++            1,
++            9,
++            8,
++            Some(vec![1, 2, 3, 4])
++        ));
++        assert_ok!(GameSolver::serve_prometheus(
++            RuntimeOrigin::signed(42),
++            0,
++            5,
++            0x7f00_0001,
++            9090,
++            4,
++        ));
++
++        let axon = GameSolver::axon_info(0, 42).expect("axon stored");
++        assert_eq!(axon.version, 3);
++        assert_eq!(axon.port, 3030);
++        assert_eq!(axon.protocol, 1);
++        assert_eq!(axon.placeholder1, 9);
++        assert_eq!(axon.placeholder2, 8);
++
++        let certificate = GameSolver::neuron_certificate(0, 42).expect("certificate stored");
++        assert_eq!(certificate.algorithm, 1);
++        assert_eq!(certificate.public_key.into_inner(), vec![2, 3, 4]);
++
++        let prometheus = GameSolver::prometheus_info(0, 42).expect("prometheus stored");
++        assert_eq!(prometheus.version, 5);
++        assert_eq!(prometheus.port, 9090);
++    });
++}
++
++#[test]
++fn serving_rejects_invalid_ip_inputs() {
++    new_test_ext().execute_with(|| {
++        assert_ok!(GameSolver::register_subnet(RuntimeOrigin::signed(10)));
++        assert_ok!(GameSolver::register_hotkey(
++            RuntimeOrigin::signed(10),
++            0,
++            42
++        ));
++
++        assert_noop!(
++            GameSolver::serve_axon(
++                RuntimeOrigin::signed(42),
++                0,
++                1,
++                u32::MAX as u128 + 1,
++                3030,
++                4,
++                0,
++                0,
++                0,
++                None,
++            ),
++            crate::pallet::Error::<Test>::InvalidIpAddress
++        );
++
++        assert_noop!(
++            GameSolver::serve_prometheus(RuntimeOrigin::signed(42), 0, 1, 1, 0, 4,),
++            crate::pallet::Error::<Test>::InvalidPort
++        );
++    });
++}
+diff --git a/crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs b/crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs
+index 9c071f1..c7ac315 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs
+@@ -1 +1,2 @@
+-//! Phase 1 restart placeholder for subnet surfaces.
++pub mod registration;
++pub mod serving;
+diff --git a/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs b/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs
+index a777185..213c9af 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs
+@@ -1,638 +1,51 @@
+-use super::*;
+-use sp_core::{H256, U256};
+-use sp_io::hashing::{keccak_256, sha2_256};
+-use sp_runtime::Saturating;
+-use subtensor_runtime_common::{Currency, NetUid};
+-use subtensor_swap_interface::SwapHandler;
+-use system::pallet_prelude::BlockNumberFor;
+-
+-const LOG_TARGET: &str = "runtime::subtensor::registration";
++use crate::NetUid;
++use crate::pallet::{
++    Config, Delegates, Error, Keys, NextNeuronUid, NextSubnetUid, Owner, Pallet, SubnetOwner,
++};
++use frame_support::ensure;
++use sp_runtime::DispatchError;
+ 
+ impl<T: Config> Pallet<T> {
+-    pub fn register_neuron(netuid: NetUid, hotkey: &T::AccountId) -> Result<u16, DispatchError> {
+-        let block_number: u64 = Self::get_current_block_as_u64();
+-        let current_subnetwork_n: u16 = Self::get_subnetwork_n(netuid);
++    pub fn do_register_subnet(owner: &T::AccountId) -> Result<NetUid, DispatchError> {
++        let netuid = NextSubnetUid::<T>::get();
++        let next_netuid = netuid.checked_add(1).ok_or(Error::<T>::NetUidExhausted)?;
+ 
+-        if current_subnetwork_n < Self::get_max_allowed_uids(netuid) {
+-            // No replacement required, the uid appends the subnetwork.
+-            let neuron_uid = current_subnetwork_n;
++        SubnetOwner::<T>::insert(netuid, owner.clone());
++        NextSubnetUid::<T>::put(next_netuid);
+ 
+-            // Expand subnetwork with new account.
+-            Self::append_neuron(netuid, hotkey, block_number);
+-            log::debug!("add new neuron account");
+-
+-            Ok(neuron_uid)
+-        } else {
+-            match Self::get_neuron_to_prune(netuid) {
+-                Some(uid_to_replace) => {
+-                    Self::replace_neuron(netuid, uid_to_replace, hotkey, block_number);
+-                    log::debug!("prune neuron");
+-                    Ok(uid_to_replace)
+-                }
+-                None => Err(Error::<T>::NoNeuronIdAvailable.into()),
+-            }
+-        }
++        Ok(netuid)
+     }
+ 
+-    /// ---- The implementation for the extrinsic do_burned_registration: registering by burning TAO.
+-    ///
+-    /// # Args:
+-    /// * 'origin': (<T as frame_system::Config>RuntimeOrigin):
+-    ///     - The signature of the calling coldkey.
+-    ///       Burned registers can only be created by the coldkey.
+-    ///
+-    /// * 'netuid' (u16):
+-    ///     - The u16 network identifier.
+-    ///
+-    /// * 'hotkey' ( T::AccountId ):
+-    ///     - Hotkey to be registered to the network.
+-    ///
+-    /// # Event:
+-    /// * NeuronRegistered;
+-    ///     - On successfully registereing a uid to a neuron slot on a subnetwork.
+-    ///
+-    /// # Raises:
+-    /// * 'MechanismDoesNotExist':
+-    ///     - Attempting to registed to a non existent network.
+-    ///
+-    /// * 'TooManyRegistrationsThisBlock':
+-    ///     - This registration exceeds the total allowed on this network this block.
+-    ///
+-    /// * 'HotKeyAlreadyRegisteredInSubNet':
+-    ///     - The hotkey is already registered on this network.
+-    ///
+-    pub fn do_burned_registration(
+-        origin: T::RuntimeOrigin,
++    pub fn do_register_hotkey(
+         netuid: NetUid,
+-        hotkey: T::AccountId,
+-    ) -> DispatchResult {
+-        // --- 1. Check that the caller has signed the transaction. (the coldkey of the pairing)
+-        let coldkey = ensure_signed(origin)?;
+-        log::debug!("do_registration( coldkey:{coldkey:?} netuid:{netuid:?} hotkey:{hotkey:?} )");
+-
+-        // --- 2. Ensure the passed network is valid.
+-        ensure!(
+-            !netuid.is_root(),
+-            Error::<T>::RegistrationNotPermittedOnRootSubnet
+-        );
+-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::SubnetNotExists);
+-
+-        // --- 3. Ensure the passed network allows registrations.
+-        ensure!(
+-            Self::get_network_registration_allowed(netuid),
+-            Error::<T>::SubNetRegistrationDisabled
+-        );
+-
+-        // --- 4. Ensure we are not exceeding the max allowed registrations per block.
+-        ensure!(
+-            Self::get_registrations_this_block(netuid)
+-                < Self::get_max_registrations_per_block(netuid),
+-            Error::<T>::TooManyRegistrationsThisBlock
+-        );
+-
+-        // --- 5. Ensure we are not exceeding the max allowed registrations per interval.
+-        ensure!(
+-            Self::get_registrations_this_interval(netuid)
+-                < Self::get_target_registrations_per_interval(netuid).saturating_mul(3),
+-            Error::<T>::TooManyRegistrationsThisInterval
+-        );
+-
+-        // --- 6. Ensure that the key is not already registered.
+-        ensure!(
+-            !Uids::<T>::contains_key(netuid, &hotkey),
+-            Error::<T>::HotKeyAlreadyRegisteredInSubNet
+-        );
+-
+-        // --- 7. Ensure the callers coldkey has enough stake to perform the transaction.
+-        let registration_cost = Self::get_burn(netuid);
+-        ensure!(
+-            Self::can_remove_balance_from_coldkey_account(&coldkey, registration_cost.into()),
+-            Error::<T>::NotEnoughBalanceToStake
+-        );
+-
+-        // If the network account does not exist we will create it here.
+-        Self::create_account_if_non_existent(&coldkey, &hotkey);
+-
+-        // --- 8. Ensure that the pairing is correct.
+-        ensure!(
+-            Self::coldkey_owns_hotkey(&coldkey, &hotkey),
+-            Error::<T>::NonAssociatedColdKey
+-        );
+-
+-        // --- 9. Possibly there are no neuron slots at all.
+-        ensure!(
+-            Self::get_max_allowed_uids(netuid) != 0,
+-            Error::<T>::NoNeuronIdAvailable
+-        );
+-
+-        // --- 10. If replacement is needed, ensure a safe prune candidate exists.
+-        let current_n = Self::get_subnetwork_n(netuid);
+-        let max_n = Self::get_max_allowed_uids(netuid);
+-        if current_n >= max_n {
+-            ensure!(
+-                Self::get_neuron_to_prune(netuid).is_some(),
+-                Error::<T>::NoNeuronIdAvailable
+-            );
+-        }
+-
+-        // --- 11. Ensure the remove operation from the coldkey is a success.
+-        let actual_burn_amount =
+-            Self::remove_balance_from_coldkey_account(&coldkey, registration_cost.into())?;
+-
+-        // Tokens are swapped and then burned.
+-        let burned_alpha = Self::swap_tao_for_alpha(
+-            netuid,
+-            actual_burn_amount,
+-            T::SwapInterface::max_price(),
+-            false,
+-        )?
+-        .amount_paid_out;
+-        SubnetAlphaOut::<T>::mutate(netuid, |total| {
+-            *total = total.saturating_sub(burned_alpha.into())
+-        });
+-
+-        // Actually perform the registration.
+-        let neuron_uid: u16 = Self::register_neuron(netuid, &hotkey)?;
+-
+-        // --- 12. Record the registration and increment block and interval counters.
+-        BurnRegistrationsThisInterval::<T>::mutate(netuid, |val| val.saturating_inc());
+-        RegistrationsThisInterval::<T>::mutate(netuid, |val| val.saturating_inc());
+-        RegistrationsThisBlock::<T>::mutate(netuid, |val| val.saturating_inc());
+-        Self::increase_rao_recycled(netuid, Self::get_burn(netuid).into());
+-
+-        // --- 13. Deposit successful event.
+-        log::debug!("NeuronRegistered( netuid:{netuid:?} uid:{neuron_uid:?} hotkey:{hotkey:?}  ) ");
+-        Self::deposit_event(Event::NeuronRegistered(netuid, neuron_uid, hotkey));
+-
+-        // --- 14. Ok and done.
+-        Ok(())
+-    }
+-
+-    /// ---- The implementation for the extrinsic do_registration.
+-    ///
+-    /// # Args:
+-    /// *'origin': (<T as frame_system::Config>RuntimeOrigin):
+-    ///     - The signature of the calling hotkey.
+-    ///
+-    /// *'netuid' (u16):
+-    ///     - The u16 network identifier.
+-    ///
+-    /// *'block_number' ( u64 ):
+-    ///     - Block hash used to prove work done.
+-    ///
+-    /// *'nonce' ( u64 ):
+-    ///     - Positive integer nonce used in POW.
+-    ///
+-    /// *'work' ( Vec<u8> ):
+-    ///     - Vector encoded bytes representing work done.
+-    ///
+-    /// *'hotkey' ( T::AccountId ):
+-    ///     - Hotkey to be registered to the network.
+-    ///
+-    /// *'coldkey' ( T::AccountId ):
+-    ///     - Associated coldkey account.
+-    ///
+-    /// # Event:
+-    /// *NeuronRegistered;
+-    ///     - On successfully registereing a uid to a neuron slot on a subnetwork.
+-    ///
+-    /// # Raises:
+-    /// *'MechanismDoesNotExist':
+-    ///     - Attempting to registed to a non existent network.
+-    ///
+-    /// *'TooManyRegistrationsThisBlock':
+-    ///     - This registration exceeds the total allowed on this network this block.
+-    ///
+-    /// *'HotKeyAlreadyRegisteredInSubNet':
+-    ///     - The hotkey is already registered on this network.
+-    ///
+-    /// *'InvalidWorkBlock':
+-    ///     - The work has been performed on a stale, future, or non existent block.
+-    ///
+-    /// *'InvalidDifficulty':
+-    ///     - The work does not match the difficutly.
+-    ///
+-    /// *'InvalidSeal':
+-    ///     - The seal is incorrect.
+-    ///
+-    pub fn do_registration(
+-        origin: T::RuntimeOrigin,
+-        netuid: NetUid,
+-        block_number: u64,
+-        nonce: u64,
+-        work: Vec<u8>,
+-        hotkey: T::AccountId,
+-        coldkey: T::AccountId,
+-    ) -> DispatchResult {
+-        // --- 1. Check that the caller has signed the transaction.
+-        let signing_origin = ensure_signed(origin)?;
+-        log::debug!(
+-            "do_registration( origin:{signing_origin:?} netuid:{netuid:?} hotkey:{hotkey:?}, coldkey:{coldkey:?} )"
+-        );
+-
+-        ensure!(
+-            signing_origin == hotkey,
+-            Error::<T>::TransactorAccountShouldBeHotKey
+-        );
+-
+-        // --- 2. Ensure the passed network is valid.
+-        ensure!(
+-            !netuid.is_root(),
+-            Error::<T>::RegistrationNotPermittedOnRootSubnet
+-        );
+-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::SubnetNotExists);
+-
+-        // --- 3. Ensure the passed network allows registrations.
+-        ensure!(
+-            Self::get_network_pow_registration_allowed(netuid),
+-            Error::<T>::SubNetRegistrationDisabled
+-        );
+-
+-        // --- 4. Ensure we are not exceeding the max allowed registrations per block.
+-        ensure!(
+-            Self::get_registrations_this_block(netuid)
+-                < Self::get_max_registrations_per_block(netuid),
+-            Error::<T>::TooManyRegistrationsThisBlock
+-        );
+-
+-        // --- 5. Ensure we are not exceeding the max allowed registrations per interval.
+-        ensure!(
+-            Self::get_registrations_this_interval(netuid)
+-                < Self::get_target_registrations_per_interval(netuid).saturating_mul(3),
+-            Error::<T>::TooManyRegistrationsThisInterval
+-        );
+-
+-        // --- 6. Ensure that the key is not already registered.
+-        ensure!(
+-            !Uids::<T>::contains_key(netuid, &hotkey),
+-            Error::<T>::HotKeyAlreadyRegisteredInSubNet
+-        );
+-
+-        // --- 7. Ensure the passed block number is valid, not in the future or too old.
+-        // Work must have been done within 3 blocks (stops long range attacks).
+-        let current_block_number: u64 = Self::get_current_block_as_u64();
+-        ensure!(
+-            block_number <= current_block_number,
+-            Error::<T>::InvalidWorkBlock
+-        );
+-        ensure!(
+-            current_block_number.saturating_sub(block_number) < 3,
+-            Error::<T>::InvalidWorkBlock
+-        );
+-
+-        // --- 8. Ensure the supplied work passes the difficulty.
+-        let difficulty: U256 = Self::get_difficulty(netuid);
+-        let work_hash: H256 = Self::vec_to_hash(work.clone());
+-        ensure!(
+-            Self::hash_meets_difficulty(&work_hash, difficulty),
+-            Error::<T>::InvalidDifficulty
+-        ); // Check that the work meets difficulty.
+-
+-        // --- 9. Check Work is the product of the nonce, the block number, and hotkey. Add this as used work.
+-        let seal: H256 = Self::create_seal_hash(block_number, nonce, &hotkey);
+-        ensure!(seal == work_hash, Error::<T>::InvalidSeal);
+-        UsedWork::<T>::insert(work.clone(), current_block_number);
+-
+-        // --- 10. If the network account does not exist we will create it here.
+-        Self::create_account_if_non_existent(&coldkey, &hotkey);
+-
+-        // --- 11. Ensure that the pairing is correct.
+-        ensure!(
+-            Self::coldkey_owns_hotkey(&coldkey, &hotkey),
+-            Error::<T>::NonAssociatedColdKey
+-        );
+-
+-        // --- 12. Possibly there is no neuron slots at all.
+-        ensure!(
+-            Self::get_max_allowed_uids(netuid) != 0,
+-            Error::<T>::NoNeuronIdAvailable
+-        );
+-
+-        // --- 13. If replacement is needed, ensure a safe prune candidate exists.
+-        let current_n = Self::get_subnetwork_n(netuid);
+-        let max_n = Self::get_max_allowed_uids(netuid);
+-        if current_n >= max_n {
+-            ensure!(
+-                Self::get_neuron_to_prune(netuid).is_some(),
+-                Error::<T>::NoNeuronIdAvailable
+-            );
+-        }
+-
+-        // Actually perform the registration.
+-        let neuron_uid: u16 = Self::register_neuron(netuid, &hotkey)?;
+-
+-        // --- 14. Record the registration and increment block and interval counters.
+-        POWRegistrationsThisInterval::<T>::mutate(netuid, |val| val.saturating_inc());
+-        RegistrationsThisInterval::<T>::mutate(netuid, |val| val.saturating_inc());
+-        RegistrationsThisBlock::<T>::mutate(netuid, |val| val.saturating_inc());
+-
+-        // --- 15. Deposit successful event.
+-        log::debug!("NeuronRegistered( netuid:{netuid:?} uid:{neuron_uid:?} hotkey:{hotkey:?}  ) ");
+-        Self::deposit_event(Event::NeuronRegistered(netuid, neuron_uid, hotkey));
+-
+-        // --- 16. Ok and done.
+-        Ok(())
+-    }
+-
+-    pub fn do_faucet(
+-        origin: T::RuntimeOrigin,
+-        block_number: u64,
+-        nonce: u64,
+-        work: Vec<u8>,
+-    ) -> DispatchResult {
+-        // --- 0. Ensure the faucet is enabled.
+-        // ensure!(AllowFaucet::<T>::get(), Error::<T>::FaucetDisabled);
+-
+-        // --- 1. Check that the caller has signed the transaction.
+-        let coldkey = ensure_signed(origin)?;
+-        log::debug!("do_faucet( coldkey:{coldkey:?} )");
+-
+-        // --- 2. Ensure the passed block number is valid, not in the future or too old.
+-        // Work must have been done within 3 blocks (stops long range attacks).
+-        let current_block_number: u64 = Self::get_current_block_as_u64();
+-        ensure!(
+-            block_number <= current_block_number,
+-            Error::<T>::InvalidWorkBlock
+-        );
+-        ensure!(
+-            current_block_number.saturating_sub(block_number) < 3,
+-            Error::<T>::InvalidWorkBlock
+-        );
+-
+-        // --- 3. Ensure the supplied work passes the difficulty.
+-        let difficulty: U256 = U256::from(1_000_000); // Base faucet difficulty.
+-        let work_hash: H256 = Self::vec_to_hash(work.clone());
+-        ensure!(
+-            Self::hash_meets_difficulty(&work_hash, difficulty),
+-            Error::<T>::InvalidDifficulty
+-        ); // Check that the work meets difficulty.
+-
+-        // --- 4. Check Work is the product of the nonce, the block number, and hotkey. Add this as used work.
+-        let seal: H256 = Self::create_seal_hash(block_number, nonce, &coldkey);
+-        ensure!(seal == work_hash, Error::<T>::InvalidSeal);
+-        UsedWork::<T>::insert(work.clone(), current_block_number);
+-
+-        // --- 5. Add Balance via faucet.
+-        let balance_to_add: u64 = 1_000_000_000_000;
+-        Self::increase_issuance(100_000_000_000.into()); // We are creating tokens here from the coinbase.
+-
+-        Self::add_balance_to_coldkey_account(&coldkey, balance_to_add);
+-
+-        // --- 6. Deposit successful event.
+-        log::debug!("Faucet( coldkey:{coldkey:?} amount:{balance_to_add:?} ) ");
+-        Self::deposit_event(Event::Faucet(coldkey, balance_to_add));
+-
+-        // --- 7. Ok and done.
+-        Ok(())
+-    }
+-
+-    pub fn vec_to_hash(vec_hash: Vec<u8>) -> H256 {
+-        let de_ref_hash = &vec_hash; // b: &Vec<u8>
+-        let de_de_ref_hash: &[u8] = de_ref_hash; // c: &[u8]
+-        let real_hash: H256 = H256::from_slice(de_de_ref_hash);
+-        real_hash
+-    }
+-
+-    fn get_immune_owner_hotkeys(netuid: NetUid, coldkey: &T::AccountId) -> Vec<T::AccountId> {
+-        Self::get_immune_owner_tuples(netuid, coldkey)
+-            .into_iter()
+-            .map(|(_, hk)| hk)
+-            .collect()
+-    }
+-
+-    pub fn get_immune_owner_uids(netuid: NetUid, coldkey: &T::AccountId) -> Vec<u16> {
+-        Self::get_immune_owner_tuples(netuid, coldkey)
+-            .into_iter()
+-            .map(|(uid, _)| uid)
+-            .collect()
+-    }
+-
+-    fn get_immune_owner_tuples(netuid: NetUid, coldkey: &T::AccountId) -> Vec<(u16, T::AccountId)> {
+-        // Gather (block, uid, hotkey) only for hotkeys that have a UID and a registration block.
+-        let mut triples: Vec<(u64, u16, T::AccountId)> = OwnedHotkeys::<T>::get(coldkey)
+-            .into_iter()
+-            .filter_map(|hotkey| {
+-                // Uids must exist, filter_map ignores hotkeys without UID
+-                Uids::<T>::get(netuid, &hotkey).map(|uid| {
+-                    let block = BlockAtRegistration::<T>::get(netuid, uid);
+-                    (block, uid, hotkey)
+-                })
+-            })
+-            .collect();
+-
+-        // Sort by BlockAtRegistration (ascending), then by uid (ascending)
+-        // Recent registration is priority so that we can let older keys expire (get non-immune)
+-        triples.sort_by(|(b1, u1, _), (b2, u2, _)| b1.cmp(b2).then(u1.cmp(u2)));
+-
+-        // Keep first ImmuneOwnerUidsLimit
+-        let limit = ImmuneOwnerUidsLimit::<T>::get(netuid).into();
+-        if triples.len() > limit {
+-            triples.truncate(limit);
+-        }
+-
+-        // Project to uid/hotkey tuple
+-        let mut immune_tuples: Vec<(u16, T::AccountId)> =
+-            triples.into_iter().map(|(_, uid, hk)| (uid, hk)).collect();
+-
+-        // Insert subnet owner hotkey in the beginning of the list if valid and not
+-        // already present
+-        if let Ok(owner_hk) = SubnetOwnerHotkey::<T>::try_get(netuid)
+-            && let Some(owner_uid) = Uids::<T>::get(netuid, &owner_hk)
+-            && !immune_tuples.contains(&(owner_uid, owner_hk.clone()))
+-        {
+-            immune_tuples.insert(0, (owner_uid, owner_hk.clone()));
+-            if immune_tuples.len() > limit {
+-                immune_tuples.truncate(limit);
+-            }
+-        }
+-
+-        immune_tuples
+-    }
+-
+-    /// Determine which neuron to prune.
+-    pub fn get_neuron_to_prune(netuid: NetUid) -> Option<u16> {
+-        let n = Self::get_subnetwork_n(netuid);
+-        if n == 0 {
+-            return None;
+-        }
+-
+-        let owner_ck = SubnetOwner::<T>::get(netuid);
+-        let immortal_hotkeys = Self::get_immune_owner_hotkeys(netuid, &owner_ck);
+-        let emissions: Vec<AlphaCurrency> = Emission::<T>::get(netuid);
+-
+-        // Single pass:
+-        // - count current non‑immortal & non‑immune UIDs,
+-        // - track best non‑immune and best immune candidates separately.
+-        let mut free_count: u16 = 0;
+-
+-        // (emission, reg_block, uid)
+-        let mut best_non_immune: Option<(AlphaCurrency, u64, u16)> = None;
+-        let mut best_immune: Option<(AlphaCurrency, u64, u16)> = None;
+-
+-        for uid in 0..n {
+-            let hk = match Self::get_hotkey_for_net_and_uid(netuid, uid) {
+-                Ok(h) => h,
+-                Err(_) => continue,
+-            };
+-
+-            // Skip owner‑immortal hotkeys entirely.
+-            if immortal_hotkeys.contains(&hk) {
+-                continue;
+-            }
+-
+-            let is_immune = Self::get_neuron_is_immune(netuid, uid);
+-            let emission = emissions
+-                .get(uid as usize)
+-                .cloned()
+-                .unwrap_or(AlphaCurrency::ZERO);
+-            let reg_block = Self::get_neuron_block_at_registration(netuid, uid);
+-
+-            // Helper to decide if (e, b, u) beats the current best.
+-            let consider = |best: &mut Option<(AlphaCurrency, u64, u16)>| match best {
+-                None => *best = Some((emission, reg_block, uid)),
+-                Some((be, bb, bu)) => {
+-                    let better = if emission != *be {
+-                        emission < *be
+-                    } else if reg_block != *bb {
+-                        reg_block < *bb
+-                    } else {
+-                        uid < *bu
+-                    };
+-                    if better {
+-                        *best = Some((emission, reg_block, uid));
+-                    }
+-                }
+-            };
+-
+-            if is_immune {
+-                consider(&mut best_immune);
+-            } else {
+-                free_count = free_count.saturating_add(1);
+-                consider(&mut best_non_immune);
+-            }
+-        }
+-
+-        // No candidates left after filtering out owner‑immortal hotkeys.
+-        if best_non_immune.is_none() && best_immune.is_none() {
+-            return None;
+-        }
+-
+-        // Safety floor for non‑immortal & non‑immune UIDs.
+-        let min_free: u16 = Self::get_min_non_immune_uids(netuid);
+-        let can_prune_non_immune = free_count > min_free;
+-
+-        // Prefer non‑immune if allowed; otherwise fall back to immune.
+-        if can_prune_non_immune && let Some((_, _, uid)) = best_non_immune {
+-            return Some(uid);
+-        }
+-        best_immune.map(|(_, _, uid)| uid)
+-    }
+-
+-    /// Determine whether the given hash satisfies the given difficulty.
+-    /// The test is done by multiplying the two together. If the product
+-    /// overflows the bounds of U256, then the product (and thus the hash)
+-    /// was too high.
+-    pub fn hash_meets_difficulty(hash: &H256, difficulty: U256) -> bool {
+-        let bytes: &[u8] = hash.as_bytes();
+-        let num_hash: U256 = U256::from_little_endian(bytes);
+-        let (value, overflowed) = num_hash.overflowing_mul(difficulty);
+-
+-        log::trace!(
+-            target: LOG_TARGET,
+-            "Difficulty: hash: {hash:?}, hash_bytes: {bytes:?}, hash_as_num: {num_hash:?}, difficulty: {difficulty:?}, value: {value:?} overflowed: {overflowed:?}"
+-        );
+-        !overflowed
+-    }
+-
+-    pub fn get_block_hash_from_u64(block_number: u64) -> H256 {
+-        let block_number: BlockNumberFor<T> = TryInto::<BlockNumberFor<T>>::try_into(block_number)
+-            .ok()
+-            .expect("convert u64 to block number.");
+-        let block_hash_at_number: <T as frame_system::Config>::Hash =
+-            system::Pallet::<T>::block_hash(block_number);
+-        let vec_hash: Vec<u8> = block_hash_at_number.as_ref().to_vec();
+-        let deref_vec_hash: &[u8] = &vec_hash; // c: &[u8]
+-        let real_hash: H256 = H256::from_slice(deref_vec_hash);
+-
+-        log::trace!(
+-            target: LOG_TARGET,
+-            "block_number: {block_number:?}, vec_hash: {vec_hash:?}, real_hash: {real_hash:?}"
+-        );
+-
+-        real_hash
+-    }
+-
+-    pub fn hash_to_vec(hash: H256) -> Vec<u8> {
+-        let hash_as_bytes: &[u8] = hash.as_bytes();
+-        let hash_as_vec: Vec<u8> = hash_as_bytes.to_vec();
+-        hash_as_vec
+-    }
+-
+-    pub fn hash_block_and_hotkey(block_hash_bytes: &[u8; 32], hotkey: &T::AccountId) -> H256 {
+-        let binding = hotkey.encode();
+-        // Safe because Substrate guarantees that all AccountId types are at least 32 bytes
+-        let (hotkey_bytes, _) = binding.split_at(32);
+-        let mut full_bytes = [0u8; 64];
+-        let (first_half, second_half) = full_bytes.split_at_mut(32);
+-        first_half.copy_from_slice(block_hash_bytes);
+-        second_half.copy_from_slice(hotkey_bytes);
+-        let keccak_256_seal_hash_vec: [u8; 32] = keccak_256(&full_bytes[..]);
+-
+-        H256::from_slice(&keccak_256_seal_hash_vec)
+-    }
+-
+-    pub fn hash_hotkey_to_u64(hotkey: &T::AccountId) -> u64 {
+-        let binding = hotkey.encode();
+-        let (hotkey_bytes, _) = binding.split_at(32);
+-        let mut full_bytes = [0u8; 64];
+-        // Copy the hotkey_bytes into the first half of full_bytes
+-        full_bytes[..32].copy_from_slice(hotkey_bytes);
+-        let keccak_256_seal_hash_vec: [u8; 32] = keccak_256(&full_bytes[..]);
+-        let hash_u64: u64 = u64::from_le_bytes(
+-            keccak_256_seal_hash_vec[0..8]
+-                .try_into()
+-                .unwrap_or_default(),
+-        );
+-        hash_u64
+-    }
+-
+-    pub fn create_seal_hash(block_number_u64: u64, nonce_u64: u64, hotkey: &T::AccountId) -> H256 {
+-        let nonce = nonce_u64.to_le_bytes();
+-        let block_hash_at_number: H256 = Self::get_block_hash_from_u64(block_number_u64);
+-        let block_hash_bytes: &[u8; 32] = block_hash_at_number.as_fixed_bytes();
+-        let binding = Self::hash_block_and_hotkey(block_hash_bytes, hotkey);
+-        let block_and_hotkey_hash_bytes: &[u8; 32] = binding.as_fixed_bytes();
+-
+-        let mut full_bytes = [0u8; 40];
+-        let (first_chunk, second_chunk) = full_bytes.split_at_mut(8);
+-        first_chunk.copy_from_slice(&nonce);
+-        second_chunk.copy_from_slice(block_and_hotkey_hash_bytes);
+-        let sha256_seal_hash_vec: [u8; 32] = sha2_256(&full_bytes[..]);
+-        let keccak_256_seal_hash_vec: [u8; 32] = keccak_256(&sha256_seal_hash_vec);
+-        let seal_hash: H256 = H256::from_slice(&keccak_256_seal_hash_vec);
+-
+-        log::trace!(
+-            "\n hotkey:{hotkey:?} \nblock_number: {block_number_u64:?}, \nnonce_u64: {nonce_u64:?}, \nblock_hash: {block_hash_at_number:?}, \nfull_bytes: {full_bytes:?}, \nsha256_seal_hash_vec: {sha256_seal_hash_vec:?},  \nkeccak_256_seal_hash_vec: {keccak_256_seal_hash_vec:?}, \nseal_hash: {seal_hash:?}"
+-        );
+-
+-        seal_hash
+-    }
+-
+-    /// Helper function for creating nonce and work.
+-    pub fn create_work_for_block_number(
+-        netuid: NetUid,
+-        block_number: u64,
+-        start_nonce: u64,
++        coldkey: &T::AccountId,
+         hotkey: &T::AccountId,
+-    ) -> (u64, Vec<u8>) {
+-        let difficulty: U256 = Self::get_difficulty(netuid);
+-        let mut nonce: u64 = start_nonce;
+-        let mut work: H256 = Self::create_seal_hash(block_number, nonce, hotkey);
+-        while !Self::hash_meets_difficulty(&work, difficulty) {
+-            nonce.saturating_inc();
+-            work = Self::create_seal_hash(block_number, nonce, hotkey);
++    ) -> Result<u16, DispatchError> {
++        ensure!(Self::subnet_exists(netuid), Error::<T>::SubnetNotFound);
++        ensure!(
++            !Keys::<T>::contains_key(netuid, hotkey),
++            Error::<T>::HotkeyAlreadyRegistered
++        );
++
++        if let Some(existing_owner) = Owner::<T>::get(hotkey) {
++            ensure!(
++                existing_owner == *coldkey,
++                Error::<T>::HotkeyOwnedByDifferentColdkey
++            );
++        } else {
++            Owner::<T>::insert(hotkey, coldkey.clone());
+         }
+-        let vec_work: Vec<u8> = Self::hash_to_vec(work);
+-        (nonce, vec_work)
++
++        if !Delegates::<T>::contains_key(hotkey) {
++            Delegates::<T>::insert(hotkey, 0);
++        }
++
++        let next_uid = NextNeuronUid::<T>::get(netuid);
++        let following_uid = next_uid.checked_add(1).ok_or(Error::<T>::NetUidExhausted)?;
++
++        Keys::<T>::insert(netuid, hotkey, next_uid);
++        NextNeuronUid::<T>::insert(netuid, following_uid);
++
++        Ok(next_uid)
+     }
+ }
+diff --git a/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs b/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs
+index d11eb47..340211d 100644
+--- a/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs
++++ b/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs
+@@ -1,372 +1,59 @@
+-use super::*;
+-use subtensor_runtime_common::NetUid;
++use crate::pallet::{Axons, Config, Error, Keys, NeuronCertificates, Pallet, Prometheus};
++use crate::{AxonInfo, NetUid, NeuronCertificate, PrometheusInfo};
++use frame_support::ensure;
++use sp_runtime::DispatchError;
+ 
+ impl<T: Config> Pallet<T> {
+-    /// ---- The implementation for the extrinsic serve_axon which sets the ip endpoint information for a uid on a network.
+-    ///
+-    /// # Args:
+-    /// * 'origin': (<T as frame_system::Config>RuntimeOrigin):
+-    ///     - The signature of the caller.
+-    ///
+-    /// * 'netuid' (u16):
+-    ///     - The u16 network identifier.
+-    ///
+-    /// * 'version' (u64):
+-    ///     - The bittensor version identifier.
+-    ///
+-    /// * 'ip' (u64):
+-    ///     - The endpoint ip information as a u128 encoded integer.
+-    ///
+-    /// * 'port' (u16):
+-    ///     - The endpoint port information as a u16 encoded integer.
+-    ///
+-    /// * 'ip_type' (u8):
+-    ///     - The endpoint ip version as a u8, 4 or 6.
+-    ///
+-    /// * 'protocol' (u8):
+-    ///     - UDP:1 or TCP:0
+-    ///
+-    /// * 'placeholder1' (u8):
+-    ///     - Placeholder for further extra params.
+-    ///
+-    /// * 'placeholder2' (u8):
+-    ///     - Placeholder for further extra params.
+-    ///
+-    /// * 'certificate' (Option<Vec<u8>>):
+-    ///     - Certificate for mutual Tls connection between neurons
+-    ///
+-    /// # Event:
+-    /// * AxonServed;
+-    ///     - On successfully serving the axon info.
+-    ///
+-    /// # Raises:
+-    /// * 'MechanismDoesNotExist':
+-    ///     - Attempting to set weights on a non-existent network.
+-    ///
+-    /// * 'NotRegistered':
+-    ///     - Attempting to set weights from a non registered account.
+-    ///
+-    /// * 'InvalidIpType':
+-    ///     - The ip type is not 4 or 6.
+-    ///
+-    /// * 'InvalidIpAddress':
+-    ///     - The numerically encoded ip address does not resolve to a proper ip.
+-    ///
+-    /// * 'ServingRateLimitExceeded':
+-    ///     - Attempting to set prometheus information withing the rate limit min.
+-    ///
+     pub fn do_serve_axon(
+-        origin: T::RuntimeOrigin,
+         netuid: NetUid,
+-        version: u32,
+-        ip: u128,
+-        port: u16,
+-        ip_type: u8,
+-        protocol: u8,
+-        placeholder1: u8,
+-        placeholder2: u8,
+-        certificate: Option<Vec<u8>>,
+-    ) -> dispatch::DispatchResult {
+-        // We check the callers (hotkey) signature.
+-        let hotkey_id = ensure_signed(origin)?;
+-
+-        // Validate user input
+-        Self::validate_serve_axon(
+-            &hotkey_id,
+-            netuid,
+-            version,
+-            ip,
+-            port,
+-            ip_type,
+-            protocol,
+-            placeholder1,
+-            placeholder2,
+-        )?;
+-
+-        // Check+insert certificate
+-        if let Some(certificate) = certificate
+-            && let Ok(certificate) = NeuronCertificateOf::try_from(certificate)
+-        {
+-            NeuronCertificates::<T>::insert(netuid, hotkey_id.clone(), certificate)
+-        }
+-
+-        // We insert the axon meta.
+-        let mut prev_axon = Self::get_axon_info(netuid, &hotkey_id);
+-        prev_axon.block = Self::get_current_block_as_u64();
+-        prev_axon.version = version;
+-        prev_axon.ip = ip;
+-        prev_axon.port = port;
+-        prev_axon.ip_type = ip_type;
+-        prev_axon.protocol = protocol;
+-        prev_axon.placeholder1 = placeholder1;
+-        prev_axon.placeholder2 = placeholder2;
+-
+-        // Validate axon data with delegate func
+-        let axon_validated = Self::validate_axon_data(&prev_axon);
++        hotkey: &T::AccountId,
++        axon: AxonInfo,
++        certificate: Option<NeuronCertificate>,
++    ) -> Result<(), DispatchError> {
++        ensure!(Self::subnet_exists(netuid), Error::<T>::SubnetNotFound);
+         ensure!(
+-            axon_validated.is_ok(),
+-            axon_validated.err().unwrap_or(Error::<T>::InvalidPort)
++            Keys::<T>::contains_key(netuid, hotkey),
++            Error::<T>::HotkeyNotRegisteredInSubnet
+         );
+ 
+-        Axons::<T>::insert(netuid, hotkey_id.clone(), prev_axon);
++        Self::validate_ip_inputs(axon.ip_type, axon.ip, axon.port)?;
++        Axons::<T>::insert(netuid, hotkey, axon);
+ 
+-        // We deposit axon served event.
+-        log::debug!("AxonServed( hotkey:{:?} ) ", hotkey_id.clone());
+-        Self::deposit_event(Event::AxonServed(netuid, hotkey_id));
++        if let Some(certificate) = certificate {
++            NeuronCertificates::<T>::insert(netuid, hotkey, certificate);
++        }
+ 
+-        // Return is successful dispatch.
+         Ok(())
+     }
+ 
+-    /// ---- The implementation for the extrinsic serve_prometheus.
+-    ///
+-    /// # Args:
+-    /// * 'origin': (<T as frame_system::Config>RuntimeOrigin):
+-    ///     - The signature of the caller.
+-    ///
+-    /// * 'netuid' (u16):
+-    ///     - The u16 network identifier.
+-    ///
+-    /// * 'version' (u64):
+-    ///     - The bittensor version identifier.
+-    ///
+-    /// * 'ip' (u64):
+-    ///     - The prometheus ip information as a u128 encoded integer.
+-    ///
+-    /// * 'port' (u16):
+-    ///     - The prometheus port information as a u16 encoded integer.
+-    ///
+-    /// * 'ip_type' (u8):
+-    ///     - The prometheus ip version as a u8, 4 or 6.
+-    ///
+-    /// # Event:
+-    /// * PrometheusServed;
+-    ///     - On successfully serving the axon info.
+-    ///
+-    /// # Raises:
+-    /// * 'MechanismDoesNotExist':
+-    ///     - Attempting to set weights on a non-existent network.
+-    ///
+-    /// * 'NotRegistered':
+-    ///     - Attempting to set weights from a non registered account.
+-    ///
+-    /// * 'InvalidIpType':
+-    ///     - The ip type is not 4 or 6.
+-    ///
+-    /// * 'InvalidIpAddress':
+-    ///     - The numerically encoded ip address does not resolve to a proper ip.
+-    ///
+-    /// * 'ServingRateLimitExceeded':
+-    ///     - Attempting to set prometheus information withing the rate limit min.
+-    ///
+     pub fn do_serve_prometheus(
+-        origin: T::RuntimeOrigin,
+         netuid: NetUid,
+-        version: u32,
+-        ip: u128,
+-        port: u16,
+-        ip_type: u8,
+-    ) -> dispatch::DispatchResult {
+-        // We check the callers (hotkey) signature.
+-        let hotkey_id = ensure_signed(origin)?;
+-
+-        // Check the ip signature validity.
+-        ensure!(Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType);
++        hotkey: &T::AccountId,
++        info: PrometheusInfo,
++    ) -> Result<(), DispatchError> {
++        ensure!(Self::subnet_exists(netuid), Error::<T>::SubnetNotFound);
+         ensure!(
+-            Self::is_valid_ip_address(ip_type, ip, false),
+-            Error::<T>::InvalidIpAddress
++            Keys::<T>::contains_key(netuid, hotkey),
++            Error::<T>::HotkeyNotRegisteredInSubnet
+         );
+ 
+-        // Ensure the hotkey is registered somewhere.
+-        ensure!(
+-            Self::is_hotkey_registered_on_any_network(&hotkey_id),
+-            Error::<T>::HotKeyNotRegisteredInNetwork
+-        );
++        Self::validate_ip_inputs(info.ip_type, info.ip, info.port)?;
++        Prometheus::<T>::insert(netuid, hotkey, info);
+ 
+-        // We get the previous axon info assoicated with this ( netuid, uid )
+-        let mut prev_prometheus = Self::get_prometheus_info(netuid, &hotkey_id);
+-        let current_block: u64 = Self::get_current_block_as_u64();
+-        ensure!(
+-            Self::prometheus_passes_rate_limit(netuid, &prev_prometheus, current_block),
+-            Error::<T>::ServingRateLimitExceeded
+-        );
+-
+-        // We insert the prometheus meta.
+-        prev_prometheus.block = Self::get_current_block_as_u64();
+-        prev_prometheus.version = version;
+-        prev_prometheus.ip = ip;
+-        prev_prometheus.port = port;
+-        prev_prometheus.ip_type = ip_type;
+-
+-        // Validate prometheus data with delegate func
+-        let prom_validated = Self::validate_prometheus_data(&prev_prometheus);
+-        ensure!(
+-            prom_validated.is_ok(),
+-            prom_validated.err().unwrap_or(Error::<T>::InvalidPort)
+-        );
+-
+-        // Insert new prometheus data
+-        Prometheus::<T>::insert(netuid, hotkey_id.clone(), prev_prometheus);
+-
+-        // We deposit prometheus served event.
+-        log::debug!("PrometheusServed( hotkey:{:?} ) ", hotkey_id.clone());
+-        Self::deposit_event(Event::PrometheusServed(netuid, hotkey_id));
+-
+-        // Return is successful dispatch.
+         Ok(())
+     }
+ 
+-    /********************************
+-     --==[[  Helper functions   ]]==--
+-    *********************************/
++    fn validate_ip_inputs(ip_type: u8, ip: u128, port: u16) -> Result<(), DispatchError> {
++        ensure!(matches!(ip_type, 4 | 6), Error::<T>::InvalidIpType);
++        ensure!(port != 0, Error::<T>::InvalidPort);
+ 
+-    pub fn axon_passes_rate_limit(
+-        netuid: NetUid,
+-        prev_axon_info: &AxonInfoOf,
+-        current_block: u64,
+-    ) -> bool {
+-        let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
+-        let last_serve = prev_axon_info.block;
+-        rate_limit == 0 || last_serve == 0 || current_block.saturating_sub(last_serve) >= rate_limit
+-    }
+-
+-    pub fn prometheus_passes_rate_limit(
+-        netuid: NetUid,
+-        prev_prometheus_info: &PrometheusInfoOf,
+-        current_block: u64,
+-    ) -> bool {
+-        let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
+-        let last_serve = prev_prometheus_info.block;
+-        rate_limit == 0 || last_serve == 0 || current_block.saturating_sub(last_serve) >= rate_limit
+-    }
+-
+-    pub fn get_axon_info(netuid: NetUid, hotkey: &T::AccountId) -> AxonInfoOf {
+-        if let Some(axons) = Axons::<T>::get(netuid, hotkey) {
+-            axons
+-        } else {
+-            AxonInfo {
+-                block: 0,
+-                version: 0,
+-                ip: 0,
+-                port: 0,
+-                ip_type: 0,
+-                protocol: 0,
+-                placeholder1: 0,
+-                placeholder2: 0,
+-            }
+-        }
+-    }
+-
+-    pub fn get_prometheus_info(netuid: NetUid, hotkey: &T::AccountId) -> PrometheusInfoOf {
+-        if let Some(prometheus) = Prometheus::<T>::get(netuid, hotkey) {
+-            prometheus
+-        } else {
+-            PrometheusInfo {
+-                block: 0,
+-                version: 0,
+-                ip: 0,
+-                port: 0,
+-                ip_type: 0,
+-            }
+-        }
+-    }
+-
+-    pub fn is_valid_ip_type(ip_type: u8) -> bool {
+-        let allowed_values = [4, 6];
+-        allowed_values.contains(&ip_type)
+-    }
+-
+-    // @todo (Parallax 2-1-2021) : Implement exclusion of private IP ranges
+-    pub fn is_valid_ip_address(ip_type: u8, addr: u128, allow_zero: bool) -> bool {
+-        if !allow_zero && addr == 0 {
+-            return false;
+-        }
+-        if ip_type == 4 {
+-            if addr >= u32::MAX as u128 {
+-                return false;
+-            }
+-            if addr == 0x7f000001 {
+-                return false;
+-            } // Localhost
+-        }
+-        if ip_type == 6 {
+-            if addr == u128::MAX {
+-                return false;
+-            }
+-            if addr == 1 {
+-                return false;
+-            } // IPv6 localhost
+-        }
+-        true
+-    }
+-
+-    pub fn validate_axon_data(axon_info: &AxonInfoOf) -> Result<bool, pallet::Error<T>> {
+-        if axon_info.port.clamp(0, u16::MAX) == 0 {
+-            return Err(Error::<T>::InvalidPort);
+-        }
+-
+-        Ok(true)
+-    }
+-
+-    pub fn validate_prometheus_data(
+-        prom_info: &PrometheusInfoOf,
+-    ) -> Result<bool, pallet::Error<T>> {
+-        if prom_info.port.clamp(0, u16::MAX) == 0 {
+-            return Err(Error::<T>::InvalidPort);
+-        }
+-
+-        Ok(true)
+-    }
+-
+-    pub fn validate_serve_axon(
+-        hotkey_id: &T::AccountId,
+-        netuid: NetUid,
+-        version: u32,
+-        ip: u128,
+-        port: u16,
+-        ip_type: u8,
+-        protocol: u8,
+-        placeholder1: u8,
+-        placeholder2: u8,
+-    ) -> Result<(), Error<T>> {
+-        // Ensure the hotkey is registered somewhere.
+-        ensure!(
+-            Self::is_hotkey_registered_on_any_network(hotkey_id),
+-            Error::<T>::HotKeyNotRegisteredInNetwork
+-        );
+-
+-        // Check the ip signature validity.
+-        ensure!(Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType);
+-        ensure!(
+-            // allow axon to be served with a zero ip address for testing purposes
+-            Self::is_valid_ip_address(ip_type, ip, true),
+-            Error::<T>::InvalidIpAddress
+-        );
+-
+-        // Get the previous axon information.
+-        let mut prev_axon = Self::get_axon_info(netuid, hotkey_id);
+-        let current_block: u64 = Self::get_current_block_as_u64();
+-        ensure!(
+-            Self::axon_passes_rate_limit(netuid, &prev_axon, current_block),
+-            Error::<T>::ServingRateLimitExceeded
+-        );
+-
+-        // Validate axon data with delegate func
+-        prev_axon.block = Self::get_current_block_as_u64();
+-        prev_axon.version = version;
+-        prev_axon.ip = ip;
+-        prev_axon.port = port;
+-        prev_axon.ip_type = ip_type;
+-        prev_axon.protocol = protocol;
+-        prev_axon.placeholder1 = placeholder1;
+-        prev_axon.placeholder2 = placeholder2;
+-
+-        let axon_validated = Self::validate_axon_data(&prev_axon);
+-        ensure!(
+-            axon_validated.is_ok(),
+-            axon_validated.err().unwrap_or(Error::<T>::InvalidPort)
+-        );
++        let valid_ip = match ip_type {
++            4 => ip != 0 && ip <= u32::MAX as u128,
++            6 => ip != 0,
++            _ => false,
++        };
+ 
++        ensure!(valid_ip, Error::<T>::InvalidIpAddress);
+         Ok(())
+     }
+ }
+diff --git a/outputs/chain/pallet/implementation.md b/outputs/chain/pallet/implementation.md
+index dcd30ce..c0c4d20 100644
+--- a/outputs/chain/pallet/implementation.md
++++ b/outputs/chain/pallet/implementation.md
+@@ -2,64 +2,44 @@
+ 
+ Date: 2026-03-20
+ Lane: `chain:pallet`
+-Slice: `Phase 1 restart scaffolding`
++Slice: `Phase 2 restore core storage and registration/serving`
+ 
+ ## Implemented in this slice
+ 
+-This implementation takes the smallest approved restart cut that makes
+-`pallet-game-solver` compile as a Myosu-owned pallet core again.
++This slice advances the reviewed restart plan from the Phase 1 compile-only
++boundary into the next approved cut: a minimal Myosu-owned pallet core with
++restored config, core storage, and basic registration / serving dispatchables.
+ 
+-- Replaced the forward-ported subtensor `lib.rs` with a minimal FRAME pallet core.
+-- Added local Myosu-owned domain types:
+-  - `NetUid = u16`
+-  - `Balance = u64`
+-  - `Currency` + `SingleTokenCurrency`
+-  - `Hyperparameter`
+-  - `RateLimitKey`
+-  - preserved `AxonInfo`, `PrometheusInfo`, and `NeuronCertificate`
+-- Restored only the storage needed by the stripped rate-limit helpers:
+-  - `RateLimitedLastBlock`
+-  - `NetworkLastLockBlock`
+-- Kept the approved salvageable modules in build:
+-  - `stubs.rs`
+-  - `swap_stub.rs`
+-  - a reduced `utils/rate_limiting.rs`
+-- Stripped the broken subtensor-forwarded surfaces from the active build by
+-  narrowing the module graph:
+-  - `macros/` now exposes only the trait definitions used by `stubs.rs`
+-  - `guards/check_coldkey_swap.rs` is now a local no-op guard
+-  - `staking/mod.rs` and `subnets/mod.rs` are reduced restart surfaces
+-  - `epoch/math.rs` is a local checked-arithmetic surface for the restart cut
+-  - `epoch/run_epoch.rs`, `extensions/`, `migrations/`, `rpc_info/`, `swap/`,
+-    and `coinbase/` are no longer on the active compile path
+-- Updated `Cargo.toml` to add `log` and declare local `runtime-benchmarks` /
+-  `try-runtime` features for the stripped crate shape.
+-- Preserved the downstream-owned handoff artifacts as file surfaces:
+-  - `outputs/chain/pallet/quality.md`
+-  - `outputs/chain/pallet/promotion.md`
+-  These are carried as empty files in this slice so later gates can take
+-  ownership and overwrite them.
++- Extended the pallet `Config` with `RuntimeEvent` and kept the single-token
++  `Balance` surface in [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L147).
++- Restored the approved storage subset in [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L186):
++  `Keys`, `Axons`, `Prometheus`, `NeuronCertificates`, `Owner`, `Delegates`,
++  `SubnetOwner`, `NextSubnetUid`, and `NextNeuronUid`.
++- Added the minimal dispatchable surface in [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L254):
++  `register_subnet`, `register_hotkey`, `serve_axon`, and `serve_prometheus`.
++- Replaced the dormant forwarded subnet logic with Myosu-owned helpers in
++  [registration.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs#L8)
++  and [serving.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs#L6).
++- Preserved the reviewed trust boundary for hotkey ownership by rejecting
++  attempts to bind an already-owned hotkey to a different coldkey in
++  [registration.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs#L30).
++- Added focused pallet tests in
++  [phase2_tests.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs#L44)
++  covering subnet registration, hotkey registration, ownership conflicts,
++  serving persistence, and invalid endpoint input rejection.
+ 
+-## Notes
++## Touched surfaces
+ 
+-- The reviewed spec called for `parity-scale-codec` `encode` / `decode` feature
+-  flags, but the workspace lock resolves to `3.7.5`, which does not expose
+-  those features. The manifest keeps the lock-compatible `derive` feature.
+-- The fixed-point `substrate-fixed` reintroduction is still deferred. This slice
+-  keeps `epoch/math.rs` as a local checked-arithmetic restart surface so the crate
+-  compiles cleanly at the Phase 1 boundary without pulling the old subtensor
+-  math back into scope.
++- [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs)
++- [subnets/mod.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs)
++- [subnets/registration.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs)
++- [subnets/serving.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs)
++- [phase2_tests.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs)
+ 
+-## Files touched
++## Remaining blockers before the next slice
+ 
+-- `crates/myosu-chain/pallets/game-solver/Cargo.toml`
+-- `crates/myosu-chain/pallets/game-solver/src/lib.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/macros/mod.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/macros/config.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/guards/check_coldkey_swap.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/utils/mod.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/utils/rate_limiting.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/epoch/mod.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/epoch/math.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/staking/mod.rs`
+-- `crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs`
++- `epoch/math.rs` is still on the reduced checked-arithmetic surface and has not
++  yet been restored to the reviewed fixed-point design.
++- `staking/` remains outside the active Phase 2 write set.
++- The runtime has not yet wired this restored pallet surface into broader chain
++  flows beyond standalone compile and pallet-local tests.
+diff --git a/outputs/chain/pallet/integration.md b/outputs/chain/pallet/integration.md
+index 09e1a54..1add738 100644
+--- a/outputs/chain/pallet/integration.md
++++ b/outputs/chain/pallet/integration.md
+@@ -2,35 +2,28 @@
+ 
+ Date: 2026-03-20
+ Lane: `chain:pallet`
+-Slice: `Phase 1 restart scaffolding`
++Slice: `Phase 2 restore core storage and registration/serving`
+ 
+ ## Integration effect
+ 
+-The `pallet-game-solver` crate is back to a clean standalone compile and test
+-state with a Myosu-owned module graph. This gives the restart lane a stable
+-base for the next approved pallet slices instead of continuing to patch the
+-subtensor forward-port in place.
++`pallet-game-solver` now exposes a coherent minimal runtime surface instead of a
++compile-only shell. The pallet can allocate subnet ids, register hotkeys with
++stable coldkey ownership, and persist serving metadata for registered hotkeys.
+ 
+-## Surfaces now safe to build on
++## What downstream work can rely on now
+ 
+-- The pallet exports local `NetUid`, `Balance`, `Currency`, `Hyperparameter`,
+-  and `RateLimitKey` types.
+-- `AxonInfo`, `PrometheusInfo`, and `NeuronCertificate` remain available as
+-  clean pallet-owned data types.
+-- `stubs.rs` and `swap_stub.rs` stay live and verified.
+-- The reduced rate-limit helpers can be extended without depending on any
+-  `subtensor_*` workspace crates.
++- Runtime integration can build against the restored pallet `Config`, events,
++  errors, and core storage in
++  [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L147).
++- Pallet callers can use the new registration and serving extrinsics in
++  [lib.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/lib.rs#L254).
++- Subnet logic is now Myosu-owned in
++  [registration.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs#L8)
++  and [serving.rs](/home/r/.fabro/runs/20260320-01KM71KWW01SKCJTVS36V85KY5/worktree/crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs#L6),
++  with no revived `subtensor_*` workspace dependencies.
+ 
+-## Still pending before deeper chain integration
++## Next integration blocker
+ 
+-- Restore the minimal Myosu `Config` surface needed by the runtime.
+-- Reintroduce pallet storage beyond rate limiting.
+-- Restore registration / serving dispatchables.
+-- Replace the `epoch/math.rs` placeholder with real fixed-point logic.
+-- Wire staking and subnet modules back in slice-by-slice.
+-
+-## Stage ownership note
+-
+-`quality.md` is owned by the Quality Gate and `promotion.md` is owned by the
+-Review stage. They were intentionally not hand-authored in this implementation
+-slice.
++The next approved blocker remains Phase 3: restore `epoch/math.rs` to the
++reviewed fixed-point shape so later staking, subnet, and emission slices have
++the math surface they depend on.
+diff --git a/outputs/chain/pallet/promotion.md b/outputs/chain/pallet/promotion.md
+index e69de29..3dc7f72 100644
+--- a/outputs/chain/pallet/promotion.md
++++ b/outputs/chain/pallet/promotion.md
+@@ -0,0 +1,4 @@
++merge_ready: yes
++manual_proof_pending: no
++reason: The Phase 2 pallet slice matches the reviewed plan, has passing automated proof, and `quality.md` is green.
++next_action: Implement the approved Phase 3 `epoch/math.rs` restoration with `substrate-fixed` and local safe division.
+diff --git a/outputs/chain/pallet/quality.md b/outputs/chain/pallet/quality.md
+index c05c152..4bfadef 100644
+--- a/outputs/chain/pallet/quality.md
++++ b/outputs/chain/pallet/quality.md
+@@ -5,7 +5,11 @@ artifact_mismatch_risk: no
+ manual_followup_required: no
+ 
+ ## Touched Surfaces
+-- (none declared)
++- crates/myosu-chain/pallets/game-solver/src/lib.rs
++- crates/myosu-chain/pallets/game-solver/src/subnets/mod.rs
++- crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs
++- crates/myosu-chain/pallets/game-solver/src/subnets/serving.rs
++- crates/myosu-chain/pallets/game-solver/src/phase2_tests.rs
+ 
+ ## Placeholder Hits
+ 
+diff --git a/outputs/chain/pallet/verification.md b/outputs/chain/pallet/verification.md
+index a4c1850..574e57d 100644
+--- a/outputs/chain/pallet/verification.md
++++ b/outputs/chain/pallet/verification.md
+@@ -2,37 +2,30 @@
+ 
+ Date: 2026-03-20
+ Lane: `chain:pallet`
+-Slice: `Phase 1 restart scaffolding`
++Slice: `Phase 2 restore core storage and registration/serving`
+ 
+ ## Automated proof
+ 
+-1. `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo check -p pallet-game-solver`
++1. `CARGO_TARGET_DIR=/tmp/myosu-pallet-target cargo check -p pallet-game-solver`
+    - Result: passed
+-   - Outcome: `pallet-game-solver` finished the `dev` profile successfully.
+-   - Notes: cargo emitted a future-incompatibility warning for `trie-db v0.29.1`.
++   - Outcome: the restored Phase 2 pallet compiled successfully.
++   - Notes: cargo emitted a future-incompatibility note for transitive
++     dependency `trie-db v0.29.1`; no touched pallet source emitted compiler
++     warnings.
+ 
+-2. `CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p pallet-game-solver --lib`
++2. `CARGO_TARGET_DIR=/tmp/myosu-pallet-target cargo test -p pallet-game-solver --lib`
+    - Result: passed
+-   - Outcome: 13 tests passed, 0 failed.
+-   - Notes: cargo briefly waited on the shared artifact lock and then completed
+-     successfully; the same `trie-db v0.29.1` future-incompatibility warning was
+-     emitted during the test run.
+-   - Covered tests:
+-     - `stubs::tests::*`
+-     - `swap_stub::tests::*`
++   - Outcome: 20 tests passed, 0 failed.
++   - Covered areas:
++     - existing `stubs::tests::*`
++     - existing `swap_stub::tests::*`
++     - new `phase2_tests::*`
++     - generated runtime integrity / genesis checks from the test runtime
+ 
+-3. `test -f ./outputs/chain/pallet/implementation.md && test -f ./outputs/chain/pallet/verification.md && test -f ./outputs/chain/pallet/quality.md && test -f ./outputs/chain/pallet/promotion.md && test -f ./outputs/chain/pallet/integration.md`
+-   - Result: passed
+-   - Outcome: all five lane artifact files are now present, so the implement
+-     lane clears its first proof gate.
++## Proof notes
+ 
+-4. Lane quality-gate shell from `../graph.fabro`
+-   - Result: passed
+-   - Outcome: `outputs/chain/pallet/quality.md` was regenerated with
+-     `quality_ready: yes`.
+-
+-## Verification notes
+-
+-- The default workspace target directory was not writable inside the current
+-  sandbox, so verification used `CARGO_TARGET_DIR=/tmp/myosu-cargo-target`.
+-- The warning on `trie-db v0.29.1` did not block the slice.
++- The default workspace target directory is not writable in this sandbox, so
++  proof commands used `CARGO_TARGET_DIR=/tmp/myosu-pallet-target`.
++- The Phase 2 tests exercised the trust-boundary behavior that matters for this
++  slice: signed subnet creation, signed hotkey registration, coldkey ownership
++  consistency, endpoint persistence, and invalid network endpoint rejection.
