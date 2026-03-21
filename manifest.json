@@ -1,0 +1,13 @@
+{
+  "run_id": "01KM77EQZAB3EH21TY8VTT8988",
+  "workflow_name": "TuiShell",
+  "goal": "Implement the next approved `tui:shell` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `tui:shell`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `quality.md`\n- `promotion.md`\n- `integration.md`\n",
+  "start_time": "2026-03-21T03:36:38.348675732Z",
+  "node_count": 9,
+  "edge_count": 12,
+  "run_branch": "fabro/run/01KM77EQZAB3EH21TY8VTT8988",
+  "base_sha": "6b547323ccdc1c2a06e82f6e47111495a7630ab2",
+  "base_branch": "autodev-live",
+  "workflow_slug": "implement",
+  "host_repo_path": "/home/r/coding/myosu/.worktrees/autodev-live"
+}
