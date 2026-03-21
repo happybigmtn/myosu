@@ -5,7 +5,13 @@ artifact_mismatch_risk: no
 manual_followup_required: no
 
 ## Touched Surfaces
-- (none declared)
+- `crates/myosu-chain/pallets/game-solver/Cargo.toml`
+- `crates/myosu-chain/pallets/game-solver/src/lib.rs`
+- `crates/myosu-chain/pallets/game-solver/src/stubs.rs`
+- `crates/myosu-chain/pallets/game-solver/src/epoch/mod.rs`
+- `crates/myosu-chain/pallets/game-solver/src/epoch/math.rs`
+- `crates/myosu-chain/pallets/game-solver/src/utils/mod.rs`
+- `crates/myosu-chain/pallets/game-solver/src/utils/rate_limiting.rs`
 
 ## Placeholder Hits
 
@@ -17,4 +23,3 @@ manual_followup_required: no
 
 
 ## Manual Followup Hits
-

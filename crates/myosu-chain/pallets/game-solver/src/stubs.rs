@@ -4,9 +4,10 @@
 //! myosu does not need. These no-op stubs satisfy the trait bounds while
 //! keeping the runtime minimal.
 //!
-//! These stubs implement the traits defined in `crate::macros::config`:
+//! These stubs define and implement the local trait surfaces kept for the
+//! restart slice:
 //! - ProxyInterface
-//! - CommitmentsInterface  
+//! - CommitmentsInterface
 //! - AuthorshipProvider
 //!
 //! Plus CheckColdkeySwap which is defined locally.
@@ -14,10 +15,24 @@
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 
-// Import the trait definitions from macros::config
-pub use crate::macros::config::{
-    AuthorshipProvider, CommitmentsInterface, ProxyInterface,
-};
+pub trait ProxyInterface<AccountId> {
+    fn exists(delegate: &AccountId) -> bool;
+    fn proxied(who: &AccountId) -> Option<AccountId>;
+    fn real(who: AccountId) -> AccountId;
+    fn is_pure(who: &AccountId) -> bool;
+}
+
+pub trait CommitmentsInterface<AccountId> {
+    fn set_commitment(who: &AccountId, data: &[u8]) -> Result<(), ()>;
+    fn get_commitment(who: &AccountId) -> Option<Vec<u8>>;
+    fn rate_limit() -> u64;
+}
+
+pub trait AuthorshipProvider<AccountId> {
+    fn author() -> Option<AccountId>;
+    fn uncles() -> Vec<AccountId>;
+    fn set_author(author: &AccountId);
+}
 
 /// No-op proxy interface stub.
 ///
@@ -37,8 +52,8 @@ impl<T> ProxyStub<T> {
     }
 
     /// No-op proxy check - always returns the original account.
-    pub fn real(_who: T) -> T {
-        _who
+    pub fn real(who: T) -> T {
+        who
     }
 
     /// Always returns false - no pure proxies.
