@@ -1,0 +1,50 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "specify",
+    "last_response": "**What Changed**\nAdded a dedicated foundations frontier and wrote the required durable artifacts at [foundation-plan.md](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/outputs/founda",
+    "response.specify": "**What Changed**\nAdded a dedicated foundations frontier and wrote the required durable artifacts at [foundation-plan.md](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/outputs/foundations/foundation-plan.md) and [review.md](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/outputs/foundations/review.md). I also added the supporting control-plane surfaces in [myosu-foundations.yaml](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/programs/myosu-foundations.yaml), [foundations.toml](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/run-configs/bootstrap/foundations.toml), [foundations.fabro](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/workflows/bootstrap/foundations.fabro), and the repo-local Fabro wrapper [fabro-local-dispatch.sh](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/checks/fabro-local-dispatch.sh). I fixed the stale Raspberry command examples in [README.md](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/README.md) and [fabro/README.md](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/fabro/README.md), and recorded the slice in [plans/031926-iterative-execution-and-raspberry-hardening.md](/home/r/.fabro/runs/20260320-01KM74SBWAM4KBQHZJYKJ5AEZX/worktree/plans/031926-iterative-execution-and-raspberry-hardening.md).\n\n**Verification**\n`./fabro/checks/foundations-verify.sh` passes. The foundations execute probe isolated the current truth cleanly: relative-manifest `raspberry execute` is still broken, but with an absolute manifest plus the local wrapper it truthfully submitted run `01KM75Q2QBHW7XN46707XJJ00M`, `status/watch` showed it running at `Plan`, and then it truthfully failed with `tracked run remained active after its worker process disappeared`. That means the reviewed slice is honest, but the remaining fixes now clearly belong in the sibling Fabro/Raspberry repo, which I couldn’t patch from this worktree."
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 10404197,
+    "output_tokens": 58421,
+    "cost": 26.886807500000003
+  },
+  "files_written": [
+    "README.md",
+    "fabro/README.md",
+    "fabro/checks/fabro-local-dispatch.sh",
+    "fabro/checks/foundations-verify.sh",
+    "fabro/checks/foundations-write-artifact.sh",
+    "fabro/programs/README.md",
+    "fabro/programs/myosu-foundations.yaml",
+    "fabro/programs/myosu.yaml",
+    "fabro/run-configs/bootstrap/foundations.toml",
+    "fabro/workflows/bootstrap/foundations.fabro",
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md",
+    "plans/031926-iterative-execution-and-raspberry-hardening.md"
+  ],
+  "files_touched": [
+    "README.md",
+    "fabro/README.md",
+    "fabro/checks/fabro-local-dispatch.sh",
+    "fabro/checks/foundations-verify.sh",
+    "fabro/checks/foundations-write-artifact.sh",
+    "fabro/programs/README.md",
+    "fabro/programs/myosu-foundations.yaml",
+    "fabro/programs/myosu.yaml",
+    "fabro/run-configs/bootstrap/foundations.toml",
+    "fabro/workflows/bootstrap/foundations.fabro",
+    "outputs/foundations/foundation-plan.md",
+    "outputs/foundations/review.md",
+    "plans/031926-iterative-execution-and-raspberry-hardening.md"
+  ],
+  "duration_ms": 1294114,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T03:11:34.738240853+00:00",
+  "updated_at": "2026-03-21T03:11:34.738246408+00:00"
+}
