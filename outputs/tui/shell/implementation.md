@@ -11,9 +11,24 @@ The `events.rs` implementation for this slice was already present at the start o
 The failing verify stage did not uncover a new `events.rs` defect. It failed before running tests because the recorded Slice 1 proof gate used invalid Cargo syntax:
 
 - before: `cargo test events:: --no-ignore`
-- after: `cargo test events:: -- --include-ignored`
+- after: `cargo test -p myosu-tui events:: -- --include-ignored`
 
-This preserves the original proof intent for Slice 1 while matching actual Cargo argument parsing.
+This preserves the original proof intent for Slice 1 while matching actual Cargo
+argument parsing and keeping the proof inside the `tui:shell` package boundary.
+
+## Automation Drift Confirmed
+
+During this fixup, the active run's preflight/verify scripts were confirmed to
+be stale outside the worktree:
+
+- they still invoke `cargo test events:: --no-ignore`
+- they still invoke `cargo test shell:: --integration`
+- when allowed to continue, the unscoped workspace-root commands cross into
+  `crates/myosu-chain/pallets/game-solver`, which is outside this lane and
+  currently fails compilation
+
+Those run-graph files are not writable from this sandboxed worktree, so this
+turn hardens the lane artifacts and leaves the runtime code unchanged.
 
 ## Implementation Status Preserved
 
@@ -34,4 +49,5 @@ This fixup stayed within the current slice and its lane artifacts:
 - refreshed `outputs/tui/shell/verification.md`
 - refreshed `outputs/tui/shell/integration.md`
 
-No new runtime behavior was introduced, and no work was advanced into `shell.rs`, `schema.rs`, `pipe.rs`, or downstream renderer surfaces.
+No new runtime behavior was introduced, and no work was advanced into
+`shell.rs`, `schema.rs`, `pipe.rs`, or downstream renderer surfaces.
