@@ -1,0 +1,11 @@
+[package]
+name = "myosu-chain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Top-level chain workspace marker crate for Myosu"
+
+[lib]
+path = "src/lib.rs"

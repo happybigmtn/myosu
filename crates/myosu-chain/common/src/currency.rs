@@ -1,18 +1,10 @@
 use core::fmt::{self, Display, Formatter};
 use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
-#[cfg(feature = "approx")]
-use approx::AbsDiffEq;
-use codec::{
-    Compact, CompactAs, Decode, DecodeWithMemTracking, Encode, Error as CodecError, MaxEncodedLen,
-};
-use frame_support::pallet_prelude::*;
+use codec::{Compact, CompactAs, Decode, Encode, Error as CodecError, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
-use substrate_fixed::traits::{Fixed, ToFixed};
-use subtensor_macros::freeze_struct;
 
-#[freeze_struct("40205476b6d995b2")]
 #[repr(transparent)]
 #[derive(
     Deserialize,
@@ -20,7 +12,6 @@ use subtensor_macros::freeze_struct;
     Clone,
     Copy,
     Decode,
-    DecodeWithMemTracking,
     Default,
     Encode,
     Eq,
@@ -29,11 +20,12 @@ use subtensor_macros::freeze_struct;
     Ord,
     PartialEq,
     PartialOrd,
-    RuntimeDebug,
+    Debug,
+    TypeInfo,
 )]
+#[serde(transparent)]
 pub struct AlphaCurrency(u64);
 
-#[freeze_struct("4d1bcb31c40c2594")]
 #[repr(transparent)]
 #[derive(
     Deserialize,
@@ -41,7 +33,6 @@ pub struct AlphaCurrency(u64);
     Clone,
     Copy,
     Decode,
-    DecodeWithMemTracking,
     Default,
     Encode,
     Eq,
@@ -50,8 +41,10 @@ pub struct AlphaCurrency(u64);
     Ord,
     PartialEq,
     PartialOrd,
-    RuntimeDebug,
+    Debug,
+    TypeInfo,
 )]
+#[serde(transparent)]
 pub struct TaoCurrency(u64);
 
 // implements traits required by the Currency trait (ToFixed + Into<u64> + From<u64>) and CompactAs,
@@ -61,13 +54,6 @@ macro_rules! impl_currency_reqs {
         impl $currency_type {
             pub const fn new(inner: u64) -> Self {
                 Self(inner)
-            }
-        }
-
-        impl TypeInfo for $currency_type {
-            type Identity = <u64 as TypeInfo>::Identity;
-            fn type_info() -> scale_info::Type {
-                <u64 as TypeInfo>::type_info()
             }
         }
 
@@ -104,27 +90,6 @@ macro_rules! impl_currency_reqs {
         impl From<u64> for $currency_type {
             fn from(value: u64) -> Self {
                 Self(value)
-            }
-        }
-
-        impl ToFixed for $currency_type {
-            fn to_fixed<F: Fixed>(self) -> F {
-                self.0.to_fixed()
-            }
-
-            fn checked_to_fixed<F: Fixed>(self) -> Option<F> {
-                self.0.checked_to_fixed()
-            }
-
-            fn saturating_to_fixed<F: Fixed>(self) -> F {
-                self.0.saturating_to_fixed()
-            }
-            fn wrapping_to_fixed<F: Fixed>(self) -> F {
-                self.0.wrapping_to_fixed()
-            }
-
-            fn overflowing_to_fixed<F: Fixed>(self) -> (F, bool) {
-                self.0.overflowing_to_fixed()
             }
         }
     };
@@ -206,29 +171,8 @@ macro_rules! impl_arithmetic_operators {
     };
 }
 
-macro_rules! impl_approx {
-    ($currency_type:ident) => {
-        #[cfg(feature = "approx")]
-        impl AbsDiffEq<Self> for $currency_type {
-            type Epsilon = Self;
-
-            fn default_epsilon() -> Self::Epsilon {
-                u64::default_epsilon().into()
-            }
-
-            fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-                u64::abs_diff_eq(&u64::from(*self), &u64::from(*other), epsilon.into())
-            }
-
-            fn abs_diff_ne(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-                u64::abs_diff_ne(&u64::from(*self), &u64::from(*other), epsilon.into())
-            }
-        }
-    };
-}
-
 pub trait Currency:
-    ToFixed + Into<u64> + From<u64> + Clone + Copy + Eq + Ord + PartialEq + PartialOrd + Display
+    Into<u64> + From<u64> + Clone + Copy + Eq + Ord + PartialEq + PartialOrd + Display
 {
     const MAX: Self;
     const ZERO: Self;
@@ -260,11 +204,9 @@ pub trait Currency:
 }
 
 impl_arithmetic_operators!(AlphaCurrency);
-impl_approx!(AlphaCurrency);
 impl_currency_reqs!(AlphaCurrency);
 
 impl_arithmetic_operators!(TaoCurrency);
-impl_approx!(TaoCurrency);
 impl_currency_reqs!(TaoCurrency);
 
 impl Currency for AlphaCurrency {

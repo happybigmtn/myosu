@@ -89,7 +89,7 @@ pub mod pallet {
         },
     };
     use frame_system::pallet_prelude::*;
-        use runtime_common::prod_or_fast;
+    use runtime_common::prod_or_fast;
     use sp_core::{ConstU32, H160, H256};
     use sp_runtime::traits::{Dispatchable, TrailingZeroInput};
     use sp_std::collections::btree_map::BTreeMap;

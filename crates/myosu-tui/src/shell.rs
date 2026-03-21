@@ -147,7 +147,9 @@ impl Shell {
         }
 
         // Help toggle with '?' only when input buffer is empty
-        if key.code == KeyCode::Char('?') && key.modifiers.is_empty() && self.input.text().is_empty()
+        if key.code == KeyCode::Char('?')
+            && key.modifiers.is_empty()
+            && self.input.text().is_empty()
         {
             self.show_help = !self.show_help;
             return;
@@ -295,11 +297,11 @@ impl Shell {
 
         // Constraints for vertical layout
         let constraints = [
-            Constraint::Length(1),              // header
-            Constraint::Min(3),                 // transcript (flexible)
-            Constraint::Length(state_height),   // state (dynamic, can be 0)
-            Constraint::Length(1),              // declaration
-            Constraint::Length(1),              // input
+            Constraint::Length(1),            // header
+            Constraint::Min(3),               // transcript (flexible)
+            Constraint::Length(state_height), // state (dynamic, can be 0)
+            Constraint::Length(1),            // declaration
+            Constraint::Length(1),            // input
         ];
 
         let chunks = Layout::default()
@@ -371,7 +373,12 @@ impl Shell {
             .rev()
             .take(area.height as usize)
             .rev()
-            .map(|text| Line::from(Span::styled(text.clone(), Style::default().fg(self.theme.fg))))
+            .map(|text| {
+                Line::from(Span::styled(
+                    text.clone(),
+                    Style::default().fg(self.theme.fg),
+                ))
+            })
             .collect();
 
         let paragraph = Paragraph::new(visible_lines)
@@ -667,11 +674,7 @@ mod tests {
         shell.draw(Rect::new(0, 0, 80, 24), &mut buf, &renderer);
 
         // Should have rendered something (not empty buffer)
-        let content: String = buf
-            .content
-            .iter()
-            .map(|cell| cell.symbol())
-            .collect();
+        let content: String = buf.content.iter().map(|cell| cell.symbol()).collect();
         assert!(!content.trim().is_empty());
     }
 
@@ -683,11 +686,7 @@ mod tests {
 
         shell.draw(Rect::new(0, 0, 10, 5), &mut buf, &renderer);
 
-        let content: String = buf
-            .content
-            .iter()
-            .map(|cell| cell.symbol())
-            .collect();
+        let content: String = buf.content.iter().map(|cell| cell.symbol()).collect();
         // Check for partial match since text wrapping may break up words in small buffer
         assert!(
             content.contains("small") || content.contains("Terminal"),
@@ -716,7 +715,10 @@ mod tests {
         assert_eq!(layout.state.height, 4);
 
         // Transcript takes remaining space
-        let used = layout.header.height + layout.declaration.height + layout.input.height + layout.state.height;
+        let used = layout.header.height
+            + layout.declaration.height
+            + layout.input.height
+            + layout.state.height;
         assert_eq!(layout.transcript.height, area.height - used);
     }
 
@@ -755,5 +757,4 @@ mod tests {
         let shell: Shell = Default::default();
         assert!(!shell.is_running());
     }
-
 }

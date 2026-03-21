@@ -1,0 +1,60 @@
+[package]
+name = "myosu-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Minimal Myosu runtime bootstrapped from the Polkadot SDK runtime template"
+build = "build.rs"
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-executive/std",
+    "frame-support/std",
+    "frame-system-rpc-runtime-api/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "pallet-sudo/std",
+    "pallet-timestamp/std",
+    "pallet-transaction-payment/std",
+    "pallet-transaction-payment-rpc-runtime-api/std",
+    "scale-info/std",
+    "sp-api/std",
+    "sp-block-builder/std",
+    "sp-core/std",
+    "sp-genesis-builder/std",
+    "sp-inherents/std",
+    "sp-offchain/std",
+    "sp-runtime/std",
+    "sp-transaction-pool/std",
+    "sp-version/std",
+    "substrate-wasm-builder",
+]
+
+[dependencies]
+codec.workspace = true
+frame-executive.workspace = true
+frame-support.workspace = true
+frame-system.workspace = true
+frame-system-rpc-runtime-api.workspace = true
+pallet-balances.workspace = true
+pallet-sudo.workspace = true
+pallet-timestamp.workspace = true
+pallet-transaction-payment.workspace = true
+pallet-transaction-payment-rpc-runtime-api.workspace = true
+scale-info.workspace = true
+sp-api.workspace = true
+sp-block-builder.workspace = true
+sp-core.workspace = true
+sp-genesis-builder.workspace = true
+sp-inherents.workspace = true
+sp-offchain.workspace = true
+sp-runtime.workspace = true
+sp-transaction-pool.workspace = true
+sp-version.workspace = true
+
+[build-dependencies]
+substrate-wasm-builder = { workspace = true, optional = true, default-features = true }

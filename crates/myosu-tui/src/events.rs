@@ -144,13 +144,13 @@ mod tests {
     #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
     async fn key_event_handled() {
         let mut loop_handle = EventLoop::new(Duration::from_millis(10));
-        
+
         // Should receive tick events
         let event = tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
             .await
             .expect("timeout waiting for event")
             .expect("event loop closed");
-        
+
         assert_eq!(event, Event::Tick);
     }
 
@@ -169,7 +169,7 @@ mod tests {
         // Collect events until we get our update
         let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
         let mut found = false;
-        
+
         while tokio::time::Instant::now() < deadline {
             let timeout = deadline - tokio::time::Instant::now();
             if let Ok(Some(event)) = tokio::time::timeout(timeout, loop_handle.next()).await {
@@ -180,7 +180,7 @@ mod tests {
                 }
             }
         }
-        
+
         assert!(found, "did not receive injected update");
     }
 

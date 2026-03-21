@@ -1,0 +1,26 @@
+[package]
+name = "myosu-chain-common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Common chain types shared by the Myosu runtime"
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "serde/std",
+    "sp-core/std",
+    "sp-runtime/std",
+]
+
+[dependencies]
+codec.workspace = true
+environmental.workspace = true
+scale-info.workspace = true
+serde.workspace = true
+sp-core.workspace = true
+sp-runtime.workspace = true

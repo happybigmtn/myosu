@@ -1,18 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+
+use alloc::vec::Vec;
 use core::fmt::{self, Display, Formatter};
 
-use codec::{
-    Compact, CompactAs, Decode, DecodeWithMemTracking, Encode, Error as CodecError, MaxEncodedLen,
-};
-use frame_support::pallet_prelude::*;
-use runtime_common::prod_or_fast;
+use codec::{Compact, CompactAs, Decode, Encode, Error as CodecError, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-    MultiSignature, Vec,
+    DispatchError, MultiSignature,
     traits::{IdentifyAccount, Verify},
 };
-use subtensor_macros::freeze_struct;
 
 pub use currency::*;
 pub use evm_context::*;
@@ -44,7 +42,6 @@ pub type Nonce = u32;
 /// Transfers below SMALL_TRANSFER_LIMIT are considered small transfers
 pub const SMALL_TRANSFER_LIMIT: Balance = 500_000_000; // 0.5 TAO
 
-#[freeze_struct("c972489bff40ae48")]
 #[repr(transparent)]
 #[derive(
     Deserialize,
@@ -52,7 +49,6 @@ pub const SMALL_TRANSFER_LIMIT: Balance = 500_000_000; // 0.5 TAO
     Clone,
     Copy,
     Decode,
-    DecodeWithMemTracking,
     Default,
     Encode,
     Eq,
@@ -61,7 +57,8 @@ pub const SMALL_TRANSFER_LIMIT: Balance = 500_000_000; // 0.5 TAO
     Ord,
     PartialEq,
     PartialOrd,
-    RuntimeDebug,
+    Debug,
+    TypeInfo,
 )]
 #[serde(transparent)]
 pub struct NetUid(u16);
@@ -122,26 +119,8 @@ impl From<u16> for NetUid {
     }
 }
 
-impl TypeInfo for NetUid {
-    type Identity = <u16 as TypeInfo>::Identity;
-    fn type_info() -> scale_info::Type {
-        <u16 as TypeInfo>::type_info()
-    }
-}
-
 #[derive(
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Encode,
-    Decode,
-    DecodeWithMemTracking,
-    Debug,
-    MaxEncodedLen,
-    TypeInfo,
+    Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen, TypeInfo,
 )]
 pub enum ProxyType {
     Any,
@@ -277,7 +256,7 @@ pub mod time {
     /// slot_duration()`.
     ///
     /// Change this to adjust the block time.
-    pub const MILLISECS_PER_BLOCK: u64 = prod_or_fast!(12000, 250);
+    pub const MILLISECS_PER_BLOCK: u64 = 6_000;
 
     // NOTE: Currently it is not possible to change the slot duration after the chain has started.
     //       Attempting to do so will brick block production.
@@ -289,7 +268,6 @@ pub mod time {
     pub const DAYS: BlockNumber = HOURS * 24;
 }
 
-#[freeze_struct("7e5202d7f18b39d4")]
 #[repr(transparent)]
 #[derive(
     Deserialize,
@@ -297,7 +275,6 @@ pub mod time {
     Clone,
     Copy,
     Decode,
-    DecodeWithMemTracking,
     Default,
     Encode,
     Eq,
@@ -306,7 +283,8 @@ pub mod time {
     Ord,
     PartialEq,
     PartialOrd,
-    RuntimeDebug,
+    Debug,
+    TypeInfo,
 )]
 #[serde(transparent)]
 pub struct MechId(u8);
@@ -363,14 +341,6 @@ impl From<Compact<MechId>> for MechId {
     }
 }
 
-impl TypeInfo for MechId {
-    type Identity = <u8 as TypeInfo>::Identity;
-    fn type_info() -> scale_info::Type {
-        <u8 as TypeInfo>::type_info()
-    }
-}
-
-#[freeze_struct("2d995c5478e16d4d")]
 #[repr(transparent)]
 #[derive(
     Deserialize,
@@ -378,7 +348,6 @@ impl TypeInfo for MechId {
     Clone,
     Copy,
     Decode,
-    DecodeWithMemTracking,
     Default,
     Encode,
     Eq,
@@ -387,7 +356,8 @@ impl TypeInfo for MechId {
     Ord,
     PartialEq,
     PartialOrd,
-    RuntimeDebug,
+    Debug,
+    TypeInfo,
 )]
 #[serde(transparent)]
 pub struct NetUidStorageIndex(u16);
@@ -435,13 +405,6 @@ impl From<NetUidStorageIndex> for u16 {
 impl From<u16> for NetUidStorageIndex {
     fn from(value: u16) -> Self {
         Self(value)
-    }
-}
-
-impl TypeInfo for NetUidStorageIndex {
-    type Identity = <u16 as TypeInfo>::Identity;
-    fn type_info() -> scale_info::Type {
-        <u16 as TypeInfo>::type_info()
     }
 }
 
