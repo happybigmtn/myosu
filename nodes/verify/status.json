@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 990,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T02:30:53.089447142+00:00",
+  "updated_at": "2026-03-21T02:30:53.089455494+00:00",
+  "failure_reason": "Script failed with exit code: 101\n\n## stderr\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\nerror: package ID specification `myosu-games-liars-dice` did not match any packages\n"
+}
