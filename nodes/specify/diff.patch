@@ -1,0 +1,366 @@
+diff --git a/outputs/README.md b/outputs/README.md
+index f243931..28876e4 100644
+--- a/outputs/README.md
++++ b/outputs/README.md
+@@ -18,5 +18,13 @@ Implementation-lane convention:
+ - `implementation.md` records the concrete slice the lane changed
+ - `verification.md` records the proof result, residual risks, and next slice
+ 
++Integration-decision convention:
++
++- `*-adapter.md` records how already-reviewed lane artifacts should be
++  consumed by the next frontier or workflow family
++- `review.md` records the keep/reopen/reset judgment for that integration
++  decision and states whether the next move is implementation or another
++  unblock
++
+ Fabro run branches and `.fabro` runtime state remain execution-plane details.
+ `outputs/` is the first durable control-plane artifact surface.
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..e6b55cd
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,137 @@
++# `agent-integration` Adapter
++
++## Purpose
++
++This artifact adapts the reviewed product-lane contracts into the next honest
++execution move for the product frontier. The question is narrow:
++
++- after `outputs/play/tui/review.md` and `outputs/agent/experience/review.md`
++- and after confirming the current tree still matches those reviews
++
++should Myosu pause for another upstream unblock, or should product open an
++implementation-family workflow next?
++
++## Inputs Consumed
++
++- `README.md`
++- `SPEC.md`
++- `PLANS.md`
++- `AGENTS.md`
++- `specs/031626-00-master-index.md`
++- `specs/031826-fabro-primary-executor-decision.md`
++- `fabro/programs/myosu-product.yaml`
++- `outputs/play/tui/spec.md`
++- `outputs/play/tui/review.md`
++- `outputs/agent/experience/spec.md`
++- `outputs/agent/experience/review.md`
++
++## Current Product Truth
++
++| Surface | Reviewed judgment | Integration consequence |
++|---|---|---|
++| `play:tui` | **KEEP**; ready for implementation-family workflow | Product already has one lane whose next honest step is code delivery |
++| `agent:experience` | **KEEP**; proceed to implementation-family workflow | The lane is design-complete; only part of it depends on `play:tui` Slice 1 |
++| `myosu-product.yaml` | Both reviewed product lanes already exist under one frontier | No new product bootstrap lane is needed before execution begins |
++| Current tree | `crates/myosu-play/`, `crates/myosu-games-poker/`, `agent_context.rs`, `journal.rs`, `narration.rs`, and spectator files are all absent | The reviewed artifacts are still truthful and current |
++
++## Adapter Decision
++
++**Decision: product needs an implementation family next, not another upstream
++unblock.**
++
++The first implementation family should be **`play:tui`**, not a combined
++play-plus-agent delivery lane. `play:tui` owns the first shared product seam:
++the `myosu-play` binary, the concrete poker renderer, and the `--pipe` runtime
++surface that `agent:experience` extends.
++
++That means the integration adapter for product is:
++
++1. Open a `play:tui` implementation-family workflow using the existing
++   `implement/` family pattern already proven by
++   `fabro/programs/myosu-games-traits-implementation.yaml`.
++2. Treat `agent:experience` as the immediate downstream consumer of that work,
++   not as a reason to delay execution.
++3. Once `play:tui` Slice 1 lands, either:
++   - open a dedicated `agent:experience` implementation-family workflow, or
++   - intentionally widen the product implementation frontier if the control
++     plane needs one shared product-delivery surface.
++
++## Why Another Upstream Unblock Is Not The Next Move
++
++The reviewed artifacts do document real blockers, but none of them justify
++stopping product execution before the first implementation slice.
++
++### 1. The biggest near-term dependency is product-owned, not upstream-owned
++
++`agent:experience` Slice 3 and later require the `myosu-play` binary to exist.
++That binary belongs to `play:tui` Slice 1. This is a product sequencing issue,
++not a missing upstream review.
++
++### 2. The `robopoker` path dependency is real, but it blocks later slices
++
++`play:tui/review.md` and `agent:experience/review.md` both preserve the
++`robopoker` absolute-path risk in `myosu-games`. That is still an upstream
++maintenance task, but it does not block the first honest product bringup:
++
++- `play:tui` Slice 1 is binary skeleton + shell wiring
++- `play:tui` Slice 2 is hardcoded `NlheRenderer`
++- `agent:experience` Slices 1-2 are `agent_context.rs` + `journal.rs`
++
++Those slices can begin without waiting for a separate upstream-unblock-only
++round.
++
++### 3. Chain restart is not on the critical path for Phase 0 product work
++
++Both product reviews treat chain-backed play, live subnet discovery, and miner
++integration as later slices. The first product implementation family is local
++training + pipe + renderer work.
++
++## Recommended Execution Order
++
++### Phase A: open `play:tui` implementation family now
++
++Start with the smallest shared seam:
++
++- create `crates/myosu-play/`
++- create `crates/myosu-games-poker/`
++- prove the shell render loop and `--pipe` entrypoint compile
++
++This is the first product move that creates new executable surface instead of
++restating existing design.
++
++### Phase B: begin the non-CLI-dependent agent slices immediately after
++
++Once product execution is active, the next smallest agent slices are:
++
++- `crates/myosu-tui/src/agent_context.rs`
++- `crates/myosu-tui/src/journal.rs`
++
++These do not require chain work and do not need the full spectator stack.
++
++### Phase C: consume the new play seam from `agent:experience`
++
++After `play:tui` Slice 1 exists:
++
++- wire `--context`
++- wire `reflect>`
++- wire `--narrate`
++- add lobby behavior in pipe mode
++
++After `play:tui` has a stable data-dir/session convention:
++
++- add `SpectatorRelay`
++- add `SpectateScreen`
++
++## What Would Reopen This Adapter
++
++Revisit this decision only if one of these becomes true:
++
++- `play:tui` Slice 1 cannot be started without first resolving the
++  `robopoker` dependency in `myosu-games`
++- the `GameRenderer` or `PipeMode` contract changes underneath the reviewed
++  product specs
++- Raspberry needs a different control-plane shape than one lane-scoped
++  implementation family followed by another
++
++Absent one of those conditions, the next honest frontier move is to begin
++product implementation, led by `play:tui`.
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..82617c3
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,128 @@
++# `agent-integration` Review
++
++**Lane**: `agent-integration`
++**Date**: 2026-03-21
++**Bootstrap status**: Complete — reviewed integration decision written
++
++---
++
++## 1. Keep / Reopen / Reset Judgment
++
++**Judgment: KEEP**
++
++The product frontier should move into an implementation-family workflow next.
++It does **not** need another upstream review-only unblock before product
++execution resumes.
++
++### Rationale for KEEP
++
++- `outputs/play/tui/review.md` already says `play:tui` is ready for an
++  implementation-family workflow immediately.
++- `outputs/agent/experience/review.md` already says `agent:experience` should
++  proceed to implementation-family work next, with clear slice ordering.
++- The actual repository tree still matches those reviews: the product code is
++  genuinely absent rather than partially implemented in a contradictory way.
++- `fabro/programs/myosu-product.yaml` already provides the reviewed product
++  frontier shape, so the decision now is execution sequencing, not more
++  bootstrap decomposition.
++
++### Rationale against REOPEN
++
++There is no new contradiction between doctrine and repository state. The lane
++reviews remain current and their blockers are already explicit.
++
++### Rationale against RESET
++
++Resetting would throw away truthful reviewed product artifacts without exposing
++new information. The open question is now which implementation family to start,
++not whether the product frontier needs to be redesigned.
++
++---
++
++## 2. Current Integration State
++
++| Surface | State | Why it matters |
++|---|---|---|
++| `play:tui` | Reviewed and implementation-ready | Owns `myosu-play`, the first executable product seam |
++| `agent:experience` | Reviewed and partially implementation-ready | Owns context, journal, narration, and spectator extensions on top of play |
++| `crates/myosu-play/` | Missing | Confirms `play:tui` Slice 1 is still the next real seam |
++| `crates/myosu-games-poker/` | Missing | Confirms poker renderer delivery has not started |
++| `crates/myosu-tui/src/agent_context.rs` | Missing | Confirms agent persistence remains Slice 1 work |
++| `crates/myosu-tui/src/journal.rs` | Missing | Confirms journal work remains Slice 2 work |
++| `crates/myosu-tui/src/narration.rs` | Missing | Confirms narration is still a later agent slice |
++
++---
++
++## 3. Product-Level Decision
++
++**Decision: open a product implementation family next, led by `play:tui`.**
++
++This is the honest sequencing implied by the reviewed artifacts:
++
++1. `play:tui` must move first because it creates the `myosu-play` binary and
++   concrete `--pipe` entrypoint that `agent:experience` extends.
++2. `agent:experience` should not be treated as blocked in the large. Its first
++   slices remain valid and can follow as soon as product execution opens.
++3. Product does not need to wait for chain-backed play, miner discovery, or
++   spectator networking before starting implementation.
++
++**Recommended control-plane shape**:
++
++- first, add a lane-scoped `implement/` family for `play:tui`
++- then open a second lane-scoped implementation family for `agent:experience`
++  once `play:tui` Slice 1 establishes the binary seam
++
++This keeps ownership clean and matches the existing pattern used for
++`games:traits`.
++
++---
++
++## 4. Remaining Blockers and Risks
++
++### 4.1 `robopoker` absolute-path coupling remains real
++
++This is still the main upstream risk, but it is not strong enough to justify
++another review-only frontier before product implementation begins.
++
++**Operational consequence**:
++
++- do not let `play:tui` advance past the first robopoker-dependent slice
++  without checking the `games:traits` dependency fix
++- do not duplicate the absolute-path coupling into new product crates
++
++### 4.2 `agent:experience` depends on `play:tui` Slice 1 for CLI wiring
++
++This is the most important product-local gate.
++
++**Operational consequence**:
++
++- start `play:tui` first
++- treat `agent:experience` Slices 3+ as waiting on that seam, not on a new
++  upstream review
++
++### 4.3 No product implementation manifest exists yet
++
++Unlike `games:traits`, product does not yet have an implementation-family
++program manifest or run config.
++
++**Operational consequence**:
++
++- the next slice should create that implementation-family control-plane
++  surface rather than authoring more bootstrap review artifacts
++
++---
++
++## 5. Review Verdict
++
++The reviewed product frontier is strong enough to leave bootstrap mode.
++
++**Next honest move**:
++
++- start `play:tui` implementation-family work
++- keep `agent:experience` as the immediately adjacent downstream lane
++- revisit only if the first `play:tui` slice proves unexpectedly blocked by the
++  unresolved `robopoker` dependency
++
++That means the answer to the frontier question is:
++
++**product needs an implementation family next, not another upstream unblock.**
+diff --git a/plans/031926-iterative-execution-and-raspberry-hardening.md b/plans/031926-iterative-execution-and-raspberry-hardening.md
+index 270f7c9..e04383e 100644
+--- a/plans/031926-iterative-execution-and-raspberry-hardening.md
++++ b/plans/031926-iterative-execution-and-raspberry-hardening.md
+@@ -66,9 +66,11 @@ worked around locally.
+ - [x] (2026-03-19 06:44Z) Finished the direct Fabro foreground runs for
+   `validator:oracle` and `games:multi-game`, then rerendered
+   services/platform against the new reviewed artifacts.
+-- [ ] Execute `agent:experience`, the last remaining ready product lane, then
+-  use its reviewed artifacts to decide whether product needs an implementation
+-  family next or another upstream unblock.
++- [x] (2026-03-21 04:25Z) Executed `agent:experience`, then wrote
++  `outputs/agent-integration/agent-adapter.md` and
++  `outputs/agent-integration/review.md` to capture the product-frontier
++  decision: product should open a `play:tui`-led implementation family next
++  instead of pausing for another upstream unblock.
+ 
+ ## Surprises & Discoveries
+ 
+@@ -152,6 +154,14 @@ worked around locally.
+   `games:traits`, while some Raspberry detached-submit paths still required
+   hardening in the sibling Fabro repo.
+ 
++- Observation: the last remaining reviewed product lane does not point to
++  another upstream review pass; it points to the first product implementation
++  family, led by `play:tui`.
++  Evidence: `outputs/play/tui/review.md` marks `play:tui` ready for an
++  implementation-family workflow immediately, while
++  `outputs/agent/experience/review.md` says `agent:experience` Slices 3+
++  depend on `play:tui` Slice 1 rather than on a new upstream contract lane.
++
+ ## Decision Log
+ 
+ - Decision: make the next plan execution-first rather than manifest-first.
+@@ -203,6 +213,14 @@ worked around locally.
+   reach the Anthropic-compatible bridge credentials.
+   Date/Author: 2026-03-19 / Codex
+ 
++- Decision: treat `play:tui` as the first product implementation-family lane
++  and `agent:experience` as its immediate downstream consumer rather than
++  pausing the product frontier for another upstream-unblock-only round.
++  Rationale: the shared missing seam is the `myosu-play` binary owned by
++  `play:tui`; waiting for another upstream review would stall product delivery
++  without changing the next honest executable work.
++  Date/Author: 2026-03-21 / Codex
++
+ ## Outcomes & Retrospective
+ 
+ This plan starts after the biggest conceptual migration work is already done.
+@@ -213,6 +231,12 @@ Myosu now has:
+ - durable artifact roots under `outputs/`
+ - one fully proven bootstrap-to-implementation example in `games:traits`
+ 
++It now also has a fully reviewed product frontier. With
++`outputs/play/tui/review.md`, `outputs/agent/experience/review.md`, and the
++new `outputs/agent-integration/` decision artifacts in place, the next honest
++product move is no longer another bootstrap-style review pass. It is the first
++`implement/`-family product lane, starting with `play:tui`.
++
+ So the next outcome worth chasing is not another design artifact. It is a
+ repeatable execution loop:
+ 
+@@ -491,3 +515,8 @@ same iterative execution loop.
+ Revision Note: Created after reading all live Myosu plans and the expanded
+ `fabro/` execution surface, to move the repo from frontier seeding into
+ frontier execution and Raspberry hardening.
++
++Revision Note (2026-03-21): Marked the `agent:experience` frontier step
++complete and recorded the resulting product decision: open a `play:tui`-led
++implementation family next, using `outputs/agent-integration/` as the durable
++adapter/review surface.
