@@ -4,7 +4,7 @@
 
 | Gate | Command | Status |
 |------|---------|--------|
-| `cargo test events:: --no-ignore` | `cargo test -p myosu-tui events::` | **PASS** |
+| `cargo test events::` | `cargo test -p myosu-tui events::` | **PASS** |
 
 ---
 
