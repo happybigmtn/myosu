@@ -15,7 +15,28 @@ Implemented the smallest approved `games:multi-game` slice from
 This slice intentionally stops at crate wiring. It does not implement the game
 engine, solver, scoring registry, or spectator surfaces.
 
+## Fixup Boundary
+
+This fixup keeps the lane on the same approved slice. No slice-2 game-engine
+work was started.
+
+The package inventory in this checkout, confirmed via `cargo metadata --no-deps
+--format-version 1`, is currently:
+
+- `myosu-games`
+- `myosu-games-liars-dice`
+- `myosu-tui`
+- `pallet-game-solver`
+
+That means the verify-stage failure was not a slice-1 defect in
+`myosu-games-liars-dice`. It came from proof orchestration continuing into
+later or absent surfaces such as `myosu-play`. This fixup preserves the slice-1
+boundary instead of manufacturing later-slice crates just to satisfy an
+out-of-scope command.
+
 ## What Changed
+
+No source changes were needed during fixup. The slice-1 code remains:
 
 ### `Cargo.toml`
 
@@ -86,8 +107,9 @@ be compiled and tested in isolation.
 - No edits were made to `crates/myosu-games/src/`.
 - No poker-engine surfaces were touched.
 - No spectator or scoring work was started.
-- `quality.md` and `promotion.md` were intentionally left untouched because the
-  implementation lane does not own those artifacts.
+- This fixup does not author `quality.md` or `promotion.md`; those artifacts
+  remain owned by the Quality and Review stages, and the fixup instructions
+  explicitly forbid creating or rewriting them here.
 
 ## What Remains for Future Slices
 
