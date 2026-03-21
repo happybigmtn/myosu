@@ -124,7 +124,7 @@ The lane is **proven** when:
 ### Slice 1: Event Loop Headless Test
 **File**: `crates/myosu-tui/src/events.rs`
 **Action**: Add `MockEventStream` test helper that produces synthetic `CrosstermEvent` values without requiring a TTY. Replace `#[ignore]` tests with mocked versions.
-**Proof gate**: `cargo test events:: --no-ignore`
+**Proof gate**: `cargo test events:: -- --include-ignored`
 
 ### Slice 2: Shell Integration Test
 **File**: `crates/myosu-tui/src/shell.rs`

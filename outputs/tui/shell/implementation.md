@@ -1,53 +1,37 @@
-# `tui:shell` Implementation — Slice 1
+# `tui:shell` Implementation — Slice 1 Fixup
 
-## Slice Implemented
+## Active Slice
 
-**Slice 1 — Event Loop Headless Test**
+**Slice 1 — Event Loop Headless Test** remains the active approved slice from `outputs/tui/shell/spec.md` and `outputs/tui/shell/review.md`.
 
-Implemented the next approved `tui:shell` slice from `outputs/tui/shell/spec.md` and `outputs/tui/shell/review.md` by making the `events.rs` event source injectable for tests and replacing the TTY-only ignored tests with headless proof.
+The `events.rs` implementation for this slice was already present at the start of fixup and was not expanded further in this turn.
 
-## What Changed
+## Fix Applied
 
-### `crates/myosu-tui/src/events.rs`
+The failing verify stage did not uncover a new `events.rs` defect. It failed before running tests because the recorded Slice 1 proof gate used invalid Cargo syntax:
 
-The public `EventLoop::new` API is unchanged, but the internal task setup now delegates through a private injected-stream constructor:
+- before: `cargo test events:: --no-ignore`
+- after: `cargo test events:: -- --include-ignored`
 
-- `EventLoop::new(...)` now calls private `with_stream(...)`
-- `run_event_task(...)` holds the async select loop so production and test streams share the same logic
-- `map_crossterm_event(...)` centralizes Crossterm-to-Myosu event mapping
+This preserves the original proof intent for Slice 1 while matching actual Cargo argument parsing.
 
-This keeps the implementation slice inside the owned `events.rs` surface while letting tests supply a synthetic stream.
+## Implementation Status Preserved
 
-## Headless Proof Added
+The landed Slice 1 code in `crates/myosu-tui/src/events.rs` remains the same:
 
-Added a channel-backed `MockEventStream` in the `events.rs` test module and replaced the two ignored tests with deterministic headless coverage:
-
-- `tick_event_handled_headless`
-- `key_event_handled`
-- `resize_event_handled`
-- `async_response_received`
-
-The updated tests now prove that tick, key, resize, and async update events traverse the event loop without requiring a real terminal.
-
-## Nearby Fix Discovered While Verifying
-
-The `EventLoop::new` doctest executed the constructor in a headless environment and panicked inside `crossterm`. The example block is now marked `no_run`, so documentation still compiles without trying to open a terminal during doctest execution.
+- `EventLoop::new(...)` keeps its public API
+- private `with_stream(...)` allows tests to inject a synthetic event source
+- `run_event_task(...)` continues to own the shared async select loop
+- `map_crossterm_event(...)` continues to centralize Crossterm-to-Myosu mapping
+- headless tests still cover tick, key, resize, and async update delivery
 
 ## Scope Guard
 
-This slice touched only `crates/myosu-tui/src/events.rs`.
+This fixup stayed within the current slice and its lane artifacts:
 
-No changes were made to:
+- updated `outputs/tui/shell/spec.md`
+- refreshed `outputs/tui/shell/implementation.md`
+- refreshed `outputs/tui/shell/verification.md`
+- refreshed `outputs/tui/shell/integration.md`
 
-- `shell.rs`
-- `schema.rs`
-- `pipe.rs`
-- any downstream game renderer surfaces
-
-## Next Slice
-
-Per `outputs/tui/shell/spec.md`, the next approved implementation slice remains:
-
-**Slice 2 — Shell Integration Test**
-
-Add a `shell.rs` integration test covering Lobby input submission through `handle_key`/`handle_submit` into a Game screen transition.
+No new runtime behavior was introduced, and no work was advanced into `shell.rs`, `schema.rs`, `pipe.rs`, or downstream renderer surfaces.

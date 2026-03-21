@@ -1,39 +1,31 @@
-# `tui:shell` Verification — Slice 1
+# `tui:shell` Verification — Slice 1 Fixup
+
+## Verification Context
+
+The prior verify-stage failure was deterministic and happened before any `events` tests ran. The recorded command `cargo test events:: --no-ignore` is not valid Cargo CLI syntax.
+
+All commands below were rerun from the workspace root. In this sandbox, Cargo needs `CARGO_TARGET_DIR=/tmp/myosu-target` because the default target path resolves outside the writable root.
 
 ## Automated Proof Commands
 
-All commands were run from the workspace root. Because the default target directory resolves outside the writable sandbox in this run environment, Cargo commands were executed with `CARGO_TARGET_DIR=/tmp/myosu-target`.
-
 | Command | Exit Code | Result |
 |---------|-----------|--------|
-| `cargo fmt --all` | 0 | Formatting passed |
-| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events::` | 0 | Focused `events` module proof passed: 6 tests |
-| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events:: -- --include-ignored` | 0 | Current Cargo-compatible equivalent of the spec gate; 6 tests passed and no ignored `events` tests remain |
-| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui` | 0 | Full crate regression pass: 86 unit tests + 1 doctest passed |
+| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events::` | 0 | Focused `events` proof passed: 6 tests, 0 ignored |
+| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events:: -- --include-ignored` | 0 | Cargo-compatible Slice 1 proof gate passed: same 6 `events` tests, with no ignored tests remaining |
+| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui` | 0 | Full crate regression passed: 86 unit tests and 1 doctest |
 
 ## Proof Outcome
 
-The reopened `events.rs` proof gap is reduced for Slice 1:
+Slice 1 is verified in its current form:
 
-- headless tick delivery is proven
-- headless key delivery is proven
-- headless resize delivery is proven
-- headless async update injection is proven
-
-The original TTY-dependent ignored tests are no longer required for CI proof.
+- tick delivery is proven headlessly
+- key delivery is proven headlessly
+- resize delivery is proven headlessly
+- async update injection is proven headlessly
+- the doctest for `EventLoop::new` compiles cleanly in headless verification
 
 ## Residual Risks
 
-- The live terminal path still depends on `crossterm::event::EventStream` at runtime. This slice proves the shared event-loop logic headlessly, but it does not add an end-to-end live terminal harness.
-- `shell.rs` remains reopened for its separate integration and render-proof gaps.
-- `schema.rs` remains reopened for per-game coverage gaps.
-
-## Next Approved Slice
-
-**Slice 2 — Shell Integration Test**
-
-Proof gate from the lane spec:
-
-```bash
-cargo test shell:: --integration
-```
+- This slice proves the shared event-loop logic without a live terminal harness; runtime use still depends on `crossterm::event::EventStream`.
+- `shell.rs` remains reopened for the separate transition and render coverage gaps called out in review.
+- `schema.rs` remains reopened for per-game schema coverage.

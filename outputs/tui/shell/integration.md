@@ -1,22 +1,22 @@
-# `tui:shell` Integration — Slice 1
+# `tui:shell` Integration — Slice 1 Fixup
 
-## Contract Preserved
+## Runtime Contract
 
-This slice preserves the runtime contract consumed by the rest of `myosu-tui`:
+The runtime contract consumed by the rest of `myosu-tui` is unchanged:
 
-- `EventLoop::new(Duration) -> EventLoop` is unchanged
-- `EventLoop::next()` is unchanged
-- `EventLoop::update_sender()` is unchanged
+- `EventLoop::new(Duration) -> EventLoop`
+- `EventLoop::next()`
+- `EventLoop::update_sender()`
 
-`shell.rs` continues to construct the event loop exactly as before, with no call-site changes required.
+`shell.rs` and the rest of the TUI continue to consume the event loop exactly as before.
 
 ## Integration Effect
 
-The only integration change is internal testability:
+This fixup does not introduce a new integration behavior. It makes the current Slice 1 proof durable:
 
-- production still uses `crossterm::event::EventStream`
-- tests can now inject a mock stream through the same event-task logic
-- the shell-facing event contract is now proven headlessly for tick, key, resize, and update events
+- production still reads terminal input from `crossterm::event::EventStream`
+- tests still prove the same event-task path through the injected headless stream
+- the lane-local Slice 1 proof gate now matches real Cargo semantics, so CI-style verification can execute instead of failing at argument parsing
 
 ## Surfaces Intentionally Not Touched
 
@@ -28,4 +28,4 @@ The only integration change is internal testability:
 
 ## Verification Signal
 
-The full `myosu-tui` crate test pass after this slice indicates the internal `events.rs` refactor did not break neighboring TUI surfaces or their current contracts.
+`CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui` passed after the artifact fixup, which indicates the existing `events.rs` implementation continues to integrate cleanly with neighboring TUI surfaces.
