@@ -4,7 +4,7 @@
 
 | Command | Exit Code | Result |
 |---------|-----------|--------|
-| `cargo test events:: --no-ignore` | 1 | The command in `spec.md` is not valid Cargo syntax. Cargo rejects `--no-ignore` unless test args are passed after `--`. |
+| `cargo test events:: --no-ignore` | 1 | Fails immediately. This is the stale verifier command from the prior stage logs, not the current live Slice 1 proof gate in `spec.md`. |
 | `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::` | 0 | Passed. The live Slice 1 proof gate succeeded with 4 `events::` tests. |
 | `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui schema::tests::all_game_types_have_schema` | 0 | Passed. The planned Slice 3 selector resolves to 1 real test once activated. |
 | `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell::tests::shell_draw_` | 0 | Passed. The planned Slice 4 selector resolves to 2 existing render tests once activated. |
@@ -39,10 +39,13 @@ test result: ok. 4 passed; 0 failed; 0 ignored
 - Cargo in this environment defaults to a read-only target directory outside
   the writable run sandbox. Verification used
   `CARGO_TARGET_DIR=/tmp/myosu-cargo-target` to keep proof execution runnable.
-- `outputs/tui/shell/spec.md` now exposes the active Slice 1 command as the only
+- `outputs/tui/shell/spec.md` exposes the active Slice 1 command as the only
   live `**Proof gate**`. Later slices keep `**Planned proof gate**` labels until
   they are selected, which prevents the implementation verifier from running
   future-slice commands too early.
+- A repo search during this fixup found no remaining lane-owned source or spec
+  references to `cargo test events:: --no-ignore`; the stale command survives
+  only as historical verifier state outside the current slice contract.
 - The planned Slice 3/4/5 commands were spot-checked with fully qualified test
   selectors so those gates no longer rely on zero-match filters when they are
   activated later.
@@ -54,7 +57,9 @@ test result: ok. 4 passed; 0 failed; 0 ignored
 - **Unproven async delivery path:** Reduced. Tick, key, resize, and async
   update delivery all traverse the same event-loop channel in CI.
 - **Deterministic proof-script failure:** Reduced. The live proof gate now uses
-  valid Cargo syntax and the sandbox-safe target directory override.
+  valid Cargo syntax and the sandbox-safe target directory override. The only
+  remaining failure reproduced in this fixup is the stale legacy verifier
+  command.
 
 ## Risks Remaining
 

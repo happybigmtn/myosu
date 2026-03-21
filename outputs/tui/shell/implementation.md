@@ -5,14 +5,15 @@
 **Slice 1 — Event Loop Headless Test**
 
 The approved `events.rs` slice from [`outputs/tui/shell/spec.md`](./spec.md)
-was already implemented: the event loop can be proven headlessly in CI without
-requiring a real TTY.
+was already present at the start of this fixup: the event loop can be proven
+headlessly in CI without requiring a real TTY.
 
-This fixup did not widen code scope. It repaired the implementation-lane proof
-contract so the live proof gate matches the active slice and uses valid Cargo
-syntax in this sandboxed workspace.
+No additional Rust source changes were required in this turn. The fixup work
+stays inside the current slice by refreshing the curated implementation records
+so they describe the active proof gate truthfully and do not misattribute the
+stale `cargo test events:: --no-ignore` failure to the current `spec.md`.
 
-## Owned Surface
+## Lane Surfaces Considered
 
 - `crates/myosu-tui/src/events.rs`
 - `outputs/tui/shell/spec.md`
@@ -20,7 +21,8 @@ syntax in this sandboxed workspace.
 - `outputs/tui/shell/verification.md`
 - `outputs/tui/shell/integration.md`
 
-No additional lane-owned source files were changed.
+Only the curated implementation artifacts were updated in this fixup. The
+lane-owned source surface in `events.rs` was revalidated but not edited.
 
 ## What Changed
 
@@ -48,13 +50,13 @@ The two ignored tests that depended on a real terminal were replaced with headle
 
 `update_sender_cloned` was also updated to use the headless harness so the `events::` suite no longer depends on terminal availability.
 
-### Proof activation is now slice-scoped
+### Proof activation remains slice-scoped
 
 `outputs/tui/shell/spec.md` now exposes only one live `**Proof gate**`, for the
 currently approved Slice 1. Later slices keep `**Planned proof gate**` labels
 until they are explicitly selected.
 
-That fixup also corrects the command shape:
+The active command shape remains:
 
 ```bash
 env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::
@@ -63,6 +65,10 @@ env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::
 The `CARGO_TARGET_DIR` override is required in this workspace because the
 default Cargo target path points at a read-only location outside the writable
 run sandbox.
+
+The legacy `cargo test events:: --no-ignore` invocation is now treated as a
+stale verifier command from earlier stage logs, not as the current live proof
+gate for this slice.
 
 ## Behavioral Outcome
 

@@ -12,7 +12,9 @@ The only integration change in the original Slice 1 code was internal:
 `events.rs` can now be exercised with a synthetic event stream in tests.
 
 This fixup adds no new runtime integration behavior. It only clarifies which
-proof command is live for the current implementation slice.
+proof command is live for the current implementation slice and records that the
+legacy `cargo test events:: --no-ignore` failure comes from stale verifier
+state rather than the current lane-owned runtime surfaces.
 
 ## Upstream and Downstream Impact
 
@@ -22,6 +24,9 @@ proof command is live for the current implementation slice.
 - **Curated proof consumers:** clarified. `outputs/tui/shell/spec.md` now marks
   only the active Slice 1 command as `**Proof gate**`; future slices stay
   planned until their code is approved to land.
+- **Legacy verifier command:** isolated. The stale `--no-ignore` invocation is
+  not part of the current shell/runtime integration contract and cannot be
+  repaired from `events.rs`.
 
 ## Slice Boundary Check
 
