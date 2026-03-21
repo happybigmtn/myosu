@@ -1,0 +1,28 @@
+{
+  "status": "success",
+  "context_updates": {
+    "response.specify": "Created the durable integration artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM761TJDPXHRVPA7KXWHJARF/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fabro/runs/20260320-01KM761TJDPXHRVPA7KXWHJARF/worktree/outputs/agent-integration/review.md).\n\nThe call is now explicit: product should move into an implementation-family next, not wait for another upstream unblock. The first honest slice is `play:tui` implementation, because `agent:experience` still depends on a missing `myosu-play` binary and concrete poker renderer. I also normalized one important drift in older reviews: the `robopoker` absolute-path blocker is no longer live in the current tree.\n\nVerification I ran:\n- `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-target cargo test -p myosu-games` -> 10 unit tests and 4 doctests passed\n- `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-target cargo test -p myosu-tui schema::tests` -> 12 tests passed\n- `CARGO_TARGET_DIR=/tmp/myosu-agent-integration-target cargo test -p myosu-tui pipe::tests` -> 5 tests passed\n\nThe artifacts also note that product still lacks any checked-in implementation-family manifest, so the next control-plane move is to seed and run `play:tui` implementation assets, then follow immediately with `agent:experience` implementation.",
+    "last_stage": "specify",
+    "last_response": "Created the durable integration artifacts at [agent-adapter.md](/home/r/.fabro/runs/20260320-01KM761TJDPXHRVPA7KXWHJARF/worktree/outputs/agent-integration/agent-adapter.md) and [review.md](/home/r/.fa"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 1730716,
+    "output_tokens": 17261,
+    "cost": 4.585705
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 371135,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T03:18:17.354785999+00:00",
+  "updated_at": "2026-03-21T03:18:17.354796208+00:00"
+}
