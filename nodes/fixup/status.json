@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "duration_ms": 1458561,
+  "attempt": 4,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T03:26:28.003907350+00:00",
+  "updated_at": "2026-03-21T03:26:28.003912945+00:00",
+  "failure_reason": "Handler error: CLI command exited with code -1: Reading prompt from stdin...\n\nstdout: {\"type\":\"thread.started\",\"thread_id\":\"019d0e6d-ff8f-7310-b2ff-4303bf93da9c\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"error\",\"message\":\"You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Mar 21st, 2026 7:31 PM.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Mar 21st, 2026 7:31 PM.\"}}\n"
+}
