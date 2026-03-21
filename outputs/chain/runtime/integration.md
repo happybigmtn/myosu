@@ -2,35 +2,33 @@
 
 ## Runtime Handoff
 
-This slice leaves the runtime lane in a state that downstream work can actually consume:
+This slice leaves the runtime lane in a state that downstream work can consume:
 
 - `myosu-runtime` is a real workspace package with a proven Wasm build
-- `myosu-chain-common` is a real workspace package for shared types/utilities
-- the root workspace now resolves the chain restart packages through the same pinned `stable2407` SDK line
+- `myosu-chain-common` is a real workspace package for shared types and utilities
+- the root workspace resolves the chain restart packages through the same pinned `stable2407` SDK line
 
-## Downstream Impact
+## Proof Boundary For Downstream Lanes
 
-- **Next `chain:runtime` work** can focus on `myosu-node` instead of continuing to fight dead manifests.
-- **`chain:pallet`** remains intentionally unintegrated here. The runtime still contains only the minimal core pallets.
-- **Service lanes** are still blocked on node/devnet bring-up, but the upstream runtime build blocker has been reduced to node work instead of missing workspace plumbing.
+- `chain:runtime` is proven only through the minimal runtime crate in this slice
+- node packaging, chain spec wiring, and block production are still deferred
+- `chain:pallet` remains intentionally unintegrated here; the runtime still contains only the minimal core pallets
+
+Downstream lanes should treat the current handoff as "runtime build path proven"
+rather than "node/devnet ready."
 
 ## Integration Notes
 
-- In sandboxed or offline environments, use:
-
-```bash
-WASM_BUILD_WORKSPACE_HINT="$PWD" CARGO_NET_OFFLINE=true
-```
-
-for runtime proof commands so the nested Wasm builder uses the workspace lockfile and local dependency cache.
-
-- The runtime artifacts were verified under `/tmp/myosu-chain-target/...`; no repo-local target dir assumptions are required.
+- In sandboxed or offline environments, run the runtime proof with `WASM_BUILD_WORKSPACE_HINT="$PWD"` and `CARGO_NET_OFFLINE=true` so the nested Wasm builder uses the workspace lockfile and local dependency cache.
+- The verified Wasm outputs live under `/tmp/myosu-chain-target/release/wbuild/myosu-runtime/`; no repo-local target directory assumptions are required.
+- The earlier implementation run also carried adjacent edits outside the runtime-owned proof boundary. This fixup does not broaden integration claims to cover those surfaces.
 
 ## Stage Ownership Note
 
-`quality.md` and `promotion.md` were intentionally not written in this slice:
+`quality.md` and `promotion.md` remain intentionally unwritten here:
 
 - `quality.md` is owned by the Quality Gate
 - `promotion.md` is owned by the Review stage
 
-That keeps this implementation pass inside the lane contract instead of hand-authoring later-stage artifacts early.
+That keeps this implementation fixup inside the lane contract instead of
+hand-authoring later-stage artifacts early.
