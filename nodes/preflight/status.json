@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "duration_ms": 18611,
+  "attempt": 1,
+  "max_attempts": 1,
+  "completed_at": "2026-03-21T02:00:14.539838358+00:00",
+  "updated_at": "2026-03-21T02:00:14.539844477+00:00",
+  "notes": "Script completed: set +e\ncargo build -p myosu-games-liars-dice\ncargo test -p myosu-games-liars-dice\ncargo test -p myosu-games-liars-dice game::tests::root_is_chance_node\ncargo test -p myosu-games-liars-dice game::tests::legal_bids_increase\ncargo test -p myosu-games-liars-dice game::tests::challenge_resolves_game\ncargo test -p myosu-games-liars-dice game::tests::payoff_is_zero_sum\ncargo test -p myosu-games-liars-dice game::tests::all_trait_bounds_satisfied\ncargo test -p myosu-games-liars-dice solver::tests::train_to_nash\ncargo test -p myosu-games-liars-dice solver::tests::exploitability_near_zero\ncargo test -p myosu-games-liars-dice solver::tests::strategy_is_nontrivial\ncargo test -p myosu-games-liars-dice solver::tests::wire_serialization_works\ncargo test -p myosu-games registry::tests::all_game_types_have_metrics\ncargo test -p myosu-games registry::tests::random_baseline_positive\ncargo test -p myosu-games registry::tests::good_threshold_less_than_baseline\ncargo test -p myosu-play spectate::tests::relay_emits_events\ncargo test -p myosu-play spectate::tests::relay_handles_disconnected_listener\ncargo test -p myosu-play spectate::tests::events_are_valid_json\ncargo test -p myosu-play spectate::tests::discover_local_sessions\ncargo test -p myosu-tui spectate::tests::renders_fog_of_war\ncargo test -p myosu-tui spectate::tests::reveal_shows_hole_cards_after_showdown\ncargo test -p myosu-tui spectate::tests::reveal_blocked_during_play\ncargo test -p myosu-games\ncargo test -p myosu-games-poker\ncargo test -p myosu-games-liars-dice\ntrue"
+}
