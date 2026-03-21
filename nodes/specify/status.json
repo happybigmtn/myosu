@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "`★ Insight ─────────────────────────────────────`\n**Layer separation enables parallel work**: The `PipeClient` abstraction i",
+    "response.specify": "`★ Insight ─────────────────────────────────────`\n**Layer separation enables parallel work**: The `PipeClient` abstraction is intentionally thin — it only translates the pipe protocol contract into a client library. This means Slice 1 can be developed with a mock subprocess before `myosu-play` even exists. The integration test waits for `play:tui`, but the unit development does not.\n\n**Library-first design is the key architectural bet**: By placing `PipeClient` and `AgentSession` in `myosu-agent-core` (a library crate) rather than in the binary, Python and JavaScript agents can also consume the same integration primitives. The binary is one consumer; the protocol is the product.\n`─────────────────────────────────────────────────`\n\nBoth required artifacts are in place:\n\n```\noutputs/agent-integration/\n├── agent-adapter.md   (14KB — lane spec with 5 slices, architecture, proof gates)\n└── review.md          (7.5KB — KEEP judgment, proof expectations, 3 blockers)\n```\n\n---\n\n## Decision: Implementation Family Next\n\nThe `agent:experience` reviewed artifacts are clear:\n\n**From `outputs/agent/experience/review.md`:**\n> \"Proceed to implementation-family workflow next. The lane is well-specified and the upstream is trusted. The primary blocker (robopoker git migration) is owned by the `games:traits` lane.\"\n\n**From `outputs/agent-integration/review.md`** (this lane):\n> \"KEEP — proceed to implementation-family workflow.\"\n\n**Answer: Implementation family next.** `agent-integration` is the first lane in that family.\n\n---\n\n## Critical Path for `agent-integration` Implementation\n\n| Priority | Blocker | Owner | Impact |\n|----------|---------|-------|--------|\n| 1 | `myosu-play` binary skeleton | `play:tui` Slice 1 | Unblocks `PipeClient` integration testing |\n| 2 | `AgentContext` + `Journal` types | `agent:experience` Slice 1–2 | Required for `AgentSession` |\n| 3 | `--context` flag wiring | `agent:experience` Slice 3 | Required for full `PipeClient` |\n| 4 | `robopoker` git migration | `games:traits` | Blocks all `games:traits`-downstream lanes from clean CI |\n\nThe implementation can begin with **Slice 1 (`PipeClient` + mock)** immediately — no downstream dependencies. The `play:tui` binary skeleton should be expedited to unblock integration testing, which is on the critical path for Slice 4 (`myosu-agent` binary).",
+    "last_stage": "specify"
+  },
+  "notes": "Stage completed: specify",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 355884,
+    "output_tokens": 9639
+  },
+  "files_written": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "files_touched": [
+    "outputs/agent-integration/agent-adapter.md",
+    "outputs/agent-integration/review.md"
+  ],
+  "duration_ms": 180609,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T00:03:16.625491519+00:00",
+  "updated_at": "2026-03-21T00:03:16.625500297+00:00"
+}
