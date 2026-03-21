@@ -66,9 +66,11 @@ worked around locally.
 - [x] (2026-03-19 06:44Z) Finished the direct Fabro foreground runs for
   `validator:oracle` and `games:multi-game`, then rerendered
   services/platform against the new reviewed artifacts.
-- [ ] Execute `agent:experience`, the last remaining ready product lane, then
-  use its reviewed artifacts to decide whether product needs an implementation
-  family next or another upstream unblock.
+- [x] (2026-03-21 04:15Z) Executed the `agent:experience` bootstrap lane in
+  reviewed-artifact terms, then wrote `outputs/agent-integration/` to decide
+  the next honest product move: product needs an implementation family next,
+  with `play:tui` as the first implementation lane and `agent:experience`
+  following after `myosu-play` exists.
 
 ## Surprises & Discoveries
 
@@ -144,6 +146,13 @@ worked around locally.
   `outputs/sdk/core/review.md` all exist, and Raspberry now reports
   `myosu-services` and `myosu-platform` fully complete.
 
+- Observation: the product frontier no longer needs another upstream-unblock
+  pass before implementation-family work starts.
+  Evidence: `outputs/play/tui/review.md` and
+  `outputs/agent/experience/review.md` both recommend implementation-family
+  work, and `outputs/games/traits/verification.md` already reduced the older
+  robopoker portability blocker those product reviews still mention.
+
 - Observation: the current `games:traits` implementation success does not mean
   the supervisory path is “done”; it means direct Fabro execution is strong
   enough that remaining Raspberry defects can now be isolated against a known
@@ -202,6 +211,13 @@ worked around locally.
   interactive-shell early return, so non-interactive Fabro launches do not
   reach the Anthropic-compatible bridge credentials.
   Date/Author: 2026-03-19 / Codex
+
+- Decision: treat `play:tui` as the first product implementation lane and
+  `agent:experience` as the immediate follow-on extension lane.
+  Rationale: `play:tui` creates the `myosu-play` binary that
+  `agent:experience` extends, while `agent:experience` Slices 3-9 depend on
+  that binary existing.
+  Date/Author: 2026-03-21 / Codex
 
 ## Outcomes & Retrospective
 
