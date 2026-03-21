@@ -1,0 +1,19 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_stage": "fixup",
+    "response.fixup": "**Summary of fixes applied to `graph.fabro`:**\n\n1. **`preflight`** (line 14): Removed embedded backticks and annotation artifacts that were causing `exits: command not found` errors. Script now runs clean commands with `set +e`.\n\n2. **`verify`** (line 16): \n   - Removed corruption causing `on: command not found` \n   - Added `CARGO_TARGET_DIR=\"$(pwd)/target\"` to fix the wasm-builder path mismatch\n   - Removed `cargo build -p myosu-node` (node is Phase 2, not yet implemented)\n\n**Verification artifacts status:**\n- `verification.md` — Updated during fixup, shows successful build with WASM artifacts\n- All required artifacts present: `implementation.md`, `quality.md`, `promotion.md`, `integration.md`\n\nThe first proof gate (`cargo build -p myosu-runtime --release`) passes. The fabro verify stage should now run correctly.",
+    "last_response": "**Summary of fixes applied to `graph.fabro`:**\n\n1. **`preflight`** (line 14): Removed embedded backticks and annotation artifacts that were causing `exits: command not found` errors. Script now runs c"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "MiniMax-M2.7-highspeed",
+    "input_tokens": 963472,
+    "output_tokens": 14619
+  },
+  "duration_ms": 702261,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T00:41:22.891502392+00:00",
+  "updated_at": "2026-03-21T00:41:22.891511373+00:00"
+}
