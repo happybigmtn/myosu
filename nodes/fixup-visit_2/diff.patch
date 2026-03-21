@@ -1,0 +1,163 @@
+diff --git a/outputs/tui/shell/implementation.md b/outputs/tui/shell/implementation.md
+index e7dff05..7805cd6 100644
+--- a/outputs/tui/shell/implementation.md
++++ b/outputs/tui/shell/implementation.md
+@@ -11,9 +11,24 @@ The `events.rs` implementation for this slice was already present at the start o
+ The failing verify stage did not uncover a new `events.rs` defect. It failed before running tests because the recorded Slice 1 proof gate used invalid Cargo syntax:
+ 
+ - before: `cargo test events:: --no-ignore`
+-- after: `cargo test events:: -- --include-ignored`
++- after: `cargo test -p myosu-tui events:: -- --include-ignored`
+ 
+-This preserves the original proof intent for Slice 1 while matching actual Cargo argument parsing.
++This preserves the original proof intent for Slice 1 while matching actual Cargo
++argument parsing and keeping the proof inside the `tui:shell` package boundary.
++
++## Automation Drift Confirmed
++
++During this fixup, the active run's preflight/verify scripts were confirmed to
++be stale outside the worktree:
++
++- they still invoke `cargo test events:: --no-ignore`
++- they still invoke `cargo test shell:: --integration`
++- when allowed to continue, the unscoped workspace-root commands cross into
++  `crates/myosu-chain/pallets/game-solver`, which is outside this lane and
++  currently fails compilation
++
++Those run-graph files are not writable from this sandboxed worktree, so this
++turn hardens the lane artifacts and leaves the runtime code unchanged.
+ 
+ ## Implementation Status Preserved
+ 
+@@ -34,4 +49,5 @@ This fixup stayed within the current slice and its lane artifacts:
+ - refreshed `outputs/tui/shell/verification.md`
+ - refreshed `outputs/tui/shell/integration.md`
+ 
+-No new runtime behavior was introduced, and no work was advanced into `shell.rs`, `schema.rs`, `pipe.rs`, or downstream renderer surfaces.
++No new runtime behavior was introduced, and no work was advanced into
++`shell.rs`, `schema.rs`, `pipe.rs`, or downstream renderer surfaces.
+diff --git a/outputs/tui/shell/integration.md b/outputs/tui/shell/integration.md
+index ec884dd..5cade16 100644
+--- a/outputs/tui/shell/integration.md
++++ b/outputs/tui/shell/integration.md
+@@ -16,7 +16,7 @@ This fixup does not introduce a new integration behavior. It makes the current S
+ 
+ - production still reads terminal input from `crossterm::event::EventStream`
+ - tests still prove the same event-task path through the injected headless stream
+-- the lane-local Slice 1 proof gate now matches real Cargo semantics, so CI-style verification can execute instead of failing at argument parsing
++- the lane-local Slice 1 proof gate now uses package-scoped Cargo semantics, so the proof stays inside `myosu-tui` instead of spilling into unrelated chain crates
+ 
+ ## Surfaces Intentionally Not Touched
+ 
+@@ -29,3 +29,7 @@ This fixup does not introduce a new integration behavior. It makes the current S
+ ## Verification Signal
+ 
+ `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui` passed after the artifact fixup, which indicates the existing `events.rs` implementation continues to integrate cleanly with neighboring TUI surfaces.
++
++The active run's external verify graph still points at stale workspace-root
++commands outside this worktree, so the remaining blocker is orchestration drift
++rather than a `tui:shell` integration defect.
+diff --git a/outputs/tui/shell/spec.md b/outputs/tui/shell/spec.md
+index 28471c3..061df42 100644
+--- a/outputs/tui/shell/spec.md
++++ b/outputs/tui/shell/spec.md
+@@ -117,6 +117,11 @@ The lane is **proven** when:
+ ✓ Schema has per-game roundtrip test or explicit unimplemented marker for each game_type
+ ```
+ 
++All lane-local proof commands should be package-scoped to `myosu-tui`. Running
++unscoped `cargo test ...` from the workspace root crosses the lane boundary and
++pulls in `crates/myosu-chain/pallets/game-solver`, which is outside `tui:shell`
++and currently fails to compile.
++
+ ---
+ 
+ ## Next Implementation Slices
+@@ -124,24 +129,24 @@ The lane is **proven** when:
+ ### Slice 1: Event Loop Headless Test
+ **File**: `crates/myosu-tui/src/events.rs`
+ **Action**: Add `MockEventStream` test helper that produces synthetic `CrosstermEvent` values without requiring a TTY. Replace `#[ignore]` tests with mocked versions.
+-**Proof gate**: `cargo test events:: -- --include-ignored`
++**Proof gate**: `cargo test -p myosu-tui events:: -- --include-ignored`
+ 
+ ### Slice 2: Shell Integration Test
+ **File**: `crates/myosu-tui/src/shell.rs`
+ **Action**: Add test that creates Shell with Lobby screen, simulates typing "1" followed by Enter, verifies `current_screen()` returns Game.
+-**Proof gate**: `cargo test shell:: --integration`
++**Proof gate**: `cargo test -p myosu-tui shell::`
+ 
+ ### Slice 3: Schema Per-Game Coverage
+ **File**: `crates/myosu-tui/src/schema.rs`
+ **Action**: For each game_type in `all_game_types_have_schema`, either add full roundtrip test or add `#[unimplemented]` comment with tracking issue. At minimum, add NLHE heads-up and 6-max variants.
+-**Proof gate**: `cargo test schema::all_game_types`
++**Proof gate**: `cargo test -p myosu-tui schema::`
+ 
+ ### Slice 4: Screen Render Tests
+ **File**: `crates/myosu-tui/src/shell.rs`
+ **Action**: Add `shell_draw_lobby`, `shell_draw_onboarding`, `shell_draw_stats`, etc. verifying buffer content for each screen.
+-**Proof gate**: `cargo test shell::shell_draw_`
++**Proof gate**: `cargo test -p myosu-tui shell_draw_`
+ 
+ ### Slice 5: Pipe Mode ANSI Enforcement
+ **File**: `crates/myosu-tui/src/pipe.rs`
+ **Action**: Add property test: for all inputs, `pipe_output()` result passed through `is_plain_text()` returns true.
+-**Proof gate**: `cargo test pipe::is_plain_text`
++**Proof gate**: `cargo test -p myosu-tui is_plain_text`
+diff --git a/outputs/tui/shell/verification.md b/outputs/tui/shell/verification.md
+index dcf6778..9c3829b 100644
+--- a/outputs/tui/shell/verification.md
++++ b/outputs/tui/shell/verification.md
+@@ -2,16 +2,32 @@
+ 
+ ## Verification Context
+ 
+-The prior verify-stage failure was deterministic and happened before any `events` tests ran. The recorded command `cargo test events:: --no-ignore` is not valid Cargo CLI syntax.
++The active run's verify-stage failure is deterministic, but it is caused by the
++outer run graph rather than the `events.rs` slice. The recorded commands still
++use invalid Cargo flags and unscoped workspace-root test invocations:
+ 
+-All commands below were rerun from the workspace root. In this sandbox, Cargo needs `CARGO_TARGET_DIR=/tmp/myosu-target` because the default target path resolves outside the writable root.
++- `cargo test events:: --no-ignore`
++- `cargo test shell:: --integration`
++
++The recorded preflight stderr also shows that once the script continues past the
++invalid flags, unscoped workspace-root test commands reach
++`crates/myosu-chain/pallets/game-solver` and fail on unrelated compile errors.
++
++All commands below were rerun from the workspace root against
++`-p myosu-tui`. In this sandbox, Cargo needs
++`CARGO_TARGET_DIR=/tmp/myosu-target` because the default target path resolves
++outside the writable root.
+ 
+ ## Automated Proof Commands
+ 
+ | Command | Exit Code | Result |
+ |---------|-----------|--------|
+-| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events::` | 0 | Focused `events` proof passed: 6 tests, 0 ignored |
+-| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events:: -- --include-ignored` | 0 | Cargo-compatible Slice 1 proof gate passed: same 6 `events` tests, with no ignored tests remaining |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events::` | 0 | Focused `events` regression passed: 6 tests |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui events:: -- --include-ignored` | 0 | Slice 1 proof gate passed with Cargo-valid syntax: same 6 `events` tests and 0 ignored |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui shell::` | 0 | Existing shell-module regression passed: 11 tests; the review's missing transition/render gaps remain open |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui all_game_types_have_schema` | 0 | Existing schema coverage smoke test passed: 1 test; semantic per-game coverage remains open |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui shell_draw_` | 0 | Existing shell draw regression passed: 2 tests; non-Game screen coverage remains open |
++| `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui is_plain_text` | 0 | Existing pipe ANSI-detection regression passed: 1 test |
+ | `CARGO_TARGET_DIR=/tmp/myosu-target cargo test -p myosu-tui` | 0 | Full crate regression passed: 86 unit tests and 1 doctest |
+ 
+ ## Proof Outcome
+@@ -24,8 +40,16 @@ Slice 1 is verified in its current form:
+ - async update injection is proven headlessly
+ - the doctest for `EventLoop::new` compiles cleanly in headless verification
+ 
++The remaining lane gaps identified by review are still accurate:
++
++- `shell.rs` still lacks the typed Lobby-to-Game transition proof called out in review
++- `shell.rs` still lacks all-screen render coverage
++- `schema.rs` still overclaims per-game proof relative to the tests
++- `pipe.rs` still has only its existing ANSI-detection regression, not the Slice 5 property test
++
+ ## Residual Risks
+ 
+ - This slice proves the shared event-loop logic without a live terminal harness; runtime use still depends on `crossterm::event::EventStream`.
++- The checked-in lane artifacts now describe package-scoped proof commands, but the current run's external graph still needs to be rerendered before automation will stop replaying the stale commands.
+ - `shell.rs` remains reopened for the separate transition and render coverage gaps called out in review.
+ - `schema.rs` remains reopened for per-game schema coverage.
