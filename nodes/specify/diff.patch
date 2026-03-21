@@ -1,0 +1,367 @@
+diff --git a/outputs/agent-integration/agent-adapter.md b/outputs/agent-integration/agent-adapter.md
+new file mode 100644
+index 0000000..2c6c884
+--- /dev/null
++++ b/outputs/agent-integration/agent-adapter.md
+@@ -0,0 +1,264 @@
++# `agent-integration` Lane Specification
++
++## Purpose and User-Visible Outcome
++
++`agent-integration` is the **client-side integration layer** for Myosu — the adapter code that connects programmatic agents (LLMs, bots, scripts) to the Myosu gameplay surface.
++
++The lane delivers:
++
++1. **`PipeClient`** — a typed Rust client for `myosu-play --pipe` mode, handling stdin/stdout serialization, context file lifecycle, and reflection prompt processing
++2. **`AgentSession`** — a session manager that wraps `PipeClient`, exposes high-level `act()` and `query()` calls, and maintains the agent context + journal lifecycle
++3. **`HttpAgentClient`** (Phase 2) — a future HTTP/WS client for direct miner axon communication, replacing the pipe adapter once `chain:runtime` is available
++4. **`myosu-agent`** binary — a standalone agent runner that composes `AgentSession` with CLI argument parsing and optional autonomous loop control
++
++**User-visible behavior**: An agent developer imports `myosu-agent-core`, constructs an `AgentSession::new(path_to_context)`, and calls `session.act(&game_state)` or `session.query_best_action()` to interact with the solver. The session handles all pipe protocol details, context persistence, and journal appending transparently.
++
++---
++
++## Lane Boundary
++
++```
++                            agent-integration (THIS LANE)
++                            ┌──────────────────────────────────────────────────────┐
++upstream                     │                                                      │
++agent:experience ───────────► │  PipeClient          AgentSession                  │
++  (pipe mode surfaces,        │  ├─ stdin/stdout      ├─ context lifecycle         │
++   narration, schema)         │  ├─ reflection parse  ├─ journal lifecycle         │
++                            │  ├─ context file I/O  ├─ high-level act()/query()   │
++                            │  └─ lobby handling   └─ myosu-agent binary          │
++                            │                                                      │
++                            │  HttpAgentClient (Phase 2)                           │
++                            │  ├─ HTTP POST to miner axon                         │
++                            │  ├─ WebSocket event stream                          │
++                            │  └─ replaces PipeClient after chain:runtime         │
++                            │                                                      │
++upstream                     │                                                      │
++chain:runtime ──────────────► │  (Phase 2 only: miner axon endpoint discovery)    │
++                            │                                                      │
++downstream                   │                                                      │
++agent:experience impl ──────► │  (consumes PipeClient and AgentSession)           │
++  (slices 1-9)               │                                                      │
++                            └──────────────────────────────────────────────────────┘
++```
++
++**Trusted upstream inputs:**
++- `agent:experience` (reviewed spec + review) — defines `pipe_output()` contract, `--pipe` flag behavior, `--context` and `--narrate` semantics, `reflect>` prompt protocol, lobby format, and `game-state.json` schema
++- `games:traits` (14 tests, trusted) — `CfrGame`, `StrategyQuery/Response` types
++- `tui:shell` (82 tests, trusted) — `GameRenderer` trait and `PipeMode` behavior
++
++**Trusted downstream outputs:**
++- `agent:experience` implementation slices (consume `PipeClient` and `AgentSession`)
++- `myosu-agent` binary (standalone agent runner)
++
++---
++
++## Current State
++
++No code exists at these paths yet:
++
++| Surface | Path | Status |
++|---------|------|--------|
++| `PipeClient` | `crates/myosu-agent-core/src/pipe_client.rs` | **MISSING** |
++| `AgentSession` | `crates/myosu-agent-core/src/session.rs` | **MISSING** |
++| `HttpAgentClient` | `crates/myosu-agent-core/src/http_client.rs` | **MISSING** |
++| `myosu-agent` binary | `crates/myosu-agent/src/main.rs` | **MISSING** |
++| `myosu-agent-core` crate | `crates/myosu-agent-core/` | **MISSING** |
++
++**Preconditions from `agent:experience`:**
++- `myosu-play --pipe` CLI exists and accepts `--context` and `--narrate` flags (Slice 3+ of `agent:experience`)
++- `docs/api/game-state.json` schema is stable and trusted
++- `GameRenderer::pipe_output()` produces the documented text format
++
++---
++
++## Code Boundaries and Deliverables
++
++| File | Responsibility | Status |
++|------|---------------|--------|
++| `crates/myosu-agent-core/src/lib.rs` | Crate root; re-exports `PipeClient`, `AgentSession`, types | **MISSING** |
++| `crates/myosu-agent-core/src/pipe_client.rs` | `PipeClient` struct; owns stdin/stdout handles; implements send/recv loop; handles `reflect>` prompt; parses lobby | **MISSING** |
++| `crates/myosu-agent-core/src/session.rs` | `AgentSession` struct; wraps `PipeClient`; manages context load/save; exposes `act()`, `query_best_action()`, `start_session()` | **MISSING** |
++| `crates/myosu-agent-core/src/http_client.rs` | `HttpAgentClient`; miner axon discovery; HTTP strategy queries; WS event subscription (Phase 2) | **MISSING** |
++| `crates/myosu-agent-core/src/types.rs` | Shared types: `AgentContext`, `GameEvent`, `JournalEntry` (re-exported from `myosu-tui`) | **MISSING** |
++| `crates/myosu-agent/src/main.rs` | `myosu-agent` binary; CLI arg parsing; autonomous loop mode; context path + session management | **MISSING** |
++| `crates/myosu-agent-core/Cargo.toml` | Crate manifest; depends on `myosu-tui` (for types), `tokio`, `serde_json` | **MISSING** |
++
++---
++
++## Architecture
++
++### `PipeClient`
++
++```
++PipeClient::new(context_path, narrate) -> Result<Self>
++  ├─ spawns myosu-play --pipe --context <path> --narrate as child process
++  ├─ owns Stdin/Stdout handles
++  └─ drops process on drop
++
++PipeClient::send_action(&self, action: &str) -> Result<GameOutput>
++  ├─ writes action + "\n" to stdin
++  ├─ reads lines from stdout until next prompt or HAND COMPLETE
++  ├─ parses game state (terse or narrated depending on flag)
++  └─ returns GameOutput
++
++PipeClient::wait_reflection(&self) -> Result<Option<String>>
++  ├─ reads until "reflect>" prompt
++  ├─ user provides reflection text via PipeClient::provide_reflection()
++  └─ returns Some(reflection) or None if empty line
++
++PipeClient::request_lobby(&self) -> Result<Vec<SubnetInfo>>
++  ├─ sends "lobby\n" command
++  └─ parses MYOSU/LOBBY response
++
++PipeClient::select_subnet(&self, id: u8) -> Result<GameOutput>
++  ├─ sends "join <id>\n"
++  └─ returns initial game state
++```
++
++### `AgentSession`
++
++```
++AgentSession::new(context_path: PathBuf) -> Result<Self>
++  ├─ loads AgentContext from context_path (or creates default)
++  ├─ spawns PipeClient with context path
++  └─ initializes journal
++
++AgentSession::act(&mut self, game_state: &GameState, action: &str) -> Result<ActResult>
++  ├─ sends action via PipeClient::send_action()
++  ├─ receives GameOutput
++  ├─ if hand complete: wait for reflection, append to journal
++  └─ return ActResult { game_output, reflection: Option<String> }
++
++AgentSession::query_best_action(&mut self, game_state: &GameState) -> Result<String>
++  ├─ sends "advice\n" command to pipe
++  └─ parses advice response
++
++AgentSession::journal_append(&mut self, entry: JournalEntry)
++  ├─ appends to journal.md in context directory
++  └─ never truncates
++
++AgentSession::save_context(&self)
++  ├─ serializes AgentContext to context_path
++  └─ called on drop or explicitly
++
++AgentSession::start_autonomous_loop<F>(&mut self, decide: F) -> Result<!>
++  where F: Fn(&GameState) -> String
++  ├─ enters loop: receive game state, call decide(), send action
++  └─ never returns (runs until EOF or error)
++```
++
++### Relationship to `agent:experience` Surfaces
++
++```
++agent:experience defines          agent-integration implements
++─────────────────────────────────────────────────────────────────
++--pipe flag                      → PipeClient (child process management)
++--context flag                   → AgentSession (context file lifecycle)
++--narrate flag                   → PipeClient (passes flag to myosu-play)
++reflect> prompt                  → PipeClient::wait_reflection()
++lobby format                    → PipeClient::request_lobby() / ::select_subnet()
++game-state.json schema          → types.rs (re-exported from myosu-tui)
++journal.md format               → AgentSession::journal_append()
++```
++
++`PipeClient` does NOT implement narration or game state rendering — that is `myosu-play`'s responsibility. `PipeClient` only parses the text output that `myosu-play` produces.
++
++---
++
++## How the Integration Family Fits Together
++
++```
++agent:experience (spec lane) ──────────────────────────────
++  └─ defines surfaces: pipe protocol, schema, UX behavior
++                                                        │
++                      agent-integration (impl lane) ─────┘
++                        └─ implements PipeClient + AgentSession
++                              │
++         ┌────────────────────┼────────────────────┐
++         │                    │                    │
++   myosu-agent           myosu-agent-           agent:experience
++   (binary)              core (library)         implementation slices
++```
++
++The separation is intentional: `myosu-agent-core` is a library that any agent implementation (Python, JavaScript, Rust) can depend on. The `myosu-agent` binary is one consumer of that library.
++
++---
++
++## Proof / Check Shape for the Lane
++
++The lane is **proven** when all of the following pass:
++
++```
++# PipeClient roundtrips game state through pipe
++cargo test -p myosu-agent-core pipe_client::tests::send_action_parses_output
++cargo test -p myosu-agent-core pipe_client::tests::reflection_prompt_detected
++cargo test -p myosu-agent-core pipe_client::tests::empty_reflection_returns_none
++cargo test -p myosu-agent-core pipe_client::tests::lobby_parsed_correctly
++cargo test -p myosu-agent-core pipe_client::tests::subnet_selection_starts_game
++
++# AgentSession manages context and journal
++cargo test -p myosu-agent-core session::tests::context_persists_across_sessions
++cargo test -p myosu-agent-core session::tests::journal_appends_hand_entry
++cargo test -p myosu-agent-core session::tests::drop_saves_context
++
++# myosu-agent binary responds to --help
++cargo test -p myyosu-agent myosu_agent::tests::help_flag_works
++cargo test -p myyosu-agent myosu_agent::tests::autonomous_loop_runs
++
++# myosu-agent-core compiles and types align with myosu-tui
++cargo check -p myosu-agent-core
++```
++
++---
++
++## Next Implementation Slices (Smallest Honest First)
++
++### Slice 1: `myosu-agent-core` Crate Skeleton + `PipeClient`
++**Files**: `crates/myosu-agent-core/Cargo.toml`, `crates/myosu-agent-core/src/lib.rs`, `crates/myosu-agent-core/src/pipe_client.rs`
++**What**: Create crate; define `PipeClient::new()` that spawns `myosu-play --pipe` as child; implement `send_action()` parsing; implement `wait_reflection()`; add roundtrip tests with a mock `myosu-play` subprocess.
++**Proof gate**: `cargo test -p myosu-agent-core pipe_client::tests::send_action_parses_output`
++
++### Slice 2: `AgentSession` + Context Lifecycle
++**Files**: `crates/myosu-agent-core/src/session.rs`, `crates/myosu-agent-core/src/types.rs`
++**What**: `AgentSession` wrapping `PipeClient`; context load/save; `act()` and `query_best_action()`; journal append; `Drop` saves context.
++**Proof gate**: `cargo test -p myosu-agent-core session::tests::context_persists_across_sessions`
++
++### Slice 3: Lobby and Subnet Selection in `PipeClient`
++**Files**: `crates/myosu-agent-core/src/pipe_client.rs`
++**What**: `request_lobby()` parsing; `select_subnet(id)` command; `SubnetInfo` type; lobby tests.
++**Proof gate**: `cargo test -p myosu-agent-core pipe_client::tests::lobby_parsed_correctly`
++
++### Slice 4: `myosu-agent` Binary
++**Files**: `crates/myosu-agent/Cargo.toml`, `crates/myosu-agent/src/main.rs`
++**What**: CLI with `--context`, `--narrate`, `--autonomous` flags; `main()` wires flags to `AgentSession`; autonomous loop mode; `--help` output.
++**Proof gate**: `cargo test -p myyosu-agent myosu_agent::tests::help_flag_works`
++
++### Slice 5: `HttpAgentClient` Skeleton (Phase 2 — blocked on `chain:runtime`)
++**Files**: `crates/myosu-agent-core/src/http_client.rs`
++**What**: `HttpAgentClient` struct; miner axon discovery stub; `query_strategy()` HTTP call; `subscribe_events()` WS stream; compilation-only for now.
++**Proof gate**: `cargo check -p myosu-agent-core http_client`
++
++---
++
++## Dependency on Other Lanes
++
++| Lane | Type | What Is Used |
++|------|------|-------------|
++| `agent:experience` | Hard upstream | Pipe protocol contract, `--pipe --context --narrate` flags, reflection prompt format, lobby format, schema |
++| `play:tui` | Hard upstream | `myosu-play` binary must exist for `PipeClient` to spawn |
++| `games:traits` | Hard upstream | `StrategyQuery/Response` types |
++| `chain:runtime` | Soft upstream (Phase 2) | Miner axon endpoint discovery for `HttpAgentClient` |
++
++**Critical dependency**: `play:tui` must produce the `myosu-play` binary (Slice 1 of that lane) before `PipeClient` can be integration-tested end-to-end. Slice 1 can be developed and unit-tested with a mock subprocess; integration testing requires `myosu-play`.
++
++---
++
++## Phase Ordering
++
++```
++Phase 1 (Pipe-Based — depends on play:tui binary):
++  Slice 1 → Slice 2 → Slice 3 → Slice 4
++
++Phase 2 (HTTP/WS-Based — depends on chain:runtime):
++  Slice 5 (skeleton) → full HttpAgentClient implementation
++```
+diff --git a/outputs/agent-integration/review.md b/outputs/agent-integration/review.md
+new file mode 100644
+index 0000000..85eb14e
+--- /dev/null
++++ b/outputs/agent-integration/review.md
+@@ -0,0 +1,91 @@
++# `agent-integration` Lane Review
++
++## Judgment: **KEEP** — proceed to implementation-family workflow
++
++This lane is the natural next step after `agent:experience`. The pipe protocol surfaces are well-specified and the `PipeClient` abstraction is the correct integration primitive. The separation between `myosu-agent-core` (library) and `myosu-agent` (binary) is sound — it allows Python and JavaScript agents to consume the same library without requiring a Rust runtime.
++
++---
++
++## Rationale for KEEP
++
++1. **Clean abstraction boundary**: `PipeClient` is a thin, honest wrapper around `myosu-play --pipe`. It does not try to be clever about game state — it sends actions, receives output, and parses prompts. The complexity of game rendering stays in `myosu-play`; the complexity of agent session management stays in `AgentSession`. This is the right separation.
++
++2. **`agent:experience` surfaces are ready**: The pipe protocol, reflection prompt, lobby format, and `--context`/`--narrate` flags are all defined in `agent:experience`'s reviewed spec. `PipeClient` is a direct translation of that contract into a client library — no ambiguity to resolve.
++
++3. **Library-first design enables polyglot agents**: By keeping `PipeClient` and `AgentSession` in `myosu-agent-core` as a plain Rust library, any language with Rust FFI or process spawning can use it. The `myosu-agent` binary is one consumer. Python and JavaScript agents can use the same library or implement their own `PipeClient` following the same contract.
++
++4. **Slice dependency chain is short**: Slice 1 (`PipeClient`) can be developed with a mock subprocess for unit testing. Integration testing with the real `myosu-play` binary requires `play:tui` Slice 1 (binary skeleton) — but this is a dependency the `play:tui` lane already owns and is working on.
++
++5. **No speculative Phase 2 coupling**: `HttpAgentClient` is explicitly Phase 2 and blocked on `chain:runtime`. The spec defines it as a skeleton now so the `myosu-agent-core` crate layout is correct from the start, but Phase 1 is fully implementable without it.
++
++---
++
++## Proof Expectations
++
++To consider this lane **proven**, the following evidence must be available:
++
++| Proof | How to Verify |
++|-------|--------------|
++| `PipeClient` sends action and parses output | Spawn mock `cat`-like process; `send_action("fold\n")` returns parsed `GameOutput`; mock echoes correctly formatted text |
++| `PipeClient` detects and handles `reflect>` prompt | PipeClient receives "HAND COMPLETE\nreflect>" → `wait_reflection()` returns `Ok(None)` for empty line, `Ok(Some(text))` for non-empty |
++| `PipeClient` parses lobby correctly | `request_lobby()` on mock that echoes lobby format → returns `Vec<SubnetInfo>` with correct count and fields |
++| `PipeClient` handles subnet selection | `select_subnet(1)` sends "join 1" → returns initial `GameOutput` |
++| `AgentSession` persists context across sessions | `AgentSession::new()` → play 5 hands → drop → `AgentSession::new()` → context loaded with correct hand count |
++| `AgentSession` appends journal without truncating | `journal_append()` called 100 times → file size grows monotonically; `save()` never truncates |
++| `AgentSession::drop()` saves context | Create session; modify context; drop without explicit `save()`; create new session → changes preserved |
++| `myosu-agent --help` works | `myosu-agent --help` exits 0 with non-empty stdout describing flags |
++| `myosu-agent --autonomous` loop runs | Connect to test pipe; verify loop calls `decide()` callback and sends actions |
++
++---
++
++## Remaining Blockers
++
++### 1. `myosu-play` Binary Does Not Exist (HIGH — blocks Slice 1 integration testing)
++
++`PipeClient::new()` spawns `myosu-play --pipe --context <path> --narrate` as a child process. The `myosu-play` binary does not exist yet — it is owned by `play:tui` Slice 1.
++
++**Impact on this lane**: Slice 1 unit tests can use a mock subprocess. Full integration testing requires the real binary.
++
++**Resolution**: `play:tui` lane owns the binary skeleton. Begin Slice 1 development now; integration testing can proceed once `play:tui` Slice 1 is complete.
++
++### 2. `agent:experience` Slices 3+ Not Yet Implemented (MEDIUM — blocks `--context` and `--narrate` wiring)
++
++`PipeClient` passes `--context` and `--narrate` flags to `myosu-play`. These flags do not exist yet — they are `agent:experience` Slices 3 and 6 respectively.
++
++**Impact on this lane**: `PipeClient::new(context_path, narrate)` will pass flags that `myosu-play` does not yet understand. The CLI will error on unknown flags.
++
++**Resolution for Slice 1**: Use `PipeClient::new(context_path, false)` for initial development (narrate off). Once `agent:experience` Slice 3 lands, add narrate support. Alternatively, `play:tui` Slice 1 could add minimal `--context` support as a pre-slice if that is easier.
++
++### 3. `AgentContext` and `Journal` Types Live in `myosu-tui` (LOW — refactor before Slice 2)
++
++`AgentSession` needs `AgentContext` and `Journal` types. Currently these are defined in `myosu-tui` but are completely absent as implementation (see `agent:experience` spec). They will be implemented as part of `agent:experience` Slices 1 and 2.
++
++**Impact on this lane**: `myosu-agent-core` cannot compile `session.rs` until `AgentContext` and `Journal` exist.
++
++**Resolution**: Once `agent:experience` Slice 1 (`agent_context.rs`) lands, extract those types into a shared location or re-export through `myosu-tui`. `agent-integration` Slice 2 depends on `agent:experience` Slice 1 completing first — this is the correct ordering and is already captured in the `agent:experience` slice chain.
++
++---
++
++## Lane Readiness
++
++| Dimension | Status | Notes |
++|-----------|--------|-------|
++| Specification | **READY** | `agent-adapter.md` defines clean abstraction, 5 slices, clear upstream deps |
++| Upstream (`agent:experience`) | **READY** | Pipe protocol, reflection prompt, lobby format all reviewed and stable |
++| Upstream (`play:tui`) | **PARTIAL** | Binary missing; needed for integration testing |
++| Upstream (`games:traits`) | **READY** | 14 tests pass; `StrategyQuery/Response` types stable |
++| Library design | **SOUND** | `myosu-agent-core` as library enables polyglot use; `myosu-agent` as binary provides CLI |
++| Slice dependency chain | **CLEAN** | Slice 1 (mockable) → Slice 2 (needs agent:experience Slice 1) → Slice 3 (needs lobby) → Slice 4 (binary) → Slice 5 (Phase 2, blocked) |
++| Polyglot agent support | **ENABLED** | Library-first design; no hard Rust-only assumptions |
++
++---
++
++## Recommendation
++
++**Proceed with Slice 1 immediately.** `PipeClient` is the simplest honest first slice — it is a thin wrapper around the pipe protocol and can be developed and unit-tested without any downstream dependencies beyond a mock subprocess.
++
++**Coordinate with `play:tui` on binary skeleton.** `play:tui` Slice 1 should add minimal `--pipe` flag support to `myosu-play` as early as possible, even before full `agent:experience` Slice 3. This unblocks `agent-integration` Slice 1 integration testing.
++
++**Track `agent:experience` Slice 1 dependency for Slice 2.** `AgentSession` cannot be implemented without `AgentContext` from `agent:experience` Slice 1. Monitor that lane's progress and sequence accordingly.
++
++**Do not implement Phase 2 (`HttpAgentClient`) until `chain:runtime` is available.** The skeleton in Slice 5 is fine as a compile-only placeholder. No real work should happen on HTTP/WS integration until miner axon endpoints are available.
