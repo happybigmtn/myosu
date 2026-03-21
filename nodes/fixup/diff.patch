@@ -1,0 +1,206 @@
+diff --git a/outputs/games/multi-game/implementation.md b/outputs/games/multi-game/implementation.md
+index 475110b..0fd9372 100644
+--- a/outputs/games/multi-game/implementation.md
++++ b/outputs/games/multi-game/implementation.md
+@@ -4,45 +4,50 @@
+ 
+ **Slice 1 — Create `myosu-games-liars-dice` Crate Skeleton**
+ 
+-This slice implemented only the approved bootstrap surface for the multi-game lane:
++This lane is still at the approved Slice 1 boundary. The only code surface implemented for `games:multi-game` is the new `myosu-games-liars-dice` crate skeleton:
+ 
+-- added `crates/myosu-games-liars-dice` as a new workspace member
+-- updated `Cargo.lock` for the new workspace package
++- added `crates/myosu-games-liars-dice` as a workspace member
++- updated `Cargo.lock` for the new package
+ - created `crates/myosu-games-liars-dice/Cargo.toml`
+ - created `crates/myosu-games-liars-dice/src/lib.rs`
+ 
+-No Slice 2 game-engine logic was started, and no spectator or cross-game scoring work was included.
++This fixup does not advance into Slice 2 or later. It keeps the code surface unchanged and refreshes the lane record so it matches the current workspace truth.
+ 
+-## What Changed
++## Current Workspace Truth
++
++`cargo metadata --no-deps --format-version 1` shows the workspace currently contains these relevant packages:
++
++- `myosu-games`
++- `myosu-games-liars-dice`
++- `myosu-tui`
++- `pallet-game-solver`
++
++There is no `myosu-play` package and no `myosu-games-poker` package in this workspace snapshot. Those later review-script failures are therefore outside the code added by Slice 1.
++
++## What Slice 1 Added
+ 
+ ### Workspace wiring
+ 
+-`Cargo.toml` now includes:
++The workspace manifest now includes:
+ 
+ ```toml
+ "crates/myosu-games-liars-dice",
+ ```
+ 
+-This makes the new lane crate addressable via `cargo build -p myosu-games-liars-dice` and `cargo test -p myosu-games-liars-dice`.
+-
+-`Cargo.lock` now records the new workspace package and its direct dependencies:
+-
+-- `myosu-games`
+-- `rbp-core`
+-- `rbp-mccfr`
++That makes the new lane crate addressable as `myosu-games-liars-dice` for Cargo build and test commands.
+ 
+ ### New crate manifest
+ 
+-`crates/myosu-games-liars-dice/Cargo.toml` establishes the approved skeleton:
++`crates/myosu-games-liars-dice/Cargo.toml` establishes the bootstrap crate contract:
+ 
+ - workspace package metadata (`version`, `edition`, `license`)
+ - `[lib] crate-type = ["lib"]`
+-- `myosu-games` path dependency for the existing myosu game registry/types
+-- pinned `rbp-core` and `rbp-mccfr` git dependencies at `04716310143094ab41ec7172e6cea5a2a66744ef`, matching the reviewed lane inputs
++- path dependency on `myosu-games`
++- pinned `rbp-core` and `rbp-mccfr` git dependencies at `04716310143094ab41ec7172e6cea5a2a66744ef`
+ 
+-### New crate public surface
++### New public API shell
+ 
+-`crates/myosu-games-liars-dice/src/lib.rs` currently exposes placeholder public API names for the later slices:
++`crates/myosu-games-liars-dice/src/lib.rs` exports the stable public names reserved for later slices:
+ 
+ ```rust
+ pub use stub::{
+@@ -53,26 +58,25 @@ pub use stub::{
+ pub const GAME_TYPE: GameType = GameType::LiarsDice;
+ ```
+ 
+-The placeholder structs are zero-sized stubs. This keeps the crate boundary and public names stable now, while leaving the actual `CfrGame`, `CfrEdge`, `CfrTurn`, `CfrInfo`, `Encoder`, and `Profile` implementations to Slice 2 and Slice 3.
++The exported types are still zero-sized placeholders. That is intentional for Slice 1: the crate boundary and canonical names now exist, while the actual `CfrGame`, `CfrEdge`, `CfrTurn`, `CfrInfo`, `Encoder`, and `Profile` implementations remain deferred to the next approved slices.
+ 
+-Two smoke tests were added in `lib.rs`:
++Two smoke tests live in `lib.rs`:
+ 
+ - `exposes_liars_dice_game_type`
+ - `stub_public_api_is_constructible`
+ 
+-These verify the crate is wired to the existing `GameType::LiarsDice` registry hook and that the initial public API builds cleanly.
++## Boundaries Preserved
+ 
+-## Slice Boundaries Preserved
+-
+-- `crates/myosu-games/src/` was not modified
+-- `crates/myosu-games-poker/src/` was not modified
++- `crates/myosu-games/src/` was not modified by Slice 1
+ - no `game.rs`, `edge.rs`, `turn.rs`, `info.rs`, `encoder.rs`, or `profile.rs` files were added yet
+-- no `myosu-play` or `myosu-tui` spectator work was started
+-- `quality.md` was not hand-authored
+-- `promotion.md` was not authored
++- no `ExploitMetric` registration work was started
++- no spectator relay or spectator TUI code was started
++- no placeholder `myosu-play` or `myosu-games-poker` package was introduced just to satisfy later review commands
++- `quality.md` was not authored in this fixup
++- `promotion.md` was not touched in this fixup
+ 
+ ## Next Approved Slice
+ 
+ **Slice 2 — `game.rs` + `edge.rs` + `turn.rs` + `info.rs`: Liar's Dice Game Engine**
+ 
+-That slice owns the first real game state and trait implementation work. This Slice 1 change intentionally stops before that boundary.
++That remains the next approved implementation increment from the reviewed lane artifacts.
+diff --git a/outputs/games/multi-game/verification.md b/outputs/games/multi-game/verification.md
+index 04e1e89..a58816b 100644
+--- a/outputs/games/multi-game/verification.md
++++ b/outputs/games/multi-game/verification.md
+@@ -1,51 +1,59 @@
+-# `games:multi-game` Verification — Slice 1
++# `games:multi-game` Verification — Slice 1 Fixup
+ 
+-## Proof Commands That Passed
++## Verification Scope
+ 
+-The default environment exported `CARGO_TARGET_DIR=/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target`, which was read-only from this sandbox. To make the proof reproducible in this worktree, the commands below were run with a local writable target dir:
++This fixup revalidated the active Slice 1 proof gate and reproduced the first deterministic review-script blocker. It does not claim that Slice 2 through Slice 7 are complete.
+ 
+-`CARGO_TARGET_DIR=/home/r/.fabro/runs/20260320-01KM71XNRG6FY2B05MJEVXYBBS/worktree/target/codex-multi-game`
++Compilation commands were run with `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup` because `cargo metadata` reports the default target directory as `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target`, which is outside the writable sandbox for this run.
+ 
+-| Command | Exit Code | Result |
+-|---------|-----------|--------|
+-| `CARGO_TARGET_DIR=/home/r/.fabro/runs/20260320-01KM71XNRG6FY2B05MJEVXYBBS/worktree/target/codex-multi-game cargo build -p myosu-games-liars-dice` | 0 | Passed; new crate compiled successfully |
+-| `CARGO_TARGET_DIR=/home/r/.fabro/runs/20260320-01KM71XNRG6FY2B05MJEVXYBBS/worktree/target/codex-multi-game cargo test -p myosu-games-liars-dice` | 0 | Passed; 2 unit tests passed, 0 doctests |
+-| `CARGO_TARGET_DIR=/home/r/.fabro/runs/20260320-01KM71XNRG6FY2B05MJEVXYBBS/worktree/target/codex-multi-game cargo test -p myosu-games` | 0 | Passed; 10 unit tests and 4 doctests still passed after workspace update |
++## Automated Commands Run
+ 
+-## Automated Outcomes
++| Command | Exit Code | Outcome |
++|---------|-----------|---------|
++| `cargo metadata --no-deps --format-version 1` | 0 | Workspace members resolve to `myosu-games`, `myosu-games-liars-dice`, `myosu-tui`, and `pallet-game-solver` |
++| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo build -p myosu-games-liars-dice` | 0 | Passed; the Slice 1 crate skeleton compiles |
++| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo test -p myosu-games-liars-dice` | 0 | Passed; 2 unit tests passed and 0 doctests ran |
++| `CARGO_TARGET_DIR=/tmp/myosu-mg-fixup cargo test -p myosu-games` | 0 | Passed; 10 unit tests and 4 doctests still pass after the workspace change |
++| `cargo test -p myosu-play` | 101 | Failed immediately: `package ID specification 'myosu-play' did not match any packages` |
++| `cargo test -p myosu-games-poker` | 101 | Failed immediately: `package ID specification 'myosu-games-poker' did not match any packages` |
+ 
+-- The new package is now recognized by Cargo and can be built by package name.
+-- The crate's initial public surface compiles and its registry hook matches `GameType::LiarsDice`.
+-- The existing `myosu-games` crate still passes its full current test suite after the workspace membership change.
++## Active Proof Gate Status
+ 
+-## Environment Note
++The current slice's first proof gate is green:
+ 
+-The first unmodified `cargo build -p myosu-games-liars-dice` attempt failed with:
++- `myosu-games-liars-dice` builds by package name
++- the crate's two Slice 1 smoke tests pass
++- `myosu-games` still passes its current suite after the workspace membership change
++
++That is the full approved proof surface for Slice 1.
++
++## Deterministic Review-Script Blocker
++
++The orchestrated `verify` stage ran the full review command list with `set -e`. In that run, commands through `cargo test -p myosu-games` completed successfully or returned clean filtered-test outputs. The first hard failure was:
+ 
+ ```text
+-error: failed to open: /home/r/coding/myosu/.worktrees/autodev-live/.raspberry/cargo-target/debug/.cargo-lock
+-
+-Caused by:
+-  Read-only file system (os error 30)
++cargo test -p myosu-play
++error: package ID specification `myosu-play` did not match any packages
+ ```
+ 
+-That failure was environmental, not code-related. Re-running with a writable local `CARGO_TARGET_DIR` resolved it.
++Because the script stops on the first non-zero exit, later review commands were not reachable in that gate run.
+ 
+-## Risks Reduced
++Separate reproduction during this fixup confirms that `myosu-games-poker` is also absent from the current workspace snapshot and would fail for the same reason if reached.
+ 
+-- **Critical blocker: missing `myosu-games-liars-dice` crate** — reduced. The crate now exists and is wired into the workspace.
+-- **Bootstrap proof gap** — reduced. The reviewed Slice 1 proof command (`cargo build -p myosu-games-liars-dice`) now succeeds when run against a writable target directory.
+-- **Public API churn risk** — reduced. The lane now has stable exported type names for later slices to fill in.
++## Current Workspace Constraint
+ 
+-## Risks That Remain
++The current workspace snapshot does not include:
+ 
+-- **MG-01 game engine work** is still pending. No `CfrGame: Copy` implementation exists yet.
+-- **MG-02 solver and Nash verification** are still pending. No encoder or profile logic exists yet.
+-- **CS-01 cross-game scoring** is still pending. `ExploitMetric` has not been added to `myosu-games`.
+-- **SP-01/SP-02 spectator work** is still pending. No `myosu-play` or `myosu-tui` spectator surfaces were touched in this slice.
++- `myosu-play`
++- `myosu-games-poker`
+ 
+-## Next Slice
++Those missing packages explain the deterministic review failure. This fixup does not create placeholder packages for them, because doing so would expand past the approved Slice 1 surface.
+ 
+-**Slice 2 — `game.rs` + `edge.rs` + `turn.rs` + `info.rs`**
++## Remaining Work Beyond Slice 1
+ 
+-That is the next approved implementation increment from `outputs/games/multi-game/spec.md` and `outputs/games/multi-game/review.md`.
++- Slice 2: implement `game.rs`, `edge.rs`, `turn.rs`, and `info.rs`
++- Slice 3: implement `encoder.rs`, `profile.rs`, and Nash verification tests
++- Slice 4: add `ExploitMetric` registration to `myosu-games`
++- Slice 5: add spectator relay surfaces for `myosu-play`
++- Slice 6: add spectator TUI surfaces for `myosu-tui`
++- Slice 7: run zero-change verification once the referenced packages exist in this workspace
