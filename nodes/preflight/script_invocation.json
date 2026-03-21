@@ -1,0 +1,5 @@
+{
+  "command": "set +e\ntest -f ./outputs/chain/pallet/implementation.md && test -f ./outputs/chain/pallet/verification.md && test -f ./outputs/chain/pallet/quality.md && test -f ./outputs/chain/pallet/promotion.md && test -f ./outputs/chain/pallet/integration.md\ntrue",
+  "language": "shell",
+  "timeout_ms": null
+}

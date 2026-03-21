@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-03-21T02:42:03.427152876Z",
+  "current_node": "preflight",
+  "completed_nodes": [
+    "start",
+    "preflight"
+  ],
+  "node_retries": {
+    "preflight": 1,
+    "start": 1
+  },
+  "context_values": {
+    "outcome": "success",
+    "internal.run_id": "01KM74AT0BMXWH877HQV8SZ88R",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #review { backend: cli; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.fidelity": "compact",
+    "internal.retry_count.preflight": 1,
+    "command.output": "",
+    "current.preamble": "Goal: Implement the next approved `chain:pallet` slice.\n\nInputs:\n- `pallet/spec.md`\n- `pallet/review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `chain:pallet`\n\nRequired curated artifacts:\n- `pallet/implementation.md`\n- `pallet/verification.md`\n- `pallet/quality.md`\n- `pallet/promotion.md`\n- `pallet/integration.md`\n\n",
+    "graph.rankdir": "LR",
+    "internal.retry_count.start": 1,
+    "internal.node_visit_count": 1,
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM74AT0BMXWH877HQV8SZ88R/worktree",
+    "command.stderr": "",
+    "current_node": "preflight",
+    "thread.start.current_node": "preflight",
+    "internal.thread_id": "start",
+    "graph.goal": "Implement the next approved `chain:pallet` slice.\n\nInputs:\n- `pallet/spec.md`\n- `pallet/review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `chain:pallet`\n\nRequired curated artifacts:\n- `pallet/implementation.md`\n- `pallet/verification.md`\n- `pallet/quality.md`\n- `pallet/promotion.md`\n- `pallet/integration.md`\n",
+    "failure_class": "",
+    "failure_signature": ""
+  },
+  "logs": [],
+  "node_outcomes": {
+    "preflight": {
+      "status": "success",
+      "context_updates": {
+        "command.output": "",
+        "command.stderr": ""
+      },
+      "notes": "Script completed: set +e\ntest -f ./outputs/chain/pallet/implementation.md && test -f ./outputs/chain/pallet/verification.md && test -f ./outputs/chain/pallet/quality.md && test -f ./outputs/chain/pallet/promotion.md && test -f ./outputs/chain/pallet/integration.md\ntrue",
+      "duration_ms": 2
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "implement",
+  "node_visits": {
+    "preflight": 1,
+    "start": 1
+  }
+}
