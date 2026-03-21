@@ -1,0 +1,13 @@
+{
+  "run_id": "01KM6XR65CB3FEVGXQAY31CXCR",
+  "workflow_name": "ChainPalletRestart",
+  "goal": "Implement the next approved `chain:pallet` slice.\n\nInputs:\n- `pallet/spec.md`\n- `pallet/review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `chain:pallet`\n\nRequired curated artifacts:\n- `pallet/implementation.md`\n- `pallet/verification.md`\n- `pallet/quality.md`\n- `pallet/promotion.md`\n- `pallet/integration.md`\n",
+  "start_time": "2026-03-21T00:47:01.750972217Z",
+  "node_count": 9,
+  "edge_count": 12,
+  "run_branch": "fabro/run/01KM6XR65CB3FEVGXQAY31CXCR",
+  "base_sha": "6b547323ccdc1c2a06e82f6e47111495a7630ab2",
+  "base_branch": "autodev-live",
+  "workflow_slug": "implement",
+  "host_repo_path": "/home/r/coding/myosu/.worktrees/autodev-live"
+}
