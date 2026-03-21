@@ -1,54 +1,52 @@
-[workspace]
-resolver = "2"
-members = [
-    "crates/myosu-games",
-    "crates/myosu-tui",
-    "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
-    "crates/myosu-chain",  # Phase 0: chain workspace anchor
-    # "crates/myosu-miner",      # Stage 4: Miner binary
-    # "crates/myosu-validator",   # Stage 4: Validator binary
-    # "crates/myosu-play",       # Stage 5: Gameplay CLI
-]
-default-members = [
-    "crates/myosu-games",
-    "crates/myosu-tui",
-    "crates/myosu-chain/pallets/game-solver",
-    "crates/myosu-chain",
-]
-
-[workspace.package]
+[package]
+name = "myosu-runtime"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/happybigmtn/myosu"
+description = "Runtime restart surface for the Myosu chain"
+publish = false
 
-[workspace.dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-tokio = { version = "1", features = ["full"] }
-clap = { version = "4", features = ["derive"] }
-thiserror = "2"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-anyhow = "1"
-rand = "0.8"
-crossterm = { version = "0.28", features = ["event-stream"] }
-ratatui = "0.29"
-futures = "0.3"
-tokio-test = "0.4"
+[lib]
+name = "myosu_runtime"
+path = "src/lib.rs"
+
+[features]
+default = ["std"]
+runtime-benchmarks = []
+std = [
+    "codec/std",
+    "frame-executive/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "pallet-sudo/std",
+    "pallet-timestamp/std",
+    "scale-info/std",
+    "sp-api/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "sp-version/std",
+]
+try-runtime = []
+
+[dependencies]
 codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
-scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
-environmental = "1.1"
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
 sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 sp-version = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+
+[build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }

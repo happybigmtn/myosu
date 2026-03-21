@@ -1,0 +1,19 @@
+[package]
+name = "myosu-chain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Workspace anchor crate for the Myosu chain restart"
+publish = false
+
+[features]
+default = []
+common = ["dep:myosu-chain-common"]
+node = ["dep:myosu-node"]
+runtime = ["dep:myosu-runtime"]
+
+[dependencies]
+myosu-chain-common = { path = "common", optional = true }
+myosu-node = { path = "node", optional = true }
+myosu-runtime = { path = "runtime", optional = true }

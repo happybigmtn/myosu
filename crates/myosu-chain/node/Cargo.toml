@@ -1,0 +1,26 @@
+[package]
+name = "myosu-node"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/happybigmtn/myosu"
+description = "Node restart surface for the Myosu chain"
+publish = false
+
+[lib]
+name = "myosu_node"
+path = "src/lib.rs"
+
+[[bin]]
+name = "myosu-node"
+path = "src/main.rs"
+
+[features]
+default = []
+runtime-benchmarks = []
+try-runtime = []
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+myosu-chain-common = { path = "../common" }
+node-subtensor-runtime = { package = "myosu-runtime", path = "../runtime" }

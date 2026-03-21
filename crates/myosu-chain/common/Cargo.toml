@@ -1,0 +1,32 @@
+[package]
+name = "myosu-chain-common"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/happybigmtn/myosu"
+description = "Common chain types for the Myosu chain restart"
+publish = false
+
+[lib]
+name = "myosu_chain_common"
+path = "src/lib.rs"
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-support/std",
+    "scale-info/std",
+    "serde/std",
+    "sp-core/std",
+    "sp-runtime/std",
+]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
+environmental = "1.1"
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
+serde = { version = "1", default-features = false, features = ["derive"] }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
