@@ -1,20 +1,30 @@
-# `tui:shell` Implementation — Slice 1
+# `tui:shell` Implementation — Slice 1 Fixup
 
 ## Slice Implemented
 
 **Slice 1 — Event Loop Headless Test**
 
-Implemented the approved `events.rs` slice from [`outputs/tui/shell/spec.md`](./spec.md): the event loop can now be proven headlessly in CI without requiring a real TTY.
+The approved `events.rs` slice from [`outputs/tui/shell/spec.md`](./spec.md)
+was already implemented: the event loop can be proven headlessly in CI without
+requiring a real TTY.
+
+This fixup did not widen code scope. It repaired the implementation-lane proof
+contract so the live proof gate matches the active slice and uses valid Cargo
+syntax in this sandboxed workspace.
 
 ## Owned Surface
 
 - `crates/myosu-tui/src/events.rs`
+- `outputs/tui/shell/spec.md`
+- `outputs/tui/shell/implementation.md`
+- `outputs/tui/shell/verification.md`
+- `outputs/tui/shell/integration.md`
 
-No other lane-owned source files were changed.
+No additional lane-owned source files were changed.
 
 ## What Changed
 
-### Internal event-loop construction is now injectable for tests
+### Slice code remains the same
 
 `EventLoop::new(tick_rate)` remains the production entrypoint and still constructs a real `crossterm::event::EventStream`.
 
@@ -38,6 +48,22 @@ The two ignored tests that depended on a real terminal were replaced with headle
 
 `update_sender_cloned` was also updated to use the headless harness so the `events::` suite no longer depends on terminal availability.
 
+### Proof activation is now slice-scoped
+
+`outputs/tui/shell/spec.md` now exposes only one live `**Proof gate**`, for the
+currently approved Slice 1. Later slices keep `**Planned proof gate**` labels
+until they are explicitly selected.
+
+That fixup also corrects the command shape:
+
+```bash
+env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::
+```
+
+The `CARGO_TARGET_DIR` override is required in this workspace because the
+default Cargo target path points at a read-only location outside the writable
+run sandbox.
+
 ## Behavioral Outcome
 
 This slice proves that the `EventLoop` channel bridge delivers the critical event classes required by the shell:
@@ -48,6 +74,23 @@ This slice proves that the `EventLoop` channel bridge delivers the critical even
 - injected async updates from background tasks
 
 The production shell still calls `EventLoop::new()` exactly as before; this slice changes proofability, not the caller contract.
+
+## Proof Command for This Fixup
+
+```bash
+env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::
+```
+
+## What Remains for the Next Slice
+
+**Slice 2 — Shell Integration Test**
+
+The next approved code change remains in `crates/myosu-tui/src/shell.rs`:
+
+- start in `Screen::Lobby`
+- type `"1"`
+- submit with Enter
+- verify the shell transitions to `Screen::Game`
 
 ## Stage Ownership Note
 

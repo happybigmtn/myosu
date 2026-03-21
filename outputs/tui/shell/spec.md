@@ -121,27 +121,33 @@ The lane is **proven** when:
 
 ## Next Implementation Slices
 
+Implementation runs activate one slice at a time. Only the current slice
+should expose a live `**Proof gate**`; later slices keep a
+`**Planned proof gate**` until that slice is explicitly selected. This keeps
+verification aligned with the approved implementation scope and avoids
+zero-test or invalid-command false positives.
+
 ### Slice 1: Event Loop Headless Test
 **File**: `crates/myosu-tui/src/events.rs`
 **Action**: Add `MockEventStream` test helper that produces synthetic `CrosstermEvent` values without requiring a TTY. Replace `#[ignore]` tests with mocked versions.
-**Proof gate**: `cargo test events:: --no-ignore`
+**Proof gate**: `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui events::`
 
 ### Slice 2: Shell Integration Test
 **File**: `crates/myosu-tui/src/shell.rs`
 **Action**: Add test that creates Shell with Lobby screen, simulates typing "1" followed by Enter, verifies `current_screen()` returns Game.
-**Proof gate**: `cargo test shell:: --integration`
+**Planned proof gate**: `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell::tests::lobby_input_routes_to_game_screen`
 
 ### Slice 3: Schema Per-Game Coverage
 **File**: `crates/myosu-tui/src/schema.rs`
 **Action**: For each game_type in `all_game_types_have_schema`, either add full roundtrip test or add `#[unimplemented]` comment with tracking issue. At minimum, add NLHE heads-up and 6-max variants.
-**Proof gate**: `cargo test schema::all_game_types`
+**Planned proof gate**: `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui schema::tests::all_game_types_have_schema`
 
 ### Slice 4: Screen Render Tests
 **File**: `crates/myosu-tui/src/shell.rs`
 **Action**: Add `shell_draw_lobby`, `shell_draw_onboarding`, `shell_draw_stats`, etc. verifying buffer content for each screen.
-**Proof gate**: `cargo test shell::shell_draw_`
+**Planned proof gate**: `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui shell::tests::shell_draw_`
 
 ### Slice 5: Pipe Mode ANSI Enforcement
 **File**: `crates/myosu-tui/src/pipe.rs`
 **Action**: Add property test: for all inputs, `pipe_output()` result passed through `is_plain_text()` returns true.
-**Proof gate**: `cargo test pipe::is_plain_text`
+**Planned proof gate**: `env CARGO_TARGET_DIR=/tmp/myosu-cargo-target cargo test -p myosu-tui pipe::tests::is_plain_text_detects_ansi`
