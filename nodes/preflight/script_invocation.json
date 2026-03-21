@@ -1,0 +1,5 @@
+{
+  "command": "set +e\ntrue\ntrue",
+  "language": "shell",
+  "timeout_ms": null
+}
