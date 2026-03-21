@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "context_updates": {
+    "last_response": "Updated the `tui:shell` fixup artifacts to make the proof contract package-scoped and honest about the real blocker. [spec.md](/home/r/.fabro/runs/20260321-01KM793EKHKXY8S2YGMK3RE3ZS/worktree/outputs/",
+    "response.fixup": "Updated the `tui:shell` fixup artifacts to make the proof contract package-scoped and honest about the real blocker. [spec.md](/home/r/.fabro/runs/20260321-01KM793EKHKXY8S2YGMK3RE3ZS/worktree/outputs/tui/shell/spec.md#L120), [implementation.md](/home/r/.fabro/runs/20260321-01KM793EKHKXY8S2YGMK3RE3ZS/worktree/outputs/tui/shell/implementation.md#L9), [verification.md](/home/r/.fabro/runs/20260321-01KM793EKHKXY8S2YGMK3RE3ZS/worktree/outputs/tui/shell/verification.md#L3), and [integration.md](/home/r/.fabro/runs/20260321-01KM793EKHKXY8S2YGMK3RE3ZS/worktree/outputs/tui/shell/integration.md#L13) now reflect that Slice 1 itself is green, while the active verify failure comes from stale outer-run commands like `cargo test events:: --no-ignore` and `cargo test shell:: --integration`, which I can’t patch from this sandboxed worktree.\n\nVerification I ran locally against `myosu-tui`: `events:: -- --include-ignored`, `shell::`, `all_game_types_have_schema`, `shell_draw_`, `is_plain_text`, and the full crate test pass. All succeeded; the full crate run passed `86` unit tests plus `1` doctest. I did not create or edit `quality.md` or `promotion.md`, per the fixup-stage ownership rules.",
+    "last_stage": "fixup"
+  },
+  "notes": "Stage completed: fixup",
+  "usage": {
+    "model": "gpt-5.4",
+    "input_tokens": 1050003,
+    "output_tokens": 21390,
+    "cost": 2.9458575
+  },
+  "files_written": [
+    "outputs/tui/shell/implementation.md",
+    "outputs/tui/shell/integration.md",
+    "outputs/tui/shell/spec.md",
+    "outputs/tui/shell/verification.md"
+  ],
+  "files_touched": [
+    "outputs/tui/shell/implementation.md",
+    "outputs/tui/shell/integration.md",
+    "outputs/tui/shell/spec.md",
+    "outputs/tui/shell/verification.md"
+  ],
+  "duration_ms": 431055,
+  "attempt": 1,
+  "max_attempts": 4,
+  "completed_at": "2026-03-21T04:35:14.719300457+00:00",
+  "updated_at": "2026-03-21T04:35:14.719304581+00:00"
+}
