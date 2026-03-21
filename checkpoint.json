@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-03-21T00:14:05.017005489Z",
+  "current_node": "preflight",
+  "completed_nodes": [
+    "start",
+    "preflight"
+  ],
+  "node_retries": {
+    "start": 1,
+    "preflight": 1
+  },
+  "context_values": {
+    "internal.fidelity": "compact",
+    "internal.node_visit_count": 1,
+    "failure_signature": "preflight|transient_infra|handler error: script timed out after 600000ms: set +e cargo test events:: --no-ignore cargo test shell:: --integration cargo test schema::all_game_types cargo test shell::shell_draw_ cargo test pipe::is_plain_text true",
+    "graph.model_stylesheet": "\n            *       { backend: cli; }\n            #settle { backend: cli; model: gpt-5.4; provider: openai; }\n        ",
+    "internal.retry_count.start": 1,
+    "internal.retry_count.preflight": 1,
+    "graph.rankdir": "LR",
+    "current.preamble": "Goal: Implement the next approved `tui:shell` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `tui:shell`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `quality.md`\n- `promotion.md`\n- `integration.md`\n\n",
+    "current_node": "preflight",
+    "internal.run_id": "01KM6V9HM34R8348A89MFYRFMS",
+    "thread.start.current_node": "preflight",
+    "graph.goal": "Implement the next approved `tui:shell` slice.\n\nInputs:\n- `spec.md`\n- `review.md`\n\nScope:\n- work only inside the smallest next approved implementation slice\n- treat the reviewed lane artifacts as the source of truth\n- keep changes aligned with the owned surfaces for `tui:shell`\n\nRequired curated artifacts:\n- `implementation.md`\n- `verification.md`\n- `quality.md`\n- `promotion.md`\n- `integration.md`\n",
+    "internal.thread_id": "start",
+    "outcome": "fail",
+    "internal.work_dir": "/home/r/.fabro/runs/20260320-01KM6V9HM34R8348A89MFYRFMS/worktree",
+    "failure_class": "transient_infra"
+  },
+  "logs": [],
+  "node_outcomes": {
+    "preflight": {
+      "status": "fail",
+      "failure": {
+        "message": "Handler error: Script timed out after 600000ms: set +e\ncargo test events:: --no-ignore\ncargo test shell:: --integration\ncargo test schema::all_game_types\ncargo test shell::shell_draw_\ncargo test pipe::is_plain_text\ntrue",
+        "failure_class": "transient_infra"
+      },
+      "duration_ms": 600010
+    },
+    "start": {
+      "status": "success",
+      "duration_ms": 0
+    }
+  },
+  "next_node_id": "implement",
+  "node_visits": {
+    "start": 1,
+    "preflight": 1
+  }
+}
