@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/recurring_report/documentation.fabro"
+goal = """
+Documentation Sprint
+
+Produce the recurring report artifact for this frontier.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Audit current README for accuracy — update to reflect current state
+- Write architecture overview with ASCII diagrams
+- Write developer onboarding guide
+- Write API docs for `myosu-games`
+- Write developer guide for SDK ("30-Minute Game")
+- Verify docs build with `cargo doc`
+
+Required durable artifacts:
+- `outputs/documentation/report.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"

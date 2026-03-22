@@ -1,0 +1,10 @@
+digraph ChainRestartBuildDevnetVerify {
+    graph [goal="Build binary and start devnet\n\nChild work item of plan: Chain Restart\n\nObjective:\nBuild the chain binary and verify it starts a local devnet that produces blocks\n\nOwned surfaces:\n- `crates/myosu-chain/node/src/main.rs`\n- `crates/myosu-chain/node/src/service.rs`\n- `crates/myosu-chain/runtime/src/lib.rs`\n\nProof commands:\n- `cargo build -p myosu-chain`\n- `curl -s -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"method\":\"chain_getBlock\",\"id\":1}' http://localhost:9933 | jq -e '.result.block'`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

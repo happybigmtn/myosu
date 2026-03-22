@@ -1,0 +1,21 @@
+digraph Documentation {
+    graph [
+        goal="Documentation Sprint\n\nProduce the recurring report artifact for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Audit current README for accuracy — update to reflect current state\n- Write architecture overview with ASCII diagrams\n- Write developer onboarding guide\n- Write API docs for `myosu-games`\n- Write developer guide for SDK (\"30-Minute Game\")\n- Verify docs build with `cargo doc`\n\nRequired durable artifacts:\n- `outputs/documentation/report.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/recurring_report/documentation/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/recurring_report/documentation/review.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/recurring_report/documentation/polish.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f ./outputs/documentation/report.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

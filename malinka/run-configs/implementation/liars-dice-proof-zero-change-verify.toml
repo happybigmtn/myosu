@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/liars-dice-proof-zero-change-verify.fabro"
+goal = """
+Zero-change verification
+
+Child work item of plan: Liar's Dice Architecture Proof
+
+Objective:
+Verify no shared code (chain, TUI, SDK, miner, validator) was modified by the Liar's Dice addition
+
+Owned surfaces:
+- `crates/myosu-games-liars-dice/`
+
+Proof commands:
+- `git diff --stat main -- crates/myosu-chain/ crates/myosu-tui/ crates/myosu-sdk/ crates/myosu-miner/ crates/myosu-validator/`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

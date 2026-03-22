@@ -1,0 +1,10 @@
+digraph RaspberryProgramDecompositionVerifyParentDispatch {
+    graph [goal="Verify myosu.yaml dispatches all 6 child programs\n\nChild work item of plan: Complete Raspberry Program Decomposition\n\nObjective:\nConfirm parent portfolio lists all 6 frontier programs with reported status\n\nOwned surfaces:\n- `fabro/programs/myosu.yaml`\n\nProof commands:\n- `raspberry status --manifest fabro/programs/myosu.yaml`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

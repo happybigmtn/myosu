@@ -1,0 +1,27 @@
+version = 1
+graph = "../../workflows/integration/raspberry-program-decomposition-verify-parent-dispatch.fabro"
+goal = """
+Verify myosu.yaml dispatches all 6 child programs
+
+Child work item of plan: Complete Raspberry Program Decomposition
+
+Objective:
+Confirm parent portfolio lists all 6 frontier programs with reported status
+
+Owned surfaces:
+- `fabro/programs/myosu.yaml`
+
+Proof commands:
+- `raspberry status --manifest fabro/programs/myosu.yaml`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

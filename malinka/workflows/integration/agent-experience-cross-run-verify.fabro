@@ -1,0 +1,10 @@
+digraph AgentExperienceCrossRunVerify {
+    graph [goal="Verify agent experience across multiple runs\n\nChild work item of plan: Agent Experience Implementation\n\nObjective:\nRun same agent on three different lanes and verify memory accumulates correctly with truthful chronological journal\n\nOwned surfaces:\n- `crates/myosu-tui/tests/`\n\nProof commands:\n- `cargo test -p myosu-tui -- --ignored agent_experience_integration`\n- `ls ~/.myosu/agents/`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

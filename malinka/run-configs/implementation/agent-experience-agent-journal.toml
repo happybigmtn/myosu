@@ -1,0 +1,45 @@
+version = 1
+graph = "../../workflows/implementation/agent-experience-agent-journal.fabro"
+goal = """
+Implement journal
+
+Child work item of plan: Agent Experience Implementation
+
+Objective:
+Add append-only journal that records hand entries and session summaries as markdown prose
+
+Owned surfaces:
+- `crates/myosu-tui/src/journal.rs`
+
+Proof commands:
+- `cargo test -p myosu-tui journal::tests::append_hand_entry`
+- `cargo test -p myosu-tui journal::tests::append_session_summary`
+- `cargo test -p myosu-tui journal::tests::never_truncates`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

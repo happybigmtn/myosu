@@ -1,0 +1,10 @@
+digraph E2eDemoChainStateTui {
+    graph [goal="Wire chain state to TUI display\n\nChild work item of plan: End-to-End Demo\n\nObjective:\nTUI subscribes to chain state updates and renders the current best bot strategy\n\nOwned surfaces:\n- `crates/myosu-tui/src/chain_sync.rs`\n- `crates/myosu-tui/src/screens.rs`\n\nProof commands:\n- `cargo run -p myosu-play -- train --sync-chain`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

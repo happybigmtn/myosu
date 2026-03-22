@@ -1,0 +1,84 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "CI/CD Pipeline Setup"
+category: infrastructure
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: []
+children:
+  - id: create-ci-workflow
+    title: "Create .github/workflows/ci.yml"
+    archetype: implement
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f .github/workflows/ci.yml"
+      - "python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))\""
+    owned_surfaces:
+      - .github/workflows/ci.yml
+    where_surfaces: "GitHub Actions workflow file for CI"
+    how_description: "Create a GitHub Actions workflow that triggers on PRs to trunk and main"
+    required_tests: "test -f .github/workflows/ci.yml"
+    verification_plan: "File exists and parses as valid YAML with correct trigger configuration"
+    rollback_condition: "Workflow file is deleted or becomes syntactically invalid"
+
+  - id: add-check-and-test
+    title: "Add cargo check and cargo test for active crates"
+    archetype: implement
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "cargo check -p myosu-games -p myosu-tui"
+      - "cargo test -p myosu-games -p myosu-tui"
+    owned_surfaces:
+      - .github/workflows/ci.yml
+    where_surfaces: "CI workflow steps for cargo check and cargo test"
+    how_description: "Add CI steps that run cargo check and cargo test against myosu-games and myosu-tui crates"
+    required_tests: "cargo check -p myosu-games -p myosu-tui && cargo test -p myosu-games -p myosu-tui"
+    verification_plan: "Both cargo check and cargo test pass locally and show as steps in the workflow file"
+    rollback_condition: "cargo check or cargo test fails on the active crates"
+
+  - id: add-clippy-strict
+    title: "Add cargo clippy with strict warnings"
+    archetype: implement
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "cargo clippy -p myosu-games -p myosu-tui -- -D warnings"
+    owned_surfaces:
+      - .github/workflows/ci.yml
+    where_surfaces: "CI workflow step for cargo clippy with -D warnings"
+    how_description: "Add CI step that fails on any clippy warning via -D warnings flag"
+    required_tests: "cargo clippy -p myosu-games -p myosu-tui -- -D warnings"
+    verification_plan: "Clippy passes with zero warnings; introducing an unused variable causes CI failure"
+    rollback_condition: "Clippy warnings are present in active crates or -D warnings flag is removed"
+
+  - id: add-fmt-check
+    title: "Add cargo fmt --check"
+    archetype: implement
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "cargo fmt --check"
+    owned_surfaces:
+      - .github/workflows/ci.yml
+    where_surfaces: "CI workflow step for cargo fmt --check"
+    how_description: "Add CI step that fails if code is not formatted according to rustfmt.toml"
+    required_tests: "cargo fmt --check"
+    verification_plan: "cargo fmt --check passes with no diff; unformatted code causes CI failure"
+    rollback_condition: "Format check step is removed or formatting violations are present"
+
+  - id: configure-branch-protection
+    title: "Configure branch protection on trunk"
+    archetype: orchestration
+    lane_kind: orchestration
+    review_profile: standard
+    proof_commands:
+      - "gh api repos/{owner}/{repo}/branches/trunk/protection --jq '.required_status_checks.contexts[]'"
+    owned_surfaces: []
+    where_surfaces: "GitHub branch protection settings for trunk"
+    how_description: "Require CI checks to pass before merging PRs to trunk"
+    required_tests: "gh api repos/{owner}/{repo}/branches/trunk/protection"
+    verification_plan: "GitHub branch protection shows trunk requires passing CI checks before merge"
+    rollback_condition: "Branch protection is disabled or CI check requirement is removed"

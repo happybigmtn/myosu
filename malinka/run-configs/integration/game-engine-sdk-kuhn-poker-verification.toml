@@ -1,0 +1,27 @@
+version = 1
+graph = "../../workflows/integration/game-engine-sdk-kuhn-poker-verification.fabro"
+goal = """
+Verify 30-Minute Game is achievable
+
+Child work item of plan: Game Engine SDK Development
+
+Objective:
+Execute the guide steps and confirm myosu-sdk test reports all tests passing
+
+Owned surfaces:
+- `crates/myosu-sdk/docs/30-minute-game.md`
+
+Proof commands:
+- `myosu-sdk test --crate kuhn-poker`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

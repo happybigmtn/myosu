@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/chain-restart-node-entry-point.fabro"
+goal = """
+Create myosu-chain/node binary entry point
+
+Child work item of plan: Chain Restart
+
+Objective:
+Create main.rs and service.rs so the chain has a runnable binary entry point
+
+Owned surfaces:
+- `crates/myosu-chain/node/src/main.rs`
+- `crates/myosu-chain/node/src/service.rs`
+
+Proof commands:
+- `cargo check -p myosu-chain-node`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

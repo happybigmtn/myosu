@@ -1,0 +1,10 @@
+digraph FabroQualityHardeningVerifyAutodevGates {
+    graph [goal="Verify autodev no longer produces compile-only completions\n\nChild work item of plan: Fabro Quality Hardening\n\nObjective:\nConfirm that autodev marks programs complete only when cargo test and smoke tests pass, not on cargo build alone\n\nOwned surfaces:\n- `fabro/programs/myosu-platform.yaml`\n- `fabro/programs/myosu-product.yaml`\n\nProof commands:\n- `raspberry status --manifest fabro/programs/myosu-platform.yaml`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

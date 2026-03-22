@@ -1,0 +1,10 @@
+digraph RaspberryProgramDecompositionStressTestAutodev {
+    graph [goal="Stress-test autodev loop with all 6 programs\n\nChild work item of plan: Complete Raspberry Program Decomposition\n\nObjective:\nRun autodev loop and verify max_parallel constraint, completion marking, and blocking dependency reporting\n\nOwned surfaces:\n- `.raspberry/myosu-state.json`\n\nProof commands:\n- `raspberry autodev --manifest fabro/programs/myosu.yaml --dry-run`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

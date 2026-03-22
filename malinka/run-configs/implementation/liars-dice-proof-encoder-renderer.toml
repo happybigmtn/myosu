@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/liars-dice-proof-encoder-renderer.fabro"
+goal = """
+Implement Encoder and GameRenderer
+
+Child work item of plan: Liar's Dice Architecture Proof
+
+Objective:
+Implement bincode serialization roundtrip and TUI rendering for Liar's Dice game state
+
+Owned surfaces:
+- `crates/myosu-games-liars-dice/src/`
+
+Proof commands:
+- `cargo test -p myosu-games-liars-dice -- roundtrip`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

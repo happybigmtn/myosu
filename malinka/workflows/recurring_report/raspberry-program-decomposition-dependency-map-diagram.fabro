@@ -1,0 +1,21 @@
+digraph RaspberryProgramDecompositionDependencyMapDiagram {
+    graph [
+        goal="Produce dependency map diagram\n\nChild work item of plan: Complete Raspberry Program Decomposition\n\nObjective:\nCreate ASCII diagram of the 6-program dependency graph showing blocking relationships\n\nOwned surfaces:\n- `fabro/programs/README.md`\n\nProof commands:\n- `test -f fabro/programs/README.md`\n- `rg -A 20 'Dependency Map' fabro/programs/README.md`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/recurring_report/raspberry-program-decomposition-dependency-map-diagram/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/recurring_report/raspberry-program-decomposition-dependency-map-diagram/review.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/recurring_report/raspberry-program-decomposition-dependency-map-diagram/polish.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f fabro/programs/README.md && rg -A 20 'Dependency Map' fabro/programs/README.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

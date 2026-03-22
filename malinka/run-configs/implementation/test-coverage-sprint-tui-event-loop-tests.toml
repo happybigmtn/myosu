@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/test-coverage-sprint-tui-event-loop-tests.fabro"
+goal = """
+Add event loop tests to myosu-tui
+
+Child work item of plan: Test Coverage Sprint
+
+Objective:
+Add tests verifying event loop handles keyboard input, resize events, and pipe mode correctly
+
+Owned surfaces:
+- `crates/myosu-tui/src/tests/event_tests.rs`
+
+Proof commands:
+- `cargo test -p myosu-tui -- event_loop`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

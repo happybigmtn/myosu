@@ -1,0 +1,69 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Operational Setup"
+category: infrastructure
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [chain-restart, e2e-demo]
+children:
+  - id: devnet-launch-runbook
+    title: "Write devnet launch runbook"
+    archetype: implement
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f ops/runbooks/devnet-launch.md"
+    owned_surfaces:
+      - ops/runbooks/devnet-launch.md
+    where_surfaces: "Runbook covering chain start, participant registration, and demo execution"
+    how_description: "Create step-by-step runbook that takes an engineer from zero to a working devnet with participants"
+    required_tests: "test -f ops/runbooks/devnet-launch.md"
+    verification_plan: "File exists and covers start chain, register participants, and run demo steps"
+    rollback_condition: "Runbook is deleted or following its steps fails to produce a working devnet"
+
+  - id: chain-monitoring
+    title: "Set up basic chain monitoring"
+    archetype: implement
+    lane_kind: service
+    review_profile: standard
+    proof_commands:
+      - "test -x ops/scripts/monitor-chain.sh"
+      - "bash -n ops/scripts/monitor-chain.sh"
+    owned_surfaces:
+      - ops/scripts/monitor-chain.sh
+    where_surfaces: "Monitoring script reporting block time, emission rate, and neuron count"
+    how_description: "Create a script that queries the chain RPC and reports block time, emission, and neuron count"
+    required_tests: "bash -n ops/scripts/monitor-chain.sh && test -x ops/scripts/monitor-chain.sh"
+    verification_plan: "Script is executable, passes syntax check, and reports block time, emission rate, and neuron count against a running devnet"
+    rollback_condition: "Script is deleted, fails syntax check, or does not report all three metrics"
+
+  - id: failure-recovery-runbook
+    title: "Write failure recovery runbook"
+    archetype: implement
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f ops/runbooks/failure-recovery.md"
+    owned_surfaces:
+      - ops/runbooks/failure-recovery.md
+    where_surfaces: "Runbook documenting common failure modes and recovery steps"
+    how_description: "Document at least 5 common failure modes with step-by-step recovery procedures"
+    required_tests: "test -f ops/runbooks/failure-recovery.md"
+    verification_plan: "File exists and covers at least 5 distinct failure modes with recovery steps"
+    rollback_condition: "Runbook is deleted or covers fewer than 5 failure modes"
+
+  - id: env-documentation
+    title: "Document environment variables"
+    archetype: implement
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f .env.example"
+    owned_surfaces:
+      - .env.example
+    where_surfaces: "Root .env.example listing all required environment variables with descriptions"
+    how_description: "Create .env.example with every required variable annotated with its purpose"
+    required_tests: "test -f .env.example"
+    verification_plan: "File exists and all variables include a comment describing their purpose"
+    rollback_condition: ".env.example is deleted or contains undocumented variables"

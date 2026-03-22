@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/validator-binary-weight-submission.fabro"
+goal = """
+Implement weight verification and submission
+
+Child work item of plan: Validator Binary Implementation
+
+Objective:
+Verify miner weights satisfy Yuma Consensus and submit validator weight set via game-solver pallet tx
+
+Owned surfaces:
+- `crates/myosu-validator/src/weights.rs`
+
+Proof commands:
+- `cargo build -p myosu-validator`
+- `cargo run -p myosu-validator -- --subnet 1 --submit-weights`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

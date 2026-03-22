@@ -1,0 +1,42 @@
+digraph NlheGameEngineKuhnCfrgameImpl {
+    graph [
+        goal="Implement CfrGame for Kuhn Poker\n\nChild work item of plan: NLHE Game Engine Implementation\n\nObjective:\nCfrGame impl for 3-card Kuhn Poker passes exploitability test within 1e-6 of 1/72\n\nOwned surfaces:\n- `crates/myosu-games-poker/src/kuhn.rs`\n\nProof commands:\n- `cargo test -p myosu-games-poker -- kuhn`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`",
+        model_stylesheet="
+            *            { backend: cli; }
+            #challenge   { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #review      { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #deep_review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #escalation  { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    preflight [label="Preflight", shape=parallelogram, script="set +e\ncargo test -p myosu-games-poker -- kuhn\ntrue", max_retries=0]
+    implement [label="Implement", prompt="@../../prompts/implementation/nlhe-game-engine-kuhn-cfrgame-impl/plan.md", reasoning_effort="high"]
+    verify [label="Verify", shape=parallelogram, script="cargo test -p myosu-games-poker -- kuhn", goal_gate=true, retry_target="fixup"]
+    quality [label="Quality Gate", shape=parallelogram, script="set -e\nQUALITY_PATH='quality.md'\nIMPLEMENTATION_PATH='outputs/nlhe-game-engine-kuhn-cfrgame-impl/implementation.md'\nVERIFICATION_PATH='outputs/nlhe-game-engine-kuhn-cfrgame-impl/verification.md'\nplaceholder_hits=\"\"\nscan_placeholder() {\n  surface=\"$1\"\n  if [ ! -e \"$surface\" ]; then\n    return 0\n  fi\n  if [ -f \"$surface\" ]; then\n    surface=\"$(dirname \"$surface\")\"\n  fi\n  hits=\"$(rg -n -i -g '*.rs' -g '*.py' -g '*.js' -g '*.ts' -g '*.tsx' -g '*.md' -g 'Cargo.toml' -g '*.toml' 'TODO|stub|placeholder|not yet implemented|compile-only|for now|will implement|todo!|unimplemented!' \"$surface\" || true)\"\n  if [ -n \"$hits\" ]; then\n    if [ -n \"$placeholder_hits\" ]; then\n      placeholder_hits=\"$(printf '%s\\n%s' \"$placeholder_hits\" \"$hits\")\"\n    else\n      placeholder_hits=\"$hits\"\n    fi\n  fi\n}\ntrue\nartifact_hits=\"$(rg -n -i 'manual proof still required|placeholder|stub implementation|not yet fully implemented|todo!|unimplemented!' \"$IMPLEMENTATION_PATH\" \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nwarning_hits=\"$(rg -n 'warning:' \"$IMPLEMENTATION_PATH\" \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nmanual_hits=\"$(rg -n -i 'manual proof still required|manual;' \"$VERIFICATION_PATH\" 2>/dev/null || true)\"\nplaceholder_debt=no\nwarning_debt=no\nartifact_mismatch_risk=no\nmanual_followup_required=no\n[ -n \"$placeholder_hits\" ] && placeholder_debt=yes\n[ -n \"$warning_hits\" ] && warning_debt=yes\n[ -n \"$artifact_hits\" ] && artifact_mismatch_risk=yes\n[ -n \"$manual_hits\" ] && manual_followup_required=yes\nquality_ready=yes\nif [ \"$placeholder_debt\" = yes ] || [ \"$warning_debt\" = yes ] || [ \"$artifact_mismatch_risk\" = yes ] || [ \"$manual_followup_required\" = yes ]; then\n  quality_ready=no\nfi\nmkdir -p \"$(dirname \"$QUALITY_PATH\")\"\ncat > \"$QUALITY_PATH\" <<EOF\nquality_ready: $quality_ready\nplaceholder_debt: $placeholder_debt\nwarning_debt: $warning_debt\nartifact_mismatch_risk: $artifact_mismatch_risk\nmanual_followup_required: $manual_followup_required\n\n## Touched Surfaces\n- (none declared)\n\n## Placeholder Hits\n$placeholder_hits\n\n## Artifact Consistency Hits\n$artifact_hits\n\n## Warning Hits\n$warning_hits\n\n## Manual Followup Hits\n$manual_hits\nEOF\ntest \"$quality_ready\" = yes", goal_gate=true, retry_target="fixup"]
+    fixup [label="Fixup", prompt="@../../prompts/implementation/nlhe-game-engine-kuhn-cfrgame-impl/polish.md", reasoning_effort="high", max_visits=4]
+    challenge [label="Challenge", prompt="@../../prompts/implementation/nlhe-game-engine-kuhn-cfrgame-impl/challenge.md", reasoning_effort="medium"]
+    review [label="Review", prompt="@../../prompts/implementation/nlhe-game-engine-kuhn-cfrgame-impl/review.md", reasoning_effort="high"]
+    audit [label="Audit Artifacts", shape=parallelogram, script="test -f outputs/nlhe-game-engine-kuhn-cfrgame-impl/spec.md && test -f outputs/nlhe-game-engine-kuhn-cfrgame-impl/review.md && grep -Eq '^merge_ready: yes$' promotion.md && grep -Eq '^manual_proof_pending: no$' promotion.md && grep -Eq '^reason: .+$' promotion.md && grep -Eq '^next_action: .+$' promotion.md", goal_gate=true, retry_target="fixup", max_retries=0]
+    escalation [label="Opus Signoff", prompt="This child modifies shared foundation code. Review for downstream compatibility. Approve only if backward-compatible or all consumers updated. Write escalation-verdict.md.", reasoning_effort="high"]
+
+    start -> preflight -> implement -> verify
+    verify -> quality [condition="outcome=success"]
+    verify -> fixup
+    quality -> challenge [condition="outcome=success"]
+    quality -> fixup
+    challenge -> review [condition="outcome=success"]
+    challenge -> fixup
+    challenge -> escalation [condition="outcome=success"]
+    escalation -> review [condition="outcome=success"]
+    escalation -> fixup
+    review -> audit [condition="outcome=success"]
+    review -> fixup
+    audit -> exit [condition="outcome=success"]
+    audit -> fixup
+    fixup -> verify
+}

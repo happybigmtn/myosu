@@ -1,0 +1,46 @@
+version = 1
+graph = "../../workflows/implementation/fabro-quality-hardening-explicit-test-names.fabro"
+goal = """
+Replace cargo test -p myosu-games with explicit test names
+
+Child work item of plan: Fabro Quality Hardening
+
+Objective:
+Replace blanket cargo test -p myosu-games with cargo test -p myosu-games -- serialization_roundtrip to run 100+ property tests
+
+Owned surfaces:
+- `fabro/run-configs/implement/game-traits.toml`
+- `fabro/run-configs/bootstrap/game-traits.toml`
+- `fabro/run-configs/platform/poker-engine.toml`
+- `fabro/run-configs/platform/multi-game.toml`
+
+Proof commands:
+- `cargo test -p myosu-games -- serialization_roundtrip 2>&1 | rg 'test result'`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

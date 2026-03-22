@@ -1,0 +1,125 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "End-to-End Demo"
+category: verification
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids:
+  - chain-restart
+  - nlhe-game-engine
+  - tui-full-implementation
+  - miner-binary
+  - validator-binary
+children:
+  - id: miner-chain-submission
+    title: "Wire miner to chain submission"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "cargo run -p myosu-miner -- --subnet 1 --solve --submit --rpc ws://localhost:9944"
+    owned_surfaces:
+      - crates/myosu-miner/src/submit.rs
+      - crates/myosu-miner/src/main.rs
+    where_surfaces: "Miner binary submits strategy weights to the game-solver pallet via RPC"
+    how_description: "Miner calls gameSolver.setWeights extrinsic after solving a poker situation"
+    required_tests: "cargo test -p myosu-miner -- submit"
+    verification_plan: "Run miner with --solve --submit on local devnet; chain RPC shows gameSolver.setWeights event"
+    rollback_condition: "Miner submission fails to appear on chain or extrinsic is rejected"
+
+  - id: chain-validator-scoring
+    title: "Wire chain to validator scoring"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "cargo run -p myosu-validator -- --subnet 1 --score --rpc ws://localhost:9944"
+    owned_surfaces:
+      - crates/myosu-validator/src/score.rs
+      - crates/myosu-validator/src/main.rs
+    where_surfaces: "Validator reads miner submissions from chain and computes exploitability scores"
+    how_description: "Validator queries chain for pending miner submissions and scores them"
+    required_tests: "cargo test -p myosu-validator -- score"
+    verification_plan: "Validator reads a miner submission from chain and produces an exploitability score"
+    rollback_condition: "Validator cannot read miner submissions from chain or scoring produces invalid results"
+
+  - id: validator-chain-weights
+    title: "Wire validator weights to chain"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "cargo run -p myosu-validator -- --subnet 1 --score --submit --rpc ws://localhost:9944"
+    owned_surfaces:
+      - crates/myosu-validator/src/submit.rs
+      - crates/myosu-validator/src/main.rs
+    where_surfaces: "Validator submits scoring weights back to the game-solver pallet"
+    how_description: "Validator submits exploitability scores as weight updates to the chain"
+    required_tests: "cargo test -p myosu-validator -- submit"
+    verification_plan: "Validator weight submission appears on chain after scoring a miner submission"
+    rollback_condition: "Validator weight submission fails or chain rejects the extrinsic"
+
+  - id: chain-state-tui
+    title: "Wire chain state to TUI display"
+    archetype: integration
+    lane_kind: integration
+    review_profile: ux
+    proof_commands:
+      - "cargo run -p myosu-play -- train --sync-chain"
+    owned_surfaces:
+      - crates/myosu-tui/src/chain_sync.rs
+      - crates/myosu-tui/src/screens.rs
+    where_surfaces: "TUI reads chain state via RPC and displays current best strategy"
+    how_description: "TUI subscribes to chain state updates and renders the current best bot strategy"
+    required_tests: "cargo test -p myosu-tui -- chain_sync"
+    verification_plan: "TUI with --sync-chain shows the current best bot strategy sourced from chain state"
+    rollback_condition: "TUI fails to connect to chain or displays stale/incorrect strategy data"
+
+  - id: demo-script
+    title: "Write the demo script"
+    archetype: implement
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f demo/README.md"
+    owned_surfaces:
+      - demo/README.md
+    where_surfaces: "Step-by-step demo script a poker researcher can follow in under 10 minutes"
+    how_description: "Document the full narrative: start chain, register miner, solve, submit, validate, play"
+    required_tests: "test -f demo/README.md"
+    verification_plan: "demo/README.md exists and contains step-by-step commands covering the full pipeline"
+    rollback_condition: "Demo script is missing or commands in the script no longer match actual CLI interfaces"
+
+  - id: full-demo-run
+    title: "Run the full demo end-to-end"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "./target/debug/myosu-chain --dev --rpc-port 9933 --ws-port 9944"
+      - "cargo run -p myosu-miner -- --subnet 1 --solve --iterations 10000 --submit --rpc ws://localhost:9944"
+      - "cargo run -p myosu-validator -- --subnet 1 --score --submit --rpc ws://localhost:9944"
+      - "cargo run -p myosu-play -- train --sync-chain"
+    owned_surfaces:
+      - demo/README.md
+    where_surfaces: "Full pipeline execution from chain startup through miner, validator, and TUI"
+    how_description: "Execute the demo script end-to-end with no manual interventions or panics"
+    required_tests: "cargo build -p myosu-chain -p myosu-miner -p myosu-validator -p myosu-play"
+    verification_plan: "Demo script completes in under 10 minutes showing all pipeline steps succeeded"
+    rollback_condition: "Any step in the pipeline panics, deadlocks, or requires manual intervention"
+
+  - id: deterministic-validation
+    title: "Verify INV-003 deterministic validation"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "cargo test -p myosu-validator -- deterministic"
+    owned_surfaces:
+      - crates/myosu-validator/src/tests/deterministic.rs
+    where_surfaces: "Test proving two validators produce exploitability scores within epsilon on the same input"
+    how_description: "Two validators scoring the same miner submission produce scores within 1e-6 of each other"
+    required_tests: "cargo test -p myosu-validator -- deterministic"
+    verification_plan: "Run validator A and validator B on the same submission; score delta is less than 1e-6"
+    rollback_condition: "Validator scores diverge beyond 1e-6 epsilon on identical inputs"

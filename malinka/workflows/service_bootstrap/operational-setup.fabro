@@ -1,0 +1,21 @@
+digraph OperationalSetup {
+    graph [
+        goal="Operational Setup\n\nBootstrap the first service slice and establish a deterministic health surface.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Write devnet launch runbook\n- Set up basic chain monitoring (block time, emission, neuron count)\n- Write failure recovery runbook (common failure modes)\n- Document environment variables needed\n\nRequired durable artifacts:\n- `outputs/operational-setup/spec.md`\n- `outputs/operational-setup/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    inventory [label="Inventory", prompt="@../../prompts/service_bootstrap/operational-setup/plan.md", reasoning_effort="high"]
+    review    [label="Review", prompt="@../../prompts/service_bootstrap/operational-setup/review.md", reasoning_effort="high"]
+    polish    [label="Polish", prompt="@../../prompts/service_bootstrap/operational-setup/polish.md", reasoning_effort="medium"]
+    verify_outputs [label="Verify Outputs", shape=parallelogram, script="test -f ./outputs/operational-setup/spec.md && test -f ./outputs/operational-setup/review.md", goal_gate=true, max_retries=0]
+
+    start -> inventory -> review -> polish -> verify_outputs -> exit
+}

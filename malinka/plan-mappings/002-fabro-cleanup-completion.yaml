@@ -1,0 +1,74 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Complete Fabro Control-Plane Bootstrap"
+category: infrastructure
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: []
+children:
+  - id: verify-tui-shell
+    title: "Verify tui:shell bootstrap artifacts are current"
+    archetype: implement
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "test -f outputs/tui/shell/spec.md && test -f outputs/tui/shell/review.md"
+    owned_surfaces:
+      - outputs/tui/shell/spec.md
+      - outputs/tui/shell/review.md
+      - fabro/run-configs/bootstrap/tui-shell.toml
+    where_surfaces: "Bootstrap output artifacts for the tui:shell lane"
+    how_description: "Confirm or regenerate spec.md and review.md to reflect current crates/myosu-tui/ state"
+    required_tests: "test -f outputs/tui/shell/spec.md && test -f outputs/tui/shell/review.md"
+    verification_plan: "Artifacts exist, are non-empty, and reflect the current source state of crates/myosu-tui/"
+    rollback_condition: "Artifacts become stale relative to crates/myosu-tui/ source changes"
+
+  - id: verify-chain-runtime
+    title: "Verify chain:runtime bootstrap artifacts are current"
+    archetype: implement
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "test -f outputs/chain/runtime/spec.md && test -f outputs/chain/runtime/review.md"
+    owned_surfaces:
+      - outputs/chain/runtime/spec.md
+      - outputs/chain/runtime/review.md
+      - fabro/run-configs/bootstrap/chain-runtime-restart.toml
+    where_surfaces: "Bootstrap output artifacts for the chain:runtime lane"
+    how_description: "Confirm or regenerate spec.md and review.md to reflect current crates/myosu-chain/runtime/ state"
+    required_tests: "test -f outputs/chain/runtime/spec.md && test -f outputs/chain/runtime/review.md"
+    verification_plan: "Artifacts exist, are non-empty, and reflect the current source state of crates/myosu-chain/runtime/"
+    rollback_condition: "Artifacts become stale relative to crates/myosu-chain/runtime/ source changes"
+
+  - id: verify-chain-pallet
+    title: "Verify chain:pallet bootstrap artifacts are current"
+    archetype: implement
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "test -f outputs/chain/pallet/spec.md && test -f outputs/chain/pallet/review.md"
+    owned_surfaces:
+      - outputs/chain/pallet/spec.md
+      - outputs/chain/pallet/review.md
+      - fabro/run-configs/bootstrap/chain-pallet-restart.toml
+    where_surfaces: "Bootstrap output artifacts for the chain:pallet lane"
+    how_description: "Confirm or regenerate spec.md and review.md to reflect current crates/myosu-chain/pallets/game-solver/ state"
+    required_tests: "test -f outputs/chain/pallet/spec.md && test -f outputs/chain/pallet/review.md"
+    verification_plan: "Artifacts exist, are non-empty, and reflect the current source state of crates/myosu-chain/pallets/game-solver/"
+    rollback_condition: "Artifacts become stale relative to crates/myosu-chain/pallets/game-solver/ source changes"
+
+  - id: mark-bootstrap-satisfied
+    title: "Mark myosu-bootstrap.yaml milestone-satisfied in Raspberry"
+    archetype: orchestration
+    lane_kind: orchestration
+    review_profile: standard
+    proof_commands:
+      - "raspberry status --manifest fabro/programs/myosu-bootstrap.yaml"
+    owned_surfaces:
+      - fabro/programs/myosu-bootstrap.yaml
+    where_surfaces: "Raspberry manifest for the bootstrap program"
+    how_description: "Confirm all bootstrap lanes report complete and downstream programs are unblocked"
+    required_tests: "raspberry status --manifest fabro/programs/myosu-bootstrap.yaml"
+    verification_plan: "Raspberry reports myosu-bootstrap program as fully complete; myosu-chain-core and myosu-services report at least one lane unblocked"
+    rollback_condition: "Any bootstrap lane reverts to incomplete status"

@@ -1,0 +1,37 @@
+version = 1
+graph = "../../workflows/recurring_report/game-engine-sdk-developer-guide.fabro"
+goal = """
+Write developer guide: 30-Minute Game
+
+Child work item of plan: Game Engine SDK Development
+
+Objective:
+Produce a step-by-step guide for implementing Kuhn Poker from scaffold to trait compliance pass
+
+Owned surfaces:
+- `crates/myosu-sdk/docs/30-minute-game.md`
+
+Proof commands:
+- `test -f crates/myosu-sdk/docs/30-minute-game.md`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"

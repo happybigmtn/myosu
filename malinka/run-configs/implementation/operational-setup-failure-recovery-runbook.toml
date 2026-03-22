@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/operational-setup-failure-recovery-runbook.fabro"
+goal = """
+Write failure recovery runbook
+
+Child work item of plan: Operational Setup
+
+Objective:
+Document at least 5 common failure modes with step-by-step recovery procedures
+
+Owned surfaces:
+- `ops/runbooks/failure-recovery.md`
+
+Proof commands:
+- `test -f ops/runbooks/failure-recovery.md`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

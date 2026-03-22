@@ -1,0 +1,21 @@
+digraph ValidatorBinary {
+    graph [
+        goal="Validator Binary Implementation\n\nBootstrap the first service slice and establish a deterministic health surface.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Create `crates/myosu-validator/` crate scaffold\n- Implement validator registration with chain\n- Implement exploitability scoring using `myosu-games`\n- Implement weight verification and submission\n- Implement hotkey management\n- Test end-to-end: validator registers → scores miners → submits weights\n\nRequired durable artifacts:\n- `outputs/validator-binary/spec.md`\n- `outputs/validator-binary/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    inventory [label="Inventory", prompt="@../../prompts/service_bootstrap/validator-binary/plan.md", reasoning_effort="high"]
+    review    [label="Review", prompt="@../../prompts/service_bootstrap/validator-binary/review.md", reasoning_effort="high"]
+    polish    [label="Polish", prompt="@../../prompts/service_bootstrap/validator-binary/polish.md", reasoning_effort="medium"]
+    verify_outputs [label="Verify Outputs", shape=parallelogram, script="test -f ./outputs/validator-binary/spec.md && test -f ./outputs/validator-binary/review.md", goal_gate=true, max_retries=0]
+
+    start -> inventory -> review -> polish -> verify_outputs -> exit
+}

@@ -1,0 +1,38 @@
+version = 1
+graph = "../../workflows/recurring_report/fabro-workflow-library-usage-guide.fabro"
+goal = """
+Document workflow library with usage guide
+
+Child work item of plan: Complete Fabro Workflow Library
+
+Objective:
+Create README mapping each lane type to its recommended workflow family with rationale
+
+Owned surfaces:
+- `fabro/workflows/README.md`
+
+Proof commands:
+- `test -f fabro/workflows/README.md`
+- `rg -c '## ' fabro/workflows/README.md`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"

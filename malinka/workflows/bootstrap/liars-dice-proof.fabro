@@ -1,0 +1,21 @@
+digraph LiarsDiceProof {
+    graph [
+        goal="Liar's Dice Architecture Proof\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Implement `crates/myosu-games-liars-dice/`\n- Implement `CfrGame` for Liar's Dice (147,420 terminal states)\n- Implement `Encoder` and `GameRenderer`\n- Register in game registry\n- Verify zero-change: no shared code modified\n- Verify Liar's Dice strategy query works via TUI\n\nRequired durable artifacts:\n- `outputs/liars-dice-proof/spec.md`\n- `outputs/liars-dice-proof/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/bootstrap/liars-dice-proof/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/bootstrap/liars-dice-proof/review.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/bootstrap/liars-dice-proof/polish.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f ./outputs/liars-dice-proof/spec.md && test -f ./outputs/liars-dice-proof/review.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

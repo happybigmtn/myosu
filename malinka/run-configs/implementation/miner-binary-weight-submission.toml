@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/miner-binary-weight-submission.fabro"
+goal = """
+Implement weight submission to chain
+
+Child work item of plan: Miner Binary Implementation
+
+Objective:
+Submit solved strategy weights to the game-solver pallet via chain transaction
+
+Owned surfaces:
+- `crates/myosu-miner/src/main.rs`
+
+Proof commands:
+- `cargo build -p myosu-miner`
+- `cargo run -p myosu-miner -- --subnet 1 --submit --rpc ws://localhost:9944`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

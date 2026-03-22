@@ -1,0 +1,104 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Chain Restart"
+category: infrastructure
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: []
+children:
+  - id: workspace-re-enable
+    title: "Re-enable crates/myosu-chain in workspace"
+    archetype: implement
+    lane_kind: platform
+    review_profile: standard
+    proof_commands:
+      - "cargo metadata --format-version 1 | jq '.packages[] | select(.name == \"myosu-chain\")'"
+    owned_surfaces:
+      - Cargo.toml
+      - crates/myosu-chain/Cargo.toml
+    where_surfaces: "Root workspace manifest and chain package manifest"
+    how_description: "Uncomment myosu-chain from workspace members so cargo resolves it"
+    required_tests: "cargo metadata --format-version 1 | jq -e '.packages[] | select(.name == \"myosu-chain\")'"
+    verification_plan: "cargo metadata lists myosu-chain as a workspace member"
+    rollback_condition: "myosu-chain is commented out or removed from workspace members"
+
+  - id: node-entry-point
+    title: "Create myosu-chain/node binary entry point"
+    archetype: implement
+    lane_kind: platform
+    review_profile: standard
+    proof_commands:
+      - "cargo check -p myosu-chain-node"
+    owned_surfaces:
+      - crates/myosu-chain/node/src/main.rs
+      - crates/myosu-chain/node/src/service.rs
+    where_surfaces: "Node binary crate with Substrate service initialization"
+    how_description: "Create main.rs and service.rs so the chain has a runnable binary entry point"
+    required_tests: "cargo check -p myosu-chain-node"
+    verification_plan: "cargo check -p myosu-chain-node exits zero"
+    rollback_condition: "cargo check -p myosu-chain-node fails"
+
+  - id: wire-game-solver
+    title: "Wire game-solver pallet into runtime"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo check -p myosu-chain-runtime"
+    owned_surfaces:
+      - crates/myosu-chain/runtime/src/lib.rs
+      - crates/myosu-chain/pallets/game-solver/src/lib.rs
+    where_surfaces: "Runtime construction macro and game-solver pallet definition"
+    how_description: "Integrate pallet_game_solver into construct_runtime! and configure GameSolverConfig"
+    required_tests: "cargo check -p myosu-chain-runtime"
+    verification_plan: "cargo check -p myosu-chain-runtime passes with no missing pallet errors for game-solver"
+    rollback_condition: "cargo check -p myosu-chain-runtime fails with game-solver pallet errors"
+
+  - id: wire-subtensor-pallet
+    title: "Wire subtensor base pallet for consensus"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo check -p myosu-chain-runtime"
+    owned_surfaces:
+      - crates/myosu-chain/runtime/src/lib.rs
+    where_surfaces: "Runtime construction macro — subtensor pallet integration"
+    how_description: "Integrate pallet_subtensor for staking, emission, and registration infrastructure"
+    required_tests: "cargo check -p myosu-chain-runtime"
+    verification_plan: "cargo check -p myosu-chain-runtime passes with subtensor pallet wired"
+    rollback_condition: "cargo check -p myosu-chain-runtime fails with subtensor pallet errors"
+
+  - id: wire-remaining-pallets
+    title: "Wire remaining critical pallets"
+    archetype: implement
+    lane_kind: platform
+    review_profile: standard
+    proof_commands:
+      - "cargo check -p myosu-chain-runtime"
+    owned_surfaces:
+      - crates/myosu-chain/runtime/src/lib.rs
+    where_surfaces: "Runtime construction macro — admin-utils, commitments, registry, swap, transaction-fee"
+    how_description: "Wire admin-utils, commitments, registry, swap, and transaction-fee pallets into construct_runtime!"
+    required_tests: "cargo check -p myosu-chain-runtime"
+    verification_plan: "cargo check -p myosu-chain-runtime passes with all pallets integrated"
+    rollback_condition: "cargo check -p myosu-chain-runtime fails with any missing pallet error"
+
+  - id: build-devnet-verify
+    title: "Build binary and start devnet"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-chain"
+      - "curl -s -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"method\":\"chain_getBlock\",\"id\":1}' http://localhost:9933 | jq -e '.result.block'"
+    owned_surfaces:
+      - crates/myosu-chain/node/src/main.rs
+      - crates/myosu-chain/node/src/service.rs
+      - crates/myosu-chain/runtime/src/lib.rs
+    where_surfaces: "Full chain binary — node, runtime, and all wired pallets"
+    how_description: "Build the chain binary and verify it starts a local devnet that produces blocks"
+    required_tests: "cargo build -p myosu-chain && ./target/debug/myosu-chain --dev --rpc-port 9933 & sleep 10 && curl -s -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"method\":\"chain_getBlock\",\"id\":1}' http://localhost:9933 | jq -e '.result.block'"
+    verification_plan: "Binary exists at target/debug/myosu-chain, devnet starts and produces blocks, RPC returns valid block data"
+    rollback_condition: "Binary fails to build, devnet fails to start, or RPC does not return blocks"

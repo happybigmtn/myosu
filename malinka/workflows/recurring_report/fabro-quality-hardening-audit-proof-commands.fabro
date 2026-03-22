@@ -1,0 +1,21 @@
+digraph FabroQualityHardeningAuditProofCommands {
+    graph [
+        goal="Audit all Fabro proof commands for false-green patterns\n\nChild work item of plan: Fabro Quality Hardening\n\nObjective:\nClassify every proof command as honest (tests real behavior) or false-green (tests only compilation)\n\nOwned surfaces:\n- `fabro/run-configs/`\n- `fabro/checks/`\n\nProof commands:\n- `rg -l 'cargo (build|check)' fabro/run-configs/ fabro/checks/`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/recurring_report/fabro-quality-hardening-audit-proof-commands/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/recurring_report/fabro-quality-hardening-audit-proof-commands/review.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/recurring_report/fabro-quality-hardening-audit-proof-commands/polish.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="rg -l 'cargo (build|check)' fabro/run-configs/ fabro/checks/", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

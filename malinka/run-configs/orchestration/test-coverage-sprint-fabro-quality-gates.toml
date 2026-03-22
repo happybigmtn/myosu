@@ -1,0 +1,29 @@
+version = 1
+graph = "../../workflows/orchestration/test-coverage-sprint-fabro-quality-gates.fabro"
+goal = """
+Integrate test suites into Fabro quality gates
+
+Child work item of plan: Test Coverage Sprint
+
+Objective:
+Update Fabro proof commands so that PRs touching myosu-tui or myosu-games automatically run the new tests
+
+Owned surfaces:
+- `fabro/checks/tui-shell.sh`
+- `fabro/checks/games-traits.sh`
+
+Proof commands:
+- `cargo test -p myosu-tui`
+- `cargo test -p myosu-games`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

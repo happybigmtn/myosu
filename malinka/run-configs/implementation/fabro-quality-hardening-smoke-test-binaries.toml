@@ -1,0 +1,46 @@
+version = 1
+graph = "../../workflows/implementation/fabro-quality-hardening-smoke-test-binaries.fabro"
+goal = """
+Add smoke test to all generated implementation programs
+
+Child work item of plan: Fabro Quality Hardening
+
+Objective:
+Add smoke test invocations that verify binaries produce expected behavior beyond just exiting with code 0
+
+Owned surfaces:
+- `fabro/run-configs/product/play-tui.toml`
+- `fabro/run-configs/platform/poker-engine.toml`
+- `fabro/run-configs/platform/multi-game.toml`
+- `fabro/run-configs/platform/sdk-core.toml`
+
+Proof commands:
+- `cargo run -p myosu-play -- --smoke-test`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

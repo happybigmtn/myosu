@@ -1,0 +1,47 @@
+version = 1
+graph = "../../workflows/service_bootstrap/fabro-cleanup-completion.fabro"
+goal = """
+Complete Fabro Control-Plane Bootstrap
+
+Bootstrap the first service slice and establish a deterministic health surface.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Re-verify `tui:shell` bootstrap lane — `spec.md` and `review.md` exist but should be confirmed current
+- Re-verify `chain:runtime` bootstrap lane — `spec.md` and `review.md` exist but should be confirmed current
+- Re-verify `chain:pallet` bootstrap lane — `spec.md` and `review.md` exist but should be confirmed current
+- Mark `myosu-bootstrap.yaml` as milestone-satisfied in Raspberry
+
+Required durable artifacts:
+- `outputs/fabro-cleanup-completion/spec.md`
+- `outputs/fabro-cleanup-completion/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

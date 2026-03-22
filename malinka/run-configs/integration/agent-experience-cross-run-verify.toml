@@ -1,0 +1,28 @@
+version = 1
+graph = "../../workflows/integration/agent-experience-cross-run-verify.fabro"
+goal = """
+Verify agent experience across multiple runs
+
+Child work item of plan: Agent Experience Implementation
+
+Objective:
+Run same agent on three different lanes and verify memory accumulates correctly with truthful chronological journal
+
+Owned surfaces:
+- `crates/myosu-tui/tests/`
+
+Proof commands:
+- `cargo test -p myosu-tui -- --ignored agent_experience_integration`
+- `ls ~/.myosu/agents/`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/operational-setup-devnet-launch-runbook.fabro"
+goal = """
+Write devnet launch runbook
+
+Child work item of plan: Operational Setup
+
+Objective:
+Create step-by-step runbook that takes an engineer from zero to a working devnet with participants
+
+Owned surfaces:
+- `ops/runbooks/devnet-launch.md`
+
+Proof commands:
+- `test -f ops/runbooks/devnet-launch.md`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

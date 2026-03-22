@@ -44,3 +44,6 @@ results.json
 # Reconciliation scratch
 ops/reconciliation/
 .malinka-scratch/
+.worktrees
+.paperclip/
+fabro/paperclip/*/bootstrap-state.json

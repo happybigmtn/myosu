@@ -1,0 +1,76 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Complete Fabro Workflow Library"
+category: infrastructure
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [fabro-cleanup-completion]
+children:
+  - id: implement-family
+    title: "Complete implement/ workflow family"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "test -f fabro/workflows/implement/workflow.fabro"
+      - "test -f fabro/run-configs/implement/game-traits.toml"
+    owned_surfaces:
+      - fabro/workflows/implement/
+      - fabro/run-configs/implement/
+    where_surfaces: "Fabro implement workflow family and associated run-configs"
+    how_description: "Add spec-implement-verify-promote workflow with documented phase contracts"
+    required_tests: "test -f fabro/workflows/implement/workflow.fabro && test -f fabro/run-configs/implement/game-traits.toml"
+    verification_plan: "workflow.fabro exists with phase contracts; at least one run-config references it"
+    rollback_condition: "workflow file deleted or phase contracts found incomplete"
+
+  - id: bootstrap-family
+    title: "Complete bootstrap/ workflow family"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "test -f fabro/workflows/bootstrap/bootstrap.fabro"
+      - "ls fabro/run-configs/bootstrap/*.toml | wc -l"
+    owned_surfaces:
+      - fabro/workflows/bootstrap/
+      - fabro/run-configs/bootstrap/
+    where_surfaces: "Fabro bootstrap workflow family and associated run-configs"
+    how_description: "Add spec-review-restart workflow covering all 4 bootstrap lanes"
+    required_tests: "test -f fabro/workflows/bootstrap/bootstrap.fabro && test $(ls fabro/run-configs/bootstrap/*.toml | wc -l) -ge 4"
+    verification_plan: "bootstrap.fabro exists; run-configs cover all 4 bootstrap lanes"
+    rollback_condition: "bootstrap workflow missing or fewer than 4 run-configs present"
+
+  - id: usage-guide
+    title: "Document workflow library with usage guide"
+    archetype: report
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f fabro/workflows/README.md"
+      - "rg -c '## ' fabro/workflows/README.md"
+    owned_surfaces:
+      - fabro/workflows/README.md
+    where_surfaces: "Workflow library usage guide at fabro/workflows/README.md"
+    how_description: "Create README mapping each lane type to its recommended workflow family with rationale"
+    required_tests: "test -f fabro/workflows/README.md && test $(rg -c '## ' fabro/workflows/README.md) -ge 6"
+    verification_plan: "README.md exists with at least 6 workflow-family sections"
+    rollback_condition: "README.md deleted or section count drops below 6"
+
+  - id: execution-verify
+    title: "Verify each family has a successful execution"
+    archetype: integration
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "find outputs -path '*/bootstrap/*' -name 'review.md' | head -1"
+      - "find outputs -path '*/implement/*' -name 'review.md' | head -1"
+      - "find outputs -path '*/services/*' -name 'review.md' | head -1"
+      - "find outputs -path '*/maintenance/*' -name 'review.md' | head -1"
+    owned_surfaces:
+      - outputs/
+    where_surfaces: "Execution output artifacts across all workflow families"
+    how_description: "Execute each workflow family at least once and confirm reviewed artifacts exist"
+    required_tests: "for f in bootstrap implement services maintenance; do test $(find outputs -path \"*/$f/*\" -name 'review.md' | wc -l) -ge 1; done"
+    verification_plan: "Each of the 4 workflow families has at least one review.md in outputs/"
+    rollback_condition: "Any workflow family found without a successful execution artifact"

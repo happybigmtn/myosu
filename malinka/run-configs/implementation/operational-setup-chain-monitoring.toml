@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/operational-setup-chain-monitoring.fabro"
+goal = """
+Set up basic chain monitoring
+
+Child work item of plan: Operational Setup
+
+Objective:
+Create a script that queries the chain RPC and reports block time, emission, and neuron count
+
+Owned surfaces:
+- `ops/scripts/monitor-chain.sh`
+
+Proof commands:
+- `test -x ops/scripts/monitor-chain.sh`
+- `bash -n ops/scripts/monitor-chain.sh`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

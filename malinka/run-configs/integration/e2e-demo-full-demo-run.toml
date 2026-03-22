@@ -1,0 +1,30 @@
+version = 1
+graph = "../../workflows/integration/e2e-demo-full-demo-run.fabro"
+goal = """
+Run the full demo end-to-end
+
+Child work item of plan: End-to-End Demo
+
+Objective:
+Execute the demo script end-to-end with no manual interventions or panics
+
+Owned surfaces:
+- `demo/README.md`
+
+Proof commands:
+- `./target/debug/myosu-chain --dev --rpc-port 9933 --ws-port 9944`
+- `cargo run -p myosu-miner -- --subnet 1 --solve --iterations 10000 --submit --rpc ws://localhost:9944`
+- `cargo run -p myosu-validator -- --subnet 1 --score --submit --rpc ws://localhost:9944`
+- `cargo run -p myosu-play -- train --sync-chain`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

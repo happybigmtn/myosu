@@ -1,0 +1,45 @@
+version = 1
+graph = "../../workflows/implementation/game-engine-sdk-scaffold-command.fabro"
+goal = """
+Implement cargo myosu-sdk scaffold command
+
+Child work item of plan: Game Engine SDK Development
+
+Objective:
+Generate a valid Rust crate with trait stub implementations from a game name
+
+Owned surfaces:
+- `crates/myosu-sdk/src/scaffold.rs`
+
+Proof commands:
+- `cargo build -p myosu-sdk`
+- `myosu-sdk scaffold --game liars-dice --output /tmp/new-game`
+- `cargo check --manifest-path /tmp/new-game/Cargo.toml`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

@@ -1,0 +1,27 @@
+version = 1
+graph = "../../workflows/integration/nlhe-game-engine-wire-game-registry.fabro"
+goal = """
+Wire into game registry and verify strategy query
+
+Child work item of plan: NLHE Game Engine Implementation
+
+Objective:
+NLHE registered in game registry; game state to strategy query to recommended action works end-to-end
+
+Owned surfaces:
+- `crates/myosu-games-poker/src/lib.rs`
+
+Proof commands:
+- `cargo test -p myosu-games-poker -- strategy_query`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

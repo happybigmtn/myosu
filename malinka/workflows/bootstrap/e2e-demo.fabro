@@ -1,0 +1,21 @@
+digraph E2eDemo {
+    graph [
+        goal="End-to-End Demo\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Wire miner → chain submission\n- Wire chain → validator scoring\n- Wire validator → chain weights\n- Wire chain state → TUI display\n- Write the demo script (step-by-step narrative)\n- Run the full demo end-to-end\n\nRequired durable artifacts:\n- `outputs/e2e-demo/spec.md`\n- `outputs/e2e-demo/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/bootstrap/e2e-demo/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/bootstrap/e2e-demo/review.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/bootstrap/e2e-demo/polish.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f ./outputs/e2e-demo/spec.md && test -f ./outputs/e2e-demo/review.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

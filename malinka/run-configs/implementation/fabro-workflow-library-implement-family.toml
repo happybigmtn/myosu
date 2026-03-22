@@ -1,0 +1,45 @@
+version = 1
+graph = "../../workflows/implementation/fabro-workflow-library-implement-family.fabro"
+goal = """
+Complete implement/ workflow family
+
+Child work item of plan: Complete Fabro Workflow Library
+
+Objective:
+Add spec-implement-verify-promote workflow with documented phase contracts
+
+Owned surfaces:
+- `fabro/workflows/implement/`
+- `fabro/run-configs/implement/`
+
+Proof commands:
+- `test -f fabro/workflows/implement/workflow.fabro`
+- `test -f fabro/run-configs/implement/game-traits.toml`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

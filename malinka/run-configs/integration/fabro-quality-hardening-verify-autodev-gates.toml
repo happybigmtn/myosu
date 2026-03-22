@@ -1,0 +1,28 @@
+version = 1
+graph = "../../workflows/integration/fabro-quality-hardening-verify-autodev-gates.fabro"
+goal = """
+Verify autodev no longer produces compile-only completions
+
+Child work item of plan: Fabro Quality Hardening
+
+Objective:
+Confirm that autodev marks programs complete only when cargo test and smoke tests pass, not on cargo build alone
+
+Owned surfaces:
+- `fabro/programs/myosu-platform.yaml`
+- `fabro/programs/myosu-product.yaml`
+
+Proof commands:
+- `raspberry status --manifest fabro/programs/myosu-platform.yaml`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

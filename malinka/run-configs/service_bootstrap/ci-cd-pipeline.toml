@@ -1,0 +1,49 @@
+version = 1
+graph = "../../workflows/service_bootstrap/ci-cd-pipeline.fabro"
+goal = """
+CI/CD Pipeline Setup
+
+Bootstrap the first service slice and establish a deterministic health surface.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Create `.github/workflows/ci.yml`
+- Add `cargo check` for all workspace members
+- Add `cargo test` for active workspace members (`myosu-games`, `myosu-tui`)
+- Add `cargo clippy` with strict warnings
+- Add `cargo fmt --check`
+- Configure branch protection on `trunk`
+
+Required durable artifacts:
+- `outputs/ci-cd-pipeline/spec.md`
+- `outputs/ci-cd-pipeline/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

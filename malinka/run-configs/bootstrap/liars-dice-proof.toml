@@ -1,0 +1,49 @@
+version = 1
+graph = "../../workflows/bootstrap/liars-dice-proof.fabro"
+goal = """
+Liar's Dice Architecture Proof
+
+Bootstrap the first honest reviewed slice for this frontier.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Implement `crates/myosu-games-liars-dice/`
+- Implement `CfrGame` for Liar's Dice (147,420 terminal states)
+- Implement `Encoder` and `GameRenderer`
+- Register in game registry
+- Verify zero-change: no shared code modified
+- Verify Liar's Dice strategy query works via TUI
+
+Required durable artifacts:
+- `outputs/liars-dice-proof/spec.md`
+- `outputs/liars-dice-proof/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

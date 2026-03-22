@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/chain-restart-workspace-re-enable.fabro"
+goal = """
+Re-enable crates/myosu-chain in workspace
+
+Child work item of plan: Chain Restart
+
+Objective:
+Uncomment myosu-chain from workspace members so cargo resolves it
+
+Owned surfaces:
+- `Cargo.toml`
+- `crates/myosu-chain/Cargo.toml`
+
+Proof commands:
+- `cargo metadata --format-version 1 | jq '.packages[] | select(.name == "myosu-chain")'`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

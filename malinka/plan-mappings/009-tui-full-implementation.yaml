@@ -1,0 +1,108 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "TUI Full Implementation"
+category: interface
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [nlhe-game-engine, test-coverage-sprint]
+children:
+  - id: fix-play-entry
+    title: "Fix myosu-play binary entry point"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo build -p myosu-play"
+    owned_surfaces:
+      - crates/myosu-play/src/main.rs
+      - crates/myosu-tui/src/events.rs
+      - crates/myosu-tui/src/shell.rs
+    where_surfaces: "Binary entry point and TUI event loop wiring"
+    how_description: "myosu-play train enters a blocking terminal loop instead of exiting immediately"
+    required_tests: "cargo test -p myosu-play"
+    verification_plan: "cargo run -p myosu-play -- train enters a blocking terminal loop; kill exits cleanly"
+    rollback_condition: "myosu-play exits immediately without entering the event loop"
+
+  - id: wire-poker-renderer
+    title: "Wire poker renderer into TUI shell"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo build -p myosu-games-poker"
+      - "cargo test -p myosu-games-poker"
+    owned_surfaces:
+      - crates/myosu-games-poker/src/renderer.rs
+      - crates/myosu-tui/src/screens.rs
+    where_surfaces: "GameRenderer<NLHE> implementation and shell state panel integration"
+    how_description: "State panel shows hole cards, board, pot, and positions via GameRenderer trait"
+    required_tests: "cargo test -p myosu-games-poker -- renderer"
+    verification_plan: "Running the TUI shows poker state in the state panel, not placeholder text"
+    rollback_condition: "State panel shows placeholder text or panics on render"
+
+  - id: implement-poker-screens
+    title: "Implement all poker screens"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo build -p myosu-tui"
+      - "cargo test -p myosu-tui"
+    owned_surfaces:
+      - crates/myosu-tui/src/screens.rs
+      - crates/myosu-games-poker/src/renderer.rs
+    where_surfaces: "Screen management for title, new game, play, hand history, and settings"
+    how_description: "Tab navigation between all five poker screens works without panics"
+    required_tests: "cargo test -p myosu-tui -- screens"
+    verification_plan: "All screens (title, new game, play, hand history, settings) render and navigate correctly"
+    rollback_condition: "Any screen panics on render or navigation between screens fails"
+
+  - id: implement-pipe-mode
+    title: "Implement pipe mode end-to-end"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo build -p myosu-play"
+      - "cargo test -p myosu-tui -- pipe"
+    owned_surfaces:
+      - crates/myosu-tui/src/pipe.rs
+    where_surfaces: "Pipe mode JSON protocol for agent interaction via stdin/stdout"
+    how_description: "Pipe mode reads JSON game state from stdin, queries strategy, writes action JSON to stdout"
+    required_tests: "cargo test -p myosu-tui -- pipe"
+    verification_plan: "echo JSON game state | cargo run -p myosu-play -- pipe returns valid action JSON"
+    rollback_condition: "Pipe mode fails to parse input JSON or produces invalid output"
+
+  - id: implement-theme-system
+    title: "Implement theme system with poker-specific colors"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo build -p myosu-tui"
+      - "cargo test -p myosu-tui -- theme"
+    owned_surfaces:
+      - crates/myosu-tui/src/theme.rs
+    where_surfaces: "Theme styling with poker-specific color palettes"
+    how_description: "Poker-specific color theme applied to all panels and screens"
+    required_tests: "cargo test -p myosu-tui -- theme"
+    verification_plan: "Theme colors render correctly across all five panels; ASCII fallback works for non-UTF8 terminals"
+    rollback_condition: "Theme colors cause rendering artifacts or panic on non-UTF8 terminals"
+
+  - id: add-integration-tests
+    title: "Add comprehensive integration tests"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo test -p myosu-tui"
+      - "cargo test -p myosu-games-poker"
+    owned_surfaces:
+      - crates/myosu-tui/
+      - crates/myosu-games-poker/
+    where_surfaces: "Integration test suites for TUI and poker renderer"
+    how_description: "At least 20 TUI integration tests and 50 poker tests pass in CI"
+    required_tests: "cargo test -p myosu-tui && cargo test -p myosu-games-poker"
+    verification_plan: "cargo test -p myosu-tui shows >= 20 passing tests; cargo test -p myosu-games-poker shows >= 50 passing tests"
+    rollback_condition: "Test count drops below threshold or any test fails in CI"

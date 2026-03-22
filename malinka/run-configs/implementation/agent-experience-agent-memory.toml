@@ -1,0 +1,45 @@
+version = 1
+graph = "../../workflows/implementation/agent-experience-agent-memory.fabro"
+goal = """
+Implement agent memory system
+
+Child work item of plan: Agent Experience Implementation
+
+Objective:
+Add agent context file that loads on startup and saves on shutdown, accumulating memory across sessions
+
+Owned surfaces:
+- `crates/myosu-tui/src/agent_context.rs`
+
+Proof commands:
+- `cargo test -p myosu-tui agent_context::tests::load_and_save_roundtrip`
+- `cargo test -p myosu-tui agent_context::tests::journal_appends_not_overwrites`
+- `cargo test -p myosu-tui agent_context::tests::missing_context_creates_new`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

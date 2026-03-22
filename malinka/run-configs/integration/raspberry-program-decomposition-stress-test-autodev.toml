@@ -1,0 +1,27 @@
+version = 1
+graph = "../../workflows/integration/raspberry-program-decomposition-stress-test-autodev.fabro"
+goal = """
+Stress-test autodev loop with all 6 programs
+
+Child work item of plan: Complete Raspberry Program Decomposition
+
+Objective:
+Run autodev loop and verify max_parallel constraint, completion marking, and blocking dependency reporting
+
+Owned surfaces:
+- `.raspberry/myosu-state.json`
+
+Proof commands:
+- `raspberry autodev --manifest fabro/programs/myosu.yaml --dry-run`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

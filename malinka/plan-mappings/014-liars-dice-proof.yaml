@@ -1,0 +1,83 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Liar's Dice Architecture Proof"
+category: game
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [nlhe-game-engine, game-engine-sdk, tui-full-implementation]
+children:
+  - id: liars-dice-engine
+    title: "Implement Liar's Dice game engine"
+    archetype: implement
+    lane_kind: platform
+    review_profile: hardened
+    proof_commands:
+      - "cargo test -p myosu-games-liars-dice -- terminal_state_count"
+    owned_surfaces:
+      - crates/myosu-games-liars-dice/
+    where_surfaces: "New crate implementing CfrGame for 2-player Liar's Dice"
+    how_description: "Implement CfrGame trait for Liar's Dice with exactly 147,420 terminal states using Copy workaround for variable-length bid history"
+    required_tests: "cargo test -p myosu-games-liars-dice -- terminal_state_count"
+    verification_plan: "terminal_state_count test asserts exactly 147,420"
+    rollback_condition: "Terminal state count test fails or deviates from 147,420"
+
+  - id: encoder-renderer
+    title: "Implement Encoder and GameRenderer"
+    archetype: implement
+    lane_kind: platform
+    review_profile: standard
+    proof_commands:
+      - "cargo test -p myosu-games-liars-dice -- roundtrip"
+    owned_surfaces:
+      - crates/myosu-games-liars-dice/src/
+    where_surfaces: "Encoder and GameRenderer implementations within the liars-dice crate"
+    how_description: "Implement bincode serialization roundtrip and TUI rendering for Liar's Dice game state"
+    required_tests: "cargo test -p myosu-games-liars-dice -- roundtrip"
+    verification_plan: "Roundtrip serialization test passes; TUI renders dice state correctly"
+    rollback_condition: "Roundtrip test fails or TUI rendering produces incorrect output"
+
+  - id: game-registry
+    title: "Register in game registry"
+    archetype: implement
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "cargo test -p myosu-games -- game_registry"
+    owned_surfaces:
+      - crates/myosu-games/
+    where_surfaces: "Game registry in myosu-games crate"
+    how_description: "Add Liar's Dice alongside NLHE in the game registry"
+    required_tests: "cargo test -p myosu-games -- game_registry"
+    verification_plan: "game_registry test lists both NLHE and Liar's Dice"
+    rollback_condition: "game_registry test fails or Liar's Dice not listed"
+
+  - id: zero-change-verify
+    title: "Zero-change verification"
+    archetype: implement
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "git diff --stat main -- crates/myosu-chain/ crates/myosu-tui/ crates/myosu-sdk/ crates/myosu-miner/ crates/myosu-validator/"
+    owned_surfaces:
+      - crates/myosu-games-liars-dice/
+    where_surfaces: "Shared crates that must remain unmodified"
+    how_description: "Verify no shared code (chain, TUI, SDK, miner, validator) was modified by the Liar's Dice addition"
+    required_tests: "test -z \"$(git diff --stat main -- crates/myosu-chain/ crates/myosu-tui/ crates/myosu-sdk/ crates/myosu-miner/ crates/myosu-validator/)\""
+    verification_plan: "git diff against main shows zero changes in shared crate directories"
+    rollback_condition: "Any shared crate shows modifications on the branch"
+
+  - id: tui-strategy-query
+    title: "Liar's Dice strategy query via TUI"
+    archetype: integration
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo run -p myosu-play -- --game liars-dice"
+    owned_surfaces:
+      - crates/myosu-games-liars-dice/
+    where_surfaces: "TUI integration for playing Liar's Dice"
+    how_description: "Enable playing a complete Liar's Dice hand against the best bot via the TUI"
+    required_tests: "cargo run -p myosu-play -- --game liars-dice"
+    verification_plan: "A human can play one complete Liar's Dice hand via the TUI"
+    rollback_condition: "myosu-play --game liars-dice fails to start or cannot complete a hand"

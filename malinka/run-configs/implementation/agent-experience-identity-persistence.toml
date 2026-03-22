@@ -1,0 +1,46 @@
+version = 1
+graph = "../../workflows/implementation/agent-experience-identity-persistence.fabro"
+goal = """
+Implement identity persistence
+
+Child work item of plan: Agent Experience Implementation
+
+Objective:
+Persist agent identity fields and preferred_game across sessions; enable lobby-based game selection in pipe mode
+
+Owned surfaces:
+- `crates/myosu-tui/src/agent_context.rs`
+- `crates/myosu-tui/src/pipe.rs`
+
+Proof commands:
+- `cargo test -p myosu-tui agent_context::tests::load_and_save_roundtrip`
+- `cargo test -p myosu-tui pipe::tests::lobby_presented_without_subnet_flag`
+- `cargo test -p myosu-tui pipe::tests::selection_starts_game`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

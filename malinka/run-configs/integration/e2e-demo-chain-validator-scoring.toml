@@ -1,0 +1,28 @@
+version = 1
+graph = "../../workflows/integration/e2e-demo-chain-validator-scoring.fabro"
+goal = """
+Wire chain to validator scoring
+
+Child work item of plan: End-to-End Demo
+
+Objective:
+Validator queries chain for pending miner submissions and scores them
+
+Owned surfaces:
+- `crates/myosu-validator/src/score.rs`
+- `crates/myosu-validator/src/main.rs`
+
+Proof commands:
+- `cargo run -p myosu-validator -- --subnet 1 --score --rpc ws://localhost:9944`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

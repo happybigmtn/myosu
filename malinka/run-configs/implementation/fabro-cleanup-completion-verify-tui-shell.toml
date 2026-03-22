@@ -1,0 +1,45 @@
+version = 1
+graph = "../../workflows/implementation/fabro-cleanup-completion-verify-tui-shell.fabro"
+goal = """
+Verify tui:shell bootstrap artifacts are current
+
+Child work item of plan: Complete Fabro Control-Plane Bootstrap
+
+Objective:
+Confirm or regenerate spec.md and review.md to reflect current crates/myosu-tui/ state
+
+Owned surfaces:
+- `outputs/tui/shell/spec.md`
+- `outputs/tui/shell/review.md`
+- `fabro/run-configs/bootstrap/tui-shell.toml`
+
+Proof commands:
+- `test -f outputs/tui/shell/spec.md && test -f outputs/tui/shell/review.md`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

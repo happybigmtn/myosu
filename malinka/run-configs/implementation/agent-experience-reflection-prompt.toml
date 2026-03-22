@@ -1,0 +1,45 @@
+version = 1
+graph = "../../workflows/implementation/agent-experience-reflection-prompt.fabro"
+goal = """
+Implement reflection prompt
+
+Child work item of plan: Agent Experience Implementation
+
+Objective:
+Add optional reflect> prompt after each hand in pipe mode; empty line skips, non-empty appends to journal
+
+Owned surfaces:
+- `crates/myosu-tui/src/pipe.rs`
+
+Proof commands:
+- `cargo test -p myosu-tui pipe::tests::reflection_prompt_after_hand`
+- `cargo test -p myosu-tui pipe::tests::empty_reflection_skips`
+- `cargo test -p myosu-tui pipe::tests::reflection_saved_to_journal`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

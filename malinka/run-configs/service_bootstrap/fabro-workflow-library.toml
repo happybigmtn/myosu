@@ -1,0 +1,47 @@
+version = 1
+graph = "../../workflows/service_bootstrap/fabro-workflow-library.fabro"
+goal = """
+Complete Fabro Workflow Library
+
+Bootstrap the first service slice and establish a deterministic health surface.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Complete `implement/` family — real implementation workflows beyond bootstrap
+- Complete `bootstrap/` family — real bootstrap workflows beyond the initial 4
+- Document all workflow families with usage guide
+- Verify each family has at least one successful execution
+
+Required durable artifacts:
+- `outputs/fabro-workflow-library/spec.md`
+- `outputs/fabro-workflow-library/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

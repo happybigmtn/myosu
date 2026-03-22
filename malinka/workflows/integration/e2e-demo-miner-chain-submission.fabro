@@ -1,0 +1,10 @@
+digraph E2eDemoMinerChainSubmission {
+    graph [goal="Wire miner to chain submission\n\nChild work item of plan: End-to-End Demo\n\nObjective:\nMiner calls gameSolver.setWeights extrinsic after solving a poker situation\n\nOwned surfaces:\n- `crates/myosu-miner/src/submit.rs`\n- `crates/myosu-miner/src/main.rs`\n\nProof commands:\n- `cargo run -p myosu-miner -- --subnet 1 --solve --submit --rpc ws://localhost:9944`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

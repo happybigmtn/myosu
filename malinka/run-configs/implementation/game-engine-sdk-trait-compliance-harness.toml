@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/game-engine-sdk-trait-compliance-harness.fabro"
+goal = """
+Implement trait compliance test harness
+
+Child work item of plan: Game Engine SDK Development
+
+Objective:
+Run trait compliance checks (info_set_count, serialize, deserialize) and report pass/fail per AC
+
+Owned surfaces:
+- `crates/myosu-sdk/src/harness.rs`
+
+Proof commands:
+- `cargo build -p myosu-sdk`
+- `myosu-sdk test --crate /tmp/new-game`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

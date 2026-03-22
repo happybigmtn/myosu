@@ -69,6 +69,37 @@ worked around locally.
 - [ ] Execute `agent:experience`, the last remaining ready product lane, then
   use its reviewed artifacts to decide whether product needs an implementation
   family next or another upstream unblock.
+- [x] (2026-03-19 16:31Z) Proved a real repo-wide Myosu autodev loop in a git
+  worktree (`autodev-live`) can synth-generate the next implementation-family
+  programs and reinsert them into the top-level portfolio automatically.
+- [x] (2026-03-19 16:31Z) Verified that the worktree-backed `myosu.yaml`
+  portfolio now expands from the original 7 child frontiers to 11 by adding:
+  `play-tui-implementation`, `games-poker-engine-implementation`,
+  `games-multi-game-implementation`, and `sdk-core-implementation`.
+- [x] (2026-03-19 16:31Z) Verified that those four newly synthesized
+  implementation-family child programs become ready at the top level and are
+  dispatched by the repo-wide autodev loop.
+- [x] (2026-03-19 16:34Z) Confirmed from the live worktree autodev report that
+  those four generated implementation-family programs stay in flight across
+  later top-level cycles instead of disappearing after the first dispatch.
+- [x] (2026-03-19 16:37Z) Captured the first live implementation-child failure
+  signatures from the worktree run:
+  - `play:tui-implement` is running in `Implement` but its proof command fails
+    because package `myosu-play` does not exist yet
+  - `games:poker-engine-implement` is running in `Implement` but its proof
+    command fails because package `myosu-games-poker` does not exist yet
+- [ ] Follow the four dispatched implementation child programs through actual
+  code/artifact progress, fix any new Fabro/Raspberry defects they expose, and
+  only then promote the worktree branch back toward trunk.
+- [x] (2026-03-19 21:49Z) Raised the implementation-family quality bar so
+  child runs now require a deterministic `quality.md` artifact and a
+  `Quality Gate` before review/promotion can pass.
+- [ ] Re-run the live worktree implementation children under that hardened
+  contract and use the resulting failures to drive the next Raspberry/Fabro
+  engineering loop.
+- [x] (2026-03-19 22:20Z) Landed native Codex slot selection in Fabro so
+  future OpenAI/Codex review/promote stages can use the saved local slot pool
+  instead of always relying on the default `.codex` home.
 
 ## Surprises & Discoveries
 
@@ -152,6 +183,80 @@ worked around locally.
   `games:traits`, while some Raspberry detached-submit paths still required
   hardening in the sibling Fabro repo.
 
+- Observation: the current top-level Myosu portfolio is finally behaving like a
+  real autonomous control plane rather than a static frontier index.
+  Evidence: the worktree-backed `autodev-live` run expanded `myosu.yaml` with
+  new implementation-family child programs, and a later cycle reported all four
+  as ready and dispatched them automatically.
+
+- Observation: the remaining execution risk has moved from “can synthesis
+  generate the next frontier?” to “can the generated implementation frontiers
+  make durable progress without bogging down evaluation surfaces?”
+  Evidence: the implementation child programs are no longer structurally
+  blocked, but top-level `status` and TUI refreshes now pay the cost of their
+  proof commands unless we tighten the observer/runtime boundary.
+
+- Observation: the current live worktree run is no longer a one-shot proving
+  event; it is sustaining multiple implementation-frontier children in flight.
+  Evidence: the top-level worktree report
+  `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/myosu-autodev.json`
+  shows cycles 2-6 with `running_after=4`.
+
+- Observation: the next binding constraint is now inside the generated
+  implementation contracts themselves.
+  Evidence: the first implementation-child status samples show running proof
+  checks failing on nonexistent package IDs (`myosu-play`,
+  `myosu-games-poker`) rather than on portfolio wiring or readiness gating.
+
+- Observation: those earliest missing-package failures are likely stale by now,
+  because the generated crates now exist in the worktree and the corresponding
+  manual `cargo build -p ...` probes block on the artifact lock instead of
+  failing immediately.
+  Evidence: `crates/myosu-play/`, `crates/myosu-games-poker/`, and
+  `crates/myosu-sdk/` now exist under
+  `/home/r/coding/myosu/.worktrees/autodev-live/`, and manual cargo probes are
+  waiting on the artifact directory rather than reporting unknown package IDs.
+
+- Observation: at least one generated implementation child has already
+  completed successfully enough to satisfy its managed milestone.
+  Evidence: `myosu-play-tui-implementation` now reports complete in the
+  worktree status view, with its `implementation.md` / `verification.md`
+  artifacts present, even though stale failure text from the first preflight
+  still appears in lane detail.
+
+- Observation: the first manual smoke test of the generated `myosu-play`
+  binary shows that the slice is still a compile-only skeleton, not a usable
+  gameplay TUI.
+  Evidence: invoking the built binary as `myosu-play train` in the worktree
+  exits immediately with code 0 and does not enter a terminal loop, which is
+  consistent with the generated implementation artifact's note that the shell
+  is created but not run.
+
+- Observation: the next confidence improvement is now encoded in the generated
+  contract itself.
+  Evidence: refreshing `myosu-play-tui-implementation.yaml` in the worktree now
+  adds a `promotion.md` artifact and a `merge_ready` milestone, so a future
+  implementation completion can be gated on an explicit merge verdict instead
+  of only on `implementation.md` and `verification.md`.
+
+- Observation: compile-and-test proof is still outrunning product quality.
+  Evidence: `play` and `sdk` can satisfy the current slice proof commands while
+  still containing placeholder-heavy code paths and incomplete user-facing
+  behavior, so the next iteration needs stronger deterministic quality checks
+  inside the generated workflow itself.
+
+- Observation: the first live refreshed implementation package now encodes that
+  stronger quality contract directly in the worktree.
+  Evidence: `myosu-play-tui-implementation.yaml` now carries a `quality`
+  artifact and the regenerated `play-tui.fabro` now runs a `Quality Gate`
+  before review/promotion, with paths rooted under `outputs/play/tui/`.
+
+- Observation: the OpenAI/Codex auth problem was partly a launch-identity
+  problem, not only a credentials problem.
+  Evidence: the machine already had multiple saved Codex slot homes and slot
+  rotator config, but Fabro was calling raw `codex exec` without selecting a
+  `CODEX_HOME`, so autonomous runs were pinned to the default auth home.
+
 ## Decision Log
 
 - Decision: make the next plan execution-first rather than manifest-first.
@@ -203,6 +308,20 @@ worked around locally.
   reach the Anthropic-compatible bridge credentials.
   Date/Author: 2026-03-19 / Codex
 
+- Decision: move live proving from disposable `/tmp` copies to a real Myosu git
+  worktree.
+  Rationale: the user wants real production-shaped repo data, and a worktree
+  preserves isolation while making the autonomous loop's outputs commitable.
+  Date/Author: 2026-03-19 / User + Codex
+
+- Decision: treat “great code” as a workflow-contract problem before treating
+  it as a raw-model problem.
+  Rationale: the system currently accepts compile-only slices because the
+  synthesized implementation contract does not yet demand deterministic
+  evidence about warnings, placeholders, smoke behavior, and artifact/code
+  consistency.
+  Date/Author: 2026-03-19 / User + Codex
+
 ## Outcomes & Retrospective
 
 This plan starts after the biggest conceptual migration work is already done.
@@ -223,6 +342,12 @@ repeatable execution loop:
 
 If this plan succeeds, the repository will gain real forward motion across the
 frontier map instead of only better documentation about the frontier map.
+
+The next execution outcome is sharper now: the worktree should stop promoting
+implementation slices that are merely plausible. A child lane should only cross
+`merge_ready` after the synthesized workflow has produced a deterministic
+quality artifact and a promotion verdict that matches the actual code and proof
+surfaces.
 
 ## Context and Orientation
 
@@ -285,6 +410,115 @@ on fixes there:
 
 This plan assumes that additional Raspberry/Fabro fixes will continue to be
 required as more frontiers start running.
+
+The current live proving target is no longer a temp copy. It is the real Myosu
+git worktree:
+
+- `/home/r/coding/myosu/.worktrees/autodev-live`
+
+and the current repo-wide autodev loop has already produced the next generated
+implementation family there.
+
+Current live monitor snapshot:
+
+- top-level portfolio expanded from 7 child programs to 11
+- four generated implementation programs are in flight
+- the worktree branch remains commit-capable while those runs proceed
+
+Immediate next steps:
+
+1. monitor the four generated implementation programs for first durable code or
+   artifact changes
+2. repair the generated implementation proof commands and/or first-slice
+   synthesis so they target packages/modules that can actually be created from
+   the current repo shape
+3. inspect any failed or stalled child run in the worktree, not in `/tmp`
+4. keep fixing Fabro/Raspberry only where the live worktree run exposes real
+   blocking defects
+
+Latest live note:
+
+- `play-tui-implementation` has now been refreshed to require a new
+  `promotion.md` artifact and a `merge_ready` milestone instead of treating
+  `verified` as the final promotion bar
+- the same promotion-hardening refresh is now being applied to the generated
+  platform implementation-family programs
+
+That shifts the next confidence goal from “did the lane write artifacts?” to
+“did the generated workflow itself justify a merge-ready verdict?”
+
+Current promotion-review policy:
+
+- keep generated `promote` steps on `gpt-5.4`
+- keep implementation workers on MiniMax
+- only consider downgrading the promotion reviewer once the generated
+  `promotion.md` contract and deterministic gates have proven reliable across
+  several live implementation slices
+
+Current active monitoring note:
+
+- the implementation children appear to be past the “missing package” phase
+- the immediate next question is whether they complete a first compile or stall
+  indefinitely behind shared Cargo workspace contention
+- the first answer has started to emerge: `play-tui-implementation` has
+  completed, so the remaining question is how many of the other generated
+  implementation children make the same transition without new synth/runtime
+  fixes
+- the current control-plane follow-on is to let finished implementation
+  children become ready for rerun under the new `merge_ready` contract instead
+  of pinning them as forever-`running` just because some artifacts exist
+
+Latest live note:
+
+- the lane-truth refresh has now converted all four generated implementation
+  children from stale `running` to fresh `ready`
+- the next live autodev cycle should therefore be able to re-dispatch them
+  under the stronger promotion-aware workflow contract
+
+Newest live note:
+
+- the latest one-cycle top-level autodev pass saw all four implementation
+  children as ready
+- it dispatched two of them in that cycle, which matches the portfolio's
+  `max_parallel = 2`
+
+So the next monitoring question is straightforward: once those two finish, does
+the next autodev pass dispatch the remaining two under the same refreshed
+contract?
+
+Latest live note:
+
+- `games:poker-engine-implement` fresh rerun:
+  - status `running`
+  - stage `Implement`
+  - run id `01KM3HX7QS8017YT3WPZECGCG9`
+  - running proof check currently passing
+- `games:multi-game-implement` fresh rerun:
+  - status `running`
+  - stage `Implement`
+  - run id `01KM3HXYKR9YRZVZHE5F34FP2T`
+  - running proof check currently passing
+
+This is better than the first generation wave: the refreshed implementation
+contracts are now getting through `Preflight` and into real `Implement` work
+under live autodev control.
+
+Current live monitor snapshot:
+
+- still running:
+  - `games:poker-engine-implement` (`01KM3HX7QS8017YT3WPZECGCG9`)
+  - `games:multi-game-implement` (`01KM3HXYKR9YRZVZHE5F34FP2T`)
+- ready and waiting for a free slot:
+  - `play:tui-implement`
+  - `sdk:core-implement`
+
+The top-level worktree report now matches the intended scheduler behavior:
+ready children are queued behind the portfolio's `max_parallel = 2` while the
+two active implementation children remain in flight.
+- the stronger answer is now: `play-tui-implementation` is good enough as a
+  worktree checkpoint, but not yet good enough for automatic merge promotion
+- the next target is to make that promotion rule universal across generated
+  implementation programs, not just for `play:tui`
 
 ## Milestones
 
@@ -491,3 +725,94 @@ same iterative execution loop.
 Revision Note: Created after reading all live Myosu plans and the expanded
 `fabro/` execution surface, to move the repo from frontier seeding into
 frontier execution and Raspberry hardening.
+
+Latest live worktree review (2026-03-19):
+
+- the generated `myosu-games-poker` and `myosu-games-liars-dice` crates are not
+  just present on disk; direct proof reruns in the live worktree passed:
+  - `cargo test -p myosu-games-poker`
+  - `cargo test -p myosu-games-liars-dice`
+- `outputs/games/poker-engine/promotion.md` and
+  `outputs/games/multi-game/promotion.md` now exist with `merge_ready: yes`,
+  but that is still slice-scoped rather than whole-lane completion
+- `play:tui` remains a skeleton slice:
+  - verification still centers on `cargo build -p myosu-play`
+  - `crates/myosu-play/src/main.rs` still initializes `_shell` without running
+    the shell loop
+- `sdk:core` remains a skeleton slice:
+  - verification is compile-only plus ignored placeholder tests
+  - no `promotion.md` has landed yet
+- the live worktree still emits at least one warning during direct package
+  proof (`myosu-games-liars-dice` dead-code warning), so the current output is
+  not yet at the repo's zero-warnings bar
+
+This is meaningful progress: synth is producing real executable code in the
+games frontiers. It is not yet end-to-end effective across the whole repo,
+because play/sdk are still scaffold-first and the top-level orchestrator is not
+yet continuously advancing the remaining ready implementation programs without
+another explicit autodev pass.
+
+Latest execution-loop note (2026-03-19, later):
+
+- forcing a fresh `raspberry status` over the live worktree now rewrites
+  `/home/r/coding/myosu/.worktrees/autodev-live/.raspberry/myosu-state.json`
+  into truthful parent statuses:
+  - `games-multi-game-implementation:program` -> `complete`
+  - `games-poker-engine-implementation:program` -> `complete`
+  - `play-tui-implementation:program` -> `ready`
+  - `sdk-core-implementation:program` -> `ready`
+- this came from a Raspberry harness fix, not from manual state editing
+- another harness fix now makes top-level autodev defer `synth evolve` until
+  the current ready frontier is consumed, which should improve actual
+  development velocity for the remaining ready play/sdk work on the next live
+  relaunch
+- another harness fix now directs autonomous cargo work into
+  `.raspberry/cargo-target` under the live target repo, to reduce contention
+  with unrelated/background cargo activity in the same workspace
+- live `play` / `sdk` promotion attempts also exposed two more harness bugs:
+  - agent review/promote stages were ignoring node-level `provider: openai` and
+    falling back to Anthropic
+  - `promotion_check` could still pass on an old `promotion.md` after review /
+    promote failed
+- both of those are now being fixed in Fabro/Raspberry itself rather than
+  treated as one-off repo anomalies
+- stale child runtime records for `play` / `sdk` were reset in the proving
+  worktree and the child implementation packages were re-evolved under the
+  refreshed template
+- fresh child runs are now in flight under the new workflow semantics:
+  - `play:tui-implement` -> `01KM3SPS33KNYAFMK2RFY76HC1`
+  - `sdk:core-implement` -> `01KM3SQ8SP199TQD61QSS353AB`
+- this is the first live run wave in the worktree using:
+  - regenerated implementation workflows
+  - dedicated `.raspberry/cargo-target`
+  - CLI-based `gpt-5.4` review/promote path
+- the fresh child workflows now explicitly preserve the real proof commands for
+  play/sdk instead of collapsing `verify` to a simple artifact-exists check
+- current state:
+  - both fresh child runs completed preflight successfully
+  - both are currently in `Implement`
+  - dedicated autonomous cargo target is actively being populated under
+    `.raspberry/cargo-target`
+- a direct proving-ground comparison now exists:
+  - non-interactive child dispatches of the refreshed workflows hit 401-style
+    auth failures in `Implement`
+  - interactive-shell re-dispatches then recovered:
+    - `play:tui-implement` -> `01KM3T2ADPSXBFN17FGPD0XW2K`
+    - `sdk:core-implement` -> `01KM3T30RXG4K1GV0Q8KT4R7SP`
+  - both interactive reruns cleared preflight and are back in `Implement`
+
+Latest proving-ground update:
+
+- Fabro/Raspberry auth propagation was tightened so project `fabro.toml`
+  sandbox env is forwarded into backend execution, and Raspberry spawns Fabro
+  through an interactive bash
+- after those harness fixes, fresh non-interactive child dispatches succeeded:
+  - `play:tui-implement` -> `01KM3T2ADPSXBFN17FGPD0XW2K`
+  - `sdk:core-implement` -> `01KM3TE3PT8B2QAPQG2PSTHXB8`
+- `play:tui-implement` is now visibly doing real agent work inside `Implement`
+  instead of failing immediately on provider auth; its implement-stage log shows
+  file reads, code edits, build/test proof reruns, and promotion artifact
+  rewrites under the live worktree
+- because that fresh `play` run also showed `Implement` writing
+  `outputs/play/tui/promotion.md`, the implementation/fixup prompt contract in
+  Fabro was tightened so promotion artifacts stay owned by the Promote stage

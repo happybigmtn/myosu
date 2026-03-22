@@ -1,0 +1,46 @@
+version = 1
+graph = "../../workflows/service_bootstrap/raspberry-program-decomposition.fabro"
+goal = """
+Complete Raspberry Program Decomposition
+
+Bootstrap the first service slice and establish a deterministic health surface.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Harden dependency edges — explicit ordering of which program must complete before which
+- Verify `myosu.yaml` (parent portfolio) correctly dispatches all 6 child programs
+- Stress-test autodev loop with all 6 programs active
+
+Required durable artifacts:
+- `outputs/raspberry-program-decomposition/spec.md`
+- `outputs/raspberry-program-decomposition/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

@@ -1,0 +1,10 @@
+digraph FabroCleanupCompletionMarkBootstrapSatisfied {
+    graph [goal="Mark myosu-bootstrap.yaml milestone-satisfied in Raspberry\n\nChild work item of plan: Complete Fabro Control-Plane Bootstrap\n\nObjective:\nConfirm all bootstrap lanes report complete and downstream programs are unblocked\n\nOwned surfaces:\n- `fabro/programs/myosu-bootstrap.yaml`\n\nProof commands:\n- `raspberry status --manifest fabro/programs/myosu-bootstrap.yaml`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Orchestration", shape=parallelogram, script="printf 'repo-level orchestration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

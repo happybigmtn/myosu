@@ -1,0 +1,106 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Miner Binary Implementation"
+category: service
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [chain-restart, nlhe-game-engine]
+children:
+  - id: crate-scaffold
+    title: "Create crates/myosu-miner/ crate scaffold"
+    archetype: implement
+    lane_kind: service
+    review_profile: standard
+    proof_commands:
+      - "cargo build -p myosu-miner"
+      - "cargo run -p myosu-miner -- --help"
+    owned_surfaces:
+      - crates/myosu-miner/Cargo.toml
+      - crates/myosu-miner/src/main.rs
+      - crates/myosu-miner/src/cli.rs
+    where_surfaces: "New myosu-miner crate with CLI entry point accepting --subnet, --hotkey, --wallet"
+    how_description: "Scaffold binary crate with clap CLI that parses subnet, hotkey, wallet, register, solve, submit flags"
+    required_tests: "cargo build -p myosu-miner && cargo run -p myosu-miner -- --help"
+    verification_plan: "Binary compiles and --help shows all expected CLI options"
+    rollback_condition: "Binary fails to compile or CLI flags are missing"
+
+  - id: neuron-registration
+    title: "Implement neuron registration with chain"
+    archetype: implement
+    lane_kind: service
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-miner"
+      - "cargo run -p myosu-miner -- --subnet 1 --register --rpc ws://localhost:9944"
+    owned_surfaces:
+      - crates/myosu-miner/src/main.rs
+    where_surfaces: "Neuron registration logic connecting to subtensor RPC"
+    how_description: "Register the miner as a neuron on the target subnet via substrate RPC"
+    required_tests: "cargo build -p myosu-miner && cargo run -p myosu-miner -- --subnet 1 --register --rpc ws://localhost:9944"
+    verification_plan: "Registration succeeds and chain shows the new neuron registered"
+    rollback_condition: "Registration fails or chain does not reflect neuron"
+
+  - id: mccfr-solver
+    title: "Implement MCCFR game-solver using myosu-games"
+    archetype: implement
+    lane_kind: service
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-miner"
+      - "cargo run -p myosu-miner -- --subnet 1 --solve --iterations 10000"
+    owned_surfaces:
+      - crates/myosu-miner/src/main.rs
+    where_surfaces: "MCCFR solving loop producing strategy checkpoints"
+    how_description: "Run MCCFR solving for the configured game via myosu-games and produce strategy checkpoints"
+    required_tests: "cargo run -p myosu-miner -- --subnet 1 --solve --iterations 10000"
+    verification_plan: "Solver runs for configured iterations and produces a checkpoint file"
+    rollback_condition: "Solver crashes, hangs, or produces no checkpoint"
+
+  - id: weight-submission
+    title: "Implement weight submission to chain"
+    archetype: implement
+    lane_kind: service
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-miner"
+      - "cargo run -p myosu-miner -- --subnet 1 --submit --rpc ws://localhost:9944"
+    owned_surfaces:
+      - crates/myosu-miner/src/main.rs
+    where_surfaces: "Weight submission logic sending strategy weights to game-solver pallet"
+    how_description: "Submit solved strategy weights to the game-solver pallet via chain transaction"
+    required_tests: "cargo run -p myosu-miner -- --subnet 1 --solve --submit --rpc ws://localhost:9944"
+    verification_plan: "Weights submitted and chain shows weight submission event"
+    rollback_condition: "Submission fails or chain does not record weights"
+
+  - id: hotkey-management
+    title: "Implement hotkey management"
+    archetype: implement
+    lane_kind: service
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-miner"
+      - "cargo run -p myosu-miner -- --hotkey ./test-hotkey --help"
+    owned_surfaces:
+      - crates/myosu-miner/src/main.rs
+    where_surfaces: "Hotkey loading and signing logic for chain transactions"
+    how_description: "Load hotkey from file, use it to sign registration and weight submission transactions"
+    required_tests: "cargo build -p myosu-miner"
+    verification_plan: "Miner loads hotkey and signs transactions; invalid hotkey paths produce clear errors"
+    rollback_condition: "Hotkey loading fails silently or transactions are unsigned"
+
+  - id: e2e-workflow
+    title: "Test end-to-end: miner registers, solves, submits weights"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "cargo run -p myosu-miner -- --subnet 1 --register --rpc ws://localhost:9944"
+      - "cargo run -p myosu-miner -- --subnet 1 --solve --iterations 10000 --submit --rpc ws://localhost:9944"
+    owned_surfaces:
+      - crates/myosu-miner/src/main.rs
+    where_surfaces: "Full miner lifecycle: register, solve, submit, receive emission"
+    how_description: "Verify that a miner can register, solve for 10k iterations, submit weights, and receive positive emission within one epoch"
+    required_tests: "cargo run -p myosu-miner -- --subnet 1 --register --rpc ws://localhost:9944 && cargo run -p myosu-miner -- --subnet 1 --solve --iterations 10000 --submit --rpc ws://localhost:9944"
+    verification_plan: "Miner registers, solves, submits, and receives positive emission within one epoch on local devnet"
+    rollback_condition: "Any step in the register-solve-submit-emission pipeline fails"

@@ -1,0 +1,47 @@
+version = 1
+graph = "../../workflows/implementation/nlhe-game-engine-comprehensive-tests.fabro"
+goal = """
+Comprehensive test suite
+
+Child work item of plan: NLHE Game Engine Implementation
+
+Objective:
+Test suite reaches 50+ tests with 60%+ line coverage on nlhe.rs and kuhn.rs
+
+Owned surfaces:
+- `crates/myosu-games-poker/src/tests/kuhn_tests.rs`
+- `crates/myosu-games-poker/src/tests/nlhe_tests.rs`
+- `crates/myosu-games-poker/src/tests/roundtrip_tests.rs`
+- `crates/myosu-games-poker/src/encoding.rs`
+
+Proof commands:
+- `cargo test -p myosu-games-poker`
+- `cargo clippy -p myosu-games-poker -- -D warnings`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

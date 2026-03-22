@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/tui-full-implementation-implement-theme-system.fabro"
+goal = """
+Implement theme system with poker-specific colors
+
+Child work item of plan: TUI Full Implementation
+
+Objective:
+Poker-specific color theme applied to all panels and screens
+
+Owned surfaces:
+- `crates/myosu-tui/src/theme.rs`
+
+Proof commands:
+- `cargo build -p myosu-tui`
+- `cargo test -p myosu-tui -- theme`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

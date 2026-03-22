@@ -1,0 +1,38 @@
+version = 1
+graph = "../../workflows/recurring_report/raspberry-program-decomposition-dependency-map-diagram.fabro"
+goal = """
+Produce dependency map diagram
+
+Child work item of plan: Complete Raspberry Program Decomposition
+
+Objective:
+Create ASCII diagram of the 6-program dependency graph showing blocking relationships
+
+Owned surfaces:
+- `fabro/programs/README.md`
+
+Proof commands:
+- `test -f fabro/programs/README.md`
+- `rg -A 20 'Dependency Map' fabro/programs/README.md`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"

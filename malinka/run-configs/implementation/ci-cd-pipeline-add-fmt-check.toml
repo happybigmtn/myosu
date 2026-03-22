@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/ci-cd-pipeline-add-fmt-check.fabro"
+goal = """
+Add cargo fmt --check
+
+Child work item of plan: CI/CD Pipeline Setup
+
+Objective:
+Add CI step that fails if code is not formatted according to rustfmt.toml
+
+Owned surfaces:
+- `.github/workflows/ci.yml`
+
+Proof commands:
+- `cargo fmt --check`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

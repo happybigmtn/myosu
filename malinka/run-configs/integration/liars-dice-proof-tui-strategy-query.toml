@@ -1,0 +1,27 @@
+version = 1
+graph = "../../workflows/integration/liars-dice-proof-tui-strategy-query.fabro"
+goal = """
+Liar's Dice strategy query via TUI
+
+Child work item of plan: Liar's Dice Architecture Proof
+
+Objective:
+Enable playing a complete Liar's Dice hand against the best bot via the TUI
+
+Owned surfaces:
+- `crates/myosu-games-liars-dice/`
+
+Proof commands:
+- `cargo run -p myosu-play -- --game liars-dice`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

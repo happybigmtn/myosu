@@ -1,0 +1,104 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Validator Binary Implementation"
+category: service
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [chain-restart, nlhe-game-engine, miner-binary]
+children:
+  - id: crate-scaffold
+    title: "Create myosu-validator crate scaffold"
+    archetype: implement
+    lane_kind: service
+    review_profile: standard
+    proof_commands:
+      - "cargo build -p myosu-validator"
+      - "cargo run -p myosu-validator -- --help"
+    owned_surfaces:
+      - crates/myosu-validator/Cargo.toml
+      - crates/myosu-validator/src/main.rs
+    where_surfaces: "New validator binary crate under crates/myosu-validator/"
+    how_description: "Scaffold a CLI binary crate with --subnet, --hotkey, --register, --score, --submit flags"
+    required_tests: "cargo build -p myosu-validator && cargo run -p myosu-validator -- --help"
+    verification_plan: "Binary compiles and --help shows all CLI options"
+    rollback_condition: "cargo build -p myosu-validator fails"
+
+  - id: validator-registration
+    title: "Implement validator registration with chain"
+    archetype: implement
+    lane_kind: service
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-validator"
+      - "cargo run -p myosu-validator -- --subnet 1 --register"
+    owned_surfaces:
+      - crates/myosu-validator/src/registration.rs
+    where_surfaces: "Validator registration module in myosu-validator"
+    how_description: "Register the validator on a target subnet via subtensor RPC"
+    required_tests: "cargo test -p myosu-validator -- registration"
+    verification_plan: "Running --register succeeds and the chain shows the validator registered"
+    rollback_condition: "Registration fails or chain does not reflect validator"
+
+  - id: exploitability-scoring
+    title: "Implement exploitability scoring using myosu-games"
+    archetype: implement
+    lane_kind: service
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-validator"
+      - "cargo run -p myosu-validator -- --subnet 1 --score"
+    owned_surfaces:
+      - crates/myosu-validator/src/scoring.rs
+    where_surfaces: "Exploitability scoring module in myosu-validator"
+    how_description: "Compute exploitability for miner submissions via myosu-games::remote_poker_exploitability()"
+    required_tests: "cargo test -p myosu-validator -- scoring"
+    verification_plan: "Scoring a miner submission produces a numeric exploitability value; two validators agree within 1e-6 epsilon"
+    rollback_condition: "Scoring produces non-deterministic results or exceeds epsilon tolerance"
+
+  - id: weight-submission
+    title: "Implement weight verification and submission"
+    archetype: implement
+    lane_kind: service
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-validator"
+      - "cargo run -p myosu-validator -- --subnet 1 --submit-weights"
+    owned_surfaces:
+      - crates/myosu-validator/src/weights.rs
+    where_surfaces: "Weight verification and submission module in myosu-validator"
+    how_description: "Verify miner weights satisfy Yuma Consensus and submit validator weight set via game-solver pallet tx"
+    required_tests: "cargo test -p myosu-validator -- weights"
+    verification_plan: "After scoring, --submit-weights succeeds and weights are recorded on chain"
+    rollback_condition: "Weight submission fails or chain rejects the weight set"
+
+  - id: hotkey-management
+    title: "Implement hotkey management"
+    archetype: implement
+    lane_kind: service
+    review_profile: hardened
+    proof_commands:
+      - "cargo build -p myosu-validator"
+      - "cargo test -p myosu-validator -- hotkey"
+    owned_surfaces:
+      - crates/myosu-validator/src/hotkey.rs
+    where_surfaces: "Hotkey management module in myosu-validator"
+    how_description: "Load and manage validator hotkey for signing registration and weight submission transactions"
+    required_tests: "cargo test -p myosu-validator -- hotkey"
+    verification_plan: "Hotkey is loaded from keystore and used to sign chain transactions"
+    rollback_condition: "Hotkey loading or signing fails"
+
+  - id: end-to-end-workflow
+    title: "End-to-end validator workflow test"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "cargo test -p myosu-validator -- e2e"
+    owned_surfaces:
+      - crates/myosu-validator/tests/e2e.rs
+    where_surfaces: "End-to-end integration test for full validator lifecycle"
+    how_description: "Validator registers, receives miner weights, scores via exploitability, submits weights, receives positive emission within one epoch"
+    required_tests: "cargo test -p myosu-validator -- e2e"
+    verification_plan: "A validator that scores miners and submits weights receives a positive emission within one epoch"
+    rollback_condition: "Any step in the register → score → submit → emission pipeline fails"

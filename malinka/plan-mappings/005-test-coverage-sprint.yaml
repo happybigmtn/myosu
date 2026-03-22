@@ -1,0 +1,90 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Test Coverage Sprint"
+category: verification
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: []
+children:
+  - id: tui-screen-tests
+    title: "Add screen transition tests to myosu-tui"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo test -p myosu-tui -- screen"
+    owned_surfaces:
+      - crates/myosu-tui/src/tests/mod.rs
+      - crates/myosu-tui/src/tests/screen_tests.rs
+      - crates/myosu-tui/src/screens.rs
+    where_surfaces: "Screen transition integration tests for the five-panel shell in myosu-tui"
+    how_description: "Add tests verifying mode transitions (normal, pipe, command) in the screen manager"
+    required_tests: "cargo test -p myosu-tui -- screen"
+    verification_plan: "cargo test -p myosu-tui -- screen runs at least 5 tests and all pass"
+    rollback_condition: "Screen transition tests fail or coverage drops below 5 test cases"
+
+  - id: tui-shell-state-tests
+    title: "Add shell state tests to myosu-tui"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo test -p myosu-tui -- shell_state"
+    owned_surfaces:
+      - crates/myosu-tui/src/tests/shell_state_tests.rs
+      - crates/myosu-tui/src/shell.rs
+    where_surfaces: "Shell state mutation tests for header, transcript, declaration, and input panels"
+    how_description: "Add tests verifying that shell state updates correctly in response to events"
+    required_tests: "cargo test -p myosu-tui -- shell_state"
+    verification_plan: "cargo test -p myosu-tui -- shell_state runs at least 10 tests and all pass"
+    rollback_condition: "Shell state tests fail or coverage drops below 10 test cases"
+
+  - id: tui-event-loop-tests
+    title: "Add event loop tests to myosu-tui"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo test -p myosu-tui -- event_loop"
+    owned_surfaces:
+      - crates/myosu-tui/src/tests/event_tests.rs
+    where_surfaces: "Event loop integration tests for keyboard input, resize, and pipe mode handling"
+    how_description: "Add tests verifying event loop handles keyboard input, resize events, and pipe mode correctly"
+    required_tests: "cargo test -p myosu-tui -- event_loop"
+    verification_plan: "cargo test -p myosu-tui -- event_loop runs at least 5 tests and all pass"
+    rollback_condition: "Event loop tests fail or coverage drops below 5 test cases"
+
+  - id: games-roundtrip-tests
+    title: "Add property-based round-trip tests to myosu-games"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo test -p myosu-games -- serialization_roundtrip"
+    owned_surfaces:
+      - crates/myosu-games/Cargo.toml
+      - crates/myosu-games/src/tests/
+      - crates/myosu-games/src/traits.rs
+    where_surfaces: "Property-based serialization round-trip tests for GameType and GameConfig"
+    how_description: "Add proptest-based tests verifying GameType::from_bytes(g.to_bytes()) == g for random configurations"
+    required_tests: "cargo test -p myosu-games -- serialization_roundtrip"
+    verification_plan: "cargo test -p myosu-games -- serialization_roundtrip runs at least 100 property tests and all pass"
+    rollback_condition: "Property tests fail or a serialization round-trip bug is discovered and left unfixed"
+
+  - id: fabro-quality-gates
+    title: "Integrate test suites into Fabro quality gates"
+    archetype: orchestration
+    lane_kind: orchestration
+    review_profile: standard
+    proof_commands:
+      - "cargo test -p myosu-tui"
+      - "cargo test -p myosu-games"
+    owned_surfaces:
+      - fabro/checks/tui-shell.sh
+      - fabro/checks/games-traits.sh
+    where_surfaces: "Fabro proof commands and check scripts that run the new test suites"
+    how_description: "Update Fabro proof commands so that PRs touching myosu-tui or myosu-games automatically run the new tests"
+    required_tests: "cargo test -p myosu-tui && cargo test -p myosu-games"
+    verification_plan: "Fabro proof commands for tui and games lanes invoke the new test suites and gate on their results"
+    rollback_condition: "Fabro lanes stop running the test suites or proof commands are removed"

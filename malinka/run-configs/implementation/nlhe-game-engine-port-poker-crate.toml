@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/nlhe-game-engine-port-poker-crate.fabro"
+goal = """
+Port crates/myosu-games-poker/ to main workspace
+
+Child work item of plan: NLHE Game Engine Implementation
+
+Objective:
+myosu-games-poker compiles as a workspace member with zero warnings
+
+Owned surfaces:
+- `crates/myosu-games-poker/src/lib.rs`
+- `crates/myosu-games-poker/Cargo.toml`
+
+Proof commands:
+- `cargo check -p myosu-games-poker`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

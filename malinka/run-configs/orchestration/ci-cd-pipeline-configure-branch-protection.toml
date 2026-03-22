@@ -1,0 +1,24 @@
+version = 1
+graph = "../../workflows/orchestration/ci-cd-pipeline-configure-branch-protection.fabro"
+goal = """
+Configure branch protection on trunk
+
+Child work item of plan: CI/CD Pipeline Setup
+
+Objective:
+Require CI checks to pass before merging PRs to trunk
+
+Proof commands:
+- `gh api repos/{owner}/{repo}/branches/trunk/protection --jq '.required_status_checks.contexts[]'`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

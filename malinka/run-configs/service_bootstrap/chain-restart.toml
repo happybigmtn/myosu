@@ -1,0 +1,49 @@
+version = 1
+graph = "../../workflows/service_bootstrap/chain-restart.fabro"
+goal = """
+Chain Restart
+
+Bootstrap the first service slice and establish a deterministic health surface.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Re-enable `crates/myosu-chain` in workspace `Cargo.toml`
+- Create/verify `myosu-chain/Cargo.toml` with all pallet dependencies
+- Wire `game-solver` pallet into runtime `lib.rs`
+- Wire remaining pallets: `admin-utils`, `commitments`, `registry`, `swap`, `subtensor`
+- Get `cargo check -p myosu-chain` to pass
+- Get `cargo build -p myosu-chain` to produce a binary
+
+Required durable artifacts:
+- `outputs/chain-restart/spec.md`
+- `outputs/chain-restart/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

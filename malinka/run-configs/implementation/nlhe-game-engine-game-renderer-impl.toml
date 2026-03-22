@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/nlhe-game-engine-game-renderer-impl.fabro"
+goal = """
+Implement GameRenderer for poker state
+
+Child work item of plan: NLHE Game Engine Implementation
+
+Objective:
+GameRenderer impl renders hole cards, board cards, pot, and positions for TUI consumption
+
+Owned surfaces:
+- `crates/myosu-games-poker/src/renderer.rs`
+
+Proof commands:
+- `cargo check -p myosu-games-poker`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

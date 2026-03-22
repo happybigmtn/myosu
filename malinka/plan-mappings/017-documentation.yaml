@@ -1,0 +1,103 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Documentation Sprint"
+category: meta
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [nlhe-game-engine, game-engine-sdk, tui-full-implementation, e2e-demo]
+children:
+  - id: audit-readme
+    title: "Audit and update root README"
+    archetype: report
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "rg 'cargo run|cargo test' README.md"
+    owned_surfaces:
+      - README.md
+    where_surfaces: "Root README reflecting current working state of the project"
+    how_description: "Verify every claim in README matches reality; remove or update anything that does not build or run"
+    required_tests: "rg 'cargo run|cargo test' README.md | xargs -I{} sh -c 'echo {} && eval {}'"
+    verification_plan: "Every cargo command referenced in README.md executes without error"
+    rollback_condition: "A cargo command listed in README.md fails on a clean checkout"
+
+  - id: architecture-overview
+    title: "Write architecture overview with ASCII diagrams"
+    archetype: report
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f docs/architecture.md"
+    owned_surfaces:
+      - docs/architecture.md
+    where_surfaces: "Architecture overview document with ASCII diagram of the full stack"
+    how_description: "Create docs/architecture.md describing each layer of the Myosu stack with ASCII component diagrams"
+    required_tests: "test -f docs/architecture.md && grep -q '─\\|│\\|┌\\|└\\|├\\|┤' docs/architecture.md"
+    verification_plan: "docs/architecture.md exists and contains at least one ASCII diagram showing all major components"
+    rollback_condition: "docs/architecture.md is missing or contains no ASCII diagram"
+
+  - id: onboarding-guide
+    title: "Write developer onboarding guide"
+    archetype: report
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f docs/onboarding.md"
+    owned_surfaces:
+      - docs/onboarding.md
+    where_surfaces: "Step-by-step onboarding guide covering clone, build, test, run, contribute"
+    how_description: "Create docs/onboarding.md with a reproducible step-by-step path from git clone to running contribution"
+    required_tests: "test -f docs/onboarding.md"
+    verification_plan: "Following docs/onboarding.md on a clean checkout produces a working local environment"
+    rollback_condition: "Any step in the onboarding guide fails on a clean checkout"
+
+  - id: api-docs-games
+    title: "Write API docs for myosu-games"
+    archetype: implement
+    lane_kind: artifact
+    review_profile: foundation
+    proof_commands:
+      - "cargo doc -p myosu-games --no-deps"
+      - "test -f target/doc/myosu_games/index.html"
+    owned_surfaces:
+      - crates/myosu-games/src/lib.rs
+      - crates/myosu-games/src/traits.rs
+    where_surfaces: "Rustdoc comments on all public items in myosu-games crate"
+    how_description: "Add doc comments to all public types, traits, and functions in myosu-games so cargo doc produces complete API documentation"
+    required_tests: "cargo doc -p myosu-games --no-deps && test -f target/doc/myosu_games/index.html"
+    verification_plan: "cargo doc -p myosu-games --no-deps produces no warnings and target/doc/myosu_games/index.html exists"
+    rollback_condition: "cargo doc -p myosu-games --no-deps produces warnings or index.html is missing"
+
+  - id: sdk-developer-guide
+    title: "Write developer guide for SDK (30-Minute Game)"
+    archetype: report
+    lane_kind: artifact
+    review_profile: ux
+    proof_commands:
+      - "test -f docs/developer-guide.md"
+    owned_surfaces:
+      - docs/developer-guide.md
+    where_surfaces: "SDK developer guide walking through implementing a game in 30 minutes"
+    how_description: "Create docs/developer-guide.md with a tutorial showing how to implement a new game using myosu-sdk traits"
+    required_tests: "test -f docs/developer-guide.md"
+    verification_plan: "docs/developer-guide.md exists and references the CfrGame and Encoder traits from myosu-games"
+    rollback_condition: "docs/developer-guide.md is missing or references non-existent APIs"
+
+  - id: cargo-doc-clean
+    title: "Verify cargo doc passes with no warnings"
+    archetype: implement
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "cargo doc --all-features --no-deps"
+      - "cargo doc -p myosu-games --no-deps"
+      - "cargo doc -p myosu-tui --no-deps"
+    owned_surfaces:
+      - crates/myosu-games/src/
+      - crates/myosu-tui/src/
+    where_surfaces: "Doc comments across all public items in all crates"
+    how_description: "Add missing doc comments to all public items so cargo doc produces no warnings across the workspace"
+    required_tests: "cargo doc --all-features --no-deps 2>&1 | grep -c warning | xargs test 0 -eq"
+    verification_plan: "cargo doc --all-features --no-deps and per-crate doc builds produce zero warnings"
+    rollback_condition: "cargo doc produces any missing-docs warning on public items"

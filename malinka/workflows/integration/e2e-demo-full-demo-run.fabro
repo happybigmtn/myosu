@@ -1,0 +1,10 @@
+digraph E2eDemoFullDemoRun {
+    graph [goal="Run the full demo end-to-end\n\nChild work item of plan: End-to-End Demo\n\nObjective:\nExecute the demo script end-to-end with no manual interventions or panics\n\nOwned surfaces:\n- `demo/README.md`\n\nProof commands:\n- `./target/debug/myosu-chain --dev --rpc-port 9933 --ws-port 9944`\n- `cargo run -p myosu-miner -- --subnet 1 --solve --iterations 10000 --submit --rpc ws://localhost:9944`\n- `cargo run -p myosu-validator -- --subnet 1 --score --submit --rpc ws://localhost:9944`\n- `cargo run -p myosu-play -- train --sync-chain`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

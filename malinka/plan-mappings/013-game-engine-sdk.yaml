@@ -1,0 +1,105 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Game Engine SDK Development"
+category: foundation
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [chain-restart, nlhe-game-engine]
+children:
+  - id: sdk-crate-scaffold
+    title: "Create crates/myosu-sdk/ with scaffold tool"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo build -p myosu-sdk"
+      - "cargo install --path crates/myosu-sdk"
+    owned_surfaces:
+      - crates/myosu-sdk/
+      - crates/myosu-sdk/Cargo.toml
+      - crates/myosu-sdk/src/
+    where_surfaces: "New SDK crate providing the myosu-sdk binary and scaffold infrastructure"
+    how_description: "Create the myosu-sdk crate with CLI entry point and scaffold module"
+    required_tests: "cargo build -p myosu-sdk"
+    verification_plan: "cargo build -p myosu-sdk exits 0; binary is installable"
+    rollback_condition: "crate deleted or cargo build fails"
+
+  - id: scaffold-command
+    title: "Implement cargo myosu-sdk scaffold command"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo build -p myosu-sdk"
+      - "myosu-sdk scaffold --game liars-dice --output /tmp/new-game"
+      - "cargo check --manifest-path /tmp/new-game/Cargo.toml"
+    owned_surfaces:
+      - crates/myosu-sdk/src/scaffold.rs
+    where_surfaces: "Scaffold subcommand that generates a new game crate with CfrGame + Encoder trait impls"
+    how_description: "Generate a valid Rust crate with trait stub implementations from a game name"
+    required_tests: "myosu-sdk scaffold --game liars-dice --output /tmp/new-game && cargo check --manifest-path /tmp/new-game/Cargo.toml"
+    verification_plan: "scaffold produces a crate that passes cargo check; generated lib.rs contains CfrGame and Encoder impl stubs"
+    rollback_condition: "scaffold output fails cargo check or is missing trait impls"
+
+  - id: trait-compliance-harness
+    title: "Implement trait compliance test harness"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo build -p myosu-sdk"
+      - "myosu-sdk test --crate /tmp/new-game"
+    owned_surfaces:
+      - crates/myosu-sdk/src/harness.rs
+    where_surfaces: "Test harness that verifies CfrGame and Encoder trait compliance without the full chain"
+    how_description: "Run trait compliance checks (info_set_count, serialize, deserialize) and report pass/fail per AC"
+    required_tests: "myosu-sdk test --crate /tmp/new-game"
+    verification_plan: "harness runs against scaffolded crate; reports per-AC pass/fail for CfrGame and Encoder requirements"
+    rollback_condition: "harness crashes or produces no output on a valid game crate"
+
+  - id: registration-flow
+    title: "Implement game registration flow"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo build -p myosu-sdk"
+      - "myosu-sdk register --game liars-dice --crate /tmp/new-game --rpc ws://localhost:9944"
+    owned_surfaces:
+      - crates/myosu-sdk/src/register.rs
+    where_surfaces: "Registration subcommand that submits a game registration tx to the chain"
+    how_description: "Submit a permissioned game registration extrinsic to the Myosu chain via RPC"
+    required_tests: "myosu-sdk register --game liars-dice --crate /tmp/new-game --rpc ws://localhost:9944"
+    verification_plan: "register command submits tx and receives confirmation from a running devnet"
+    rollback_condition: "register command fails to construct or submit the extrinsic"
+
+  - id: developer-guide
+    title: "Write developer guide: 30-Minute Game"
+    archetype: report
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f crates/myosu-sdk/docs/30-minute-game.md"
+    owned_surfaces:
+      - crates/myosu-sdk/docs/30-minute-game.md
+    where_surfaces: "Developer guide walking through Kuhn Poker implementation using the SDK"
+    how_description: "Produce a step-by-step guide for implementing Kuhn Poker from scaffold to trait compliance pass"
+    required_tests: "test -f crates/myosu-sdk/docs/30-minute-game.md"
+    verification_plan: "Guide exists with checkable steps; following all steps produces a crate that passes myosu-sdk test"
+    rollback_condition: "Guide deleted or steps no longer produce a passing crate"
+
+  - id: kuhn-poker-verification
+    title: "Verify 30-Minute Game is achievable"
+    archetype: integration
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "myosu-sdk test --crate kuhn-poker"
+    owned_surfaces:
+      - crates/myosu-sdk/docs/30-minute-game.md
+    where_surfaces: "End-to-end verification that the guide produces a passing Kuhn Poker implementation"
+    how_description: "Execute the guide steps and confirm myosu-sdk test reports all tests passing"
+    required_tests: "myosu-sdk test --crate kuhn-poker"
+    verification_plan: "An engineer follows the guide, implements Kuhn Poker, and myosu-sdk test --crate kuhn-poker reports all tests passing"
+    rollback_condition: "Guide steps produce a crate that fails trait compliance"

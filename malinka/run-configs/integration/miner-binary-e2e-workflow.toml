@@ -1,0 +1,28 @@
+version = 1
+graph = "../../workflows/integration/miner-binary-e2e-workflow.fabro"
+goal = """
+Test end-to-end: miner registers, solves, submits weights
+
+Child work item of plan: Miner Binary Implementation
+
+Objective:
+Verify that a miner can register, solve for 10k iterations, submit weights, and receive positive emission within one epoch
+
+Owned surfaces:
+- `crates/myosu-miner/src/main.rs`
+
+Proof commands:
+- `cargo run -p myosu-miner -- --subnet 1 --register --rpc ws://localhost:9944`
+- `cargo run -p myosu-miner -- --subnet 1 --solve --iterations 10000 --submit --rpc ws://localhost:9944`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

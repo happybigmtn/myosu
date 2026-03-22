@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/game-engine-sdk-registration-flow.fabro"
+goal = """
+Implement game registration flow
+
+Child work item of plan: Game Engine SDK Development
+
+Objective:
+Submit a permissioned game registration extrinsic to the Myosu chain via RPC
+
+Owned surfaces:
+- `crates/myosu-sdk/src/register.rs`
+
+Proof commands:
+- `cargo build -p myosu-sdk`
+- `myosu-sdk register --game liars-dice --crate /tmp/new-game --rpc ws://localhost:9944`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

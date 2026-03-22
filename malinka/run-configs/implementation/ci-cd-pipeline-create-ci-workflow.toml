@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/ci-cd-pipeline-create-ci-workflow.fabro"
+goal = """
+Create .github/workflows/ci.yml
+
+Child work item of plan: CI/CD Pipeline Setup
+
+Objective:
+Create a GitHub Actions workflow that triggers on PRs to trunk and main
+
+Owned surfaces:
+- `.github/workflows/ci.yml`
+
+Proof commands:
+- `test -f .github/workflows/ci.yml`
+- `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

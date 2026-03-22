@@ -1,0 +1,10 @@
+digraph CiCdPipelineConfigureBranchProtection {
+    graph [goal="Configure branch protection on trunk\n\nChild work item of plan: CI/CD Pipeline Setup\n\nObjective:\nRequire CI checks to pass before merging PRs to trunk\n\nProof commands:\n- `gh api repos/{owner}/{repo}/branches/trunk/protection --jq '.required_status_checks.contexts[]'`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Orchestration", shape=parallelogram, script="printf 'repo-level orchestration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

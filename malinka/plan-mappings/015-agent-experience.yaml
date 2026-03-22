@@ -1,0 +1,111 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Agent Experience Implementation"
+category: interface
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [tui-full-implementation, nlhe-game-engine]
+children:
+  - id: agent-memory
+    title: "Implement agent memory system"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo test -p myosu-tui agent_context::tests::load_and_save_roundtrip"
+      - "cargo test -p myosu-tui agent_context::tests::journal_appends_not_overwrites"
+      - "cargo test -p myosu-tui agent_context::tests::missing_context_creates_new"
+    owned_surfaces:
+      - crates/myosu-tui/src/agent_context.rs
+    where_surfaces: "Per-agent persistent memory in ~/.myosu/agents/{agent_id}/memory/"
+    how_description: "Add agent context file that loads on startup and saves on shutdown, accumulating memory across sessions"
+    required_tests: "cargo test -p myosu-tui agent_context::tests"
+    verification_plan: "Agent plays 10 hands, shuts down, restarts — memory preserved; context roundtrips without loss"
+    rollback_condition: "Context file fails to persist across restarts or truncates existing data"
+
+  - id: reflection-prompt
+    title: "Implement reflection prompt"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo test -p myosu-tui pipe::tests::reflection_prompt_after_hand"
+      - "cargo test -p myosu-tui pipe::tests::empty_reflection_skips"
+      - "cargo test -p myosu-tui pipe::tests::reflection_saved_to_journal"
+    owned_surfaces:
+      - crates/myosu-tui/src/pipe.rs
+    where_surfaces: "Reflection channel in pipe mode after each hand completion"
+    how_description: "Add optional reflect> prompt after each hand in pipe mode; empty line skips, non-empty appends to journal"
+    required_tests: "cargo test -p myosu-tui pipe::tests::reflection_prompt_after_hand && cargo test -p myosu-tui pipe::tests::empty_reflection_skips && cargo test -p myosu-tui pipe::tests::reflection_saved_to_journal"
+    verification_plan: "Agent writes reflection after hand — appears in journal; empty line skips without entry"
+    rollback_condition: "reflect> prompt missing after hand completion or reflection not appended to journal"
+
+  - id: agent-journal
+    title: "Implement journal"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo test -p myosu-tui journal::tests::append_hand_entry"
+      - "cargo test -p myosu-tui journal::tests::append_session_summary"
+      - "cargo test -p myosu-tui journal::tests::never_truncates"
+    owned_surfaces:
+      - crates/myosu-tui/src/journal.rs
+    where_surfaces: "Append-only markdown autobiography at ~/.myosu/agents/{agent_id}/journal.md"
+    how_description: "Add append-only journal that records hand entries and session summaries as markdown prose"
+    required_tests: "cargo test -p myosu-tui journal::tests"
+    verification_plan: "Journal grows across 3 sessions without truncation; entries include board, held cards, result, and optional reflection"
+    rollback_condition: "Journal truncated or overwritten between sessions, or entries missing required fields"
+
+  - id: identity-persistence
+    title: "Implement identity persistence"
+    archetype: implement
+    lane_kind: platform
+    review_profile: standard
+    proof_commands:
+      - "cargo test -p myosu-tui agent_context::tests::load_and_save_roundtrip"
+      - "cargo test -p myosu-tui pipe::tests::lobby_presented_without_subnet_flag"
+      - "cargo test -p myosu-tui pipe::tests::selection_starts_game"
+    owned_surfaces:
+      - crates/myosu-tui/src/agent_context.rs
+      - crates/myosu-tui/src/pipe.rs
+    where_surfaces: "Agent identity (name, preferences, game selection) persisted in context file"
+    how_description: "Persist agent identity fields and preferred_game across sessions; enable lobby-based game selection in pipe mode"
+    required_tests: "cargo test -p myosu-tui agent_context::tests::load_and_save_roundtrip && cargo test -p myosu-tui pipe::tests::lobby_presented_without_subnet_flag && cargo test -p myosu-tui pipe::tests::info_command_in_lobby && cargo test -p myosu-tui pipe::tests::selection_starts_game"
+    verification_plan: "Agent identity survives restart; pipe mode without --subnet presents lobby; agent selects game and preferred_game updates in context"
+    rollback_condition: "Identity fields lost on restart or lobby not presented when --subnet omitted"
+
+  - id: narration-mode
+    title: "Implement rich narration mode"
+    archetype: implement
+    lane_kind: interface
+    review_profile: ux
+    proof_commands:
+      - "cargo test -p myosu-tui narration::tests::narrate_includes_board_texture"
+      - "cargo test -p myosu-tui narration::tests::narrate_includes_session_context"
+      - "cargo test -p myosu-tui narration::tests::terse_and_narrate_same_game_state"
+    owned_surfaces:
+      - crates/myosu-tui/src/narration.rs
+      - crates/myosu-tui/src/pipe.rs
+    where_surfaces: "Rich prose narration engine activated by --narrate flag in pipe mode"
+    how_description: "Add --narrate flag that renders game state as prose with board texture, session arc, and strategic context"
+    required_tests: "cargo test -p myosu-tui narration::tests"
+    verification_plan: "--narrate produces prose with board texture and session arc; underlying game state identical in both modes; LLM can extract valid action from narrated output"
+    rollback_condition: "--narrate flag missing, narration omits board texture or session context, or game state diverges between modes"
+
+  - id: cross-run-verify
+    title: "Verify agent experience across multiple runs"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "cargo test -p myosu-tui -- --ignored agent_experience_integration"
+      - "ls ~/.myosu/agents/"
+    owned_surfaces:
+      - crates/myosu-tui/tests/
+    where_surfaces: "Integration tests verifying accumulated agent experience across multiple lane runs"
+    how_description: "Run same agent on three different lanes and verify memory accumulates correctly with truthful chronological journal"
+    required_tests: "cargo test -p myosu-tui -- --ignored agent_experience_integration"
+    verification_plan: "After 3 lane runs, agent memory reflects all 3 runs; journal contains 3 entries in chronological order; agent with memory outperforms agent without on multi-step task"
+    rollback_condition: "Memory does not accumulate across runs or journal entries out of order or missing"

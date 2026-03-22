@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/test-coverage-sprint-tui-shell-state-tests.fabro"
+goal = """
+Add shell state tests to myosu-tui
+
+Child work item of plan: Test Coverage Sprint
+
+Objective:
+Add tests verifying that shell state updates correctly in response to events
+
+Owned surfaces:
+- `crates/myosu-tui/src/tests/shell_state_tests.rs`
+- `crates/myosu-tui/src/shell.rs`
+
+Proof commands:
+- `cargo test -p myosu-tui -- shell_state`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

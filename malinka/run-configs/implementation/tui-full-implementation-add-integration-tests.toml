@@ -1,0 +1,45 @@
+version = 1
+graph = "../../workflows/implementation/tui-full-implementation-add-integration-tests.fabro"
+goal = """
+Add comprehensive integration tests
+
+Child work item of plan: TUI Full Implementation
+
+Objective:
+At least 20 TUI integration tests and 50 poker tests pass in CI
+
+Owned surfaces:
+- `crates/myosu-tui/`
+- `crates/myosu-games-poker/`
+
+Proof commands:
+- `cargo test -p myosu-tui`
+- `cargo test -p myosu-games-poker`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

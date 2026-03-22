@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/nlhe-game-engine-nlhe-cfrgame-impl.fabro"
+goal = """
+Implement CfrGame for NLHE (heads-up)
+
+Child work item of plan: NLHE Game Engine Implementation
+
+Objective:
+CfrGame impl for heads-up NLHE returns a recommended action for a known flop situation
+
+Owned surfaces:
+- `crates/myosu-games-poker/src/nlhe.rs`
+- `crates/myosu-games-poker/src/robopoker_bridge.rs`
+
+Proof commands:
+- `cargo test -p myosu-games-poker -- nlhe`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

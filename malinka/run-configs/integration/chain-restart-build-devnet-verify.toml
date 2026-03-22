@@ -1,0 +1,30 @@
+version = 1
+graph = "../../workflows/integration/chain-restart-build-devnet-verify.fabro"
+goal = """
+Build binary and start devnet
+
+Child work item of plan: Chain Restart
+
+Objective:
+Build the chain binary and verify it starts a local devnet that produces blocks
+
+Owned surfaces:
+- `crates/myosu-chain/node/src/main.rs`
+- `crates/myosu-chain/node/src/service.rs`
+- `crates/myosu-chain/runtime/src/lib.rs`
+
+Proof commands:
+- `cargo build -p myosu-chain`
+- `curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"chain_getBlock","id":1}' http://localhost:9933 | jq -e '.result.block'`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

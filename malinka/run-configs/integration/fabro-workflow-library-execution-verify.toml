@@ -1,0 +1,30 @@
+version = 1
+graph = "../../workflows/integration/fabro-workflow-library-execution-verify.fabro"
+goal = """
+Verify each family has a successful execution
+
+Child work item of plan: Complete Fabro Workflow Library
+
+Objective:
+Execute each workflow family at least once and confirm reviewed artifacts exist
+
+Owned surfaces:
+- `outputs/`
+
+Proof commands:
+- `find outputs -path '*/bootstrap/*' -name 'review.md' | head -1`
+- `find outputs -path '*/implement/*' -name 'review.md' | head -1`
+- `find outputs -path '*/services/*' -name 'review.md' | head -1`
+- `find outputs -path '*/maintenance/*' -name 'review.md' | head -1`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

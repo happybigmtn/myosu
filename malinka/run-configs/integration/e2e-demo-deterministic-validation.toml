@@ -1,0 +1,27 @@
+version = 1
+graph = "../../workflows/integration/e2e-demo-deterministic-validation.fabro"
+goal = """
+Verify INV-003 deterministic validation
+
+Child work item of plan: End-to-End Demo
+
+Objective:
+Two validators scoring the same miner submission produce scores within 1e-6 of each other
+
+Owned surfaces:
+- `crates/myosu-validator/src/tests/deterministic.rs`
+
+Proof commands:
+- `cargo test -p myosu-validator -- deterministic`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

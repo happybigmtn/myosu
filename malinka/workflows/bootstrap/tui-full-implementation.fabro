@@ -1,0 +1,21 @@
+digraph TuiFullImplementation {
+    graph [
+        goal="TUI Full Implementation\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Fix `myosu-play` binary so it actually enters the terminal loop (not compile-only)\n- Wire poker renderer into TUI shell\n- Implement all poker screens: title, new game, play, hand history, settings\n- Implement pipe mode end-to-end for agent protocol\n- Implement theme system with poker-specific colors\n- Add comprehensive integration tests\n\nRequired durable artifacts:\n- `outputs/tui-full-implementation/spec.md`\n- `outputs/tui-full-implementation/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/bootstrap/tui-full-implementation/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/bootstrap/tui-full-implementation/review.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/bootstrap/tui-full-implementation/polish.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f ./outputs/tui-full-implementation/spec.md && test -f ./outputs/tui-full-implementation/review.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

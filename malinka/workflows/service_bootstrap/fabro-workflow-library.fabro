@@ -1,0 +1,21 @@
+digraph FabroWorkflowLibrary {
+    graph [
+        goal="Complete Fabro Workflow Library\n\nBootstrap the first service slice and establish a deterministic health surface.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Complete `implement/` family — real implementation workflows beyond bootstrap\n- Complete `bootstrap/` family — real bootstrap workflows beyond the initial 4\n- Document all workflow families with usage guide\n- Verify each family has at least one successful execution\n\nRequired durable artifacts:\n- `outputs/fabro-workflow-library/spec.md`\n- `outputs/fabro-workflow-library/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    inventory [label="Inventory", prompt="@../../prompts/service_bootstrap/fabro-workflow-library/plan.md", reasoning_effort="high"]
+    review    [label="Review", prompt="@../../prompts/service_bootstrap/fabro-workflow-library/review.md", reasoning_effort="high"]
+    polish    [label="Polish", prompt="@../../prompts/service_bootstrap/fabro-workflow-library/polish.md", reasoning_effort="medium"]
+    verify_outputs [label="Verify Outputs", shape=parallelogram, script="test -f ./outputs/fabro-workflow-library/spec.md && test -f ./outputs/fabro-workflow-library/review.md", goal_gate=true, max_retries=0]
+
+    start -> inventory -> review -> polish -> verify_outputs -> exit
+}

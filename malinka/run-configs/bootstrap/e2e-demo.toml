@@ -1,0 +1,49 @@
+version = 1
+graph = "../../workflows/bootstrap/e2e-demo.fabro"
+goal = """
+End-to-End Demo
+
+Bootstrap the first honest reviewed slice for this frontier.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Wire miner → chain submission
+- Wire chain → validator scoring
+- Wire validator → chain weights
+- Wire chain state → TUI display
+- Write the demo script (step-by-step narrative)
+- Run the full demo end-to-end
+
+Required durable artifacts:
+- `outputs/e2e-demo/spec.md`
+- `outputs/e2e-demo/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

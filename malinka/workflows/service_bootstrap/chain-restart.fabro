@@ -1,0 +1,21 @@
+digraph ChainRestart {
+    graph [
+        goal="Chain Restart\n\nBootstrap the first service slice and establish a deterministic health surface.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Re-enable `crates/myosu-chain` in workspace `Cargo.toml`\n- Create/verify `myosu-chain/Cargo.toml` with all pallet dependencies\n- Wire `game-solver` pallet into runtime `lib.rs`\n- Wire remaining pallets: `admin-utils`, `commitments`, `registry`, `swap`, `subtensor`\n- Get `cargo check -p myosu-chain` to pass\n- Get `cargo build -p myosu-chain` to produce a binary\n\nRequired durable artifacts:\n- `outputs/chain-restart/spec.md`\n- `outputs/chain-restart/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    inventory [label="Inventory", prompt="@../../prompts/service_bootstrap/chain-restart/plan.md", reasoning_effort="high"]
+    review    [label="Review", prompt="@../../prompts/service_bootstrap/chain-restart/review.md", reasoning_effort="high"]
+    polish    [label="Polish", prompt="@../../prompts/service_bootstrap/chain-restart/polish.md", reasoning_effort="medium"]
+    verify_outputs [label="Verify Outputs", shape=parallelogram, script="test -f ./outputs/chain-restart/spec.md && test -f ./outputs/chain-restart/review.md", goal_gate=true, max_retries=0]
+
+    start -> inventory -> review -> polish -> verify_outputs -> exit
+}

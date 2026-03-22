@@ -1,0 +1,104 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "NLHE Game Engine Implementation"
+category: game
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [chain-restart, game-engine-sdk]
+children:
+  - id: port-poker-crate
+    title: "Port crates/myosu-games-poker/ to main workspace"
+    archetype: implement
+    lane_kind: platform
+    review_profile: standard
+    proof_commands:
+      - "cargo check -p myosu-games-poker"
+    owned_surfaces:
+      - crates/myosu-games-poker/src/lib.rs
+      - crates/myosu-games-poker/Cargo.toml
+    where_surfaces: "Copy poker crate from worktree into main workspace and add to Cargo.toml"
+    how_description: "myosu-games-poker compiles as a workspace member with zero warnings"
+    required_tests: "cargo check -p myosu-games-poker 2>&1 | grep -qv error"
+    verification_plan: "cargo check -p myosu-games-poker exits 0 with no warnings"
+    rollback_condition: "Crate removed from workspace or fails cargo check"
+
+  - id: kuhn-cfrgame-impl
+    title: "Implement CfrGame for Kuhn Poker"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo test -p myosu-games-poker -- kuhn"
+    owned_surfaces:
+      - crates/myosu-games-poker/src/kuhn.rs
+    where_surfaces: "Kuhn Poker CfrGame trait implementation with Nash equilibrium validation"
+    how_description: "CfrGame impl for 3-card Kuhn Poker passes exploitability test within 1e-6 of 1/72"
+    required_tests: "cargo test -p myosu-games-poker -- kuhn"
+    verification_plan: "Kuhn equilibrium exploitability result is within 1e-6 of 1/72 (0.013888...)"
+    rollback_condition: "Exploitability test fails or CfrGame trait changes upstream"
+
+  - id: nlhe-cfrgame-impl
+    title: "Implement CfrGame for NLHE (heads-up)"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "cargo test -p myosu-games-poker -- nlhe"
+    owned_surfaces:
+      - crates/myosu-games-poker/src/nlhe.rs
+      - crates/myosu-games-poker/src/robopoker_bridge.rs
+    where_surfaces: "NLHE CfrGame trait implementation via robopoker RemoteProfile thin-wrap"
+    how_description: "CfrGame impl for heads-up NLHE returns a recommended action for a known flop situation"
+    required_tests: "cargo test -p myosu-games-poker -- nlhe"
+    verification_plan: "Strategy query test returns a valid poker action (fold/call/raise) for known test case"
+    rollback_condition: "Robopoker RemoteProfile API changes or strategy query returns invalid action"
+
+  - id: game-renderer-impl
+    title: "Implement GameRenderer for poker state"
+    archetype: implement
+    lane_kind: platform
+    review_profile: ux
+    proof_commands:
+      - "cargo check -p myosu-games-poker"
+    owned_surfaces:
+      - crates/myosu-games-poker/src/renderer.rs
+    where_surfaces: "GameRenderer trait implementation for poker state TUI rendering"
+    how_description: "GameRenderer impl renders hole cards, board cards, pot, and positions for TUI consumption"
+    required_tests: "cargo check -p myosu-games-poker && test -f crates/myosu-games-poker/src/renderer.rs"
+    verification_plan: "GameRenderer impl exists with no missing trait implementations; cargo check passes"
+    rollback_condition: "TUI Renderable trait contract changes or GameRenderer impl becomes incomplete"
+
+  - id: wire-game-registry
+    title: "Wire into game registry and verify strategy query"
+    archetype: integration
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "cargo test -p myosu-games-poker -- strategy_query"
+    owned_surfaces:
+      - crates/myosu-games-poker/src/lib.rs
+    where_surfaces: "Register NLHE in myosu-games game registry for end-to-end strategy queries"
+    how_description: "NLHE registered in game registry; game state to strategy query to recommended action works end-to-end"
+    required_tests: "cargo test -p myosu-games-poker -- strategy_query"
+    verification_plan: "Strategy query returns a valid poker action (fold/call/raise) for a known test case end-to-end"
+    rollback_condition: "Game registry API changes or strategy query pipeline breaks"
+
+  - id: comprehensive-tests
+    title: "Comprehensive test suite"
+    archetype: implement
+    lane_kind: platform
+    review_profile: standard
+    proof_commands:
+      - "cargo test -p myosu-games-poker"
+      - "cargo clippy -p myosu-games-poker -- -D warnings"
+    owned_surfaces:
+      - crates/myosu-games-poker/src/tests/kuhn_tests.rs
+      - crates/myosu-games-poker/src/tests/nlhe_tests.rs
+      - crates/myosu-games-poker/src/tests/roundtrip_tests.rs
+      - crates/myosu-games-poker/src/encoding.rs
+    where_surfaces: "Unit, integration, property tests and bincode Encoder impl for myosu-games-poker"
+    how_description: "Test suite reaches 50+ tests with 60%+ line coverage on nlhe.rs and kuhn.rs"
+    required_tests: "cargo test -p myosu-games-poker 2>&1 | grep -E 'test result'"
+    verification_plan: "cargo test shows >= 50 passing tests; clippy passes with -D warnings; coverage >= 60% on nlhe.rs and kuhn.rs"
+    rollback_condition: "Test count drops below 50 or coverage drops below 60%"

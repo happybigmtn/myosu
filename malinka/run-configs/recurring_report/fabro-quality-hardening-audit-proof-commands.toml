@@ -1,0 +1,38 @@
+version = 1
+graph = "../../workflows/recurring_report/fabro-quality-hardening-audit-proof-commands.fabro"
+goal = """
+Audit all Fabro proof commands for false-green patterns
+
+Child work item of plan: Fabro Quality Hardening
+
+Objective:
+Classify every proof command as honest (tests real behavior) or false-green (tests only compilation)
+
+Owned surfaces:
+- `fabro/run-configs/`
+- `fabro/checks/`
+
+Proof commands:
+- `rg -l 'cargo (build|check)' fabro/run-configs/ fabro/checks/`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"

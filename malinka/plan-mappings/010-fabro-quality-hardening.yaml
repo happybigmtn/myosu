@@ -1,0 +1,95 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Fabro Quality Hardening"
+category: verification
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [test-coverage-sprint]
+children:
+  - id: audit-proof-commands
+    title: "Audit all Fabro proof commands for false-green patterns"
+    archetype: report
+    lane_kind: artifact
+    review_profile: hardened
+    proof_commands:
+      - "rg -l 'cargo (build|check)' fabro/run-configs/ fabro/checks/"
+    owned_surfaces:
+      - fabro/run-configs/
+      - fabro/checks/
+    where_surfaces: "All Fabro run-config TOML files and check scripts that contain proof commands"
+    how_description: "Classify every proof command as honest (tests real behavior) or false-green (tests only compilation)"
+    required_tests: "rg -c 'cargo (build|check)' fabro/run-configs/ fabro/checks/"
+    verification_plan: "Every proof command in run-configs and checks is annotated as honest or false-green; no unclassified commands remain"
+    rollback_condition: "New run-configs or checks are added with unclassified proof commands"
+
+  - id: explicit-test-names
+    title: "Replace cargo test -p myosu-games with explicit test names"
+    archetype: implement
+    lane_kind: platform
+    review_profile: hardened
+    proof_commands:
+      - "cargo test -p myosu-games -- serialization_roundtrip 2>&1 | rg 'test result'"
+    owned_surfaces:
+      - fabro/run-configs/implement/game-traits.toml
+      - fabro/run-configs/bootstrap/game-traits.toml
+      - fabro/run-configs/platform/poker-engine.toml
+      - fabro/run-configs/platform/multi-game.toml
+    where_surfaces: "Fabro run-configs that reference cargo test -p myosu-games without explicit test names"
+    how_description: "Replace blanket cargo test -p myosu-games with cargo test -p myosu-games -- serialization_roundtrip to run 100+ property tests"
+    required_tests: "cargo test -p myosu-games -- serialization_roundtrip 2>&1 | rg 'test result'"
+    verification_plan: "cargo test -p myosu-games -- serialization_roundtrip reports >= 100 tests passing"
+    rollback_condition: "Test count drops below 100 or proof commands revert to blanket cargo test"
+
+  - id: quality-gate-programs
+    title: "Add quality gate to all implementation-family programs"
+    archetype: implement
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "rg -l 'cargo (build|check)' fabro/run-configs/ | wc -l"
+      - "rg 'cargo test' fabro/run-configs/ | rg -v '#'"
+    owned_surfaces:
+      - fabro/run-configs/bootstrap/
+      - fabro/run-configs/implement/
+      - fabro/run-configs/platform/
+      - fabro/run-configs/services/
+    where_surfaces: "All implementation-family Fabro run-configs across bootstrap, implement, platform, and services"
+    how_description: "Ensure every implementation-family program reaches at least Level 3 (cargo test with explicit test names) in its proof commands"
+    required_tests: "for f in fabro/run-configs/**/*.toml; do rg 'cargo test' \"$f\" || echo \"FAIL: $f missing cargo test\"; done"
+    verification_plan: "Every run-config TOML in implementation-family programs contains a cargo test command with explicit test names, not just cargo build or cargo check"
+    rollback_condition: "Any implementation-family run-config reverts to Level 1 or Level 2 proof commands"
+
+  - id: smoke-test-binaries
+    title: "Add smoke test to all generated implementation programs"
+    archetype: implement
+    lane_kind: platform
+    review_profile: hardened
+    proof_commands:
+      - "cargo run -p myosu-play -- --smoke-test"
+    owned_surfaces:
+      - fabro/run-configs/product/play-tui.toml
+      - fabro/run-configs/platform/poker-engine.toml
+      - fabro/run-configs/platform/multi-game.toml
+      - fabro/run-configs/platform/sdk-core.toml
+    where_surfaces: "Run-configs for play-tui, poker-engine, multi-game, and sdk-core implementation programs"
+    how_description: "Add smoke test invocations that verify binaries produce expected behavior beyond just exiting with code 0"
+    required_tests: "cargo run -p myosu-play -- --smoke-test"
+    verification_plan: "Each implementation program has a smoke test command in its run-config; the smoke test exits non-zero if the binary does nothing useful"
+    rollback_condition: "Smoke test commands are removed or a binary passes smoke test while doing nothing"
+
+  - id: verify-autodev-gates
+    title: "Verify autodev no longer produces compile-only completions"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "raspberry status --manifest fabro/programs/myosu-platform.yaml"
+    owned_surfaces:
+      - fabro/programs/myosu-platform.yaml
+      - fabro/programs/myosu-product.yaml
+    where_surfaces: "Raspberry program manifests for platform and product implementation programs"
+    how_description: "Confirm that autodev marks programs complete only when cargo test and smoke tests pass, not on cargo build alone"
+    required_tests: "raspberry status --manifest fabro/programs/myosu-platform.yaml"
+    verification_plan: "After a fresh autodev run, every program marked complete in Raspberry has cargo test passing and smoke test passing, not just cargo build"
+    rollback_condition: "Any autodev run marks a program complete without passing its full proof chain"

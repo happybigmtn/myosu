@@ -1,0 +1,47 @@
+version = 1
+graph = "../../workflows/implementation/fabro-quality-hardening-quality-gate-programs.fabro"
+goal = """
+Add quality gate to all implementation-family programs
+
+Child work item of plan: Fabro Quality Hardening
+
+Objective:
+Ensure every implementation-family program reaches at least Level 3 (cargo test with explicit test names) in its proof commands
+
+Owned surfaces:
+- `fabro/run-configs/bootstrap/`
+- `fabro/run-configs/implement/`
+- `fabro/run-configs/platform/`
+- `fabro/run-configs/services/`
+
+Proof commands:
+- `rg -l 'cargo (build|check)' fabro/run-configs/ | wc -l`
+- `rg 'cargo test' fabro/run-configs/ | rg -v '#'`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

@@ -1,0 +1,21 @@
+digraph FabroCleanupCompletion {
+    graph [
+        goal="Complete Fabro Control-Plane Bootstrap\n\nBootstrap the first service slice and establish a deterministic health surface.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Re-verify `tui:shell` bootstrap lane — `spec.md` and `review.md` exist but should be confirmed current\n- Re-verify `chain:runtime` bootstrap lane — `spec.md` and `review.md` exist but should be confirmed current\n- Re-verify `chain:pallet` bootstrap lane — `spec.md` and `review.md` exist but should be confirmed current\n- Mark `myosu-bootstrap.yaml` as milestone-satisfied in Raspberry\n\nRequired durable artifacts:\n- `outputs/fabro-cleanup-completion/spec.md`\n- `outputs/fabro-cleanup-completion/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    inventory [label="Inventory", prompt="@../../prompts/service_bootstrap/fabro-cleanup-completion/plan.md", reasoning_effort="high"]
+    review    [label="Review", prompt="@../../prompts/service_bootstrap/fabro-cleanup-completion/review.md", reasoning_effort="high"]
+    polish    [label="Polish", prompt="@../../prompts/service_bootstrap/fabro-cleanup-completion/polish.md", reasoning_effort="medium"]
+    verify_outputs [label="Verify Outputs", shape=parallelogram, script="test -f ./outputs/fabro-cleanup-completion/spec.md && test -f ./outputs/fabro-cleanup-completion/review.md", goal_gate=true, max_retries=0]
+
+    start -> inventory -> review -> polish -> verify_outputs -> exit
+}

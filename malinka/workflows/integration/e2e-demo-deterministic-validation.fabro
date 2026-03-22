@@ -1,0 +1,10 @@
+digraph E2eDemoDeterministicValidation {
+    graph [goal="Verify INV-003 deterministic validation\n\nChild work item of plan: End-to-End Demo\n\nObjective:\nTwo validators scoring the same miner submission produce scores within 1e-6 of each other\n\nOwned surfaces:\n- `crates/myosu-validator/src/tests/deterministic.rs`\n\nProof commands:\n- `cargo test -p myosu-validator -- deterministic`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Only", shape=parallelogram, script="printf 'integration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

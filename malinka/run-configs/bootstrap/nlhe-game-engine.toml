@@ -1,0 +1,49 @@
+version = 1
+graph = "../../workflows/bootstrap/nlhe-game-engine.fabro"
+goal = """
+NLHE Game Engine Implementation
+
+Bootstrap the first honest reviewed slice for this frontier.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Bring `crates/myosu-games-poker/` from worktree into main workspace
+- Implement `CfrGame` trait for NLHE via robopoker thin-wrap
+- Implement `Encoder` trait for NLHE wire serialization
+- Implement `GameRenderer` for poker state → TUI rendering
+- Wire into `myosu-games` game registry
+- Add comprehensive tests (not just doc tests)
+
+Required durable artifacts:
+- `outputs/nlhe-game-engine/spec.md`
+- `outputs/nlhe-game-engine/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

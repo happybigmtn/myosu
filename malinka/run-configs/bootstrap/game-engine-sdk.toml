@@ -1,0 +1,49 @@
+version = 1
+graph = "../../workflows/bootstrap/game-engine-sdk.fabro"
+goal = """
+Game Engine SDK Development
+
+Bootstrap the first honest reviewed slice for this frontier.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Create `crates/myosu-sdk/` with scaffold tool
+- Implement `cargo myosu-sdk scaffold` command
+- Implement trait compliance test harness
+- Implement game registration flow
+- Write developer guide: "30-Minute Game" (implement Kuhn Poker in 30 min)
+- Verify developer can implement Kuhn Poker without reading chain source
+
+Required durable artifacts:
+- `outputs/game-engine-sdk/spec.md`
+- `outputs/game-engine-sdk/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

@@ -1,0 +1,28 @@
+version = 1
+graph = "../../workflows/integration/e2e-demo-miner-chain-submission.fabro"
+goal = """
+Wire miner to chain submission
+
+Child work item of plan: End-to-End Demo
+
+Objective:
+Miner calls gameSolver.setWeights extrinsic after solving a poker situation
+
+Owned surfaces:
+- `crates/myosu-miner/src/submit.rs`
+- `crates/myosu-miner/src/main.rs`
+
+Proof commands:
+- `cargo run -p myosu-miner -- --subnet 1 --solve --submit --rpc ws://localhost:9944`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

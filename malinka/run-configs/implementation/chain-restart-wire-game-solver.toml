@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/chain-restart-wire-game-solver.fabro"
+goal = """
+Wire game-solver pallet into runtime
+
+Child work item of plan: Chain Restart
+
+Objective:
+Integrate pallet_game_solver into construct_runtime! and configure GameSolverConfig
+
+Owned surfaces:
+- `crates/myosu-chain/runtime/src/lib.rs`
+- `crates/myosu-chain/pallets/game-solver/src/lib.rs`
+
+Proof commands:
+- `cargo check -p myosu-chain-runtime`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

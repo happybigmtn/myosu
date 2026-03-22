@@ -1,0 +1,21 @@
+digraph NlheGameEngine {
+    graph [
+        goal="NLHE Game Engine Implementation\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Bring `crates/myosu-games-poker/` from worktree into main workspace\n- Implement `CfrGame` trait for NLHE via robopoker thin-wrap\n- Implement `Encoder` trait for NLHE wire serialization\n- Implement `GameRenderer` for poker state → TUI rendering\n- Wire into `myosu-games` game registry\n- Add comprehensive tests (not just doc tests)\n\nRequired durable artifacts:\n- `outputs/nlhe-game-engine/spec.md`\n- `outputs/nlhe-game-engine/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/bootstrap/nlhe-game-engine/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/bootstrap/nlhe-game-engine/review.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/bootstrap/nlhe-game-engine/polish.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f ./outputs/nlhe-game-engine/spec.md && test -f ./outputs/nlhe-game-engine/review.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

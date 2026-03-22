@@ -1,0 +1,10 @@
+digraph TestCoverageSprintFabroQualityGates {
+    graph [goal="Integrate test suites into Fabro quality gates\n\nChild work item of plan: Test Coverage Sprint\n\nObjective:\nUpdate Fabro proof commands so that PRs touching myosu-tui or myosu-games automatically run the new tests\n\nOwned surfaces:\n- `fabro/checks/tui-shell.sh`\n- `fabro/checks/games-traits.sh`\n\nProof commands:\n- `cargo test -p myosu-tui`\n- `cargo test -p myosu-games`\n\nRequired durable artifacts:\n- `spec.md`\n- `review.md`"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    unsupported [label="Supervisor Orchestration", shape=parallelogram, script="printf 'repo-level orchestration lanes are executed directly by raspberry supervisor\n' >&2; exit 1", max_retries=0]
+    exit [shape=Msquare, label="Exit"]
+
+    start -> unsupported -> exit
+}

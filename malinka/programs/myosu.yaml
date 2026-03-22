@@ -1,0 +1,2795 @@
+version: 1
+program: myosu
+target_repo: ../..
+state_path: ../../.raspberry/myosu-state.json
+max_parallel: 3
+units:
+- id: master
+  title: 180-Day Myosu Turnaround Master Plan
+  output_root: ../../outputs/master
+  artifacts:
+  - id: report
+    path: report.md
+  milestones:
+  - id: reported
+    requires:
+    - report
+  lanes:
+  - id: master
+    kind: recurring
+    title: 180-Day Myosu Turnaround Master Plan Lane
+    run_config: ../run-configs/recurring_report/master.toml
+    managed_milestone: reported
+    produces:
+    - report
+- id: fabro-cleanup-completion
+  title: Complete Fabro Control-Plane Bootstrap
+  output_root: ../../outputs/fabro-cleanup-completion
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-cleanup-completion
+    kind: platform
+    title: Complete Fabro Control-Plane Bootstrap Lane
+    run_config: ../run-configs/service_bootstrap/fabro-cleanup-completion.toml
+    managed_milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: fabro-cleanup-completion-verify-tui-shell
+  title: Verify tui:shell bootstrap artifacts are current
+  output_root: ../../outputs/fabro-cleanup-completion-verify-tui-shell
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-cleanup-completion-verify-tui-shell
+    kind: integration
+    title: Verify tui:shell bootstrap artifacts are current Lane
+    run_config: ../run-configs/implementation/fabro-cleanup-completion-verify-tui-shell.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: fabro-cleanup-completion
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: fabro-cleanup-completion-verify-chain-runtime
+  title: Verify chain:runtime bootstrap artifacts are current
+  output_root: ../../outputs/fabro-cleanup-completion-verify-chain-runtime
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-cleanup-completion-verify-chain-runtime
+    kind: integration
+    title: Verify chain:runtime bootstrap artifacts are current Lane
+    run_config: ../run-configs/implementation/fabro-cleanup-completion-verify-chain-runtime.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: fabro-cleanup-completion
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: fabro-cleanup-completion-verify-chain-pallet
+  title: Verify chain:pallet bootstrap artifacts are current
+  output_root: ../../outputs/fabro-cleanup-completion-verify-chain-pallet
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-cleanup-completion-verify-chain-pallet
+    kind: integration
+    title: Verify chain:pallet bootstrap artifacts are current Lane
+    run_config: ../run-configs/implementation/fabro-cleanup-completion-verify-chain-pallet.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: fabro-cleanup-completion
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: fabro-cleanup-completion-mark-bootstrap-satisfied
+  title: Mark myosu-bootstrap.yaml milestone-satisfied in Raspberry
+  output_root: ../../outputs/fabro-cleanup-completion-mark-bootstrap-satisfied
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-cleanup-completion-mark-bootstrap-satisfied
+    kind: orchestration
+    title: Mark myosu-bootstrap.yaml milestone-satisfied in Raspberry Lane
+    run_config: ../run-configs/orchestration/fabro-cleanup-completion-mark-bootstrap-satisfied.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: fabro-cleanup-completion
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: fabro-workflow-library
+  title: Complete Fabro Workflow Library
+  output_root: ../../outputs/fabro-workflow-library
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-workflow-library
+    kind: platform
+    title: Complete Fabro Workflow Library Lane
+    run_config: ../run-configs/service_bootstrap/fabro-workflow-library.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: fabro-cleanup-completion
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: fabro-workflow-library-implement-family
+  title: Complete implement/ workflow family
+  output_root: ../../outputs/fabro-workflow-library-implement-family
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-workflow-library-implement-family
+    kind: platform
+    title: Complete implement/ workflow family Lane
+    run_config: ../run-configs/implementation/fabro-workflow-library-implement-family.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: fabro-workflow-library
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: fabro-workflow-library-bootstrap-family
+  title: Complete bootstrap/ workflow family
+  output_root: ../../outputs/fabro-workflow-library-bootstrap-family
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-workflow-library-bootstrap-family
+    kind: platform
+    title: Complete bootstrap/ workflow family Lane
+    run_config: ../run-configs/implementation/fabro-workflow-library-bootstrap-family.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: fabro-workflow-library
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: fabro-workflow-library-usage-guide
+  title: Document workflow library with usage guide
+  output_root: ../../outputs/fabro-workflow-library-usage-guide
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-workflow-library-usage-guide
+    kind: artifact
+    title: Document workflow library with usage guide Lane
+    run_config: ../run-configs/recurring_report/fabro-workflow-library-usage-guide.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: fabro-workflow-library
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: fabro-workflow-library-execution-verify
+  title: Verify each family has a successful execution
+  output_root: ../../outputs/fabro-workflow-library-execution-verify
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-workflow-library-execution-verify
+    kind: integration
+    title: Verify each family has a successful execution Lane
+    run_config: ../run-configs/integration/fabro-workflow-library-execution-verify.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: fabro-workflow-library
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: raspberry-program-decomposition
+  title: Complete Raspberry Program Decomposition
+  output_root: ../../outputs/raspberry-program-decomposition
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: raspberry-program-decomposition
+    kind: platform
+    title: Complete Raspberry Program Decomposition Lane
+    run_config: ../run-configs/service_bootstrap/raspberry-program-decomposition.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: fabro-cleanup-completion
+      lane: null
+      milestone: reviewed
+    - unit: fabro-workflow-library
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: raspberry-program-decomposition-harden-dependency-edges
+  title: Harden dependency edges with explicit ordering
+  output_root: ../../outputs/raspberry-program-decomposition-harden-dependency-edges
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: raspberry-program-decomposition-harden-dependency-edges
+    kind: platform
+    title: Harden dependency edges with explicit ordering Lane
+    run_config: ../run-configs/implementation/raspberry-program-decomposition-harden-dependency-edges.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: raspberry-program-decomposition
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: raspberry-program-decomposition-verify-parent-dispatch
+  title: Verify myosu.yaml dispatches all 6 child programs
+  output_root: ../../outputs/raspberry-program-decomposition-verify-parent-dispatch
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: raspberry-program-decomposition-verify-parent-dispatch
+    kind: integration
+    title: Verify myosu.yaml dispatches all 6 child programs Lane
+    run_config: ../run-configs/integration/raspberry-program-decomposition-verify-parent-dispatch.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: raspberry-program-decomposition
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: raspberry-program-decomposition-stress-test-autodev
+  title: Stress-test autodev loop with all 6 programs
+  output_root: ../../outputs/raspberry-program-decomposition-stress-test-autodev
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: raspberry-program-decomposition-stress-test-autodev
+    kind: integration
+    title: Stress-test autodev loop with all 6 programs Lane
+    run_config: ../run-configs/integration/raspberry-program-decomposition-stress-test-autodev.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: raspberry-program-decomposition
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: raspberry-program-decomposition-dependency-map-diagram
+  title: Produce dependency map diagram
+  output_root: ../../outputs/raspberry-program-decomposition-dependency-map-diagram
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: raspberry-program-decomposition-dependency-map-diagram
+    kind: artifact
+    title: Produce dependency map diagram Lane
+    run_config: ../run-configs/recurring_report/raspberry-program-decomposition-dependency-map-diagram.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: raspberry-program-decomposition
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: test-coverage-sprint
+  title: Test Coverage Sprint
+  output_root: ../../outputs/test-coverage-sprint
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: test-coverage-sprint
+    kind: platform
+    title: Test Coverage Sprint Lane
+    run_config: ../run-configs/bootstrap/test-coverage-sprint.toml
+    managed_milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: test-coverage-sprint-tui-screen-tests
+  title: Add screen transition tests to myosu-tui
+  output_root: ../../outputs/test-coverage-sprint-tui-screen-tests
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: test-coverage-sprint-tui-screen-tests
+    kind: interface
+    title: Add screen transition tests to myosu-tui Lane
+    run_config: ../run-configs/implementation/test-coverage-sprint-tui-screen-tests.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: test-coverage-sprint
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: test-coverage-sprint-tui-shell-state-tests
+  title: Add shell state tests to myosu-tui
+  output_root: ../../outputs/test-coverage-sprint-tui-shell-state-tests
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: test-coverage-sprint-tui-shell-state-tests
+    kind: interface
+    title: Add shell state tests to myosu-tui Lane
+    run_config: ../run-configs/implementation/test-coverage-sprint-tui-shell-state-tests.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: test-coverage-sprint
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: test-coverage-sprint-tui-event-loop-tests
+  title: Add event loop tests to myosu-tui
+  output_root: ../../outputs/test-coverage-sprint-tui-event-loop-tests
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: test-coverage-sprint-tui-event-loop-tests
+    kind: interface
+    title: Add event loop tests to myosu-tui Lane
+    run_config: ../run-configs/implementation/test-coverage-sprint-tui-event-loop-tests.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: test-coverage-sprint
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: test-coverage-sprint-games-roundtrip-tests
+  title: Add property-based round-trip tests to myosu-games
+  output_root: ../../outputs/test-coverage-sprint-games-roundtrip-tests
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: test-coverage-sprint-games-roundtrip-tests
+    kind: platform
+    title: Add property-based round-trip tests to myosu-games Lane
+    run_config: ../run-configs/implementation/test-coverage-sprint-games-roundtrip-tests.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: test-coverage-sprint
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: test-coverage-sprint-fabro-quality-gates
+  title: Integrate test suites into Fabro quality gates
+  output_root: ../../outputs/test-coverage-sprint-fabro-quality-gates
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: test-coverage-sprint-fabro-quality-gates
+    kind: orchestration
+    title: Integrate test suites into Fabro quality gates Lane
+    run_config: ../run-configs/orchestration/test-coverage-sprint-fabro-quality-gates.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: test-coverage-sprint
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: ci-cd-pipeline
+  title: CI/CD Pipeline Setup
+  output_root: ../../outputs/ci-cd-pipeline
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: ci-cd-pipeline
+    kind: platform
+    title: CI/CD Pipeline Setup Lane
+    run_config: ../run-configs/service_bootstrap/ci-cd-pipeline.toml
+    managed_milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: ci-cd-pipeline-create-ci-workflow
+  title: Create .github/workflows/ci.yml
+  output_root: ../../outputs/ci-cd-pipeline-create-ci-workflow
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: ci-cd-pipeline-create-ci-workflow
+    kind: artifact
+    title: Create .github/workflows/ci.yml Lane
+    run_config: ../run-configs/implementation/ci-cd-pipeline-create-ci-workflow.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: ci-cd-pipeline
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: ci-cd-pipeline-add-check-and-test
+  title: Add cargo check and cargo test for active crates
+  output_root: ../../outputs/ci-cd-pipeline-add-check-and-test
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: ci-cd-pipeline-add-check-and-test
+    kind: integration
+    title: Add cargo check and cargo test for active crates Lane
+    run_config: ../run-configs/implementation/ci-cd-pipeline-add-check-and-test.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: ci-cd-pipeline
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: ci-cd-pipeline-add-clippy-strict
+  title: Add cargo clippy with strict warnings
+  output_root: ../../outputs/ci-cd-pipeline-add-clippy-strict
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: ci-cd-pipeline-add-clippy-strict
+    kind: integration
+    title: Add cargo clippy with strict warnings Lane
+    run_config: ../run-configs/implementation/ci-cd-pipeline-add-clippy-strict.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: ci-cd-pipeline
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: ci-cd-pipeline-add-fmt-check
+  title: Add cargo fmt --check
+  output_root: ../../outputs/ci-cd-pipeline-add-fmt-check
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: ci-cd-pipeline-add-fmt-check
+    kind: integration
+    title: Add cargo fmt --check Lane
+    run_config: ../run-configs/implementation/ci-cd-pipeline-add-fmt-check.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: ci-cd-pipeline
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: ci-cd-pipeline-configure-branch-protection
+  title: Configure branch protection on trunk
+  output_root: ../../outputs/ci-cd-pipeline-configure-branch-protection
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: ci-cd-pipeline-configure-branch-protection
+    kind: orchestration
+    title: Configure branch protection on trunk Lane
+    run_config: ../run-configs/orchestration/ci-cd-pipeline-configure-branch-protection.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: ci-cd-pipeline
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: chain-restart
+  title: Chain Restart
+  output_root: ../../outputs/chain-restart
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: chain-restart
+    kind: platform
+    title: Chain Restart Lane
+    run_config: ../run-configs/service_bootstrap/chain-restart.toml
+    managed_milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: chain-restart-workspace-re-enable
+  title: Re-enable crates/myosu-chain in workspace
+  output_root: ../../outputs/chain-restart-workspace-re-enable
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: chain-restart-workspace-re-enable
+    kind: platform
+    title: Re-enable crates/myosu-chain in workspace Lane
+    run_config: ../run-configs/implementation/chain-restart-workspace-re-enable.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: chain-restart-node-entry-point
+  title: Create myosu-chain/node binary entry point
+  output_root: ../../outputs/chain-restart-node-entry-point
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: chain-restart-node-entry-point
+    kind: platform
+    title: Create myosu-chain/node binary entry point Lane
+    run_config: ../run-configs/implementation/chain-restart-node-entry-point.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: chain-restart-wire-game-solver
+  title: Wire game-solver pallet into runtime
+  output_root: ../../outputs/chain-restart-wire-game-solver
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: chain-restart-wire-game-solver
+    kind: platform
+    title: Wire game-solver pallet into runtime Lane
+    run_config: ../run-configs/implementation/chain-restart-wire-game-solver.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: chain-restart-wire-subtensor-pallet
+  title: Wire subtensor base pallet for consensus
+  output_root: ../../outputs/chain-restart-wire-subtensor-pallet
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: chain-restart-wire-subtensor-pallet
+    kind: platform
+    title: Wire subtensor base pallet for consensus Lane
+    run_config: ../run-configs/implementation/chain-restart-wire-subtensor-pallet.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: chain-restart-wire-remaining-pallets
+  title: Wire remaining critical pallets
+  output_root: ../../outputs/chain-restart-wire-remaining-pallets
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: chain-restart-wire-remaining-pallets
+    kind: platform
+    title: Wire remaining critical pallets Lane
+    run_config: ../run-configs/implementation/chain-restart-wire-remaining-pallets.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: chain-restart-build-devnet-verify
+  title: Build binary and start devnet
+  output_root: ../../outputs/chain-restart-build-devnet-verify
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: chain-restart-build-devnet-verify
+    kind: integration
+    title: Build binary and start devnet Lane
+    run_config: ../run-configs/integration/chain-restart-build-devnet-verify.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: nlhe-game-engine
+  title: NLHE Game Engine Implementation
+  output_root: ../../outputs/nlhe-game-engine
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: nlhe-game-engine
+    kind: interface
+    title: NLHE Game Engine Implementation Lane
+    run_config: ../run-configs/bootstrap/nlhe-game-engine.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: nlhe-game-engine-port-poker-crate
+  title: Port crates/myosu-games-poker/ to main workspace
+  output_root: ../../outputs/nlhe-game-engine-port-poker-crate
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: nlhe-game-engine-port-poker-crate
+    kind: platform
+    title: Port crates/myosu-games-poker/ to main workspace Lane
+    run_config: ../run-configs/implementation/nlhe-game-engine-port-poker-crate.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: nlhe-game-engine-kuhn-cfrgame-impl
+  title: Implement CfrGame for Kuhn Poker
+  output_root: ../../outputs/nlhe-game-engine-kuhn-cfrgame-impl
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: nlhe-game-engine-kuhn-cfrgame-impl
+    kind: platform
+    title: Implement CfrGame for Kuhn Poker Lane
+    run_config: ../run-configs/implementation/nlhe-game-engine-kuhn-cfrgame-impl.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: nlhe-game-engine-nlhe-cfrgame-impl
+  title: Implement CfrGame for NLHE (heads-up)
+  output_root: ../../outputs/nlhe-game-engine-nlhe-cfrgame-impl
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: nlhe-game-engine-nlhe-cfrgame-impl
+    kind: platform
+    title: Implement CfrGame for NLHE (heads-up) Lane
+    run_config: ../run-configs/implementation/nlhe-game-engine-nlhe-cfrgame-impl.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: nlhe-game-engine-game-renderer-impl
+  title: Implement GameRenderer for poker state
+  output_root: ../../outputs/nlhe-game-engine-game-renderer-impl
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: nlhe-game-engine-game-renderer-impl
+    kind: platform
+    title: Implement GameRenderer for poker state Lane
+    run_config: ../run-configs/implementation/nlhe-game-engine-game-renderer-impl.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: nlhe-game-engine-wire-game-registry
+  title: Wire into game registry and verify strategy query
+  output_root: ../../outputs/nlhe-game-engine-wire-game-registry
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: nlhe-game-engine-wire-game-registry
+    kind: integration
+    title: Wire into game registry and verify strategy query Lane
+    run_config: ../run-configs/integration/nlhe-game-engine-wire-game-registry.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: nlhe-game-engine-comprehensive-tests
+  title: Comprehensive test suite
+  output_root: ../../outputs/nlhe-game-engine-comprehensive-tests
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: nlhe-game-engine-comprehensive-tests
+    kind: platform
+    title: Comprehensive test suite Lane
+    run_config: ../run-configs/implementation/nlhe-game-engine-comprehensive-tests.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: tui-full-implementation
+  title: TUI Full Implementation
+  output_root: ../../outputs/tui-full-implementation
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: tui-full-implementation
+    kind: interface
+    title: TUI Full Implementation Lane
+    run_config: ../run-configs/bootstrap/tui-full-implementation.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    - unit: test-coverage-sprint
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: tui-full-implementation-fix-play-entry
+  title: Fix myosu-play binary entry point
+  output_root: ../../outputs/tui-full-implementation-fix-play-entry
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: tui-full-implementation-fix-play-entry
+    kind: interface
+    title: Fix myosu-play binary entry point Lane
+    run_config: ../run-configs/implementation/tui-full-implementation-fix-play-entry.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: tui-full-implementation-wire-poker-renderer
+  title: Wire poker renderer into TUI shell
+  output_root: ../../outputs/tui-full-implementation-wire-poker-renderer
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: tui-full-implementation-wire-poker-renderer
+    kind: interface
+    title: Wire poker renderer into TUI shell Lane
+    run_config: ../run-configs/implementation/tui-full-implementation-wire-poker-renderer.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: tui-full-implementation-implement-poker-screens
+  title: Implement all poker screens
+  output_root: ../../outputs/tui-full-implementation-implement-poker-screens
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: tui-full-implementation-implement-poker-screens
+    kind: interface
+    title: Implement all poker screens Lane
+    run_config: ../run-configs/implementation/tui-full-implementation-implement-poker-screens.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: tui-full-implementation-implement-pipe-mode
+  title: Implement pipe mode end-to-end
+  output_root: ../../outputs/tui-full-implementation-implement-pipe-mode
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: tui-full-implementation-implement-pipe-mode
+    kind: interface
+    title: Implement pipe mode end-to-end Lane
+    run_config: ../run-configs/implementation/tui-full-implementation-implement-pipe-mode.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: tui-full-implementation-implement-theme-system
+  title: Implement theme system with poker-specific colors
+  output_root: ../../outputs/tui-full-implementation-implement-theme-system
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: tui-full-implementation-implement-theme-system
+    kind: interface
+    title: Implement theme system with poker-specific colors Lane
+    run_config: ../run-configs/implementation/tui-full-implementation-implement-theme-system.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: tui-full-implementation-add-integration-tests
+  title: Add comprehensive integration tests
+  output_root: ../../outputs/tui-full-implementation-add-integration-tests
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: tui-full-implementation-add-integration-tests
+    kind: interface
+    title: Add comprehensive integration tests Lane
+    run_config: ../run-configs/implementation/tui-full-implementation-add-integration-tests.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: fabro-quality-hardening
+  title: Fabro Quality Hardening
+  output_root: ../../outputs/fabro-quality-hardening
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-quality-hardening
+    kind: platform
+    title: Fabro Quality Hardening Lane
+    run_config: ../run-configs/bootstrap/fabro-quality-hardening.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: test-coverage-sprint
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: fabro-quality-hardening-audit-proof-commands
+  title: Audit all Fabro proof commands for false-green patterns
+  output_root: ../../outputs/fabro-quality-hardening-audit-proof-commands
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-quality-hardening-audit-proof-commands
+    kind: artifact
+    title: Audit all Fabro proof commands for false-green patterns Lane
+    run_config: ../run-configs/recurring_report/fabro-quality-hardening-audit-proof-commands.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: fabro-quality-hardening
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: fabro-quality-hardening-explicit-test-names
+  title: Replace cargo test -p myosu-games with explicit test names
+  output_root: ../../outputs/fabro-quality-hardening-explicit-test-names
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-quality-hardening-explicit-test-names
+    kind: platform
+    title: Replace cargo test -p myosu-games with explicit test names Lane
+    run_config: ../run-configs/implementation/fabro-quality-hardening-explicit-test-names.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: fabro-quality-hardening
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: fabro-quality-hardening-quality-gate-programs
+  title: Add quality gate to all implementation-family programs
+  output_root: ../../outputs/fabro-quality-hardening-quality-gate-programs
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-quality-hardening-quality-gate-programs
+    kind: integration
+    title: Add quality gate to all implementation-family programs Lane
+    run_config: ../run-configs/implementation/fabro-quality-hardening-quality-gate-programs.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: fabro-quality-hardening
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: fabro-quality-hardening-smoke-test-binaries
+  title: Add smoke test to all generated implementation programs
+  output_root: ../../outputs/fabro-quality-hardening-smoke-test-binaries
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-quality-hardening-smoke-test-binaries
+    kind: platform
+    title: Add smoke test to all generated implementation programs Lane
+    run_config: ../run-configs/implementation/fabro-quality-hardening-smoke-test-binaries.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: fabro-quality-hardening
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: fabro-quality-hardening-verify-autodev-gates
+  title: Verify autodev no longer produces compile-only completions
+  output_root: ../../outputs/fabro-quality-hardening-verify-autodev-gates
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: fabro-quality-hardening-verify-autodev-gates
+    kind: integration
+    title: Verify autodev no longer produces compile-only completions Lane
+    run_config: ../run-configs/integration/fabro-quality-hardening-verify-autodev-gates.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: fabro-quality-hardening
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: miner-binary
+  title: Miner Binary Implementation
+  output_root: ../../outputs/miner-binary
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: miner-binary
+    kind: service
+    title: Miner Binary Implementation Lane
+    run_config: ../run-configs/service_bootstrap/miner-binary.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: miner-binary-crate-scaffold
+  title: Create crates/myosu-miner/ crate scaffold
+  output_root: ../../outputs/miner-binary-crate-scaffold
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: miner-binary-crate-scaffold
+    kind: service
+    title: Create crates/myosu-miner/ crate scaffold Lane
+    run_config: ../run-configs/implementation/miner-binary-crate-scaffold.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: miner-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: miner-binary-neuron-registration
+  title: Implement neuron registration with chain
+  output_root: ../../outputs/miner-binary-neuron-registration
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: miner-binary-neuron-registration
+    kind: service
+    title: Implement neuron registration with chain Lane
+    run_config: ../run-configs/implementation/miner-binary-neuron-registration.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: miner-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: miner-binary-mccfr-solver
+  title: Implement MCCFR game-solver using myosu-games
+  output_root: ../../outputs/miner-binary-mccfr-solver
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: miner-binary-mccfr-solver
+    kind: service
+    title: Implement MCCFR game-solver using myosu-games Lane
+    run_config: ../run-configs/implementation/miner-binary-mccfr-solver.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: miner-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: miner-binary-weight-submission
+  title: Implement weight submission to chain
+  output_root: ../../outputs/miner-binary-weight-submission
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: miner-binary-weight-submission
+    kind: service
+    title: Implement weight submission to chain Lane
+    run_config: ../run-configs/implementation/miner-binary-weight-submission.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: miner-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: miner-binary-hotkey-management
+  title: Implement hotkey management
+  output_root: ../../outputs/miner-binary-hotkey-management
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: miner-binary-hotkey-management
+    kind: service
+    title: Implement hotkey management Lane
+    run_config: ../run-configs/implementation/miner-binary-hotkey-management.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: miner-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: miner-binary-e2e-workflow
+  title: 'Test end-to-end: miner registers, solves, submits weights'
+  output_root: ../../outputs/miner-binary-e2e-workflow
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: miner-binary-e2e-workflow
+    kind: integration
+    title: 'Test end-to-end: miner registers, solves, submits weights Lane'
+    run_config: ../run-configs/integration/miner-binary-e2e-workflow.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: miner-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: validator-binary
+  title: Validator Binary Implementation
+  output_root: ../../outputs/validator-binary
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: validator-binary
+    kind: service
+    title: Validator Binary Implementation Lane
+    run_config: ../run-configs/service_bootstrap/validator-binary.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    - unit: miner-binary
+      lane: null
+      milestone: reviewed
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: validator-binary-crate-scaffold
+  title: Create myosu-validator crate scaffold
+  output_root: ../../outputs/validator-binary-crate-scaffold
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: validator-binary-crate-scaffold
+    kind: service
+    title: Create myosu-validator crate scaffold Lane
+    run_config: ../run-configs/implementation/validator-binary-crate-scaffold.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: validator-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: validator-binary-validator-registration
+  title: Implement validator registration with chain
+  output_root: ../../outputs/validator-binary-validator-registration
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: validator-binary-validator-registration
+    kind: service
+    title: Implement validator registration with chain Lane
+    run_config: ../run-configs/implementation/validator-binary-validator-registration.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: validator-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: validator-binary-exploitability-scoring
+  title: Implement exploitability scoring using myosu-games
+  output_root: ../../outputs/validator-binary-exploitability-scoring
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: validator-binary-exploitability-scoring
+    kind: service
+    title: Implement exploitability scoring using myosu-games Lane
+    run_config: ../run-configs/implementation/validator-binary-exploitability-scoring.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: validator-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: validator-binary-weight-submission
+  title: Implement weight verification and submission
+  output_root: ../../outputs/validator-binary-weight-submission
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: validator-binary-weight-submission
+    kind: service
+    title: Implement weight verification and submission Lane
+    run_config: ../run-configs/implementation/validator-binary-weight-submission.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: validator-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: validator-binary-hotkey-management
+  title: Implement hotkey management
+  output_root: ../../outputs/validator-binary-hotkey-management
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: validator-binary-hotkey-management
+    kind: service
+    title: Implement hotkey management Lane
+    run_config: ../run-configs/implementation/validator-binary-hotkey-management.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: validator-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: validator-binary-end-to-end-workflow
+  title: End-to-end validator workflow test
+  output_root: ../../outputs/validator-binary-end-to-end-workflow
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: validator-binary-end-to-end-workflow
+    kind: integration
+    title: End-to-end validator workflow test Lane
+    run_config: ../run-configs/integration/validator-binary-end-to-end-workflow.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: validator-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: game-engine-sdk
+  title: Game Engine SDK Development
+  output_root: ../../outputs/game-engine-sdk
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: game-engine-sdk
+    kind: platform
+    title: Game Engine SDK Development Lane
+    run_config: ../run-configs/bootstrap/game-engine-sdk.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: game-engine-sdk-sdk-crate-scaffold
+  title: Create crates/myosu-sdk/ with scaffold tool
+  output_root: ../../outputs/game-engine-sdk-sdk-crate-scaffold
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: game-engine-sdk-sdk-crate-scaffold
+    kind: platform
+    title: Create crates/myosu-sdk/ with scaffold tool Lane
+    run_config: ../run-configs/implementation/game-engine-sdk-sdk-crate-scaffold.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: game-engine-sdk-scaffold-command
+  title: Implement cargo myosu-sdk scaffold command
+  output_root: ../../outputs/game-engine-sdk-scaffold-command
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: game-engine-sdk-scaffold-command
+    kind: platform
+    title: Implement cargo myosu-sdk scaffold command Lane
+    run_config: ../run-configs/implementation/game-engine-sdk-scaffold-command.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: game-engine-sdk-trait-compliance-harness
+  title: Implement trait compliance test harness
+  output_root: ../../outputs/game-engine-sdk-trait-compliance-harness
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: game-engine-sdk-trait-compliance-harness
+    kind: platform
+    title: Implement trait compliance test harness Lane
+    run_config: ../run-configs/implementation/game-engine-sdk-trait-compliance-harness.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: game-engine-sdk-registration-flow
+  title: Implement game registration flow
+  output_root: ../../outputs/game-engine-sdk-registration-flow
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: game-engine-sdk-registration-flow
+    kind: platform
+    title: Implement game registration flow Lane
+    run_config: ../run-configs/implementation/game-engine-sdk-registration-flow.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: game-engine-sdk-developer-guide
+  title: 'Write developer guide: 30-Minute Game'
+  output_root: ../../outputs/game-engine-sdk-developer-guide
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: game-engine-sdk-developer-guide
+    kind: artifact
+    title: 'Write developer guide: 30-Minute Game Lane'
+    run_config: ../run-configs/recurring_report/game-engine-sdk-developer-guide.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: game-engine-sdk-kuhn-poker-verification
+  title: Verify 30-Minute Game is achievable
+  output_root: ../../outputs/game-engine-sdk-kuhn-poker-verification
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: game-engine-sdk-kuhn-poker-verification
+    kind: integration
+    title: Verify 30-Minute Game is achievable Lane
+    run_config: ../run-configs/integration/game-engine-sdk-kuhn-poker-verification.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: liars-dice-proof
+  title: Liar's Dice Architecture Proof
+  output_root: ../../outputs/liars-dice-proof
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: liars-dice-proof
+    kind: interface
+    title: Liar's Dice Architecture Proof Lane
+    run_config: ../run-configs/bootstrap/liars-dice-proof.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: liars-dice-proof-liars-dice-engine
+  title: Implement Liar's Dice game engine
+  output_root: ../../outputs/liars-dice-proof-liars-dice-engine
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: liars-dice-proof-liars-dice-engine
+    kind: platform
+    title: Implement Liar's Dice game engine Lane
+    run_config: ../run-configs/implementation/liars-dice-proof-liars-dice-engine.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: liars-dice-proof
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: liars-dice-proof-encoder-renderer
+  title: Implement Encoder and GameRenderer
+  output_root: ../../outputs/liars-dice-proof-encoder-renderer
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: liars-dice-proof-encoder-renderer
+    kind: platform
+    title: Implement Encoder and GameRenderer Lane
+    run_config: ../run-configs/implementation/liars-dice-proof-encoder-renderer.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: liars-dice-proof
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: liars-dice-proof-game-registry
+  title: Register in game registry
+  output_root: ../../outputs/liars-dice-proof-game-registry
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: liars-dice-proof-game-registry
+    kind: integration
+    title: Register in game registry Lane
+    run_config: ../run-configs/implementation/liars-dice-proof-game-registry.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: liars-dice-proof
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: liars-dice-proof-zero-change-verify
+  title: Zero-change verification
+  output_root: ../../outputs/liars-dice-proof-zero-change-verify
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: liars-dice-proof-zero-change-verify
+    kind: integration
+    title: Zero-change verification Lane
+    run_config: ../run-configs/implementation/liars-dice-proof-zero-change-verify.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: liars-dice-proof
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: liars-dice-proof-tui-strategy-query
+  title: Liar's Dice strategy query via TUI
+  output_root: ../../outputs/liars-dice-proof-tui-strategy-query
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: liars-dice-proof-tui-strategy-query
+    kind: interface
+    title: Liar's Dice strategy query via TUI Lane
+    run_config: ../run-configs/integration/liars-dice-proof-tui-strategy-query.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: liars-dice-proof
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: agent-experience
+  title: Agent Experience Implementation
+  output_root: ../../outputs/agent-experience
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: agent-experience
+    kind: interface
+    title: Agent Experience Implementation Lane
+    run_config: ../run-configs/bootstrap/agent-experience.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: agent-experience-agent-memory
+  title: Implement agent memory system
+  output_root: ../../outputs/agent-experience-agent-memory
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: agent-experience-agent-memory
+    kind: platform
+    title: Implement agent memory system Lane
+    run_config: ../run-configs/implementation/agent-experience-agent-memory.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: agent-experience
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: agent-experience-reflection-prompt
+  title: Implement reflection prompt
+  output_root: ../../outputs/agent-experience-reflection-prompt
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: agent-experience-reflection-prompt
+    kind: interface
+    title: Implement reflection prompt Lane
+    run_config: ../run-configs/implementation/agent-experience-reflection-prompt.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: agent-experience
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: agent-experience-agent-journal
+  title: Implement journal
+  output_root: ../../outputs/agent-experience-agent-journal
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: agent-experience-agent-journal
+    kind: platform
+    title: Implement journal Lane
+    run_config: ../run-configs/implementation/agent-experience-agent-journal.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: agent-experience
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: foundation
+- id: agent-experience-identity-persistence
+  title: Implement identity persistence
+  output_root: ../../outputs/agent-experience-identity-persistence
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: agent-experience-identity-persistence
+    kind: platform
+    title: Implement identity persistence Lane
+    run_config: ../run-configs/implementation/agent-experience-identity-persistence.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: agent-experience
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: agent-experience-narration-mode
+  title: Implement rich narration mode
+  output_root: ../../outputs/agent-experience-narration-mode
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: agent-experience-narration-mode
+    kind: interface
+    title: Implement rich narration mode Lane
+    run_config: ../run-configs/implementation/agent-experience-narration-mode.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: agent-experience
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: agent-experience-cross-run-verify
+  title: Verify agent experience across multiple runs
+  output_root: ../../outputs/agent-experience-cross-run-verify
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: agent-experience-cross-run-verify
+    kind: integration
+    title: Verify agent experience across multiple runs Lane
+    run_config: ../run-configs/integration/agent-experience-cross-run-verify.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: agent-experience
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: e2e-demo
+  title: End-to-End Demo
+  output_root: ../../outputs/e2e-demo
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: e2e-demo
+    kind: platform
+    title: End-to-End Demo Lane
+    run_config: ../run-configs/bootstrap/e2e-demo.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    - unit: miner-binary
+      lane: null
+      milestone: reviewed
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    - unit: validator-binary
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: e2e-demo-miner-chain-submission
+  title: Wire miner to chain submission
+  output_root: ../../outputs/e2e-demo-miner-chain-submission
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: e2e-demo-miner-chain-submission
+    kind: integration
+    title: Wire miner to chain submission Lane
+    run_config: ../run-configs/integration/e2e-demo-miner-chain-submission.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: e2e-demo-chain-validator-scoring
+  title: Wire chain to validator scoring
+  output_root: ../../outputs/e2e-demo-chain-validator-scoring
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: e2e-demo-chain-validator-scoring
+    kind: integration
+    title: Wire chain to validator scoring Lane
+    run_config: ../run-configs/integration/e2e-demo-chain-validator-scoring.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: e2e-demo-validator-chain-weights
+  title: Wire validator weights to chain
+  output_root: ../../outputs/e2e-demo-validator-chain-weights
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: e2e-demo-validator-chain-weights
+    kind: integration
+    title: Wire validator weights to chain Lane
+    run_config: ../run-configs/integration/e2e-demo-validator-chain-weights.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: e2e-demo-chain-state-tui
+  title: Wire chain state to TUI display
+  output_root: ../../outputs/e2e-demo-chain-state-tui
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: e2e-demo-chain-state-tui
+    kind: integration
+    title: Wire chain state to TUI display Lane
+    run_config: ../run-configs/integration/e2e-demo-chain-state-tui.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: ux
+- id: e2e-demo-demo-script
+  title: Write the demo script
+  output_root: ../../outputs/e2e-demo-demo-script
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: e2e-demo-demo-script
+    kind: artifact
+    title: Write the demo script Lane
+    run_config: ../run-configs/implementation/e2e-demo-demo-script.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: e2e-demo-full-demo-run
+  title: Run the full demo end-to-end
+  output_root: ../../outputs/e2e-demo-full-demo-run
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: e2e-demo-full-demo-run
+    kind: integration
+    title: Run the full demo end-to-end Lane
+    run_config: ../run-configs/integration/e2e-demo-full-demo-run.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: e2e-demo-deterministic-validation
+  title: Verify INV-003 deterministic validation
+  output_root: ../../outputs/e2e-demo-deterministic-validation
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: e2e-demo-deterministic-validation
+    kind: integration
+    title: Verify INV-003 deterministic validation Lane
+    run_config: ../run-configs/integration/e2e-demo-deterministic-validation.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: hardened
+- id: documentation
+  title: Documentation Sprint
+  output_root: ../../outputs/documentation
+  artifacts:
+  - id: report
+    path: report.md
+  milestones:
+  - id: reported
+    requires:
+    - report
+  lanes:
+  - id: documentation
+    kind: recurring
+    title: Documentation Sprint Lane
+    run_config: ../run-configs/recurring_report/documentation.toml
+    managed_milestone: reported
+    depends_on:
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    - unit: game-engine-sdk
+      lane: null
+      milestone: reviewed
+    - unit: nlhe-game-engine
+      lane: null
+      milestone: reviewed
+    - unit: tui-full-implementation
+      lane: null
+      milestone: reviewed
+    produces:
+    - report
+- id: operational-setup
+  title: Operational Setup
+  output_root: ../../outputs/operational-setup
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: reviewed
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: operational-setup
+    kind: platform
+    title: Operational Setup Lane
+    run_config: ../run-configs/service_bootstrap/operational-setup.toml
+    managed_milestone: reviewed
+    depends_on:
+    - unit: chain-restart
+      lane: null
+      milestone: reviewed
+    - unit: e2e-demo
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+- id: operational-setup-devnet-launch-runbook
+  title: Write devnet launch runbook
+  output_root: ../../outputs/operational-setup-devnet-launch-runbook
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: operational-setup-devnet-launch-runbook
+    kind: artifact
+    title: Write devnet launch runbook Lane
+    run_config: ../run-configs/implementation/operational-setup-devnet-launch-runbook.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: operational-setup
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: operational-setup-chain-monitoring
+  title: Set up basic chain monitoring
+  output_root: ../../outputs/operational-setup-chain-monitoring
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: operational-setup-chain-monitoring
+    kind: service
+    title: Set up basic chain monitoring Lane
+    run_config: ../run-configs/implementation/operational-setup-chain-monitoring.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: operational-setup
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: operational-setup-failure-recovery-runbook
+  title: Write failure recovery runbook
+  output_root: ../../outputs/operational-setup-failure-recovery-runbook
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: operational-setup-failure-recovery-runbook
+    kind: artifact
+    title: Write failure recovery runbook Lane
+    run_config: ../run-configs/implementation/operational-setup-failure-recovery-runbook.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: operational-setup
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard
+- id: operational-setup-env-documentation
+  title: Document environment variables
+  output_root: ../../outputs/operational-setup-env-documentation
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  milestones:
+  - id: implemented
+    requires:
+    - spec
+    - review
+  lanes:
+  - id: operational-setup-env-documentation
+    kind: artifact
+    title: Document environment variables Lane
+    run_config: ../run-configs/implementation/operational-setup-env-documentation.toml
+    managed_milestone: implemented
+    depends_on:
+    - unit: operational-setup
+      lane: null
+      milestone: reviewed
+    produces:
+    - spec
+    - review
+    proof_profile: standard

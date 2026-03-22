@@ -1,0 +1,28 @@
+version = 1
+graph = "../../workflows/integration/e2e-demo-validator-chain-weights.fabro"
+goal = """
+Wire validator weights to chain
+
+Child work item of plan: End-to-End Demo
+
+Objective:
+Validator submits exploitability scores as weight updates to the chain
+
+Owned surfaces:
+- `crates/myosu-validator/src/submit.rs`
+- `crates/myosu-validator/src/main.rs`
+
+Proof commands:
+- `cargo run -p myosu-validator -- --subnet 1 --score --submit --rpc ws://localhost:9944`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/ci-cd-pipeline-add-clippy-strict.fabro"
+goal = """
+Add cargo clippy with strict warnings
+
+Child work item of plan: CI/CD Pipeline Setup
+
+Objective:
+Add CI step that fails on any clippy warning via -D warnings flag
+
+Owned surfaces:
+- `.github/workflows/ci.yml`
+
+Proof commands:
+- `cargo clippy -p myosu-games -p myosu-tui -- -D warnings`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

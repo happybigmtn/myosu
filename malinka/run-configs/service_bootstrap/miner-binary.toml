@@ -1,0 +1,49 @@
+version = 1
+graph = "../../workflows/service_bootstrap/miner-binary.fabro"
+goal = """
+Miner Binary Implementation
+
+Bootstrap the first service slice and establish a deterministic health surface.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Create `crates/myosu-miner/` crate scaffold
+- Implement neuron registration with chain
+- Implement MCCFR game-solver using `myosu-games`
+- Implement weight submission to chain
+- Implement hotkey management
+- Test end-to-end: miner registers → solves → submits weights
+
+Required durable artifacts:
+- `outputs/miner-binary/spec.md`
+- `outputs/miner-binary/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

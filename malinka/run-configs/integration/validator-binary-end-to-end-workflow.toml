@@ -1,0 +1,27 @@
+version = 1
+graph = "../../workflows/integration/validator-binary-end-to-end-workflow.fabro"
+goal = """
+End-to-end validator workflow test
+
+Child work item of plan: Validator Binary Implementation
+
+Objective:
+Validator registers, receives miner weights, scores via exploitability, submits weights, receives positive emission within one epoch
+
+Owned surfaces:
+- `crates/myosu-validator/tests/e2e.rs`
+
+Proof commands:
+- `cargo test -p myosu-validator -- e2e`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

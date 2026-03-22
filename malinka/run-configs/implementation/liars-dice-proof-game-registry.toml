@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/liars-dice-proof-game-registry.fabro"
+goal = """
+Register in game registry
+
+Child work item of plan: Liar's Dice Architecture Proof
+
+Objective:
+Add Liar's Dice alongside NLHE in the game registry
+
+Owned surfaces:
+- `crates/myosu-games/`
+
+Proof commands:
+- `cargo test -p myosu-games -- game_registry`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

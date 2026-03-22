@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/tui-full-implementation-implement-pipe-mode.fabro"
+goal = """
+Implement pipe mode end-to-end
+
+Child work item of plan: TUI Full Implementation
+
+Objective:
+Pipe mode reads JSON game state from stdin, queries strategy, writes action JSON to stdout
+
+Owned surfaces:
+- `crates/myosu-tui/src/pipe.rs`
+
+Proof commands:
+- `cargo build -p myosu-play`
+- `cargo test -p myosu-tui -- pipe`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

@@ -1,0 +1,46 @@
+version = 1
+graph = "../../workflows/implementation/game-engine-sdk-sdk-crate-scaffold.fabro"
+goal = """
+Create crates/myosu-sdk/ with scaffold tool
+
+Child work item of plan: Game Engine SDK Development
+
+Objective:
+Create the myosu-sdk crate with CLI entry point and scaffold module
+
+Owned surfaces:
+- `crates/myosu-sdk/`
+- `crates/myosu-sdk/Cargo.toml`
+- `crates/myosu-sdk/src/`
+
+Proof commands:
+- `cargo build -p myosu-sdk`
+- `cargo install --path crates/myosu-sdk`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

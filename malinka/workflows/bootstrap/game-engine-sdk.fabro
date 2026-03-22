@@ -1,0 +1,21 @@
+digraph GameEngineSdk {
+    graph [
+        goal="Game Engine SDK Development\n\nBootstrap the first honest reviewed slice for this frontier.\n\nInputs:\n- `README.md`\n- `SPEC.md`\n- `PLANS.md`\n- `AGENTS.md`\n- `genesis/plans/001-master-plan.md`\n- `genesis/plans/002-fabro-cleanup-completion.md`\n\nCurrent frontier tasks:\n- Create `crates/myosu-sdk/` with scaffold tool\n- Implement `cargo myosu-sdk scaffold` command\n- Implement trait compliance test harness\n- Implement game registration flow\n- Write developer guide: \"30-Minute Game\" (implement Kuhn Poker in 30 min)\n- Verify developer can implement Kuhn Poker without reading chain source\n\nRequired durable artifacts:\n- `outputs/game-engine-sdk/spec.md`\n- `outputs/game-engine-sdk/review.md`",
+        model_stylesheet="
+            *       { backend: cli; }
+            #review { backend: cli; model: claude-opus-4-6; provider: anthropic; }
+            #polish { backend: cli; model: MiniMax-M2.7-highspeed; provider: anthropic; }
+        "
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    specify [label="Specify", prompt="@../../prompts/bootstrap/game-engine-sdk/plan.md", reasoning_effort="high"]
+    review  [label="Review", prompt="@../../prompts/bootstrap/game-engine-sdk/review.md", reasoning_effort="high"]
+    polish  [label="Polish", prompt="@../../prompts/bootstrap/game-engine-sdk/polish.md", reasoning_effort="medium"]
+    verify  [label="Verify", shape=parallelogram, script="test -f ./outputs/game-engine-sdk/spec.md && test -f ./outputs/game-engine-sdk/review.md", goal_gate=true, max_retries=0]
+
+    start -> specify -> review -> polish -> verify -> exit
+}

@@ -1,0 +1,53 @@
+version = 1
+graph = "../../workflows/implementation/raspberry-program-decomposition-harden-dependency-edges.fabro"
+goal = """
+Harden dependency edges with explicit ordering
+
+Child work item of plan: Complete Raspberry Program Decomposition
+
+Objective:
+Add explicit depends_on declarations referencing outputs/**/review.md artifacts to each program manifest
+
+Owned surfaces:
+- `fabro/programs/myosu-bootstrap.yaml`
+- `fabro/programs/myosu-chain-core.yaml`
+- `fabro/programs/myosu-services.yaml`
+- `fabro/programs/myosu-product.yaml`
+- `fabro/programs/myosu-platform.yaml`
+- `fabro/programs/myosu-recurring.yaml`
+
+Proof commands:
+- `rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-bootstrap.yaml`
+- `rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-chain-core.yaml`
+- `rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-services.yaml`
+- `rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-product.yaml`
+- `rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-platform.yaml`
+- `rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-recurring.yaml`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

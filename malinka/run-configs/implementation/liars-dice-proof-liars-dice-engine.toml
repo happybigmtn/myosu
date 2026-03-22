@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/liars-dice-proof-liars-dice-engine.fabro"
+goal = """
+Implement Liar's Dice game engine
+
+Child work item of plan: Liar's Dice Architecture Proof
+
+Objective:
+Implement CfrGame trait for Liar's Dice with exactly 147,420 terminal states using Copy workaround for variable-length bid history
+
+Owned surfaces:
+- `crates/myosu-games-liars-dice/`
+
+Proof commands:
+- `cargo test -p myosu-games-liars-dice -- terminal_state_count`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

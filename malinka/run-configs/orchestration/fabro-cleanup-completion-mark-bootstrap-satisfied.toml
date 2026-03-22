@@ -1,0 +1,27 @@
+version = 1
+graph = "../../workflows/orchestration/fabro-cleanup-completion-mark-bootstrap-satisfied.fabro"
+goal = """
+Mark myosu-bootstrap.yaml milestone-satisfied in Raspberry
+
+Child work item of plan: Complete Fabro Control-Plane Bootstrap
+
+Objective:
+Confirm all bootstrap lanes report complete and downstream programs are unblocked
+
+Owned surfaces:
+- `fabro/programs/myosu-bootstrap.yaml`
+
+Proof commands:
+- `raspberry status --manifest fabro/programs/myosu-bootstrap.yaml`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

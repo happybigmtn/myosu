@@ -1,0 +1,44 @@
+version = 1
+graph = "../../workflows/implementation/ci-cd-pipeline-add-check-and-test.fabro"
+goal = """
+Add cargo check and cargo test for active crates
+
+Child work item of plan: CI/CD Pipeline Setup
+
+Objective:
+Add CI steps that run cargo check and cargo test against myosu-games and myosu-tui crates
+
+Owned surfaces:
+- `.github/workflows/ci.yml`
+
+Proof commands:
+- `cargo check -p myosu-games -p myosu-tui`
+- `cargo test -p myosu-games -p myosu-tui`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

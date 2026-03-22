@@ -1,0 +1,49 @@
+version = 1
+graph = "../../workflows/bootstrap/agent-experience.fabro"
+goal = """
+Agent Experience Implementation
+
+Bootstrap the first honest reviewed slice for this frontier.
+
+Inputs:
+- `README.md`
+- `SPEC.md`
+- `PLANS.md`
+- `AGENTS.md`
+- `genesis/plans/001-master-plan.md`
+- `genesis/plans/002-fabro-cleanup-completion.md`
+
+Current frontier tasks:
+- Implement agent memory system (per-agent persistent memory)
+- Implement reflection prompt (`reflect>`)
+- Implement journal (append-only markdown autobiography)
+- Implement identity persistence
+- Implement rich narration mode (`--narrate`)
+- Verify agent experience across multiple Fabro lane runs
+
+Required durable artifacts:
+- `outputs/agent-experience/spec.md`
+- `outputs/agent-experience/review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"

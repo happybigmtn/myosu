@@ -1,0 +1,45 @@
+version = 1
+graph = "../../workflows/implementation/fabro-workflow-library-bootstrap-family.fabro"
+goal = """
+Complete bootstrap/ workflow family
+
+Child work item of plan: Complete Fabro Workflow Library
+
+Objective:
+Add spec-review-restart workflow covering all 4 bootstrap lanes
+
+Owned surfaces:
+- `fabro/workflows/bootstrap/`
+- `fabro/run-configs/bootstrap/`
+
+Proof commands:
+- `test -f fabro/workflows/bootstrap/bootstrap.fabro`
+- `ls fabro/run-configs/bootstrap/*.toml | wc -l`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

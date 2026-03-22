@@ -1,0 +1,79 @@
+mapping_source: opus
+generated_by_run: "opus-1774144823539"
+title: "Complete Raspberry Program Decomposition"
+category: infrastructure
+composite: true
+bootstrap_required: true
+implementation_required: true
+dependency_plan_ids: [fabro-cleanup-completion, fabro-workflow-library]
+children:
+  - id: harden-dependency-edges
+    title: "Harden dependency edges with explicit ordering"
+    archetype: implement
+    lane_kind: platform
+    review_profile: foundation
+    proof_commands:
+      - "rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-bootstrap.yaml"
+      - "rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-chain-core.yaml"
+      - "rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-services.yaml"
+      - "rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-product.yaml"
+      - "rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-platform.yaml"
+      - "rg 'depends_on|artifact:|precondition:' fabro/programs/myosu-recurring.yaml"
+    owned_surfaces:
+      - fabro/programs/myosu-bootstrap.yaml
+      - fabro/programs/myosu-chain-core.yaml
+      - fabro/programs/myosu-services.yaml
+      - fabro/programs/myosu-product.yaml
+      - fabro/programs/myosu-platform.yaml
+      - fabro/programs/myosu-recurring.yaml
+    where_surfaces: "All 6 frontier program manifests under fabro/programs/"
+    how_description: "Add explicit depends_on declarations referencing outputs/**/review.md artifacts to each program manifest"
+    required_tests: "for prog in myosu-bootstrap myosu-chain-core myosu-services myosu-product myosu-platform myosu-recurring; do rg 'depends_on|artifact:|precondition:' fabro/programs/${prog}.yaml || exit 1; done"
+    verification_plan: "Every program manifest has at least one explicit dependency declaration; no implicit blocking via missing artifact references"
+    rollback_condition: "Any program manifest found without explicit dependency declarations or referencing a missing artifact without a blocked_until declaration"
+
+  - id: verify-parent-dispatch
+    title: "Verify myosu.yaml dispatches all 6 child programs"
+    archetype: integration
+    lane_kind: integration
+    review_profile: standard
+    proof_commands:
+      - "raspberry status --manifest fabro/programs/myosu.yaml"
+    owned_surfaces:
+      - fabro/programs/myosu.yaml
+    where_surfaces: "Parent portfolio manifest at fabro/programs/myosu.yaml"
+    how_description: "Confirm parent portfolio lists all 6 frontier programs with reported status"
+    required_tests: "raspberry status --manifest fabro/programs/myosu.yaml 2>&1 | rg 'myosu-bootstrap' && raspberry status --manifest fabro/programs/myosu.yaml 2>&1 | rg 'myosu-chain-core' && raspberry status --manifest fabro/programs/myosu.yaml 2>&1 | rg 'myosu-services' && raspberry status --manifest fabro/programs/myosu.yaml 2>&1 | rg 'myosu-product' && raspberry status --manifest fabro/programs/myosu.yaml 2>&1 | rg 'myosu-platform' && raspberry status --manifest fabro/programs/myosu.yaml 2>&1 | rg 'myosu-recurring'"
+    verification_plan: "raspberry status output shows all 6 children: myosu-bootstrap, myosu-chain-core, myosu-services, myosu-product, myosu-platform, myosu-recurring"
+    rollback_condition: "Any of the 6 frontier programs missing from raspberry status output"
+
+  - id: stress-test-autodev
+    title: "Stress-test autodev loop with all 6 programs"
+    archetype: integration
+    lane_kind: integration
+    review_profile: hardened
+    proof_commands:
+      - "raspberry autodev --manifest fabro/programs/myosu.yaml --dry-run"
+    owned_surfaces:
+      - .raspberry/myosu-state.json
+    where_surfaces: "Raspberry autodev execution state for the myosu portfolio"
+    how_description: "Run autodev loop and verify max_parallel constraint, completion marking, and blocking dependency reporting"
+    required_tests: "raspberry autodev --manifest fabro/programs/myosu.yaml --dry-run 2>&1 | rg -q 'blocked|ready|complete'"
+    verification_plan: "Autodev respects max_parallel; completed programs marked correctly; blocked programs report blocking dependencies truthfully"
+    rollback_condition: "Autodev dispatches more than max_parallel programs simultaneously or reports incorrect blocking state"
+
+  - id: dependency-map-diagram
+    title: "Produce dependency map diagram"
+    archetype: report
+    lane_kind: artifact
+    review_profile: standard
+    proof_commands:
+      - "test -f fabro/programs/README.md"
+      - "rg -A 20 'Dependency Map' fabro/programs/README.md"
+    owned_surfaces:
+      - fabro/programs/README.md
+    where_surfaces: "Program dependency diagram in fabro/programs/README.md"
+    how_description: "Create ASCII diagram of the 6-program dependency graph showing blocking relationships"
+    required_tests: "test -f fabro/programs/README.md && rg -q 'Dependency Map' fabro/programs/README.md"
+    verification_plan: "fabro/programs/README.md exists and contains an ASCII dependency diagram showing all 6 programs and their edges"
+    rollback_condition: "README.md deleted or dependency diagram section removed"

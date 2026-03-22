@@ -1,0 +1,43 @@
+version = 1
+graph = "../../workflows/implementation/chain-restart-wire-remaining-pallets.fabro"
+goal = """
+Wire remaining critical pallets
+
+Child work item of plan: Chain Restart
+
+Objective:
+Wire admin-utils, commitments, registry, swap, and transaction-fee pallets into construct_runtime!
+
+Owned surfaces:
+- `crates/myosu-chain/runtime/src/lib.rs`
+
+Proof commands:
+- `cargo check -p myosu-chain-runtime`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[llm]
+provider = "anthropic"
+model = "MiniMax-M2.7-highspeed"
+
+[llm.fallbacks]
+anthropic = ["openai", "gemini", "kimi", "minimax"]
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"
+
+[sandbox.env]
+FABRO_STRICT_PROVIDER = "1"
+
+[integration]
+enabled = true
+strategy = "squash"
+target_branch = "origin/HEAD"
+artifact_path = "../../../integration.md"

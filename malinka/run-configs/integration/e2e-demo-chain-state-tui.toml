@@ -1,0 +1,28 @@
+version = 1
+graph = "../../workflows/integration/e2e-demo-chain-state-tui.fabro"
+goal = """
+Wire chain state to TUI display
+
+Child work item of plan: End-to-End Demo
+
+Objective:
+TUI subscribes to chain state updates and renders the current best bot strategy
+
+Owned surfaces:
+- `crates/myosu-tui/src/chain_sync.rs`
+- `crates/myosu-tui/src/screens.rs`
+
+Proof commands:
+- `cargo run -p myosu-play -- train --sync-chain`
+
+Required durable artifacts:
+- `spec.md`
+- `review.md`
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"
