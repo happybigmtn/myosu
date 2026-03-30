@@ -1,0 +1,37 @@
+[package]
+name = "subtensor-runtime-common"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+approx = { workspace = true, optional = true }
+codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+environmental = { version = "1.1.4", default-features = false }
+frame-support.workspace = true
+runtime-common = { path = "../runtime-common", default-features = false }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, default-features = false, features = ["derive"] }
+sp-core.workspace = true
+sp-runtime.workspace = true
+subtensor-macros.workspace = true
+substrate-fixed.workspace = true
+
+[features]
+default = ["std"]
+approx = ["dep:approx"]
+fast-blocks = ["runtime-common/fast-blocks"]
+fast-runtime = ["runtime-common/fast-blocks"]
+runtime-benchmarks = []
+try-runtime = []
+std = [
+    "codec/std",
+    "environmental/std",
+    "frame-support/std",
+    "runtime-common/std",
+    "scale-info/std",
+    "serde/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "substrate-fixed/std",
+]

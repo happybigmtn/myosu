@@ -728,17 +728,6 @@ impl<T: Config> Pallet<T> {
                 }
             }
 
-            // ---------- v3 ------------------------------------------------------
-            for (_epoch, q) in TimelockedWeightCommits::<T>::iter_prefix(netuid_index) {
-                for (who, cb, ..) in q.iter() {
-                    if !Self::is_commit_expired(netuid, *cb)
-                        && let Some(cell) = uid_of(who).and_then(|i| commit_blocks.get_mut(i))
-                    {
-                        *cell = (*cell).min(*cb);
-                    }
-                }
-            }
-
             weights = vec_mask_sparse_matrix(
                 &weights,
                 &commit_blocks,
@@ -1035,6 +1024,27 @@ impl<T: Config> Pallet<T> {
                 terms.bond = vec![];
             }
         }
+
+        let active_count = active.iter().filter(|value| **value).count();
+        let validator_permit_count = new_validator_permits.iter().filter(|value| **value).count();
+        let server_alpha_total: u64 = server_emission.iter().map(|value| value.to_u64()).sum();
+        let validator_alpha_total: u64 =
+            validator_emission.iter().map(|value| value.to_u64()).sum();
+        let combined_alpha_total: u64 = combined_emission.iter().map(|value| value.to_u64()).sum();
+
+        log::info!(
+            "epoch_mechanism_summary netuid={} mecid={} block={} neurons={} active={} validator_permits={} rao_emission={} server_alpha_total={} validator_alpha_total={} combined_alpha_total={}",
+            netuid,
+            u16::from(mecid),
+            current_block,
+            n,
+            active_count,
+            validator_permit_count,
+            rao_emission.to_u64(),
+            server_alpha_total,
+            validator_alpha_total,
+            combined_alpha_total,
+        );
 
         EpochOutput(terms_map)
     }

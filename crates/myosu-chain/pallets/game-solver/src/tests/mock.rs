@@ -1,5 +1,6 @@
 #![allow(
     clippy::arithmetic_side_effects,
+    dead_code,
     clippy::expect_used,
     clippy::unwrap_used
 )]
@@ -25,7 +26,7 @@ use sp_core::{ConstU64, Get, H256, U256, offchain::KeyTypeId};
 use sp_runtime::Perbill;
 use sp_runtime::{
     BuildStorage, Percent,
-    traits::{BadOrigin, BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup},
 };
 use sp_std::{cell::RefCell, cmp::Ordering, sync::OnceLock};
 use sp_tracing::tracing_subscriber;
@@ -42,15 +43,14 @@ frame_support::construct_runtime!(
         Balances: pallet_balances = 2,
         Timestamp: pallet_timestamp = 3,
         Aura: pallet_aura = 4,
-        Shield: pallet_shield = 5,
-        SubtensorModule: crate = 6,
-        Utility: pallet_utility = 7,
-        Scheduler: pallet_scheduler = 8,
-        Preimage: pallet_preimage = 9,
-        Drand: pallet_drand = 10,
-        Swap: pallet_subtensor_swap = 11,
-        Crowdloan: pallet_crowdloan = 12,
-        Proxy: pallet_subtensor_proxy = 13,
+        SubtensorModule: crate = 5,
+        Utility: pallet_utility = 6,
+        Scheduler: pallet_scheduler = 7,
+        Preimage: pallet_preimage = 8,
+        Drand: pallet_drand = 9,
+        Swap: pallet_subtensor_swap = 10,
+        Crowdloan: pallet_crowdloan = 11,
+        Proxy: pallet_subtensor_proxy = 12,
     }
 );
 
@@ -164,6 +164,10 @@ impl AuthorshipInfo<U256> for MockAuthorshipProvider {
     }
 }
 
+pub struct MockGetCommitments;
+
+impl crate::macros::config::GetCommitments<U256> for MockGetCommitments {}
+
 parameter_types! {
     pub const InitialMinAllowedWeights: u16 = 0;
     pub const InitialEmissionValue: u16 = 0;
@@ -242,6 +246,7 @@ parameter_types! {
 }
 
 impl crate::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
     type Currency = Balances;
     type InitialIssuance = InitialIssuance;
@@ -309,7 +314,8 @@ impl crate::Config for Test {
     type HotkeySwapOnSubnetInterval = HotkeySwapOnSubnetInterval;
     type ProxyInterface = FakeProxier;
     type LeaseDividendsDistributionInterval = LeaseDividendsDistributionInterval;
-    type GetCommitments = ();
+    type GetCommitments = MockGetCommitments;
+    type MaxContributors = MaxContributors;
     type MaxImmuneUidsPercentage = MaxImmuneUidsPercentage;
     type CommitmentsInterface = CommitmentsI;
     type EvmKeyAssociateRateLimit = EvmKeyAssociateRateLimit;
@@ -563,7 +569,7 @@ where
         _account: Self::AccountId,
         nonce: Self::Nonce,
     ) -> Option<Self::Extrinsic> {
-        Some(UncheckedExtrinsic::new_signed(call, nonce.into(), (), ()))
+        Some(UncheckedExtrinsic::new_signed(call, nonce, (), ()))
     }
 }
 
@@ -585,21 +591,6 @@ impl pallet_aura::Config for Test {
     type MaxAuthorities = MaxAuthorities;
     type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
     type SlotDuration = SlotDuration;
-}
-
-pub struct TestAuthorityOrigin;
-
-impl pallet_shield::AuthorityOriginExt<RuntimeOrigin> for TestAuthorityOrigin {
-    type AccountId = U256;
-
-    fn ensure_validator(_origin: RuntimeOrigin) -> Result<Self::AccountId, BadOrigin> {
-        Ok(U256::from(0))
-    }
-}
-
-impl pallet_shield::Config for Test {
-    type RuntimeCall = RuntimeCall;
-    type AuthorityOrigin = TestAuthorityOrigin;
 }
 
 static TEST_LOGS_INIT: OnceLock<()> = OnceLock::new();
@@ -978,13 +969,14 @@ pub(crate) fn swap_tao_to_alpha(netuid: NetUid, tao: TaoCurrency) -> (AlphaCurre
     }
 
     let order = GetAlphaForTao::<Test>::with_amount(tao);
-    let result = <Test as pallet::Config>::SwapInterface::swap(
-        netuid.into(),
-        order,
-        <Test as pallet::Config>::SwapInterface::max_price(),
-        false,
-        true,
-    );
+    let result =
+        <<Test as pallet::Config>::SwapInterface as subtensor_swap_interface::SwapHandler>::swap(
+            netuid,
+            order,
+            <Test as pallet::Config>::SwapInterface::max_price(),
+            false,
+            true,
+        );
 
     assert_ok!(&result);
 
@@ -1011,13 +1003,14 @@ pub(crate) fn swap_alpha_to_tao_ext(
     );
 
     let order = GetTaoForAlpha::<Test>::with_amount(alpha);
-    let result = <Test as pallet::Config>::SwapInterface::swap(
-        netuid.into(),
-        order,
-        <Test as pallet::Config>::SwapInterface::min_price(),
-        drop_fees,
-        true,
-    );
+    let result =
+        <<Test as pallet::Config>::SwapInterface as subtensor_swap_interface::SwapHandler>::swap(
+            netuid,
+            order,
+            <Test as pallet::Config>::SwapInterface::min_price(),
+            drop_fees,
+            true,
+        );
 
     assert_ok!(&result);
 
@@ -1041,7 +1034,7 @@ pub(crate) fn last_event() -> RuntimeEvent {
 pub fn assert_last_event<T: frame_system::pallet::Config>(
     generic_event: <T as frame_system::pallet::Config>::RuntimeEvent,
 ) {
-    frame_system::Pallet::<T>::assert_last_event(generic_event.into());
+    frame_system::Pallet::<T>::assert_last_event(generic_event);
 }
 
 #[allow(dead_code)]

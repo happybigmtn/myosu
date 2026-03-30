@@ -56,6 +56,51 @@ impl InputLine {
         self.cursor
     }
 
+    pub fn viewport(&self, width: usize) -> (String, usize) {
+        if width == 0 {
+            return (String::new(), 0);
+        }
+
+        if self.buf.len() <= width {
+            return (self.text(), self.cursor);
+        }
+
+        let mut budget = width;
+        let mut leading = false;
+        let mut trailing = false;
+
+        if width > 2 {
+            budget -= 1;
+            leading = true;
+            trailing = true;
+            budget -= 1;
+        }
+
+        let mut start = self.cursor.saturating_sub(budget / 2);
+        if start + budget > self.buf.len() {
+            start = self.buf.len() - budget;
+        }
+        let end = start + budget;
+
+        let mut visible = String::new();
+        let mut cursor_offset = self.cursor.saturating_sub(start);
+
+        if leading && start > 0 {
+            visible.push('<');
+            cursor_offset += 1;
+        }
+
+        for ch in &self.buf[start..end] {
+            visible.push(*ch);
+        }
+
+        if trailing && end < self.buf.len() {
+            visible.push('>');
+        }
+
+        (visible, cursor_offset)
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> InputAction {
         if key.kind != KeyEventKind::Press {
             return InputAction::Continue;
@@ -531,5 +576,34 @@ mod tests {
         };
         assert_eq!(input.handle_key(release), InputAction::Continue);
         assert_eq!(input.text(), "");
+    }
+
+    #[test]
+    fn viewport_keeps_cursor_visible_for_long_input() {
+        let mut input = InputLine::new();
+        type_str(&mut input, "raise to 123456789 chips");
+
+        let (visible, cursor) = input.viewport(10);
+
+        assert!(visible.starts_with('<'));
+        assert!(visible.len() <= 10);
+        assert!(cursor <= visible.len());
+        assert!(visible.contains("chips"));
+    }
+
+    #[test]
+    fn viewport_shows_start_without_leading_marker_when_cursor_near_front() {
+        let mut input = InputLine::new();
+        type_str(&mut input, "raise to 123456789 chips");
+        input.handle_key(ctrl('a'));
+        for _ in 0..3 {
+            input.handle_key(press(KeyCode::Right));
+        }
+
+        let (visible, cursor) = input.viewport(10);
+
+        assert!(!visible.starts_with('<'));
+        assert!(visible.ends_with('>'));
+        assert_eq!(cursor, 3);
     }
 }

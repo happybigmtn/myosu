@@ -8,6 +8,7 @@ use frame_support::{
 };
 use frame_system::{self as system, offchain::CreateTransactionBase};
 use frame_system::{EnsureRoot, limits};
+pub use pallet_game_solver as pallet_subtensor;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_grandpa::AuthorityList as GrandpaAuthorityList;
 use sp_core::U256;
@@ -32,7 +33,6 @@ frame_support::construct_runtime!(
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 5,
         Drand: pallet_drand::{Pallet, Call, Storage, Event<T>} = 6,
         Grandpa: pallet_grandpa = 7,
-        EVMChainId: pallet_evm_chain_id = 8,
         Swap: pallet_subtensor_swap::{Pallet, Call, Storage, Event<T>} = 9,
         Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 10,
         Crowdloan: pallet_crowdloan::{Pallet, Call, Storage, Event<T>} = 11,
@@ -158,7 +158,12 @@ parameter_types! {
     pub const EvmKeyAssociateRateLimit: u64 = 0;
 }
 
+pub struct EmptyCommitments;
+
+impl pallet_game_solver::macros::config::GetCommitments<U256> for EmptyCommitments {}
+
 impl pallet_subtensor::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
     type Currency = Balances;
     type InitialIssuance = InitialIssuance;
@@ -226,11 +231,12 @@ impl pallet_subtensor::Config for Test {
     type HotkeySwapOnSubnetInterval = HotkeySwapOnSubnetInterval;
     type ProxyInterface = ();
     type LeaseDividendsDistributionInterval = LeaseDividendsDistributionInterval;
-    type GetCommitments = ();
+    type GetCommitments = EmptyCommitments;
     type MaxImmuneUidsPercentage = MaxImmuneUidsPercentage;
     type CommitmentsInterface = CommitmentsI;
     type EvmKeyAssociateRateLimit = EvmKeyAssociateRateLimit;
     type AuthorshipProvider = MockAuthorshipProvider;
+    type MaxContributors = MaxContributors;
 }
 
 parameter_types! {
@@ -402,7 +408,6 @@ impl pallet_scheduler::Config for Test {
     type BlockNumberProvider = System;
 }
 
-impl pallet_evm_chain_id::Config for Test {}
 impl pallet_drand::Config for Test {
     type AuthorityId = TestAuthId;
     type Verifier = pallet_drand::verifier::QuicknetVerifier;

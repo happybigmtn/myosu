@@ -1,12 +1,13 @@
+#![allow(clippy::type_complexity)] // `freeze_struct` makes aliasing the field itself awkward here.
+
 use super::*;
-use frame_support::IterableStorageMap;
 use frame_support::pallet_prelude::{Decode, Encode};
 use safe_math::*;
 use substrate_fixed::types::U64F64;
 extern crate alloc;
 use alloc::collections::BTreeMap;
 use codec::Compact;
-use subtensor_runtime_common::{AlphaCurrency, NetUid};
+use subtensor_runtime_common::NetUid;
 
 #[freeze_struct("1fafc4fcf28cba7a")]
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug, TypeInfo)]
@@ -21,24 +22,36 @@ pub struct DelegateInfo<AccountId: TypeInfo + Encode + Decode> {
     pub total_daily_return: Compact<u64>, // Delegators current daily return
 }
 
+type DelegateNominatorStake<AccountId> = (AccountId, Vec<(Compact<NetUid>, Compact<u64>)>);
+
 impl<T: Config> Pallet<T> {
+    fn delegator_daily_return(take: Compact<u16>, emissions_per_day: U64F64) -> U64F64 {
+        // Get the take as a percentage and subtract it from 1 for remainder.
+        let without_take: U64F64 = U64F64::saturating_from_num(1)
+            .saturating_sub(U64F64::saturating_from_num(take.0).safe_div(u16::MAX.into()));
+
+        emissions_per_day.saturating_mul(without_take)
+    }
+
     fn return_per_1000_tao(
         take: Compact<u16>,
         total_stake: U64F64,
         emissions_per_day: U64F64,
     ) -> U64F64 {
-        // Get the take as a percentage and subtract it from 1 for remainder.
-        let without_take: U64F64 = U64F64::saturating_from_num(1)
-            .saturating_sub(U64F64::saturating_from_num(take.0).safe_div(u16::MAX.into()));
+        let delegator_daily_return = Self::delegator_daily_return(take, emissions_per_day);
 
         if total_stake > U64F64::saturating_from_num(0) {
-            emissions_per_day
-                .saturating_mul(without_take)
-                // Divide by 1000 TAO for return per 1k
+            delegator_daily_return
+                // Divide by 1000 TAO for return per 1k.
                 .safe_div(total_stake.safe_div(U64F64::saturating_from_num(1000.0 * 1e9)))
         } else {
             U64F64::saturating_from_num(0)
         }
+    }
+
+    #[cfg(test)]
+    pub fn delegator_daily_return_test(take: Compact<u16>, emissions_per_day: U64F64) -> U64F64 {
+        Self::delegator_daily_return(take, emissions_per_day)
     }
 
     #[cfg(test)]
@@ -54,15 +67,15 @@ impl<T: Config> Pallet<T> {
         delegate: AccountIdOf<T>,
         skip_nominators: bool,
     ) -> DelegateInfo<T::AccountId> {
-        let mut nominators = Vec::<(T::AccountId, Vec<(Compact<NetUid>, Compact<u64>)>)>::new();
+        let mut nominators = Vec::<DelegateNominatorStake<T::AccountId>>::new();
         let mut nominator_map =
             BTreeMap::<T::AccountId, Vec<(Compact<NetUid>, Compact<u64>)>>::new();
 
         if !skip_nominators {
-            let mut alpha_share_pools = vec![];
+            let mut alpha_share_pools = BTreeMap::new();
             for netuid in Self::get_all_subnet_netuids() {
                 let alpha_share_pool = Self::get_alpha_share_pool(delegate.clone(), netuid);
-                alpha_share_pools.push(alpha_share_pool);
+                alpha_share_pools.insert(netuid, alpha_share_pool);
             }
 
             for ((nominator, netuid), alpha_stake) in Alpha::<T>::iter_prefix((delegate.clone(),)) {
@@ -70,7 +83,7 @@ impl<T: Config> Pallet<T> {
                     continue;
                 }
 
-                if let Some(alpha_share_pool) = alpha_share_pools.get(u16::from(netuid) as usize) {
+                if let Some(alpha_share_pool) = alpha_share_pools.get(&netuid) {
                     let coldkey_stake = alpha_share_pool.get_value_from_shares(alpha_stake);
 
                     nominator_map
@@ -109,12 +122,8 @@ impl<T: Config> Pallet<T> {
         let owner = Self::get_owning_coldkey_for_hotkey(&delegate.clone());
         let take: Compact<u16> = <Delegates<T>>::get(delegate.clone()).into();
 
-        let total_stake: U64F64 = u64::from(Self::get_stake_for_hotkey_on_subnet(
-            &delegate.clone(),
-            NetUid::ROOT,
-        ))
-        .into();
-
+        let total_stake: U64F64 = u64::from(Self::get_total_stake_for_hotkey(&delegate)).into();
+        let total_daily_return = Self::delegator_daily_return(take, emissions_per_day);
         let return_per_1000: U64F64 =
             Self::return_per_1000_tao(take, total_stake, emissions_per_day);
 
@@ -126,7 +135,7 @@ impl<T: Config> Pallet<T> {
             registrations: registrations.iter().map(|x| x.into()).collect(),
             validator_permits,
             return_per_1000: return_per_1000.saturating_to_num::<u64>().into(),
-            total_daily_return: emissions_per_day.saturating_to_num::<u64>().into(),
+            total_daily_return: total_daily_return.saturating_to_num::<u64>().into(),
         }
     }
 
@@ -138,50 +147,6 @@ impl<T: Config> Pallet<T> {
 
         let delegate_info = Self::get_delegate_by_existing_account(delegate.clone(), false);
         Some(delegate_info)
-    }
-
-    /// get all delegates info from storage
-    ///
-    pub fn get_delegates() -> Vec<DelegateInfo<T::AccountId>> {
-        let mut delegates = Vec::<DelegateInfo<T::AccountId>>::new();
-        for delegate in <Delegates<T> as IterableStorageMap<T::AccountId, u16>>::iter_keys() {
-            let delegate_info = Self::get_delegate_by_existing_account(delegate.clone(), false);
-            delegates.push(delegate_info);
-        }
-
-        delegates
-    }
-
-    /// get all delegate info and staked token amount for a given delegatee account
-    ///
-    pub fn get_delegated(
-        delegatee: T::AccountId,
-    ) -> Vec<(
-        DelegateInfo<T::AccountId>,
-        (Compact<NetUid>, Compact<AlphaCurrency>),
-    )> {
-        let mut delegates: Vec<(
-            DelegateInfo<T::AccountId>,
-            (Compact<NetUid>, Compact<AlphaCurrency>),
-        )> = Vec::new();
-        for delegate in <Delegates<T> as IterableStorageMap<T::AccountId, u16>>::iter_keys() {
-            // Staked to this delegate, so add to list
-            for (netuid, _) in Alpha::<T>::iter_prefix((delegate.clone(), delegatee.clone())) {
-                let delegate_info = Self::get_delegate_by_existing_account(delegate.clone(), true);
-                delegates.push((
-                    delegate_info,
-                    (
-                        netuid.into(),
-                        Self::get_stake_for_hotkey_and_coldkey_on_subnet(
-                            &delegate, &delegatee, netuid,
-                        )
-                        .into(),
-                    ),
-                ));
-            }
-        }
-
-        delegates
     }
 
     // Helper function to get the coldkey associated with a hotkey

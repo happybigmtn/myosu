@@ -21,4 +21,4 @@ anyhow.workspace = true
 clap = { workspace = true, features = ["derive"] }
 semver.workspace = true
 toml_edit.workspace = true
-node-subtensor-runtime = { workspace = true, default-features = true }
+myosu-chain-runtime = { workspace = true, default-features = true }

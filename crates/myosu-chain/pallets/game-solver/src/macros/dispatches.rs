@@ -5,15 +5,12 @@ use frame_support::pallet_macros::pallet_section;
 /// This can later be imported into the pallet using [`import_section`].
 #[pallet_section]
 mod dispatches {
-    use crate::subnets::leasing::SubnetLeasingWeightInfo;
     use frame_support::traits::schedule::v3::Anon as ScheduleAnon;
     use frame_system::pallet_prelude::BlockNumberFor;
     use sp_core::ecdsa::Signature;
-    use sp_runtime::{Percent, Saturating, traits::Hash};
+    use sp_runtime::{Saturating, traits::Hash};
 
-    use crate::MAX_NUM_ROOT_CLAIMS;
-    use crate::MAX_ROOT_CLAIM_THRESHOLD;
-    use crate::MAX_SUBNET_CLAIMS;
+    use crate::{MAX_NUM_ROOT_CLAIMS, MAX_ROOT_CLAIM_THRESHOLD, MAX_SUBNET_CLAIMS};
 
     /// Dispatchable functions allow users to interact with the pallet and invoke state changes.
     /// These functions materialize as "extrinsics", which are often compared to transactions.
@@ -441,92 +438,6 @@ mod dispatches {
         /// * `netuid` (`u16`):
         ///   - The u16 network identifier.
         ///
-        /// * `commit` (`Vec<u8>`):
-        ///   - The encrypted compressed commit.
-        ///     The steps for this are:
-        ///     1. Instantiate [`WeightsTlockPayload`]
-        ///     2. Serialize it using the `parity_scale_codec::Encode` trait
-        ///     3. Encrypt it following the steps (here)[https://github.com/ideal-lab5/tle/blob/f8e6019f0fb02c380ebfa6b30efb61786dede07b/timelock/src/tlock.rs#L283-L336]
-        ///        to produce a [`TLECiphertext<TinyBLS381>`] type.
-        ///     4. Serialize and compress using the `ark-serialize` `CanonicalSerialize` trait.
-        ///
-        /// * reveal_round (`u64`):
-        ///    - The drand reveal round which will be avaliable during epoch `n+1` from the current
-        ///      epoch.
-        ///
-        /// # Raises:
-        /// * `CommitRevealV3Disabled`:
-        ///   - Attempting to commit when the commit-reveal mechanism is disabled.
-        ///
-        /// * `TooManyUnrevealedCommits`:
-        ///   - Attempting to commit when the user has more than the allowed limit of unrevealed commits.
-        ///
-        // #[pallet::call_index(99)]
-        // #[pallet::weight((Weight::from_parts(77_750_000, 0)
-        // .saturating_add(T::DbWeight::get().reads(9_u64))
-        // .saturating_add(T::DbWeight::get().writes(2)), DispatchClass::Normal, Pays::No))]
-        // pub fn commit_crv3_weights(
-        //     origin: T::RuntimeOrigin,
-        //     netuid: NetUid,
-        //     commit: BoundedVec<u8, ConstU32<MAX_CRV3_COMMIT_SIZE_BYTES>>,
-        //     reveal_round: u64,
-        // ) -> DispatchResult {
-        //     Self::do_commit_timelocked_weights(origin, netuid, commit, reveal_round, 4)
-        // }
-
-        /// ---- Used to commit encrypted commit-reveal v3 weight values to later be revealed for mechanisms.
-        ///
-        /// # Args:
-        /// * `origin`: (`<T as frame_system::Config>::RuntimeOrigin`):
-        ///   - The committing hotkey.
-        ///
-        /// * `netuid` (`u16`):
-        ///   - The u16 network identifier.
-        ///
-        /// * `mecid` (`u8`):
-        ///   - The u8 mechanism identifier.
-        ///
-        /// * `commit` (`Vec<u8>`):
-        ///   - The encrypted compressed commit.
-        ///     The steps for this are:
-        ///     1. Instantiate [`WeightsTlockPayload`]
-        ///     2. Serialize it using the `parity_scale_codec::Encode` trait
-        ///     3. Encrypt it following the steps (here)[https://github.com/ideal-lab5/tle/blob/f8e6019f0fb02c380ebfa6b30efb61786dede07b/timelock/src/tlock.rs#L283-L336]
-        ///        to produce a [`TLECiphertext<TinyBLS381>`] type.
-        ///     4. Serialize and compress using the `ark-serialize` `CanonicalSerialize` trait.
-        ///
-        /// * reveal_round (`u64`):
-        ///    - The drand reveal round which will be avaliable during epoch `n+1` from the current
-        ///      epoch.
-        ///
-        /// # Raises:
-        /// * `CommitRevealV3Disabled`:
-        ///   - Attempting to commit when the commit-reveal mechanism is disabled.
-        ///
-        /// * `TooManyUnrevealedCommits`:
-        ///   - Attempting to commit when the user has more than the allowed limit of unrevealed commits.
-        ///
-        #[pallet::call_index(117)]
-        #[pallet::weight((Weight::from_parts(77_750_000, 0)
-		.saturating_add(T::DbWeight::get().reads(7_u64))
-		.saturating_add(T::DbWeight::get().writes(2)), DispatchClass::Normal, Pays::No))]
-        pub fn commit_crv3_mechanism_weights(
-            origin: T::RuntimeOrigin,
-            netuid: NetUid,
-            mecid: MechId,
-            commit: BoundedVec<u8, ConstU32<MAX_CRV3_COMMIT_SIZE_BYTES>>,
-            reveal_round: u64,
-        ) -> DispatchResult {
-            Self::do_commit_timelocked_mechanism_weights(
-                origin,
-                netuid,
-                mecid,
-                commit,
-                reveal_round,
-                4,
-            )
-        }
-
         /// ---- The implementation for batch revealing committed weights.
         ///
         /// # Args:
@@ -1967,58 +1878,6 @@ mod dispatches {
             Self::do_remove_stake_full_limit(origin, hotkey, netuid, limit_price)
         }
 
-        /// Register a new leased network.
-        ///
-        /// The crowdloan's contributions are used to compute the share of the emissions that the contributors
-        /// will receive as dividends.
-        ///
-        /// The leftover cap is refunded to the contributors and the beneficiary.
-        ///
-        /// # Args:
-        /// * `origin` - (<T as frame_system::Config>::Origin):
-        ///     - The signature of the caller's coldkey.
-        ///
-        /// * `emissions_share` (Percent):
-        ///     - The share of the emissions that the contributors will receive as dividends.
-        ///
-        /// * `end_block` (Option<BlockNumberFor<T>>):
-        ///     - The block at which the lease will end. If not defined, the lease is perpetual.
-        #[pallet::call_index(110)]
-        #[pallet::weight(SubnetLeasingWeightInfo::<T>::do_register_leased_network(T::MaxContributors::get()))]
-        pub fn register_leased_network(
-            origin: T::RuntimeOrigin,
-            emissions_share: Percent,
-            end_block: Option<BlockNumberFor<T>>,
-        ) -> DispatchResultWithPostInfo {
-            Self::do_register_leased_network(origin, emissions_share, end_block)
-        }
-
-        /// Terminate a lease.
-        ///
-        /// The beneficiary can terminate the lease after the end block has passed and get the subnet ownership.
-        /// The subnet is transferred to the beneficiary and the lease is removed from storage.
-        ///
-        /// **The hotkey must be owned by the beneficiary coldkey.**
-        ///
-        /// # Args:
-        /// * `origin` - (<T as frame_system::Config>::Origin):
-        ///     - The signature of the caller's coldkey.
-        ///
-        /// * `lease_id` (LeaseId):
-        ///     - The ID of the lease to terminate.
-        ///
-        /// * `hotkey` (T::AccountId):
-        ///     - The hotkey of the beneficiary to mark as subnet owner hotkey.
-        #[pallet::call_index(111)]
-        #[pallet::weight(SubnetLeasingWeightInfo::<T>::do_terminate_lease(T::MaxContributors::get()))]
-        pub fn terminate_lease(
-            origin: T::RuntimeOrigin,
-            lease_id: LeaseId,
-            hotkey: T::AccountId,
-        ) -> DispatchResultWithPostInfo {
-            Self::do_terminate_lease(origin, lease_id, hotkey)
-        }
-
         /// Updates the symbol for a subnet.
         ///
         /// # Arguments
@@ -2054,50 +1913,6 @@ mod dispatches {
 
             Self::deposit_event(Event::SymbolUpdated { netuid, symbol });
             Ok(())
-        }
-
-        /// ---- Used to commit timelock encrypted commit-reveal weight values to later be revealed.
-        ///
-        /// # Args:
-        /// * `origin`: (`<T as frame_system::Config>::RuntimeOrigin`):
-        ///   - The committing hotkey.
-        ///
-        /// * `netuid` (`u16`):
-        ///   - The u16 network identifier.
-        ///
-        /// * `commit` (`Vec<u8>`):
-        ///   - The encrypted compressed commit.
-        ///     The steps for this are:
-        ///     1. Instantiate [`WeightsTlockPayload`]
-        ///     2. Serialize it using the `parity_scale_codec::Encode` trait
-        ///     3. Encrypt it following the steps (here)[https://github.com/ideal-lab5/tle/blob/f8e6019f0fb02c380ebfa6b30efb61786dede07b/timelock/src/tlock.rs#L283-L336]
-        ///        to produce a [`TLECiphertext<TinyBLS381>`] type.
-        ///     4. Serialize and compress using the `ark-serialize` `CanonicalSerialize` trait.
-        ///
-        /// * reveal_round (`u64`):
-        ///    - The drand reveal round which will be avaliable during epoch `n+1` from the current
-        ///      epoch.
-        ///
-        /// * commit_reveal_version (`u16`):
-        ///     - The client (bittensor-drand) version
-        #[pallet::call_index(113)]
-        #[pallet::weight((Weight::from_parts(63_160_000, 0)
-		.saturating_add(T::DbWeight::get().reads(10_u64))
-		.saturating_add(T::DbWeight::get().writes(2)), DispatchClass::Normal, Pays::No))]
-        pub fn commit_timelocked_weights(
-            origin: T::RuntimeOrigin,
-            netuid: NetUid,
-            commit: BoundedVec<u8, ConstU32<MAX_CRV3_COMMIT_SIZE_BYTES>>,
-            reveal_round: u64,
-            commit_reveal_version: u16,
-        ) -> DispatchResult {
-            Self::do_commit_timelocked_weights(
-                origin,
-                netuid,
-                commit,
-                reveal_round,
-                commit_reveal_version,
-            )
         }
 
         /// Set the autostake destination hotkey for a coldkey.
@@ -2155,56 +1970,6 @@ mod dispatches {
             });
 
             Ok(())
-        }
-
-        /// ---- Used to commit timelock encrypted commit-reveal weight values to later be revealed for
-        /// a mechanism.
-        ///
-        /// # Args:
-        /// * `origin`: (`<T as frame_system::Config>::RuntimeOrigin`):
-        ///   - The committing hotkey.
-        ///
-        /// * `netuid` (`u16`):
-        ///   - The u16 network identifier.
-        ///
-        /// * `mecid` (`u8`):
-        ///   - The u8 mechanism identifier.
-        ///
-        /// * `commit` (`Vec<u8>`):
-        ///   - The encrypted compressed commit.
-        ///     The steps for this are:
-        ///     1. Instantiate [`WeightsTlockPayload`]
-        ///     2. Serialize it using the `parity_scale_codec::Encode` trait
-        ///     3. Encrypt it following the steps (here)[https://github.com/ideal-lab5/tle/blob/f8e6019f0fb02c380ebfa6b30efb61786dede07b/timelock/src/tlock.rs#L283-L336]
-        ///        to produce a [`TLECiphertext<TinyBLS381>`] type.
-        ///     4. Serialize and compress using the `ark-serialize` `CanonicalSerialize` trait.
-        ///
-        /// * reveal_round (`u64`):
-        ///    - The drand reveal round which will be avaliable during epoch `n+1` from the current
-        ///      epoch.
-        ///
-        /// * commit_reveal_version (`u16`):
-        ///     - The client (bittensor-drand) version
-        #[pallet::call_index(118)]
-        #[pallet::weight((Weight::from_parts(84_020_000, 0)
-		.saturating_add(T::DbWeight::get().reads(9_u64))
-		.saturating_add(T::DbWeight::get().writes(2)), DispatchClass::Normal, Pays::No))]
-        pub fn commit_timelocked_mechanism_weights(
-            origin: T::RuntimeOrigin,
-            netuid: NetUid,
-            mecid: MechId,
-            commit: BoundedVec<u8, ConstU32<MAX_CRV3_COMMIT_SIZE_BYTES>>,
-            reveal_round: u64,
-            commit_reveal_version: u16,
-        ) -> DispatchResult {
-            Self::do_commit_timelocked_mechanism_weights(
-                origin,
-                netuid,
-                mecid,
-                commit,
-                reveal_round,
-                commit_reveal_version,
-            )
         }
 
         /// Remove a subnetwork

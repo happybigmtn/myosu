@@ -19,9 +19,8 @@ impl<T: Config> Pallet<T> {
         );
         log::debug!("Block emission: {block_emission:?}");
 
-
         // --- 4. Run emission through network.
-        Self::run_coinbase(block_emission);
+        let coinbase_summary = Self::run_coinbase(block_emission);
         // --- 5. Update moving prices AFTER using them for emissions.
         Self::update_moving_prices();
         // --- 6. Update roop prop AFTER using them for emissions.
@@ -32,6 +31,30 @@ impl<T: Config> Pallet<T> {
         Self::run_auto_claim_root_divs(last_block_hash);
         // --- 9. Populate root coldkey maps.
         Self::populate_root_coldkey_staking_maps();
+
+        if coinbase_summary.drained_epoch_count > 0 {
+            log::info!(
+                "block_step_summary block={} subnet_count={} emitting_subnet_count={} drained_epoch_count={} block_emission={} server_alpha_distributed={} validator_alpha_distributed={} root_alpha_distributed={} owner_cut_distributed={}",
+                coinbase_summary.current_block,
+                coinbase_summary.subnet_count,
+                coinbase_summary.emitting_subnet_count,
+                coinbase_summary.drained_epoch_count,
+                block_emission,
+                coinbase_summary.server_alpha_distributed.to_u64(),
+                coinbase_summary.validator_alpha_distributed.to_u64(),
+                coinbase_summary.root_alpha_distributed.to_u64(),
+                coinbase_summary.owner_cut_distributed.to_u64(),
+            );
+        } else {
+            log::debug!(
+                "block_step_summary block={} subnet_count={} emitting_subnet_count={} drained_epoch_count={} block_emission={}",
+                coinbase_summary.current_block,
+                coinbase_summary.subnet_count,
+                coinbase_summary.emitting_subnet_count,
+                coinbase_summary.drained_epoch_count,
+                block_emission,
+            );
+        }
 
         // Return ok.
         Ok(())
@@ -300,5 +323,4 @@ impl<T: Config> Pallet<T> {
 
         root_proportion
     }
-
 }

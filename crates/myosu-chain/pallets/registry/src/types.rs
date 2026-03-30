@@ -37,9 +37,10 @@ use subtensor_macros::freeze_struct;
 /// than 32-bytes then it will be truncated when encoding.
 ///
 /// Can also be `None`.
-#[derive(Clone, Eq, PartialEq, RuntimeDebug, DecodeWithMemTracking, MaxEncodedLen)]
+#[derive(Clone, Eq, PartialEq, RuntimeDebug, DecodeWithMemTracking, Default, MaxEncodedLen)]
 pub enum Data {
     /// No data here.
+    #[default]
     None,
     /// The data is stored directly.
     Raw(BoundedVec<u8, ConstU32<64>>),
@@ -213,12 +214,6 @@ impl TypeInfo for Data {
         Type::builder()
             .path(Path::new("Data", module_path!()))
             .variant(variants)
-    }
-}
-
-impl Default for Data {
-    fn default() -> Self {
-        Self::None
     }
 }
 

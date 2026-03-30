@@ -18,14 +18,15 @@ mod genesis {
                 .expect("Alice hotkey pair should be valid");
             let alice_hk_bytes = pair.public().0;
 
-            let alice_account =
+            let _alice_account =
                 T::AccountId::decode(&mut &alice_bytes[..]).expect("Alice account should decode");
-            let alice_hk_account = T::AccountId::decode(&mut &alice_hk_bytes[..])
+            let _alice_hk_account = T::AccountId::decode(&mut &alice_hk_bytes[..])
                 .expect("Alice hotkey account should decode");
 
-            let subnet_root_owner = prod_or_fast!(DefaultSubnetOwner::<T>::get(), alice_account);
+            let subnet_root_owner =
+                prod_or_fast!(DefaultSubnetOwner::<T>::get(), _alice_account);
             let subnet_root_owner_hotkey =
-                prod_or_fast!(DefaultSubnetOwner::<T>::get(), alice_hk_account);
+                prod_or_fast!(DefaultSubnetOwner::<T>::get(), _alice_hk_account);
 
             // Set initial total issuance from balances
             TotalIssuance::<T>::put(self.balances_issuance);

@@ -1,9 +1,31 @@
 use super::*;
+use crate::Stage0SwapInterface;
 use alloc::collections::BTreeMap;
 use safe_math::*;
 use substrate_fixed::types::U96F32;
 use subtensor_runtime_common::{AlphaCurrency, Currency, NetUid, TaoCurrency};
-use subtensor_swap_interface::SwapHandler;
+
+type SubnetTerms = (
+    BTreeMap<NetUid, U96F32>,
+    BTreeMap<NetUid, U96F32>,
+    BTreeMap<NetUid, U96F32>,
+    BTreeMap<NetUid, U96F32>,
+);
+type DividendDistribution<AccountId> = (
+    BTreeMap<AccountId, AlphaCurrency>,
+    (BTreeMap<AccountId, U96F32>, BTreeMap<AccountId, U96F32>),
+);
+
+pub struct CoinbaseSummary {
+    pub current_block: u64,
+    pub subnet_count: usize,
+    pub emitting_subnet_count: usize,
+    pub drained_epoch_count: usize,
+    pub server_alpha_distributed: AlphaCurrency,
+    pub validator_alpha_distributed: AlphaCurrency,
+    pub root_alpha_distributed: AlphaCurrency,
+    pub owner_cut_distributed: AlphaCurrency,
+}
 
 // Distribute dividends to each hotkey
 macro_rules! asfloat {
@@ -19,7 +41,7 @@ macro_rules! tou64 {
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn run_coinbase(block_emission: U96F32) {
+    pub fn run_coinbase(block_emission: U96F32) -> CoinbaseSummary {
         // --- 0. Get current block.
         let current_block: u64 = Self::get_current_block_as_u64();
         log::debug!(
@@ -51,6 +73,34 @@ impl<T: Config> Pallet<T> {
 
         // --- 6. Distribute the emissions to the subnets.
         Self::distribute_emissions_to_subnets(&emissions_to_distribute);
+
+        let mut server_alpha_distributed = AlphaCurrency::ZERO;
+        let mut validator_alpha_distributed = AlphaCurrency::ZERO;
+        let mut root_alpha_distributed = AlphaCurrency::ZERO;
+        let mut owner_cut_distributed = AlphaCurrency::ZERO;
+        for (
+            _netuid,
+            (pending_server_alpha, pending_validator_alpha, pending_root_alpha, pending_owner_cut),
+        ) in emissions_to_distribute.iter()
+        {
+            server_alpha_distributed =
+                server_alpha_distributed.saturating_add(*pending_server_alpha);
+            validator_alpha_distributed =
+                validator_alpha_distributed.saturating_add(*pending_validator_alpha);
+            root_alpha_distributed = root_alpha_distributed.saturating_add(*pending_root_alpha);
+            owner_cut_distributed = owner_cut_distributed.saturating_add(*pending_owner_cut);
+        }
+
+        CoinbaseSummary {
+            current_block,
+            subnet_count: subnets.len(),
+            emitting_subnet_count: subnets_to_emit_to.len(),
+            drained_epoch_count: emissions_to_distribute.len(),
+            server_alpha_distributed,
+            validator_alpha_distributed,
+            root_alpha_distributed,
+            owner_cut_distributed,
+        }
     }
 
     pub fn inject_and_maybe_swap(
@@ -60,24 +110,18 @@ impl<T: Config> Pallet<T> {
         excess_tao: &BTreeMap<NetUid, U96F32>,
     ) {
         for netuid_i in subnets_to_emit_to.iter() {
-            let tao_in_i: TaoCurrency =
-                tou64!(*tao_in.get(netuid_i).unwrap_or(&asfloat!(0))).into();
-            let alpha_in_i: AlphaCurrency =
-                tou64!(*alpha_in.get(netuid_i).unwrap_or(&asfloat!(0))).into();
             let tao_to_swap_with: TaoCurrency =
                 tou64!(excess_tao.get(netuid_i).unwrap_or(&asfloat!(0))).into();
-
-            T::SwapInterface::adjust_protocol_liquidity(*netuid_i, tao_in_i, alpha_in_i);
 
             if tao_to_swap_with > TaoCurrency::ZERO {
                 let buy_swap_result = Self::swap_tao_for_alpha(
                     *netuid_i,
                     tao_to_swap_with,
-                    T::SwapInterface::max_price(),
+                    T::SwapInterface::stage0_max_price(),
                     true,
                 );
                 if let Ok(buy_swap_result_ok) = buy_swap_result {
-                    let bought_alpha: AlphaCurrency = buy_swap_result_ok.amount_paid_out.into();
+                    let bought_alpha: AlphaCurrency = buy_swap_result_ok.amount_paid_out;
                     Self::recycle_subnet_alpha(*netuid_i, bought_alpha);
                 }
             }
@@ -105,20 +149,13 @@ impl<T: Config> Pallet<T> {
             let difference_tao = tou64!(*excess_tao.get(netuid_i).unwrap_or(&asfloat!(0)));
             TotalIssuance::<T>::mutate(|total| {
                 *total = total
-                    .saturating_add(injected_tao.into())
+                    .saturating_add(injected_tao)
                     .saturating_add(difference_tao.into());
             });
         }
     }
 
-    pub fn get_subnet_terms(
-        subnet_emissions: &BTreeMap<NetUid, U96F32>,
-    ) -> (
-        BTreeMap<NetUid, U96F32>,
-        BTreeMap<NetUid, U96F32>,
-        BTreeMap<NetUid, U96F32>,
-        BTreeMap<NetUid, U96F32>,
-    ) {
+    pub fn get_subnet_terms(subnet_emissions: &BTreeMap<NetUid, U96F32>) -> SubnetTerms {
         // Computation is described in detail in the dtao whitepaper.
         let mut tao_in: BTreeMap<NetUid, U96F32> = BTreeMap::new();
         let mut alpha_in: BTreeMap<NetUid, U96F32> = BTreeMap::new();
@@ -140,7 +177,7 @@ impl<T: Config> Pallet<T> {
             log::debug!("alpha_emission_i: {alpha_emission_i:?}");
 
             // Get subnet price.
-            let price_i: U96F32 = T::SwapInterface::current_alpha_price(netuid_i.into());
+            let price_i: U96F32 = T::SwapInterface::stage0_current_alpha_price(netuid_i);
             log::debug!("price_i: {price_i:?}");
 
             let mut tao_in_i: U96F32 = tao_emission_i;
@@ -522,10 +559,8 @@ impl<T: Config> Pallet<T> {
                 netuid,
                 owner_cut,
             );
-            // If the subnet is leased, notify the lease logic that owner cut has been distributed.
-            if let Some(lease_id) = SubnetUidToLeaseId::<T>::get(netuid) {
-                Self::distribute_leased_network_dividends(lease_id, real_owner_cut);
-            }
+            // Stage 0 uses direct owner staking rather than leased-network dividend splitting.
+            let _ = real_owner_cut;
         }
 
         // Distribute mining incentives.
@@ -659,13 +694,7 @@ impl<T: Config> Pallet<T> {
         pending_validator_alpha: AlphaCurrency,
         hotkey_emission: Vec<(T::AccountId, AlphaCurrency, AlphaCurrency)>,
         tao_weight: U96F32,
-    ) -> (
-        BTreeMap<T::AccountId, AlphaCurrency>,
-        (
-            BTreeMap<T::AccountId, U96F32>,
-            BTreeMap<T::AccountId, U96F32>,
-        ),
-    ) {
+    ) -> DividendDistribution<T::AccountId> {
         let (incentives, dividends) =
             Self::calculate_dividends_and_incentives(netuid, hotkey_emission);
 
