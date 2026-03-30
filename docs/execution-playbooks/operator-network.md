@@ -106,6 +106,7 @@ cargo run -p myosu-keys --quiet -- print-bootstrap --config-dir ~/.myosu --subne
 cargo check -p myosu-keys
 cargo test -p myosu-keys --quiet
 rustup target add wasm32-unknown-unknown
+rustup component add rust-src
 SKIP_WASM_BUILD=1 cargo build -p myosu-chain --features fast-runtime
 env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-spec --chain devnet >/tmp/myosu-devnet-spec.json
 env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-spec --chain test_finney >/tmp/myosu-testnet-spec.json
@@ -115,7 +116,9 @@ test -s /tmp/myosu-testnet-spec.json
 
 On warm machines, `SKIP_WASM_BUILD=1` reuses a cached runtime wasm. On cold
 machines with `wasm32-unknown-unknown` installed, the runtime now falls back to
-building that wasm instead of emitting an empty named-network spec.
+building that wasm instead of emitting an empty named-network spec. That cold
+path also needs the Rust `rust-src` component because Substrate's wasm builder
+compiles a real runtime artifact when no cache is present.
 
 If you prefer to run the binaries directly instead of copying the printed
 bootstrap output, the current operator-owned key path is:

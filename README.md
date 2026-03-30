@@ -97,6 +97,7 @@ test -s ./operator-bundle/devnet-spec.json
 test -s ./operator-bundle/test-finney-spec.json
 test -s ./operator-bundle/bundle-manifest.toml
 rustup target add wasm32-unknown-unknown
+rustup component add rust-src
 SKIP_WASM_BUILD=1 cargo build -p myosu-chain --features fast-runtime
 env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-spec --chain devnet >/tmp/myosu-devnet-spec.json
 env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-spec --chain test_finney >/tmp/myosu-testnet-spec.json
@@ -104,7 +105,9 @@ env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-
 
 On warm machines, `SKIP_WASM_BUILD=1` reuses a cached runtime wasm. On cold
 machines with `wasm32-unknown-unknown` installed, the runtime now falls back to
-building that wasm instead of emitting an empty named-network spec.
+building that wasm instead of emitting an empty named-network spec. That cold
+path also needs the Rust `rust-src` component because Substrate's wasm builder
+compiles a real runtime artifact when no cache is present.
 
 ## Proof Commands
 

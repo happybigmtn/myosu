@@ -117,6 +117,10 @@ and know which plans are active now versus merely useful later.
   `active-crates` now installs `protoc`, and the runtime build now falls back
   to producing a real wasm when `SKIP_WASM_BUILD=1` is set but no cached
   runtime artifact exists yet.
+- [x] (2026-03-30) Closed the next cold-runner gap in the hosted chain proof:
+  the chain jobs and operator proof lane now install Rust `rust-src` alongside
+  `wasm32-unknown-unknown`, matching Substrate's real runtime-wasm build
+  requirement when the cache is empty.
 
 ## Surprises & Discoveries
 
