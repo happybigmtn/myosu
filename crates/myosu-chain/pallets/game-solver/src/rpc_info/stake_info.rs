@@ -1,35 +1,33 @@
 extern crate alloc;
 
+use super::*;
+use crate::Stage0SwapInterface;
 use codec::Compact;
 use frame_support::pallet_prelude::{Decode, Encode};
-use subtensor_runtime_common::{AlphaCurrency, Currency, NetUid, TaoCurrency};
-use subtensor_swap_interface::SwapHandler;
+use subtensor_runtime_common::{AlphaCurrency, Currency, NetUid};
 
-use super::*;
+type StakeInfoByColdkey<AccountId> = (AccountId, Vec<StakeInfo<AccountId>>);
 
-#[freeze_struct("28269be895d7b5ba")]
+#[freeze_struct("21e182298822f3b2")]
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct StakeInfo<AccountId: TypeInfo + Encode + Decode> {
     hotkey: AccountId,
     coldkey: AccountId,
     netuid: Compact<NetUid>,
     stake: Compact<AlphaCurrency>,
-    locked: Compact<u64>,
     emission: Compact<AlphaCurrency>,
-    tao_emission: Compact<TaoCurrency>,
-    drain: Compact<u64>,
     is_registered: bool,
 }
 
 impl<T: Config> Pallet<T> {
     fn _get_stake_info_for_coldkeys(
         coldkeys: Vec<T::AccountId>,
-    ) -> Vec<(T::AccountId, Vec<StakeInfo<T::AccountId>>)> {
+    ) -> Vec<StakeInfoByColdkey<T::AccountId>> {
         if coldkeys.is_empty() {
             return Vec::new(); // No coldkeys to check
         }
         let netuids = Self::get_all_subnet_netuids();
-        let mut stake_info: Vec<(T::AccountId, Vec<StakeInfo<T::AccountId>>)> = Vec::new();
+        let mut stake_info: Vec<StakeInfoByColdkey<T::AccountId>> = Vec::new();
         for coldkey_i in coldkeys.clone().iter() {
             // Get all hotkeys associated with this coldkey.
             let staking_hotkeys = StakingHotkeys::<T>::get(coldkey_i.clone());
@@ -43,8 +41,6 @@ impl<T: Config> Pallet<T> {
                         continue;
                     }
                     let emission = AlphaDividendsPerSubnet::<T>::get(*netuid_i, &hotkey_i);
-                    // Tao dividends were removed
-                    let tao_emission = TaoCurrency::ZERO;
                     let is_registered: bool =
                         Self::is_hotkey_registered_on_network(*netuid_i, hotkey_i);
                     stake_info_for_coldkey.push(StakeInfo {
@@ -52,10 +48,7 @@ impl<T: Config> Pallet<T> {
                         coldkey: coldkey_i.clone(),
                         netuid: (*netuid_i).into(),
                         stake: alpha.into(),
-                        locked: 0.into(),
                         emission: emission.into(),
-                        tao_emission: tao_emission.into(),
-                        drain: 0.into(),
                         is_registered,
                     });
                 }
@@ -63,16 +56,6 @@ impl<T: Config> Pallet<T> {
             stake_info.push((coldkey_i.clone(), stake_info_for_coldkey));
         }
         stake_info
-    }
-
-    pub fn get_stake_info_for_coldkeys(
-        coldkey_accounts: Vec<T::AccountId>,
-    ) -> Vec<(T::AccountId, Vec<StakeInfo<T::AccountId>>)> {
-        if coldkey_accounts.is_empty() {
-            return Vec::new(); // Empty coldkeys
-        }
-
-        Self::_get_stake_info_for_coldkeys(coldkey_accounts)
     }
 
     pub fn get_stake_info_for_coldkey(
@@ -102,8 +85,6 @@ impl<T: Config> Pallet<T> {
             netuid,
         );
         let emission = AlphaDividendsPerSubnet::<T>::get(netuid, &hotkey_account);
-        // Tao dividends were removed
-        let tao_emission = TaoCurrency::ZERO;
         let is_registered: bool = Self::is_hotkey_registered_on_network(netuid, &hotkey_account);
 
         Some(StakeInfo {
@@ -111,10 +92,7 @@ impl<T: Config> Pallet<T> {
             coldkey: coldkey_account,
             netuid: (netuid).into(),
             stake: alpha.into(),
-            locked: 0.into(),
             emission: emission.into(),
-            tao_emission: tao_emission.into(),
-            drain: 0.into(),
             is_registered,
         })
     }
@@ -130,7 +108,7 @@ impl<T: Config> Pallet<T> {
             0_u64
         } else {
             let netuid = destination.or(origin).map(|v| v.1).unwrap_or_default();
-            T::SwapInterface::approx_fee_amount(netuid.into(), TaoCurrency::from(amount)).to_u64()
+            T::SwapInterface::stage0_approx_fee_amount(netuid, TaoCurrency::from(amount)).to_u64()
         }
     }
 }

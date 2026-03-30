@@ -13,8 +13,7 @@ type DispatchableOriginOf<T> = <CallOf<T> as Dispatchable>::RuntimeOrigin;
 ///
 /// When a coldkey swap has been announced for the signing account:
 /// - If the swap is disputed, ALL calls are blocked.
-/// - Otherwise, only swap-related calls and MEV-protected calls (`submit_encrypted`)
-///   are allowed through.
+/// - Otherwise, only swap-related calls are allowed through.
 ///
 /// Root origin bypasses this guard entirely (handled by `check_dispatch_guard`).
 /// Non-signed origins pass through.
@@ -27,10 +26,9 @@ pub struct CheckColdkeySwap<T: Config>(PhantomData<T>);
 
 impl<T> DispatchGuard<<T as frame_system::Config>::RuntimeCall> for CheckColdkeySwap<T>
 where
-    T: Config + pallet_shield::Config,
-    <T as frame_system::Config>::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>
-        + IsSubType<Call<T>>
-        + IsSubType<pallet_shield::Call<T>>,
+    T: Config,
+    <T as frame_system::Config>::RuntimeCall:
+        Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo> + IsSubType<Call<T>>,
     DispatchableOriginOf<T>: OriginTrait<AccountId = T::AccountId>,
 {
     fn check(origin: &DispatchableOriginOf<T>, call: &CallOf<T>) -> DispatchResultWithPostInfo {
@@ -54,12 +52,7 @@ where
                 )
             );
 
-            let is_mev_protected = matches!(
-                IsSubType::<pallet_shield::Call<T>>::is_sub_type(call),
-                Some(pallet_shield::Call::submit_encrypted { .. })
-            );
-
-            if !is_allowed_direct && !is_mev_protected {
+            if !is_allowed_direct {
                 return Err(Error::<T>::ColdkeySwapAnnounced.into());
             }
         }
@@ -72,7 +65,7 @@ where
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use crate::{ColdkeySwapAnnouncements, ColdkeySwapDisputes, Error, tests::mock::*};
-    use frame_support::{BoundedVec, assert_ok};
+    use frame_support::assert_ok;
     use frame_system::Call as SystemCall;
     use pallet_subtensor_proxy::Call as ProxyCall;
     use sp_core::U256;
@@ -117,10 +110,6 @@ mod tests {
                 new_coldkey: U256::from(42),
             }),
             RuntimeCall::SubtensorModule(crate::Call::dispute_coldkey_swap {}),
-            RuntimeCall::Shield(pallet_shield::Call::submit_encrypted {
-                commitment: HashingOf::<Test>::hash_of(&U256::from(42)),
-                ciphertext: BoundedVec::truncate_from(vec![1, 2, 3, 4]),
-            }),
         ]
     }
 

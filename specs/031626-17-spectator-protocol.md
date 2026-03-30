@@ -1,8 +1,13 @@
 # Specification: Spectator Protocol — Watching Agent vs Agent Play
 
+Historical note: this spec predates the current `myosu-play` subcommand CLI.
+For the live Stage 0 surface, read `myosu-play --pipe` as `myosu-play pipe`.
+Future spectator flags and sockets described here remain spec intent until they
+land in code.
+
 Source: DESIGN.md 9.24 spectator mode
 Status: Draft
-Date: 2026-03-17
+Date: 2026-03-30
 Depends-on: AX-01..06 (agent experience), GP-01..04 (gameplay), TU-01..12 (TUI)
 Blocks: DESIGN.md 9.24 implementation
 
@@ -16,6 +21,15 @@ This spec defines how game events flow from active sessions to spectators,
 including fog-of-war (hidden hands), event subscription, and the reveal
 mechanism after showdown.
 
+## Current Truth
+
+- the repo does not yet ship a spectator relay, spectator UI screen, or session
+  discovery flow
+- the closest live surfaces today are `myosu-play pipe` and the shared schema
+  and pipe contracts under `myosu-tui`
+- this document is therefore a future spectator design slot rather than a
+  partially implemented gameplay feature
+
 ## Architecture
 
 Three possible data sources for spectator events:
@@ -28,7 +42,7 @@ Three possible data sources for spectator events:
 
 **Decision: local relay for Phase 0, miner axon for Phase 1.**
 
-Phase 0: spectator watches a local `myosu-play --pipe` session between two
+Phase 0: spectator watches a local `myosu-play pipe` session between two
 agents running on the same machine. The relay is just a Unix domain socket
 or named pipe that forwards game events.
 
@@ -93,7 +107,8 @@ keys ([n] next, [q] quit, [r] reveal after showdown).
 
 ### AC-SP-01: Local Spectator Relay
 
-- Where: `crates/myosu-play/src/spectate.rs (new)`
+- Where: future gameplay spectator module, likely adjacent to
+  `crates/myosu-play/src/main.rs`
 - How: When a game session is active (training mode or chain mode), emit
   JSON event lines to an optional spectator socket. The spectator client
   connects and receives the event stream.
@@ -128,7 +143,8 @@ keys ([n] next, [q] quit, [r] reveal after showdown).
 
 ### AC-SP-02: Spectator TUI Screen
 
-- Where: `crates/myosu-tui/src/screens/spectate.rs (new)`
+- Where: future spectator UI surface, with current adjacent shell modules under
+  `crates/myosu-tui/src/`
 - How: New `Screen::Spectate` variant renders the spectator view per
   DESIGN.md 9.24. Connects to the relay socket and renders events as they
   arrive. Uses the same `GameRenderer` as the player view but with all
@@ -160,7 +176,8 @@ keys ([n] next, [q] quit, [r] reveal after showdown).
 
 ### AC-SP-03: Session Discovery
 
-- Where: `crates/myosu-play/src/spectate.rs (extend)`
+- Where: future gameplay spectator module, likely adjacent to
+  `crates/myosu-play/src/main.rs`
 - How: `/spectate` with no arguments lists available sessions by scanning
   `~/.myosu/spectate/` for active sockets. Display as:
 

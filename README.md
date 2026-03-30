@@ -1,77 +1,49 @@
 # 묘수 myosu
 
-A game-solving subnet chain. Fork of [Bittensor](https://github.com/opentensor/subtensor)
-where miners compete to produce optimal game strategies via MCCFR and validators
-verify quality through exploitability scoring.
+Myosu is a decentralized game-solving chain for imperfect-information games.
+Miners produce strategy, validators score it, the chain coordinates emissions,
+and gameplay exposes the result to humans and agents through the same surface.
+
+The fastest way to orient yourself is [OS.md](OS.md). It is the current
+operating-system document for the repo.
 
 ## Start Here
 
-Current doctrine and execution entrypoints:
+Current top-level entrypoints:
 
-- [SPEC.md](SPEC.md) for durable repo decisions and migration specs
-- [PLANS.md](PLANS.md) for live executable implementation plans
-- [specs/031626-00-master-index.md](specs/031626-00-master-index.md) for the
-  canonical doctrine index
-- [plans/031826-bootstrap-fabro-primary-executor-surface.md](plans/031826-bootstrap-fabro-primary-executor-surface.md)
-  for the current Fabro/Raspberry cutover slice
-- [fabro/programs/myosu.yaml](fabro/programs/myosu.yaml) as the repo-wide
-  Raspberry control-plane entrypoint
+- [OS.md](OS.md) for live doctrine, current operator loop, and stage-0 meaning
+- [SPEC.md](SPEC.md) for durable repo decisions
+- [INVARIANTS.md](INVARIANTS.md) for non-negotiable constraints
+- [genesis/plans/001-master-plan.md](genesis/plans/001-master-plan.md) for the
+  active plan stack
+- [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml)
+  for the current Raspberry bootstrap program
+- [docs/execution-playbooks/README.md](docs/execution-playbooks/README.md) for
+  current execution playbooks
+- [docs/execution-playbooks/operator-network.md](docs/execution-playbooks/operator-network.md)
+  for the current operator-facing named-network and key-surface playbook
 
-Execution plane:
+## Current Runnable Truth
 
-- workflows live under `fabro/workflows/`
-- run configs live under `fabro/run-configs/`
-- prompts live under `fabro/prompts/`
-- checks live under `fabro/checks/`
+These are the currently proven local surfaces:
 
-Control plane:
+- a stripped chain that authors blocks and serves the game-solver RPC surface
+- miner and validator binaries that participate in the local stage-0 loop
+- a poker gameplay surface in `myosu-play`
+- a second-game proof with Liar's Dice
+- a node-owned local loop proving poker and Liar's Dice coexist as distinct
+  subnets on one local chain
 
-- program manifests live under `fabro/programs/`
-- curated lane deliverables live under `outputs/`
-- historical-only material lives under `specsarchive/` and `ralph/archive/`
+What this repo does not yet claim as a first-class operator product:
 
-## Architecture
+- production deployment
+- public multi-node network operations
+- polished hosted miner or validator operations
+- a broad web product surface
 
-```
-Chain (Substrate)     Miners (solvers)     Validators (oracles)     Gameplay (CLI)
-┌──────────────┐     ┌──────────────┐     ┌──────────────────┐     ┌───────────┐
-│ game-solver  │◄────│ robopoker    │◄────│ exploitability    │     │ human vs  │
-│ pallet       │     │ MCCFR        │     │ scoring           │     │ best bot  │
-│              │     │              │     │                   │     │           │
-│ Yuma         │────►│ emissions    │     │ submit weights    │────►│ query     │
-│ Consensus    │     │              │     │ to chain          │     │ best      │
-└──────────────┘     └──────────────┘     └──────────────────┘     │ miner     │
-                                                                    └───────────┘
-```
+## Current Operator Loop
 
-## Subnets
-
-Each subnet represents a game variant with its own solver market:
-
-| Subnet | Game | Status |
-|--------|------|--------|
-| 1 | No-Limit Hold'em (Heads-Up) | Planned |
-| 2 | No-Limit Hold'em (6-max) | Planned |
-| 3 | Short Deck Hold'em | Planned |
-| 4 | Pot-Limit Omaha | Planned |
-| 5 | Backgammon | Planned |
-| 6 | Mahjong (Riichi) | Planned |
-| 7 | Bridge | Planned |
-| 8 | Liar's Dice | Planned (architecture proof) |
-
-## Core Dependencies
-
-- [robopoker](https://github.com/krukah/robopoker) v1.0.0 — MCCFR poker solver
-- [subtensor](https://github.com/opentensor/subtensor) — Substrate chain fork base
-- [fabro](https://github.com/fabro-sh/fabro) — staged execution substrate
-- Raspberry — Fabro-layered supervisory control plane for units, lanes,
-  milestones, and curated outputs
-
-## Development
-
-Built and maintained via Fabro workflows plus Raspberry program supervision.
-
-Current bootstrap loop:
+Bootstrap supervision:
 
 ```bash
 fabro run fabro/run-configs/bootstrap/game-traits.toml
@@ -79,24 +51,79 @@ fabro run fabro/run-configs/bootstrap/tui-shell.toml
 fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
 fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
 
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- plan --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- status --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- autodev --manifest fabro/programs/myosu.yaml
-cargo --manifest-path /home/r/coding/fabro/Cargo.toml run -p raspberry-cli -- tui --manifest fabro/programs/myosu.yaml
+raspberry plan --manifest fabro/programs/myosu-bootstrap.yaml
+raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
+raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml
 ```
 
-Useful proof commands:
+Node-owned stage-0 proof:
 
+```bash
+SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
+env SKIP_WASM_BUILD=1 target/debug/myosu-chain --stage0-local-loop-smoke
 ```
-cargo test -p myosu-games
-cargo test -p myosu-tui
-cargo check -p pallet-game-solver   # expected to fail until chain restart lands
+
+Gameplay/advisor proof:
+
+```bash
+SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test
+printf 'quit\n' | SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- pipe
+```
+
+Operator network prep:
+
+```bash
+export MYOSU_KEY_PASSWORD='replace-me'
+cargo run -p myosu-keys --quiet -- create --config-dir ~/.myosu --network devnet
+cargo run -p myosu-keys --quiet -- show-active --config-dir ~/.myosu
+cargo run -p myosu-keys --quiet -- print-bootstrap --config-dir ~/.myosu --subnet 7
+cargo run -p myosu-keys --quiet -- import-keyfile --config-dir ~/.myosu --source ./backup.json --network devnet
+export MYOSU_IMPORT_MNEMONIC='word1 ... word12'
+cargo run -p myosu-keys --quiet -- import-mnemonic --config-dir ~/.myosu --mnemonic-env MYOSU_IMPORT_MNEMONIC --password-env MYOSU_KEY_PASSWORD --network devnet
+export MYOSU_IMPORT_RAW_SEED='0x...'
+cargo run -p myosu-keys --quiet -- import-raw-seed --config-dir ~/.myosu --seed-env MYOSU_IMPORT_RAW_SEED --password-env MYOSU_KEY_PASSWORD --network devnet
+cargo run -p myosu-keys --quiet -- list --config-dir ~/.myosu
+cargo run -p myosu-keys --quiet -- export-active-keyfile --config-dir ~/.myosu --output ./active-backup.json
+cargo run -p myosu-keys --quiet -- switch-active --config-dir ~/.myosu --address <ss58>
+export MYOSU_OLD_PASSWORD='replace-me'
+export MYOSU_NEW_PASSWORD='replace-me-too'
+cargo run -p myosu-keys --quiet -- change-password --config-dir ~/.myosu --old-password-env MYOSU_OLD_PASSWORD --new-password-env MYOSU_NEW_PASSWORD
+cargo check -p myosu-keys
+cargo test -p myosu-keys --quiet
+bash .github/scripts/check_operator_network_bootstrap.sh
+bash .github/scripts/prepare_operator_network_bundle.sh ./operator-bundle
+./operator-bundle/verify-bundle.sh
+test -s ./operator-bundle/devnet-spec.json
+test -s ./operator-bundle/test-finney-spec.json
+test -s ./operator-bundle/bundle-manifest.toml
+rustup target add wasm32-unknown-unknown
+SKIP_WASM_BUILD=1 cargo build -p myosu-chain --features fast-runtime
+env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-spec --chain devnet >/tmp/myosu-devnet-spec.json
+env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-spec --chain test_finney >/tmp/myosu-testnet-spec.json
+```
+
+## Proof Commands
+
+```bash
+cargo test -p pallet-game-solver stage_0_flow --quiet
+SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
+SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test
+cargo test -p myosu-games-liars-dice --quiet
+SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet
+```
+
+## Architecture
+
+```text
+chain        -> subnets, neurons, weights, emissions
+miners       -> strategy computation and serving
+validators   -> scoring and weight submission
+gameplay     -> human and agent consumption
 ```
 
 ## Name
 
-묘수 (myosu) — Korean for "brilliant move" or "masterstroke." From the tradition
-of Korean strategic gaming culture (baduk, hwatu, StarCraft).
+묘수 (myosu) means "brilliant move" or "masterstroke."
 
 ## License
 

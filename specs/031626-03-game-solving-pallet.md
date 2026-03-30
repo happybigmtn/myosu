@@ -2,7 +2,7 @@
 
 Source: Master spec AC-CH-02, subtensor pallet analysis at coding/subtensor/pallets/subtensor/
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: CF-01..05 (chain fork scaffold must compile and produce blocks)
 
 ## Purpose
@@ -32,17 +32,14 @@ Current state:
 - Chain fork scaffold (CF-01..05) produces blocks with no game logic
 - subtensor's pallet_subtensor has ~66 storage items, 50+ extrinsics, 3200
   lines of epoch/math code, and handles AI subnet incentives
-- No game-solving pallet exists
+- `crates/myosu-chain/pallets/game-solver/` already exists and is the live
+  stage-0 incentive surface used by the owned local loop
 
 This spec adds:
-- `pallet_game_solver` at runtime index 7
-- Subnet registry with game_type metadata
-- Neuron registration with burn-based entry
-- Weight submission (direct and commit-reveal)
-- Yuma Consensus epoch execution
-- Token emission distribution
-- Axon endpoint registration for miners
-- Basic staking (native token, no Alpha AMM)
+- the truthful narrowed contract for the live pallet that now exists
+- the remaining stage-0 hardening and reduction work on top of the inherited
+  pallet carry
+- a canonical ownership map that matches the real module layout
 
 If all ACs land:
 - A subnet can be created for any game type
@@ -102,34 +99,33 @@ Out of scope:
 
 ## Current State
 
-- `/home/r/coding/subtensor/pallets/subtensor/src/lib.rs` — 2,750 lines,
-  66 storage items
-- `/home/r/coding/subtensor/pallets/subtensor/src/epoch/run_epoch.rs` — 1,591
-  lines, `epoch_mechanism()` function
-- `/home/r/coding/subtensor/pallets/subtensor/src/epoch/math.rs` — 1,594 lines,
-  fixed-point matrix operations
-- `/home/r/coding/subtensor/pallets/subtensor/src/subnets/weights.rs` — 1,343
-  lines, weight submission and commit-reveal
-- `/home/r/coding/subtensor/pallets/subtensor/src/subnets/subnet.rs` — subnet
-  registration at `do_register_network()` (line 111)
-- `/home/r/coding/subtensor/pallets/subtensor/src/subnets/registration.rs` —
-  neuron burn registration at `do_burned_registration()` (line 64)
-- `crates/myosu-chain/` — compiled chain scaffold from CF-01..05
+- `/home/r/coding/myosu/crates/myosu-chain/pallets/game-solver/src/lib.rs` —
+  live pallet root with imported config, dispatch, events, hooks, and stage-0
+  swap seam
+- `/home/r/coding/myosu/crates/myosu-chain/pallets/game-solver/src/subnets/`
+  — live subnet registration, serving, UID, and weight paths
+- `/home/r/coding/myosu/crates/myosu-chain/pallets/game-solver/src/epoch/` —
+  live Yuma math and epoch execution surfaces
+- `/home/r/coding/myosu/crates/myosu-chain/pallets/game-solver/src/coinbase/`
+  — live block-step and emission execution seams
+- `/home/r/coding/myosu/crates/myosu-chain/pallets/game-solver/src/staking/`
+  — live staking and ownership flows still carried for stage 0
+- `/home/r/coding/myosu/crates/myosu-chain/pallets/game-solver/src/rpc_info/`
+  — typed query helpers for chain/operator consumers
+- `/home/r/coding/myosu/crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs`
+  — live stage-0 pallet proof coverage
 
 ## What Already Exists
 
 | Sub-problem | Existing code / flow | Reuse / extend / replace | Why |
 |-------------|----------------------|--------------------------|-----|
-| Yuma Consensus math | `subtensor/epoch/run_epoch.rs` (1591 lines) | port | Proven algorithm, must produce identical results |
-| Fixed-point math | `subtensor/epoch/math.rs` (1594 lines) | port | Used by Yuma, well-tested |
-| Subnet registration | `subtensor/subnets/subnet.rs:111` | simplify | Remove lock cost dynamics, keep core flow |
-| Neuron registration | `subtensor/subnets/registration.rs:64` | simplify | Remove PoW, keep burn registration |
-| Weight submission | `subtensor/subnets/weights.rs:44-142` | port | Commit-reveal is essential for game solving |
-| Storage patterns | `subtensor/lib.rs:1089-2410` | simplify | 66 items → ~25, keep the essential double maps |
-| Config trait | `subtensor/macros/config.rs` | simplify | Remove drand, crowdloan, swap dependencies |
-| Events/errors | `subtensor/macros/events.rs`, `errors.rs` | simplify | Keep game-relevant events only |
-| Block step | `subtensor/coinbase/block_step.rs` | simplify | Remove root logic, keep epoch dispatch |
-| Rate limiting | `subtensor/utils/` | port | Prevent weight spam |
+| Pallet root and storage | `crates/myosu-chain/pallets/game-solver/src/lib.rs` | extend | This is the live pallet, not a missing future crate |
+| Subnet management | `crates/myosu-chain/pallets/game-solver/src/subnets/` | extend | Registration, serving, weights, and UID paths already live here |
+| Yuma execution | `crates/myosu-chain/pallets/game-solver/src/epoch/` | extend | Current epoch mechanism and math live here now |
+| Emission loop | `crates/myosu-chain/pallets/game-solver/src/coinbase/` | extend | Current block-step and emission paths already exist |
+| Staking and ownership | `crates/myosu-chain/pallets/game-solver/src/staking/` | extend with care | Stage-0 still carries inherited staking seams here |
+| Typed query helpers | `crates/myosu-chain/pallets/game-solver/src/rpc_info/` | reuse and extend | Current node/operator query surface builds on these helpers |
+| Stage-0 pallet proof | `crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs` | reuse | The live local truth is already covered here |
 
 ## Non-goals
 
@@ -144,17 +140,14 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Pallet scaffold | New | crates/myosu-chain/pallets/game-solver/src/lib.rs |
-| Config trait | New (simplified from subtensor) | crates/myosu-chain/pallets/game-solver/src/lib.rs |
-| Storage items | New (simplified from subtensor) | crates/myosu-chain/pallets/game-solver/src/lib.rs |
-| Subnet management | New (simplified from subtensor) | crates/myosu-chain/pallets/game-solver/src/subnets.rs |
-| Neuron registration | New (simplified from subtensor) | crates/myosu-chain/pallets/game-solver/src/registration.rs |
-| Weight submission | New (ported from subtensor) | crates/myosu-chain/pallets/game-solver/src/weights.rs |
-| Yuma Consensus | New (ported from subtensor) | crates/myosu-chain/pallets/game-solver/src/epoch.rs |
-| Math utilities | New (ported from subtensor) | crates/myosu-chain/pallets/game-solver/src/math.rs |
-| Emission | New (simplified) | crates/myosu-chain/pallets/game-solver/src/emission.rs |
-| Staking | New (simplified) | crates/myosu-chain/pallets/game-solver/src/staking.rs |
-| Serving (axon) | New (ported from subtensor) | crates/myosu-chain/pallets/game-solver/src/serving.rs |
+| Pallet scaffold | Implemented | crates/myosu-chain/pallets/game-solver/src/lib.rs |
+| Config, events, hooks, errors | Implemented | crates/myosu-chain/pallets/game-solver/src/macros/ |
+| Subnet management | Implemented | crates/myosu-chain/pallets/game-solver/src/subnets/ |
+| Yuma Consensus and math | Implemented | crates/myosu-chain/pallets/game-solver/src/epoch/ |
+| Emission and block step | Implemented | crates/myosu-chain/pallets/game-solver/src/coinbase/ |
+| Staking | Implemented | crates/myosu-chain/pallets/game-solver/src/staking/ |
+| Typed RPC info helpers | Implemented | crates/myosu-chain/pallets/game-solver/src/rpc_info/ |
+| Stage-0 proof tests | Implemented | crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs |
 
 ## Architecture / Runtime Contract
 
@@ -317,7 +310,7 @@ Failure loop:
 
 ### AC-GS-02: Subnet Registry
 
-- Where: `crates/myosu-chain/pallets/game-solver/src/subnets.rs (new)`
+- Where: `crates/myosu-chain/pallets/game-solver/src/subnets/`
 - How: Implement extrinsics for subnet lifecycle:
 
   **`create_subnet(origin, game_type: Vec<u8>, tempo: u16)`**:
@@ -434,7 +427,7 @@ Failure loop:
 
 ### AC-GS-04: Weight Submission
 
-- Where: `crates/myosu-chain/pallets/game-solver/src/weights.rs (new)`
+- Where: `crates/myosu-chain/pallets/game-solver/src/subnets/weights.rs`
 - How: Port weight submission from subtensor (direct and commit-reveal).
 
   **`set_weights(origin, subnet_id, uids: Vec<u16>, values: Vec<u16>)`**:
@@ -498,8 +491,8 @@ Failure loop:
 
 ### AC-GS-05: Yuma Consensus Port
 
-- Where: `crates/myosu-chain/pallets/game-solver/src/epoch.rs (new)`,
-  `crates/myosu-chain/pallets/game-solver/src/math.rs (new)`
+- Where: `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs`,
+  `crates/myosu-chain/pallets/game-solver/src/epoch/math.rs`
 - How: Port Yuma Consensus from subtensor's `epoch/run_epoch.rs` (lines 560-1591)
   and `epoch/math.rs` (1594 lines).
 
@@ -603,7 +596,7 @@ Failure loop:
 
 ### AC-GS-06: Emission Distribution
 
-- Where: `crates/myosu-chain/pallets/game-solver/src/emission.rs (new)`
+- Where: `crates/myosu-chain/pallets/game-solver/src/coinbase/`
 - How: Implement simplified emission (no Alpha token, no AMM, no halving).
 
   **Block emission**: fixed amount per block (configurable via Sudo).

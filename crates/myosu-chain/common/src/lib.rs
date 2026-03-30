@@ -140,10 +140,12 @@ impl TypeInfo for NetUid {
     Decode,
     DecodeWithMemTracking,
     Debug,
+    Default,
     MaxEncodedLen,
     TypeInfo,
 )]
 pub enum ProxyType {
+    #[default]
     Any,
     Owner, // Subnet owner Calls
     NonCritical,
@@ -214,13 +216,6 @@ impl From<ProxyType> for u8 {
             ProxyType::SubnetLeaseBeneficiary => 16,
             ProxyType::RootClaim => 17,
         }
-    }
-}
-
-impl Default for ProxyType {
-    // allow all Calls; required to be most permissive
-    fn default() -> Self {
-        Self::Any
     }
 }
 
@@ -335,7 +330,7 @@ impl From<MechId> for u64 {
 
 impl From<MechId> for u8 {
     fn from(val: MechId) -> Self {
-        u8::from(val.0)
+        val.0
     }
 }
 

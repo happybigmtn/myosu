@@ -7,9 +7,11 @@
 
 #![doc = include_str!("../README.md")]
 
+pub mod registry;
 pub mod traits;
 
 // Re-export commonly used types for convenience
+pub use registry::{GameDescriptor, GameRegistry};
 pub use traits::{
     CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Probability,
     Profile, StrategyQuery, StrategyResponse, Utility,

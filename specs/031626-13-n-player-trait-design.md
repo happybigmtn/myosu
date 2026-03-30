@@ -2,7 +2,7 @@
 
 Source: Gap analysis — DESIGN.md defines 8 games with 3-4 players; GT-01..05 assumes 2-player
 Status: Draft
-Date: 2026-03-17
+Date: 2026-03-30
 Depends-on: GT-01..05 (game engine traits), MG-01..04 (multi-game architecture)
 Blocks: All non-2-player game implementations (Stage 1-3)
 
@@ -29,6 +29,15 @@ DESIGN.md now specifies mockups for 8 games with >2 players:
 
 This is 40% of the game portfolio. The trait system must accommodate them
 without breaking 2-player games or the existing solver pipeline.
+
+## Current Truth
+
+- the live repo still centers on 2-player stage-0 games and 2-player solver
+  assumptions
+- there is no in-repo n-player solver path or additive `NPlayerGame` trait
+  layer yet
+- this document remains an honest Stage 1-3 design decision rather than a
+  partially implemented stage-0 surface
 
 ## Decision
 

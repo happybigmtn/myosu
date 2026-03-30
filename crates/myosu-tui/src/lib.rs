@@ -19,5 +19,9 @@ pub mod screens;
 pub mod shell;
 pub mod theme;
 
+pub use events::InteractionState;
+pub use pipe::PipeMode;
 pub use renderer::{GameRenderer, Renderable};
+pub use screens::Screen;
+pub use shell::Shell;
 pub use theme::Theme;

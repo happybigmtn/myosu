@@ -241,12 +241,6 @@ mod events {
         ColdkeySwapReannouncementDelaySet(BlockNumberFor<T>),
         /// The duration of dissolve network has been set
         DissolveNetworkScheduleDurationSet(BlockNumberFor<T>),
-        /// Commit-reveal v3 weights have been successfully committed.
-        ///
-        /// - **who**: The account ID of the user committing the weights.
-        /// - **netuid**: The network identifier.
-        /// - **commit_hash**: The hash representing the committed weights.
-        CRV3WeightsCommitted(T::AccountId, NetUidStorageIndex, H256),
         /// Weights have been successfully committed.
         ///
         /// - **who**: The account ID of the user committing the weights.
@@ -342,12 +336,6 @@ mod events {
             block_associated: u64,
         },
 
-        /// CRV3 Weights have been successfully revealed.
-        ///
-        /// - **netuid**: The network identifier.
-        /// - **who**: The account ID of the user revealing the weights.
-        CRV3WeightsRevealed(NetUid, T::AccountId),
-
         /// Commit-Reveal periods has been successfully set.
         ///
         /// - **netuid**: The network identifier.
@@ -371,26 +359,6 @@ mod events {
             /// the subnet ID
             netuid: NetUid,
         },
-        /// A subnet lease has been created.
-        SubnetLeaseCreated {
-            /// The beneficiary of the lease.
-            beneficiary: T::AccountId,
-            /// The lease ID
-            lease_id: LeaseId,
-            /// The subnet ID
-            netuid: NetUid,
-            /// The end block of the lease
-            end_block: Option<BlockNumberFor<T>>,
-        },
-
-        /// A subnet lease has been terminated.
-        SubnetLeaseTerminated {
-            /// The beneficiary of the lease.
-            beneficiary: T::AccountId,
-            /// The subnet ID
-            netuid: NetUid,
-        },
-
         /// The symbol for a subnet has been updated.
         SymbolUpdated {
             /// The subnet ID
@@ -398,26 +366,6 @@ mod events {
             /// The symbol that has been updated.
             symbol: Vec<u8>,
         },
-
-        /// Commit Reveal Weights version has been updated.
-        ///
-        /// - **version**: The required version.
-        CommitRevealVersionSet(u16),
-
-        /// Timelocked weights have been successfully committed.
-        ///
-        /// - **who**: The account ID of the user committing the weights.
-        /// - **netuid**: The network identifier.
-        /// - **commit_hash**: The hash representing the committed weights.
-        /// - **reveal_round**: The round at which weights can be revealed.
-        TimelockedWeightsCommitted(T::AccountId, NetUidStorageIndex, H256, u64),
-
-        /// Timelocked Weights have been successfully revealed.
-        ///
-        /// - **netuid**: The network identifier.
-        /// - **who**: The account ID of the user revealing the weights.
-        TimelockedWeightsRevealed(NetUidStorageIndex, T::AccountId),
-
         /// Auto-staking hotkey received stake
         AutoStakeAdded {
             /// Subnet identifier.
@@ -505,16 +453,6 @@ mod events {
             netuid: NetUid,
             /// The new alpha value (u64 with 18 decimal precision)
             alpha: u64,
-        },
-
-        /// Subnet lease dividends have been distributed.
-        SubnetLeaseDividendsDistributed {
-            /// The lease ID
-            lease_id: LeaseId,
-            /// The contributor
-            contributor: T::AccountId,
-            /// The amount of alpha distributed
-            alpha: AlphaCurrency,
         },
 
         /// "Add stake and burn" event: alpha token was purchased and burned.

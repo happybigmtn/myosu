@@ -2,7 +2,7 @@
 
 Source: Hyperspace AGI pattern analysis + master spec incentive gap analysis
 Status: Draft
-Date: 2026-03-17
+Date: 2026-03-30
 Depends-on: GS-01..10 (pallet foundation), VO-01..07 (validator oracle)
 Prior-art: https://github.com/hyperspaceai/agi (provenance DAG, uptime curves, capability weighting)
 
@@ -36,8 +36,11 @@ for myosu's on-chain game-solving context.
 ## Whole-System Goal
 
 Current state:
+- the live stage-0 pallet already runs a real local emission loop with miner
+  incentive, validator dividend, and emission vectors visible in the owned
+  local proof
 - GS-06 distributes emission proportional to Yuma Consensus scores
-- Emission split: 50/50 miner/validator, equal across active subnets
+- Emission split stays stage-0 simple relative to the richer future modifiers
 - No provenance tracking, no uptime consideration, no compute-cost weighting
 - Miners are scored on absolute exploitability only
 

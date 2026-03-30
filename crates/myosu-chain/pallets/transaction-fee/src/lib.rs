@@ -21,7 +21,7 @@ use sp_runtime::{
 };
 
 // Pallets
-use pallet_subtensor::Call as SubtensorCall;
+use pallet_game_solver::Call as GameSolverCall;
 use pallet_transaction_payment::Config as PTPConfig;
 use pallet_transaction_payment::OnChargeTransaction;
 use subtensor_swap_interface::SwapHandler;
@@ -93,7 +93,7 @@ impl<T>
     > for TransactionFeeHandler<T>
 where
     T: frame_system::Config,
-    T: pallet_subtensor::Config,
+    T: pallet_game_solver::Config,
     T: pallet_balances::Config<Balance = u64>,
     T: AuthorshipInfo<AccountIdOf<T>>,
 {
@@ -123,7 +123,7 @@ where
 impl<T> AlphaFeeHandler<T> for TransactionFeeHandler<T>
 where
     T: frame_system::Config,
-    T: pallet_subtensor::Config,
+    T: pallet_game_solver::Config,
     T: pallet_subtensor_swap::Config,
 {
     /// This function checks if tao_amount fee can be withdraw in Alpha currency
@@ -154,7 +154,7 @@ where
         // and this approach still provides spam protection.
         alpha_vec.iter().any(|(hotkey, netuid)| {
             let alpha_balance = U96F32::saturating_from_num(
-                pallet_subtensor::Pallet::<T>::get_stake_for_hotkey_and_coldkey_on_subnet(
+                pallet_game_solver::Pallet::<T>::get_stake_for_hotkey_and_coldkey_on_subnet(
                     hotkey, coldkey, *netuid,
                 ),
             );
@@ -177,7 +177,7 @@ where
         alpha_vec.iter().for_each(|(hotkey, netuid)| {
             // Divide tao_amount evenly among all alpha entries
             let alpha_balance = U96F32::saturating_from_num(
-                pallet_subtensor::Pallet::<T>::get_stake_for_hotkey_and_coldkey_on_subnet(
+                pallet_game_solver::Pallet::<T>::get_stake_for_hotkey_and_coldkey_on_subnet(
                     hotkey, coldkey, *netuid,
                 ),
             );
@@ -188,7 +188,7 @@ where
                 .min(alpha_balance)
                 .saturating_to_num::<u64>();
 
-            pallet_subtensor::Pallet::<T>::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+            pallet_game_solver::Pallet::<T>::decrease_stake_for_hotkey_and_coldkey_on_subnet(
                 hotkey,
                 coldkey,
                 *netuid,
@@ -201,11 +201,11 @@ where
         coldkey: &AccountIdOf<T>,
         hotkey: &AccountIdOf<T>,
     ) -> Vec<NetUid> {
-        pallet_subtensor::Pallet::<T>::get_all_subnet_netuids()
+        pallet_game_solver::Pallet::<T>::get_all_subnet_netuids()
             .into_iter()
-            .filter(|netuid| pallet_subtensor::SubtokenEnabled::<T>::get(netuid))
+            .filter(|netuid| pallet_game_solver::SubtokenEnabled::<T>::get(netuid))
             .filter(|netuid| {
-                pallet_subtensor::Pallet::<T>::get_stake_for_hotkey_and_coldkey_on_subnet(
+                pallet_game_solver::Pallet::<T>::get_stake_for_hotkey_and_coldkey_on_subnet(
                     hotkey, coldkey, *netuid,
                 ) != 0.into()
             })
@@ -233,8 +233,8 @@ impl<F, OU> SubtensorTxFeeHandler<F, OU> {
     /// distributed evenly between subnets in case of multiple subnets.
     pub fn fees_in_alpha<T>(who: &AccountIdOf<T>, call: &CallOf<T>) -> Vec<(AccountIdOf<T>, NetUid)>
     where
-        T: frame_system::Config + pallet_subtensor::Config,
-        CallOf<T>: IsSubType<pallet_subtensor::Call<T>>,
+        T: frame_system::Config + pallet_game_solver::Config,
+        CallOf<T>: IsSubType<pallet_game_solver::Call<T>>,
         OU: AlphaFeeHandler<T>,
     {
         let mut alpha_vec: Vec<(AccountIdOf<T>, NetUid)> = Vec::new();
@@ -243,55 +243,55 @@ impl<F, OU> SubtensorTxFeeHandler<F, OU> {
         // to TAO
         // TODO: Populate the list
         match call.is_sub_type() {
-            Some(SubtensorCall::remove_stake { hotkey, netuid, .. }) => {
+            Some(GameSolverCall::remove_stake { hotkey, netuid, .. }) => {
                 alpha_vec.push((hotkey.clone(), *netuid))
             }
-            Some(SubtensorCall::remove_stake_limit { hotkey, netuid, .. }) => {
+            Some(GameSolverCall::remove_stake_limit { hotkey, netuid, .. }) => {
                 alpha_vec.push((hotkey.clone(), *netuid))
             }
-            Some(SubtensorCall::remove_stake_full_limit { hotkey, netuid, .. }) => {
+            Some(GameSolverCall::remove_stake_full_limit { hotkey, netuid, .. }) => {
                 alpha_vec.push((hotkey.clone(), *netuid))
             }
-            Some(SubtensorCall::unstake_all { hotkey, .. }) => {
+            Some(GameSolverCall::unstake_all { hotkey, .. }) => {
                 let netuids = OU::get_all_netuids_for_coldkey_and_hotkey(who, hotkey);
                 netuids
                     .into_iter()
                     .for_each(|netuid| alpha_vec.push((hotkey.clone(), netuid)));
             }
-            Some(SubtensorCall::unstake_all_alpha { hotkey, .. }) => {
+            Some(GameSolverCall::unstake_all_alpha { hotkey, .. }) => {
                 let netuids = OU::get_all_netuids_for_coldkey_and_hotkey(who, hotkey);
                 netuids
                     .into_iter()
                     .for_each(|netuid| alpha_vec.push((hotkey.clone(), netuid)));
             }
-            Some(SubtensorCall::move_stake {
+            Some(GameSolverCall::move_stake {
                 origin_hotkey,
                 destination_hotkey: _,
                 origin_netuid,
                 ..
             }) => alpha_vec.push((origin_hotkey.clone(), *origin_netuid)),
-            Some(SubtensorCall::transfer_stake {
+            Some(GameSolverCall::transfer_stake {
                 destination_coldkey: _,
                 hotkey,
                 origin_netuid,
                 ..
             }) => alpha_vec.push((hotkey.clone(), *origin_netuid)),
-            Some(SubtensorCall::swap_stake {
+            Some(GameSolverCall::swap_stake {
                 hotkey,
                 origin_netuid,
                 ..
             }) => alpha_vec.push((hotkey.clone(), *origin_netuid)),
-            Some(SubtensorCall::swap_stake_limit {
+            Some(GameSolverCall::swap_stake_limit {
                 hotkey,
                 origin_netuid,
                 ..
             }) => alpha_vec.push((hotkey.clone(), *origin_netuid)),
-            Some(SubtensorCall::recycle_alpha {
+            Some(GameSolverCall::recycle_alpha {
                 hotkey,
                 amount: _,
                 netuid,
             }) => alpha_vec.push((hotkey.clone(), *netuid)),
-            Some(SubtensorCall::burn_alpha {
+            Some(GameSolverCall::burn_alpha {
                 hotkey,
                 amount: _,
                 netuid,
@@ -305,8 +305,8 @@ impl<F, OU> SubtensorTxFeeHandler<F, OU> {
 
 impl<T, F, OU> OnChargeTransaction<T> for SubtensorTxFeeHandler<F, OU>
 where
-    T: PTPConfig + pallet_subtensor::Config,
-    CallOf<T>: IsSubType<pallet_subtensor::Call<T>>,
+    T: PTPConfig + pallet_game_solver::Config,
+    CallOf<T>: IsSubType<pallet_game_solver::Call<T>>,
     F: Balanced<T::AccountId>,
     OU: OnUnbalanced<Credit<T::AccountId, F>> + AlphaFeeHandler<T>,
     <F as Inspect<AccountIdOf<T>>>::Balance: Into<u64>,

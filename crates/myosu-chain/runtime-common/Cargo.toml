@@ -1,0 +1,12 @@
+[package]
+name = "runtime-common"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[features]
+default = ["std"]
+std = []
+fast-blocks = []
+runtime-benchmarks = []
+try-runtime = []

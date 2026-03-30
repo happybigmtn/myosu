@@ -2,7 +2,7 @@
 
 Source: Master spec AC-CH-01, subtensor runtime analysis at coding/subtensor
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: none
 
 ## Purpose
@@ -25,16 +25,20 @@ our game logic work?" and prevents debugging two things at once.
 ## Whole-System Goal
 
 Current state:
-- `coding/subtensor` contains a full Bittensor node with 30 pallets, EVM,
-  AMM, AI incentives, and 3.7MB of pallet_subtensor code
-- The runtime compiles to WASM and produces blocks via BABE+GRANDPA
-- No myosu-specific code exists
+- `crates/myosu-chain/runtime/` and `crates/myosu-chain/node/` already compile
+  as a stripped stage-0 chain
+- the owned local proof `myosu-chain --stage0-local-loop-smoke` already boots a
+  node, authors blocks, and drives the current poker plus Liar's Dice loop
+- the remaining drift is no longer "fork subtensor from scratch", but keeping
+  the inherited chain surface, ownership map, and launch doctrine honest about
+  the code that now exists
 
 This spec adds:
-- A stripped Substrate runtime with ~12 pallets (down from 30)
-- A node binary that produces blocks on local devnet
-- A local chain spec with test accounts
-- Workspace structure under `crates/myosu-chain/`
+- the canonical description of the stripped chain boundary that stage 0 now
+  actually uses
+- the remaining reduction and packaging work needed on top of the live chain
+- the ownership map for the node, runtime, and local proof surfaces under
+  `crates/myosu-chain/`
 
 If all ACs land:
 - `cargo build -p myosu-node --release` compiles the chain binary
@@ -83,26 +87,29 @@ Out of scope:
 
 ## Current State
 
-- `/home/r/coding/subtensor/runtime/src/lib.rs` — 2,679 lines, 30 pallets in
-  `construct_runtime!`, spec_version 385
-- `/home/r/coding/subtensor/node/` — full node binary with Frontier EVM,
-  MEV shield, drand integration
-- `/home/r/coding/subtensor/pallets/subtensor/` — 3.7MB, ~150 storage items,
-  the entire AI incentive layer
-- `/home/r/coding/subtensor/node/src/chain_spec/localnet.rs` — local devnet
-  with Alice/Bob test accounts and Aura/Grandpa authorities
+- `/home/r/coding/myosu/crates/myosu-chain/runtime/src/lib.rs` — live stripped
+  runtime carrying the current stage-0 pallet set and runtime wrappers
+- `/home/r/coding/myosu/crates/myosu-chain/node/src/service.rs` — live node
+  service with startup timing and RPC readiness logging
+- `/home/r/coding/myosu/crates/myosu-chain/node/src/chain_spec/` — devnet,
+  localnet, testnet, and finney chain-spec surfaces owned in-repo
+- `/home/r/coding/myosu/crates/myosu-chain/node/tests/stage0_local_loop.rs` —
+  owned proof that the local chain boots and carries the two-subnet stage-0
+  loop
+- `/home/r/coding/subtensor/` remains the inherited source context, but it is
+  no longer the primary execution surface for this repo
 
 ## What Already Exists
 
 | Sub-problem | Existing code / flow | Reuse / extend / replace | Why |
 |-------------|----------------------|--------------------------|-----|
-| Substrate runtime shell | `subtensor/runtime/src/lib.rs` | extend (strip) | Remove 18 pallets, keep 12 |
-| Node binary | `subtensor/node/src/main.rs` | extend (strip) | Remove Frontier, drand, shield service code |
-| Local chain spec | `subtensor/node/src/chain_spec/localnet.rs` | extend | Strip subtensor genesis, keep balances/aura/grandpa |
-| BABE+GRANDPA consensus | `subtensor/node/src/consensus/` | reuse | Standard Substrate consensus, no changes needed |
-| Common types | `subtensor/common/src/lib.rs` | reuse | AccountId, Balance, BlockNumber definitions |
-| RPC configuration | `subtensor/node/src/rpc.rs` | extend | Remove Frontier RPC, keep standard Substrate RPC |
-| Build system | `subtensor/runtime/build.rs` | extend | Change metadata token name from "TAO" to "MYOSU" |
+| Runtime shell | `crates/myosu-chain/runtime/src/lib.rs` | extend | This is the live stripped runtime, not a future fork target |
+| Node binary | `crates/myosu-chain/node/src/main.rs` | extend | Current executable entrypoint for stage-0 proofs |
+| Node service | `crates/myosu-chain/node/src/service.rs` | extend | Owns block production, networking, and readiness timing |
+| Local chain specs | `crates/myosu-chain/node/src/chain_spec/*.rs` | extend | Current in-repo devnet/localnet truth surfaces |
+| Consensus wiring | `crates/myosu-chain/node/src/consensus/` | reuse with care | The live node still carries owned consensus composition here |
+| RPC assembly | `crates/myosu-chain/node/src/rpc.rs` | extend | Current custom RPC merge point and operator seam |
+| Owned launch proof | `crates/myosu-chain/node/tests/stage0_local_loop.rs` | reuse | The chain already proves the current local loop here |
 
 ## Non-goals
 
@@ -116,12 +123,12 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Runtime composition | New (from subtensor) | crates/myosu-chain/runtime/src/lib.rs |
-| Node binary | New (from subtensor) | crates/myosu-chain/node/src/main.rs |
-| Node service | New (from subtensor) | crates/myosu-chain/node/src/service.rs |
-| Chain spec (local) | New (from subtensor) | crates/myosu-chain/node/src/chain_spec.rs |
-| Common types | New (from subtensor) | crates/myosu-chain/common/src/lib.rs |
-| Runtime build | New (from subtensor) | crates/myosu-chain/runtime/build.rs |
+| Runtime composition | Implemented | crates/myosu-chain/runtime/src/lib.rs |
+| Node binary | Implemented | crates/myosu-chain/node/src/main.rs |
+| Node service | Implemented | crates/myosu-chain/node/src/service.rs |
+| Chain spec family | Implemented | crates/myosu-chain/node/src/chain_spec/ |
+| Runtime build | Implemented | crates/myosu-chain/runtime/build.rs |
+| Local loop proof | Implemented | crates/myosu-chain/node/tests/stage0_local_loop.rs |
 
 ## Architecture / Runtime Contract
 

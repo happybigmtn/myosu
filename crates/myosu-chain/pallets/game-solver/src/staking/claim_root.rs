@@ -1,9 +1,9 @@
 use super::*;
+use crate::Stage0SwapInterface;
 use frame_support::weights::Weight;
 use sp_core::Get;
 use sp_std::collections::btree_set::BTreeSet;
 use substrate_fixed::types::I96F32;
-use subtensor_swap_interface::SwapHandler;
 
 impl<T: Config> Pallet<T> {
     pub fn block_hash_to_indices(block_hash: T::Hash, k: u64, n: u64) -> Vec<u64> {
@@ -168,7 +168,7 @@ impl<T: Config> Pallet<T> {
             let owed_tao = match Self::swap_alpha_for_tao(
                 netuid,
                 owed_u64.into(),
-                T::SwapInterface::min_price::<TaoCurrency>(),
+                T::SwapInterface::stage0_min_price::<TaoCurrency>(),
                 true,
             ) {
                 Ok(owed_tao) => owed_tao,
@@ -259,7 +259,7 @@ impl<T: Config> Pallet<T> {
             // Increase root claimed based on the claimable rate.
             let new_root_claimed = root_claimed.saturating_add(
                 claimable_rate
-                    .saturating_mul(I96F32::from(u64::from(amount)))
+                    .saturating_mul(I96F32::from(amount))
                     .saturating_to_num(),
             );
 
@@ -276,7 +276,7 @@ impl<T: Config> Pallet<T> {
         // Iterate over all the subnets this hotkey is staked on for root.
         let root_claimable = RootClaimable::<T>::get(hotkey);
         for (netuid, claimable_rate) in root_claimable.iter() {
-            if *netuid == NetUid::ROOT.into() {
+            if *netuid == NetUid::ROOT {
                 continue; // Skip the root netuid.
             }
 
@@ -313,7 +313,7 @@ impl<T: Config> Pallet<T> {
 
     fn block_hash_to_indices_weight(k: u64, _n: u64) -> Weight {
         Weight::from_parts(3_000_000, 1517)
-            .saturating_add(Weight::from_parts(100_412, 0).saturating_mul(k.into()))
+            .saturating_add(Weight::from_parts(100_412, 0).saturating_mul(k))
     }
 
     pub fn maybe_add_coldkey_index(coldkey: &T::AccountId) {
