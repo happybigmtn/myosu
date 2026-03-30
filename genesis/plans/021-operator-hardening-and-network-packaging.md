@@ -93,10 +93,10 @@ can run safely.
   cache preference rather than a hard skip when the named-network proof needs
   a fresh runtime wasm.
 - [x] (2026-03-30) Synced the remaining cold-runner dependency that hosted CI
-  exposed: the chain jobs and operator proof lane now install Rust `rust-src`
-  in addition to `wasm32-unknown-unknown`, because Substrate's wasm builder
-  needs standard-library sources whenever the runtime fallback path compiles a
-  fresh wasm artifact.
+  exposed: the active-crates, chain, and operator jobs now install Rust
+  `rust-src` in addition to `wasm32-unknown-unknown`, because Substrate's wasm
+  builder needs standard-library sources whenever the runtime fallback path
+  compiles a fresh wasm artifact.
 
 ## Surprises & Discoveries
 
