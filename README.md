@@ -102,6 +102,10 @@ env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-
 env SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- build-spec --chain test_finney >/tmp/myosu-testnet-spec.json
 ```
 
+On warm machines, `SKIP_WASM_BUILD=1` reuses a cached runtime wasm. On cold
+machines with `wasm32-unknown-unknown` installed, the runtime now falls back to
+building that wasm instead of emitting an empty named-network spec.
+
 ## Proof Commands
 
 ```bash

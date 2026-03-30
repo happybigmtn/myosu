@@ -11,7 +11,9 @@ fn main() {
         std::env::set_var("WASM_BUILD_WORKSPACE_HINT", workspace_root);
     }
 
-    if std::env::var_os("SKIP_WASM_BUILD").is_some()
+    let skip_wasm_build = std::env::var_os("SKIP_WASM_BUILD");
+
+    if skip_wasm_build.is_some()
         && let Some(cached_wasm) = find_cached_runtime_wasm(workspace_root)
     {
         write_cached_wasm_binary_module(&cached_wasm);
@@ -20,6 +22,19 @@ fn main() {
             cached_wasm.display()
         );
         return;
+    }
+
+    if skip_wasm_build.is_some() {
+        println!(
+            "cargo:warning=SKIP_WASM_BUILD was set, but no cached runtime wasm was found; \
+building the runtime wasm instead"
+        );
+        // SAFETY: build scripts are single-process setup code here; we only clear
+        // the flag for this process so the downstream wasm builder can produce the
+        // runtime artifact on cold machines.
+        unsafe {
+            std::env::remove_var("SKIP_WASM_BUILD");
+        }
     }
 
     substrate_wasm_builder::WasmBuilder::new()

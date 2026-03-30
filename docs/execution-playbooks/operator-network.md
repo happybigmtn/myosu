@@ -113,6 +113,10 @@ test -s /tmp/myosu-devnet-spec.json
 test -s /tmp/myosu-testnet-spec.json
 ```
 
+On warm machines, `SKIP_WASM_BUILD=1` reuses a cached runtime wasm. On cold
+machines with `wasm32-unknown-unknown` installed, the runtime now falls back to
+building that wasm instead of emitting an empty named-network spec.
+
 If you prefer to run the binaries directly instead of copying the printed
 bootstrap output, the current operator-owned key path is:
 

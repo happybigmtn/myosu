@@ -87,6 +87,11 @@ can run safely.
   `.github/scripts/check_operator_network_bootstrap.sh` under
   `SKIP_WASM_BUILD=1` with runner-side `protoc` plus the Rust
   `wasm32-unknown-unknown` target installed.
+- [x] (2026-03-30) Hardened the hosted proof path so cold runners no longer
+  depend on a preexisting cached runtime wasm: `active-crates` now installs
+  `protoc`, and `myosu-chain-runtime` now treats `SKIP_WASM_BUILD=1` as a
+  cache preference rather than a hard skip when the named-network proof needs
+  a fresh runtime wasm.
 
 ## Surprises & Discoveries
 

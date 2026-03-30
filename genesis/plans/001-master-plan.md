@@ -113,6 +113,10 @@ and know which plans are active now versus merely useful later.
   `.github/workflows/ci.yml` now defines an `Operator Network` hosted lane for
   the bundle/bootstrap proof, so the remaining closure step is hosted evidence
   rather than missing CI shape.
+- [x] (2026-03-30) Hardened that hosted operator lane for cold runners:
+  `active-crates` now installs `protoc`, and the runtime build now falls back
+  to producing a real wasm when `SKIP_WASM_BUILD=1` is set but no cached
+  runtime artifact exists yet.
 
 ## Surprises & Discoveries
 
