@@ -990,6 +990,28 @@ fn run_stage0_local_loop_smoke() -> sc_cli::Result<()> {
 
     stop_child(&mut child);
     let summary = result?;
+    let Some(poker_gameplay_discovered_miner_uid) = summary.poker.gameplay_discovered_miner_uid
+    else {
+        return Err(sc_cli::Error::Input(
+            "poker smoke should emit discovered miner uid".to_string(),
+        ));
+    };
+    let Some(poker_gameplay_discovered_miner_endpoint) =
+        summary.poker.gameplay_discovered_miner_endpoint.as_deref()
+    else {
+        return Err(sc_cli::Error::Input(
+            "poker smoke should emit discovered miner endpoint".to_string(),
+        ));
+    };
+    let Some(poker_gameplay_live_miner_connect_endpoint) = summary
+        .poker
+        .gameplay_live_miner_connect_endpoint
+        .as_deref()
+    else {
+        return Err(sc_cli::Error::Input(
+            "poker smoke should emit live miner connect endpoint".to_string(),
+        ));
+    };
     println!("STAGE0 myosu-chain local-loop ok");
     println!("poker_subnet={}", summary.poker.subnet);
     println!("poker_alice_uid={}", summary.poker.alice_uid);
@@ -1009,26 +1031,15 @@ fn run_stage0_local_loop_smoke() -> sc_cli::Result<()> {
     );
     println!(
         "poker_gameplay_discovered_miner_uid={}",
-        summary
-            .poker
-            .gameplay_discovered_miner_uid
-            .expect("poker smoke should emit discovered miner uid")
+        poker_gameplay_discovered_miner_uid
     );
     println!(
         "poker_gameplay_discovered_miner_endpoint={}",
-        summary
-            .poker
-            .gameplay_discovered_miner_endpoint
-            .as_deref()
-            .expect("poker smoke should emit discovered miner endpoint")
+        poker_gameplay_discovered_miner_endpoint
     );
     println!(
         "poker_gameplay_live_miner_connect_endpoint={}",
-        summary
-            .poker
-            .gameplay_live_miner_connect_endpoint
-            .as_deref()
-            .expect("poker smoke should emit live miner connect endpoint")
+        poker_gameplay_live_miner_connect_endpoint
     );
     println!(
         "poker_alice_miner_incentive={}",

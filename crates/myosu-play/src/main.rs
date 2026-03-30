@@ -1032,6 +1032,20 @@ mod tests {
         }
     }
 
+    fn sample_loaded_poker_advice() -> AdviceSelection {
+        AdviceSelection {
+            game: GameSelection::Poker,
+            surface: blueprint::AdviceSurface::Poker {
+                renderer: Arc::new(NlheRenderer::demo()),
+            },
+            source: "artifact",
+            selection: "auto",
+            origin: "repo",
+            reason: "auto_loaded",
+            detail: "loaded local advice artifacts from repo".to_string(),
+        }
+    }
+
     fn not_requested_context() -> RenderContext {
         RenderContext {
             advice: demo_renderer(default_game(), default_args())
@@ -1311,8 +1325,7 @@ mod tests {
     #[test]
     fn startup_state_becomes_partial_when_discovery_returns_zero_results() {
         let context = RenderContext {
-            advice: demo_renderer(default_game(), default_args())
-                .expect("default renderer should build"),
+            advice: sample_loaded_poker_advice(),
             discovery: DiscoverySelection::missing(
                 "no chain-visible miners with nonzero incentive on subnet 7".to_string(),
             ),
@@ -1341,8 +1354,7 @@ mod tests {
     #[test]
     fn startup_state_becomes_partial_when_live_query_fails() {
         let context = RenderContext {
-            advice: demo_renderer(default_game(), default_args())
-                .expect("default renderer should build"),
+            advice: sample_loaded_poker_advice(),
             discovery: DiscoverySelection::found(sample_discovered_miner()),
             live_query: LiveQuerySelection::failed("timed out connecting to miner".to_string()),
         };

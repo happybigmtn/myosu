@@ -148,8 +148,12 @@ COMPLETED
 ACTIVE NEXT PHASE
 
 010  Expand CI proof gates across chain and doctrine surfaces
-hosted Actions now exist; closure is blocked on remote repo drift versus the
-current local stage-0 workspace
+hosted Actions now exist and the remote-drift blocker is cleared on the draft
+PR branch; the first full hosted run exposed concrete fixable blockers instead
+of vague pending work: `myosu-play` startup-state tests that depended on local
+artifact discovery, plus missing `protoc` and deny-Clippy cleanup in the chain
+lane. The next step is publish those fixes and capture one hosted green timing
+run
 
 NEXT QUEUED DOCTRINE
 
@@ -320,9 +324,10 @@ Status:
 - 009 completed on 2026-03-29.
 - 011 completed on 2026-03-29.
 - 010 remains the only active hardening plan, pending GitHub-hosted timing
-  proof. The blocker is now explicit: the local `.github/` workflow set is not
-  yet published on `happybigmtn/myosu`, so there is no hosted Actions run to
-  measure yet.
+  proof. The workflow is published and the current repo shape now reaches the
+  long hosted lanes. The remaining blockers are concrete and fixable:
+  environment-dependent `myosu-play` startup tests plus missing `protoc` and
+  node deny-Clippy cleanup in the chain lane.
 - 020 completed locally on 2026-03-30, including the owned two-subnet
   coexistence proof for poker and Liar's Dice.
 

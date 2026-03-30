@@ -52,6 +52,35 @@ After this plan, PR merges to trunk/main require: gameplay tests pass, chain com
   cleaner hosted result on run `23729944496`: `Stage-0 Repo Shape` failed in
   `4s`, and all downstream jobs skipped instead of emitting misleading cargo
   and doctrine noise.
+- [x] (2026-03-30) Published the current stage-0 CI surface to the same draft
+  PR branch and observed the first real hosted partial proof on run
+  `23730119476`: `Stage-0 Repo Shape`, `Plan Quality`, and `Doctrine
+  Integrity` all passed on the current repo surface before the cargo lanes
+  began their longer compile/test/clippy work.
+- [x] (2026-03-30) Verified the hosted warning about `actions/checkout@v4`
+  against GitHub's latest release metadata and updated the workflow to
+  `actions/checkout@v6` so future `010` evidence is not mixed with a known
+  Node 20 deprecation warning.
+- [x] (2026-03-30) Added workflow-level concurrency cancellation after needing
+  to cancel stale run `23730119476` by hand. Future pushes on the same PR now
+  replace older in-progress CI runs automatically instead of burning hosted
+  time on superseded evidence.
+- [x] (2026-03-30) Observed the first clean rerun under `actions/checkout@v6`
+  and the new concurrency-aware workflow on run `23730306070`: `Stage-0 Repo
+  Shape`, `Doctrine Integrity`, and `Plan Quality` all passed again with no
+  Node 20 deprecation annotation visible in the early hosted output.
+- [x] (2026-03-30) Let run `23730306070` settle and captured the first full
+  current-surface hosted failures instead of treating the long lanes as merely
+  pending: `Active Crates` failed in the full-package test step because two
+  `myosu-play` startup-state tests depended on ambient local artifact
+  discovery, while `Chain Core` and `Chain Clippy` both failed building
+  `litep2p` because the runner lacked `protoc`.
+- [x] (2026-03-30) Fixed those concrete blockers locally: the startup-state
+  tests in `myosu-play` now use an explicit non-empty poker advice fixture
+  instead of environment-dependent auto-discovery, the chain jobs install
+  `protobuf-compiler`, and the node-owned smoke summary no longer trips
+  deny-level Clippy on `expect()` once the chain lane gets far enough to lint
+  the node binary.
 - [ ] Verify GitHub-hosted CI runs complete in <15 minutes.
 
 ## Surprises & Discoveries
@@ -107,6 +136,43 @@ After this plan, PR merges to trunk/main require: gameplay tests pass, chain com
   `crates/myosu-chain/runtime/Cargo.toml`, `crates/myosu-chain/node/Cargo.toml`,
   plus the current `002`, `010`, and `020` Genesis plans), while every
   dependent job skipped.
+- Observation: once that current repo surface was published, the hosted
+  workflow immediately moved past the remote-drift blocker.
+  Evidence: on run `23730119476`, `Stage-0 Repo Shape` passed in `5s`,
+  `Plan Quality` passed in `3s`, and `Doctrine Integrity` passed in `4s`,
+  leaving only the longer `Active Crates`, `Chain Core`, and `Chain Clippy`
+  lanes in progress.
+- Observation: the current hosted proof still carries avoidable workflow-noise
+  unrelated to Stage 0 correctness.
+  Evidence: GitHub annotated run `23730119476` with Node 20 deprecation
+  warnings for `actions/checkout@v4`, and `gh api
+  repos/actions/checkout/releases/latest --jq '.tag_name'` returned `v6.0.2`.
+- Observation: once the branch started carrying full current-stage CI surfaces,
+  stale overlapping runs became a practical source of noise and wasted hosted
+  minutes.
+  Evidence: run `23730119476` had to be cancelled manually after the
+  `checkout@v6` update created successor run `23730274703`.
+- Observation: the cleaned-up workflow is preserving the same fast early proof
+  while reducing hosted-noise.
+  Evidence: run `23730306070` passed `Stage-0 Repo Shape` in `4s`,
+  `Doctrine Integrity` in `3s`, and `Plan Quality` in `3s`, and the earlier
+  Node 20 checkout deprecation warning did not appear in the observed watch
+  output.
+- Observation: the first full hosted run on the current repo surface exposed
+  one real CI-environment gap and one real test-isolation gap.
+  Evidence: on run `23730306070`, both chain jobs failed in `litep2p`'s build
+  script with `Could not find protoc`, and `Active Crates` failed because
+  `tests::startup_state_becomes_partial_when_discovery_returns_zero_results`
+  plus `tests::startup_state_becomes_partial_when_live_query_fails` saw clean
+  runner behavior (`AdviceSelection::startup_state == Empty`) instead of the
+  ambient local-artifact behavior that had let them pass before.
+- Observation: fixing the runner dependency surfaced one more honest local
+  chain-CI issue before the hosted rerun.
+  Evidence: once `protoc` was available locally, `cargo clippy -p myosu-chain
+  --features fast-runtime -- -D warnings` reached `crates/myosu-chain/node`
+  and failed on three `expect()` calls in the stage-0 smoke summary printer.
+  Replacing those with explicit `sc_cli::Error::Input` returns kept the smoke
+  contract strict while restoring deny-level Clippy green.
 
 ## Decision Log
 
@@ -133,17 +199,14 @@ After this plan, PR merges to trunk/main require: gameplay tests pass, chain com
 Implementation is underway and the first real CI-hardening slice is now in.
 The repo has moved from a single gameplay-only workflow to a broader gate set:
 gameplay, chain compile, doctrine integrity, plan quality, and chain clippy.
-The remaining open question is operational rather than architectural: confirm
-that the expanded workflow still completes fast enough in GitHub Actions to be
-worth keeping as a default merge gate. The local warm-cache estimate is
-encouraging enough that the timing risk still looks like a remote-run
-validation task. That proof surface now exists on GitHub, but it exposed a new
-truthful blocker: `happybigmtn/myosu` is materially behind the current local
-stage-0 repo, so the hosted workflow is measuring an older workspace/spec
-shape instead of the current one. The remaining `010` closure step is therefore
-not more YAML tuning in isolation; it is getting enough of the real current
-repo published that the hosted runner is exercising the same surface proved
-locally.
+The remaining open question is still operational rather than architectural:
+confirm that the expanded workflow completes fast enough in GitHub Actions to
+be worth keeping as a default merge gate. The difference now is that the repo
+is past the vague "publish enough surface" phase. The current hosted run has
+already proved the fast gates on the right repo shape and has already shown the
+first real blocker set. The next `010` closure step is therefore: publish the
+local fixes for hosted test isolation, runner `protoc`, and node deny-Clippy
+cleanliness, then capture one full hosted green run and its timing envelope.
 
 ## Context and Orientation
 

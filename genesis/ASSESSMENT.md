@@ -1,349 +1,251 @@
-# Genesis Assessment: Myosu 180-Day Turnaround
+# Genesis Assessment
 
-**Date:** 2026-03-21
-**Assessor:** Interim CEO/CTO
-**Scope:** Full codebase inventory, all plans, specs, git history, test coverage, dependencies
+Date: 2026-03-28
+Updated: 2026-03-30 for Genesis adjudication sync after later execution closed
+the miner/validator loop, the local two-subnet multi-game proof, the main
+`myosu-play` decomposition work, and most doctrine cleanup plans.
+Scope: Full repository audit -- root doctrine, all specs/, all plans/, all crates/, CI, git history (50 commits), dependency graph, archived genesis runs.
+Prior art: `archive/genesis_1774729423/ASSESSMENT.md` (same-day prior run) -- this assessment supersedes it with deeper code analysis and plan-quality review.
 
----
+## 1. Demand Reality
 
-## The One Sentence
+There is no evidence of external production demand.
 
-Myosu is a **Rust/Substrate blockchain fork** that incentivizes a decentralized market of MCCFR game-solving miners and exploitability-validating validators, wrapped in a Fabro-agent orchestration layer, with a terminal gameplay UI as its primary human-facing surface — currently in a bootstrapped-but-fragmented Stage 0 where the execution substrate is working but the product surface is mostly scaffolding.
+Proof of internal usage:
+- The repo is actively operated via Fabro/Raspberry (`fabro/`, `outputs/`).
+- `myosu-play` + `myosu-games-poker` + `myosu-tui` compile and run today as a local NLHE advisor.
+- 1,575 total commits, 94.8% from Fabro (automated), 5.2% from `happybigmtn` (human operator).
 
----
+Proof of no external demand:
+- No payment integration, no telemetry, no user accounts.
+- No external contributors, no issues, no PRs from outside.
+- README targets developers, not users.
 
-## Demand Reality
+Assessment: advanced prototype with internal operator usage. Not yet a product anyone would panic without.
 
-### Who Uses This?
+## 2. Status Quo
 
-**No one.** There are zero production users. There is no deployed chain, no live miners or validators, no gameplay traffic, no revenue.
+Without Myosu, the target user would:
+- Buy PioSolver ($250-2,500) for NLHE strategy computation.
+- Run ad-hoc MCCFR training via robopoker or academic implementations.
+- Have no verifiable quality scoring, no incentive market, no multi-game generalization.
+- Use no decentralized alternative -- none exists.
 
-The only active consumer of this codebase is its sole author (r@regenesis.dev, 57 commits). The Fabro/Raspberry agent orchestration layer runs autonomously against the codebase, but this is agent-driven scaffolding, not human usage.
+Pain Myosu removes: fragmentation between solver quality, verification, incentives, and playable output. The full loop (train -> score -> emit -> play) does not exist anywhere else.
 
-### What Specific Behavior Proves Real Demand?
+Current practical state: "duct-taped local demo + heavy chain fork in progress."
 
-Nothing. The strongest signal is the ongoing investment in execution infrastructure (Fabro, Raspberry, autodev loops), which suggests the author believes in the product thesis strongly enough to automate their own work on it. The game-solving subnet market thesis (replacing $2.5B proprietary solver market with open competition) is plausible, but there is no evidence anyone outside this repository wants it.
+## 3. Desperate Specificity
 
-### Classification
+The ONE person this is for today:
 
-**Side project / bootstrapped prototype.** The doctrine (`OS.md`) frames this as an autonomous company, but the operational reality is a single-developer codebase with agent-orchestrated execution. The ambition is large; the execution team is one person plus their AI agents.
+**Solo protocol engineer / founder-operator** building a verifiable game-solving network with limited bandwidth.
 
----
+What keeps them up at night:
+- "Can I prove deterministic validator scoring (INV-003) before making claims?"
+- "Can I reduce the 216K-line chain fork enough to ship a believable devnet?"
+- "Are my 37 spec files actually consistent, or am I planning against contradictions?"
 
-## Status Quo
+What gets them funded:
+- A reproducible demo: chain produces blocks, solver submits strategy, validator scores it, human plays against it, quality is measurable.
 
-### What's the Pain Without This Project?
+## 4. Narrowest Wedge
 
-For the sole author: losing Myosu means losing the Fabro execution framework that has been built specifically for this repo, plus the accumulated plans and specs. The operational loop (`raspberry autodev`) would have to be rebuilt from scratch.
+The smallest thing someone could depend on THIS WEEK:
 
-For a hypothetical future user: without Myosu, poker/baduk/bridge players pay $500-5,000 for proprietary solvers (PioSolver, MonkerSolver) with no way to verify correctness and no cross-game platform.
+**`myosu-play train` / `myosu-play pipe` -- a local NLHE training and strategy advisor backed by MCCFR-trained blueprints.**
 
-### Duct-Tape Alternatives
+Why it's real:
+- Compiles and runs today (CI-gated, smoke-tested).
+- 4-tier artifact auto-discovery with graceful fallback.
+- Full TUI with 8-screen state machine, pipe mode for agent integration.
+- Does NOT require the chain to be stable.
 
-- **For game solving:** Use existing proprietary solvers (PioSolver, MonkerSolver) or open-source CFR implementations (OpenSpiel, DREAM) — all centralized, single-game, no token incentives.
-- **For exploitability verification:** Trust the solver vendor or run your own CFR implementation.
-- **For gameplay:** Human vs. human, or human vs. rule-based bots, or human vs. proprietary solver with no competition layer.
+What is NOT a weekly wedge:
+- Full miner/validator emissions market on devnet with cross-validator determinism.
 
-There is no existing open, decentralized, multi-game alternative.
+## 5. Observation and Surprise
 
----
+### Surprising findings
 
-## Desperate Specificity
+1. **Implementation maturity mismatch.** The gameplay stack (myosu-games, myosu-games-poker, myosu-tui, myosu-play) is production-quality: 256K lines, comprehensive tests, no `unimplemented!()` calls, property-based testing via proptest. But CI only gates these 4 crates -- the entire chain side (216K lines, 13 pallets) flies blind.
 
-### The ONE Person This Is For
+2. **Spec corpus is actively misleading.** `specs/031626-07-tui-implementation.md` is 0 bytes. `specs/031626-10-agent-experience.md` is 0 bytes. Both are referenced as active in the master index. Meanwhile, `specs/031626-11` and `specs/031626-12` are byte-identical duplicates with different names. There are also 13 non-numbered mirror copies of numbered specs in the same directory.
 
-**Kihong (Kevin) Park, 34, quantitative poker researcher at a prop shop** — tired of paying $2,500/year for PioSolver licenses, frustrated that he can't verify whether the solver's output is actually Nash-equilibrium-optimal, and wanting to contribute compute to a network that rewards him for finding better solutions while also letting him play against the best strategies for games PioSolver doesn't cover (Liar's Dice, backgammon, mahjong).
+3. **The chain is a Bittensor subtensor fork carrying enormous baggage.** The runtime has 20+ pallets, EVM/Frontier integration, dual-token AMM, drand VRF, crowdloan mechanics -- none of which are needed for stage-0. The `pallet-game-solver` is essentially a renamed copy of `pallet-subtensor` with 69 extrinsics, 95+ errors, 60+ events, and 50+ storage migrations. The game-solving pallet has stubs (`stubs.rs`, `swap_stub.rs`) that correctly implement no-ops, but the runtime still wires the full subtensor surface.
 
-What keeps Kevin up at night: the proprietary solver lock-in and the inability to verify exploitability claims.
-What gets Kevin promoted: publishing better preflop ranges derived from real MCCFR computation, demonstrating that open competition produces superior strategies.
+4. **Three previous genesis runs exist in archive.** `archive/genesis_1774727580/`, `archive/genesis_1774728012/`, and `archive/genesis_1774729423/`. The latest (1774729423) produced 11 plans plus 5 dropped records. Those plans are structurally sound but lack: ASCII architecture diagrams, failure mode tables in every plan, and concrete implementation substance (several are bootstrap-only plans whose deliverables are spec/review files rather than working code).
 
----
+5. **myosu-play had a serious entry-point monolith at audit time.** The
+   original audit found `myosu-play/src/main.rs` at 31,337 lines. Later `009`
+   execution reduced that to 1,597 lines and extracted companion modules such
+   as `cli.rs` and `blueprint.rs`, which means the finding was real but is no
+   longer current in its original form.
 
-## Narrowest Wedge
+6. **The robopoker dependency is an external fork.** `happybigmtn/robopoker` provides `rbp-core`, `rbp-mccfr`, `rbp-nlhe`, `rbp-cards`, `rbp-gameplay`. Pinned via git rev. INV-006 governs fork coherence. No CHANGELOG.md was found documenting divergence from v1.0.0 baseline.
 
-### The Smallest Thing Worth Doing This Week
+### Half-built in revealing ways
 
-**`crates/myosu-games-poker/` — a working NLHE strategy query CLI.**
+- `node/src/chain_spec/devnet.rs` and `testnet.rs` are placeholders -- operational readiness is incomplete.
+- At audit time the off-chain services were not yet part of the live proof
+  story. Later execution moved both `myosu-miner` and `myosu-validator` into
+  the workspace and into the node-owned stage-0 proof loop.
+- `outputs/*/review.md` files describe surfaces as "not yet built" when the code already exists -- doc drift.
+- `DESIGN.md` is referenced in `OS.md` but may not exist or may be stale.
 
-A binary that takes a game state (hole cards + board), calls the robopoker MCCFR solver via `myosu-games`'s trait abstraction, and returns a recommended action. The chain, the validators, the miners, the token economics, the TUI — all of it is downstream of this one kernel.
+## 6. Future-Fit
 
-Without a working game engine that can solve a single poker situation and return a strategy, nothing else matters. The entire product collapses to this primitive.
+**Core bet:** Verifiable quality markets for imperfect-information strategy computation.
 
----
+**How it compounds:**
+- Shared game-trait abstractions + repeatable validation + tokenized incentives create a flywheel: more miners -> better strategies -> more players -> more revenue -> more miners.
+- Multi-game generalization means each new game (20 planned) reuses the same chain, validator, and TUI infrastructure.
+- Compute moat: trained MCCFR strategies take months to converge. Early miners have structural advantage that forks can't shortcut.
 
-## Observation & Surprise
-
-### Surprises During Exploration
-
-1. **The execution substrate (Fabro/Raspberry) is more mature than the product itself.** The agent orchestration layer has been hardened through real live runs, has working autodev loops, and has discovered/hardened 10+ defects in the sibling Fabro repo. But all the programs it manages (`games:t`, `tui:shell`, `chain:runtime`, etc.) are mostly scaffolding — generated crates that compile but don't yet do anything user-facing.
-
-2. **Chain code has excellent tests; application code has none.** The `pallet-game-solver` and `pallet-subtensor` have ~4,000+ tests in `game-solver` alone. But `myosu-games` has only 9 doc tests, and `myosu-tui` has zero tests. The quality is inverted: the part furthest from users (the chain pallet) is the most tested; the part closest to users (the TUI) is entirely untested.
-
-3. **The full Substrate chain fork is disabled.** `crates/myosu-chain` is commented out of the workspace. The pallets exist, the tests exist, but they're not being built or run. This means the chain is simultaneously "comprehensively tested" and "not actually buildable."
-
-4. **The autodev loop generates code that passes proof commands but doesn't work.** `myosu-play` compiles and its proof command (`cargo build -p myosu-play`) passes, but the binary exits immediately without entering the terminal loop. The synthesis produces compileable scaffolding, not working behavior.
-
-5. **The game solver design is genuinely sophisticated.** The Yuma Consensus + exploitability scoring mechanism for validator rewards is a non-trivial economic design. The thin-wrap of robopoker's CFR traits into `myosu-games` avoids reimplementing MCCFR. The checkpoint format (magic bytes + version + bincode) is thoughtful.
-
-6. **Single contributor, single operator.** r@regenesis.dev is the only human who has ever committed to this repo. All 57 commits are from one person (plus some Fabro automation artifacts).
-
----
-
-## Future-Fit
-
-### How Does This Compound?
-
-The game-solving subnet thesis compounds if:
-- **Compute gets cheaper** → more people can run miners profitably
-- **Open solver benchmarks emerge** → Myosu's strategies can be compared to proprietary ones
-- **Multi-game platform proves out** → adding new games is additive, not multiplicative
-- **AI coding agents improve** → the Fabro autodev loop gets better at synthesizing real crates
-
-### How Does It Decay?
-
-The thesis decays if:
-- **Proprietary solvers add verification features** → removes Myosu's trust-free advantage
-- **OpenSpiel or similar generalizes to exploitability scoring** → removes the need for a chain
-- **The sole operator burns out** → the codebase has no bus factor
-- **robopoker fork diverges or goes private** → `rbp-core` and `rbp-mccfr` are pinned to a private GitHub fork
-
-### The Bet
-
-**This project bets that open, decentralized game-solving with exploitability verification will displace proprietary solvers, and that the 180-day window is sufficient to move from scaffolding to a demo-able product.**
+**How it decays if not corrected:**
+- Spec/plan drift will erode trust in documentation faster than code improves.
+- Chain complexity (216K lines of Bittensor baggage) will block devnet stability.
+- CI blind spots on chain will allow subtle consensus regressions.
+- Without a working miner/validator loop, the chain is an expensive static binary.
 
 ---
 
-## What Works, What's Broken, What's Half-Built
+## What Works
 
-### What Works
+| Surface | Evidence | Quality |
+|---------|----------|---------|
+| `myosu-games` | 6+ property-based tests, clean trait abstractions, GameRegistry | High |
+| `myosu-games-poker` | 10 modules, 3,738 lines, MCCFR solver + 2 inference backends | High |
+| `myosu-tui` | 16+ shell state tests, 8-screen state machine, pipe mode | High |
+| `myosu-play` | Smoke test CI-gated, 4-tier artifact discovery, train+pipe modes | High |
+| `PLANS.md` / `SPEC.md` meta-rules | Clear, actionable, well-structured | High |
+| `INVARIANTS.md` | 6 hard rules with enforcement and measurement | High |
+| `OS.md` | Complete autonomous company OS, mission, stages, revenue model | High |
+| `ops/decision_log.md` | 20+ decisions with rationale | High |
 
-| Component | Status | Evidence |
-|-----------|--------|---------|
-| Fabro/Raspberry execution substrate | **Working** | Live autodev loops, real Fabro runs, reviewed artifacts under `outputs/` |
-| `myosu-games` trait abstraction | **Working** | `cargo test -p myosu-games` passes; robopoker integration functional |
-| `myosu-tui` shell infrastructure | **Working (compile)** | `cargo build -p myosu-tui` passes; shell layout, events, theme, pipe mode exist |
-| Chain pallet tests | **Excellent** | ~4,000+ tests in `pallet-game-solver` alone |
-| Planning/SPEC infrastructure | **Excellent** | `PLANS.md`, `SPEC.md`, 5 ExecPlans, 22 specs — all well-structured |
-| Spec authoring framework (`ralph/SPEC.md`) | **Exceptional** | The hidden backbone of spec quality — defines decision/migration/capability spec types rigorously |
+## What's Broken
 
-### What's Broken
+| Surface | Evidence | Impact |
+|---------|----------|--------|
+| Empty canonical specs | `specs/031626-07` (0 bytes), `specs/031626-10` (0 bytes) | Downstream plans reference missing content |
+| Duplicate specs | `031626-11` == `031626-12` byte-identical; 13 non-numbered mirrors | Conflicting source of truth |
+| Hosted CI closure still unproven | The workflow is now published and hosted runs exist on the current repo surface. Run `23730306070` showed the real remaining blockers: two environment-dependent `myosu-play` startup tests plus missing `protoc` in the chain jobs | The last `010` claim is now down to publishing those fixes and capturing one fully green hosted timing run |
+| Named network specs remain skeletal | `node/src/chain_spec/devnet.rs`, `testnet.rs` are still tiny compared with `localnet.rs` | Broader non-local packaging is weaker than the local proof surface |
+| Genesis corpus drift required adjudication | The original report and parts of this assessment kept describing an earlier active-plan set | Doctrine readers could misread what is actually live now |
 
-| Component | Status | Impact |
-|-----------|--------|--------|
-| Full chain runtime | **Not buildable** | `crates/myosu-chain` commented out; no parent workspace; runtime not wired |
-| `myosu-play` binary | **Compile-skeleton** | Builds but exits immediately without terminal loop |
-| `myosu-games-poker` crate | **Not built** | Spec exists in worktree, not in main; no NLHE implementation |
-| `myosu-sdk` crate | **Not built** | Spec exists in worktree, not in main; no SDK implementation |
-| CI/CD pipeline | **None** | No GitHub Actions, no automated test runs on PRs |
-| Containerization | **None** | No Docker, no docker-compose for local dev |
-| Test coverage for user-facing code | **Critical gap** | `myosu-tui` (0 tests), `myosu-games` (9 doc tests only) |
+## What's Half-Built
 
-### What's Half-Built
-
-| Component | Status | Gaps |
-|-----------|--------|------|
-| Game trait implementations | **Scaffolding** | `myosu-games-poker`, `myosu-games-liars-dice` exist in worktree; compile and pass `cargo test` but do no real MCCFR computation |
-| Fabro bootstrap lanes | **4 of ~19 done** | `games:traits` is fully implemented; `tui:shell`, `chain:runtime`, `chain:pallet` have reviewed artifacts but no implementation |
-| Product surfaces | **Scaffolding** | `play:tui`, `agent:experience` have spec/review but no real implementation |
-| Platform surfaces | **Scaffolding** | `games:poker-engine`, `games:multi-game`, `sdk:core` have spec/review but no real implementation |
-| Service surfaces | **Scaffolding** | `miner:service`, `validator:oracle` have spec/review but no real implementation |
-| Operational RPCs | **Spec only** | `specs/031626-18-operational-rpcs.md` exists but no implementation |
-
----
+| Surface | State | Gap |
+|---------|-------|-----|
+| Named network packaging | The local owned smoke path is real, but named `devnet` / `testnet` surfaces are still thin | The local proof is stronger than the broader deployment story |
+| Future synth governance | Genesis adjudication is now real and the synth procedure now lives in `genesis/PLANS.md` | The policy exists, but it still needs a future real-world synth pass to prove it is easy to follow |
+| Multi-game live serving | Liar's Dice is proven locally through miner/validator/play and the two-subnet harness, but live HTTP advice is still poker-only | The second-game network surface is not yet symmetric with poker |
+| Agent experience | Agent transports described in OS.md but no implementation | Empty spec, no code |
 
 ## Tech Debt Inventory
 
-### Critical (blocks user-visible progress)
-
-| ID | File/Module | Description | Risk |
-|----|-------------|-------------|------|
-| TD-01 | `crates/myosu-chain/` | Full chain workspace commented out; runtime not wired; cannot build a runnable chain | Chain work is untestable in isolation |
-| TD-02 | `crates/myosu-tui/` | Zero test coverage; any refactor risks silent breakage | High churn risk as TUI evolves |
-| TD-03 | `crates/myosu-games-poker/` | Not in main workspace; only in worktree; NLHE thin-wrap not implemented | Game engine is the core value prop |
-| TD-04 | `fabro/` autodev quality | Synth generates compile-passing but non-functional code; `play-tui` binary exits without loop | Wastes compute on fake completions |
-
-### High (significant drag)
-
-| ID | File/Module | Description | Risk |
-|----|-------------|-------------|------|
-| TD-05 | `crates/myosu-miner/` | Does not exist; spec exists; no miner binary | Core chain participant missing |
-| TD-06 | `crates/myosu-validator/` | Does not exist; spec exists; no validator binary | Core chain participant missing |
-| TD-07 | `crates/myosu-sdk/` | Worktree only; no real SDK | Third-party game registration impossible |
-| TD-08 | Python research pipeline | `numpy` not declared in `requirements.txt`; research results not wired to chain | Research-to-production gap |
-| TD-09 | CI/CD | No automated test runs; no lint; no type checks | Quality gate entirely manual |
-| TD-10 | `fabro/checks/` | Some proof commands are `cargo test` which only runs doc tests for myosu-games | False confidence in "passing" lanes |
-
-### Medium (manageable)
-
-| ID | File/Module | Description | Risk |
-|----|-------------|-------------|------|
-| TD-11 | Duplicate spec filenames | 13 pairs of zero-padded vs non-zero-padded filenames in `specs/` | Confusion about which is canonical |
-| TD-12 | `specs/031626-03-game-solving-pallet.md` | Names 11 ACs (CH-01 through CH-11) but only details 2 | Incomplete spec = incomplete implementation |
-| TD-13 | `genesis/` directory | Empty — no genesis chain initialization state | Cannot bootstrap a real chain |
-| TD-14 | Fabro orchestrator auth | MiniMax bridge requires interactive bash shell; non-interactive runs fail auth | Blocks unattended autodev in production |
-| TD-15 | Dead-code warnings | `myosu-games-liars-dice` emits dead-code warnings during test | Violates zero-warnings bar |
-| TD-16 | `ops/` KPI/evidence tracking | `ops/kpi_registry.yaml`, `ops/scorecard.md`, etc. exist but appear stale | Operational tracking not integrated into autodev loop |
-
-### Low (cosmetic)
-
-| ID | File/Module | Description |
-|----|-------------|-------------|
-| TD-17 | `.worktrees/` directory | Contains `autodev-live/` worktree with committed artifacts; `.worktrees/` in `.gitignore` |
-| TD-18 | `requirements.txt` | Missing for Python research pipeline |
-| TD-19 | `.env` template | Missing for environment variable documentation |
-
----
+| # | Area | Debt | Evidence | Impact | Owning Plan |
+|---|------|------|----------|--------|-------------|
+| TD-01 | Spec corpus | Empty canonical specs + duplicates | `specs/031626-07`, `031626-10`, `031626-11==12` | Planning integrity | 002 |
+| TD-02 | CI closure evidence | Hosted runs now exist on the current repo surface, but the long cargo lanes have not yet been recorded to completion in doctrine | The final `010` claim is not yet fully proved | 010 |
+| TD-03 | Chain runtime | 20+ pallets when 6 needed | `crates/myosu-chain/runtime/src/lib.rs` | Maintenance burden, compile time, attack surface | 003 |
+| TD-04 | Chain node packaging | Named `devnet` / `testnet` chain specs remain skeletal | The localnet/operator proof is stronger than the broader packaged surface | 004 |
+| TD-05 | Workspace packaging | Non-member crates checked in | `pallets/subtensor/Cargo.toml`, `support/linting`, `support/procedural-fork`, `support/tools` | Contributor confusion | 003 |
+| TD-06 | Genesis corpus freshness | Report/assessment drifted after later execution work | Readers could inherit the wrong active-plan set | 018 |
+| TD-07 | Play entrypoint size | `myosu-play/src/main.rs` is still 1,597 lines after decomposition | Maintenance and review burden remain non-trivial | 009 |
+| TD-08 | Robopoker fork | No CHANGELOG.md documenting divergence from v1.0.0 | INV-006 | Undocumented algorithm changes | 006 |
+| TD-09 | Artifact trust | Auto-loading from local dirs without signing | `codexpoker.rs`, `artifacts.rs` | Poisoned advice | 008 |
 
 ## Security Risks
 
-| ID | Risk | Severity | Location |
-|----|------|----------|----------|
-| SEC-01 | robopoker pinned to private GitHub fork (`happybigmtn/robopoker`) | **HIGH** | `crates/myosu-games/Cargo.toml` — if fork goes private or is deleted, build breaks permanently |
-| SEC-02 | No secrets management — `.env` template missing | **MEDIUM** | No `FABRIC_*` or `MINIMAX_API_KEY` template |
-| SEC-03 | `arkworks` + BLS curve libraries for DRAND randomness — hazmat crypto | **MEDIUM** | `pallet-drand/`, ARKworks dependencies in `pallet-game-solver` |
-| SEC-04 | `tx.origin` not used (confirmed clean) | **LOW** | N/A — Web3 rule satisfied |
-| SEC-05 | No `unsafe` blocks audited in `pallet-game-solver` | **LOW** | Unaudited; `procedural-fork` introduces risk of subtle Substrate fork divergence |
-
----
+| # | Risk | Evidence | Severity | Owning Plan |
+|---|------|----------|----------|-------------|
+| SR-01 | Large runtime attack surface | 20+ pallets including EVM/Frontier | High | 003 |
+| SR-02 | Untrusted artifact loading | `crates/myosu-play/src/main.rs` auto-discovery | Medium | 008 |
+| SR-03 | Unsafe mmap without bounds | `crates/myosu-games-poker/src/codexpoker.rs` | Medium | 008 |
+| SR-04 | bincode decode without size caps | `wire.rs`, `solver.rs`, `artifacts.rs` | Medium | 008 |
+| SR-05 | Hosted CI closure still open after the first full current-surface run | Hosted runner evidence now exists on the current repo surface; run `23730306070` passed `Stage-0 Repo Shape`, `Plan Quality`, and `Doctrine Integrity`, then failed concretely on two `myosu-play` startup tests plus missing `protoc` in the chain jobs | Medium | 010 |
+| SR-06 | No key management infrastructure | `myosu-keys` crate doesn't exist | High | 011 |
 
 ## Test Coverage Gaps
 
-### Untested Modules (Critical)
+### Not CI-gated (even where local tests exist)
+- Entire chain family: `pallet-game-solver` (35 test modules), `pallet-subtensor` (35 test modules), runtime, node, all supporting pallets.
+- Total chain test code: ~56K lines in subtensor tests alone.
 
-| Module | File | Lines | Test Coverage | Risk if Broken |
-|--------|------|-------|---------------|----------------|
-| `myosu-tui` entire crate | `crates/myosu-tui/src/` | 3,574 | **0 tests** | Any TUI change silently breaks user experience |
-| `myosu-games` game trait impls | `crates/myosu-games/src/traits.rs` | 371 | **9 doc tests only** | Game type serialization could silently break |
-| `myosu-play` CLI entrypoint | `crates/myosu-play/src/main.rs` | ~50 (scaffold) | **0 tests** | Binary could silently fail |
-| `myosu-sdk` | `crates/myosu-sdk/` (worktree only) | N/A | **0 tests** | SDK API contract untested |
-| `pallet-game-solver` RPC layer | `pallets/game-solver/src/rpc_info/` | ~500 | **0 tests** | Chain RPC could silently fail |
+### Sparse or no direct tests
+- `node/src/service.rs`, `rpc.rs`, `command.rs` -- node operational core
+- `node/src/chain_spec/devnet.rs`, `testnet.rs` -- placeholder chain specs
+- `runtime/src/check_nonce.rs`, `migrations.rs`, `sudo_wrapper.rs`, `transaction_payment_wrapper.rs`
+- `pallets/swap-interface/src/lib.rs`, swap RPC, subtensor RPC, subtensor runtime API
+- `support/tools/src/bump_version.rs`, `spec_version.rs`
 
-### Undertested Modules (High)
+### Missing test categories
+- Hosted CI evidence now exists, but it does not yet cover the current local
+  stage-0 repo surface because the published remote repo is behind
+- Liar's Dice does not yet have a live HTTP miner-query proof analogous to poker
+- Future synth governance is now documented, but it has not yet been exercised
+  by a post-policy synth run
 
-| Module | File | Test Count | Gap |
-|--------|------|------------|-----|
-| `myosu-games` property tests | `crates/myosu-games/src/` | 9 doc tests | No property-based tests for GameConfig, GameType serialization round-trip |
-| `myosu-tui` integration | `crates/myosu-tui/src/` | 0 | No screen transition tests, no event loop tests, no shell state tests |
-| Chain pallet migrations | `pallets/game-solver/src/migrations/` | 47 migrations | 47 storage migrations with minimal test coverage per migration |
+## One-Sentence Reality
 
----
+Myosu is now a locally proven two-game stage-0 chain loop with one remaining
+hosted-CI closure gap caused by specific fixable hosted blockers and a still-
+messy canonical spec corpus.
 
 ## Existing Plan Assessment
 
-### Plan 1: `031826-clean-up-myosu-for-fabro-primary-executor.md`
-**Rating: STRONG** — Well-scoped, specific milestones, has Decision Log, concrete proof commands, references specific file paths.
-**Genesis action:** Carry forward as-is into `genesis/plans/001-fabro-cleanup-completion.md`. Mark complete — this was executed on 2026-03-19.
+### Prior genesis plans (archive/genesis_1774729423/plans/)
 
-### Plan 2: `031826-bootstrap-fabro-primary-executor-surface.md`
-**Rating: STRONG** — Comprehensive bootstrap surface seeding with 14 Decision Log entries, specific file references, and thorough Surprises section.
-**Genesis action:** Carry forward as-is into `genesis/plans/002-fabro-bootstrap-completion.md`. Mark partially complete — bootstrap surface is seeded, but 3 of 4 lanes still need re-verification.
+| Plan | Rating | Strengths | Weaknesses | Genesis Action |
+|------|--------|-----------|------------|----------------|
+| 001-master-plan | Strong | Clear 4-phase structure, dependency graph | No ASCII diagrams, vague phase boundaries | Enhance with diagrams, tighter milestones, specific proof commands |
+| 002-spec-corpus-normalization | Strong | Correct problem identification, clear milestones | Proof commands are file-existence checks, not content validation | Enhance with content-quality gates |
+| 003-chain-runtime-reduction | Strong | Correct scope (structural only), 8-file cap | Missing: which pallets specifically stay/go, no architecture diagram | Enhance with explicit allowlist and ASCII diagram |
+| 004-node-devnet-minimalization | Strong | Good separation from runtime plan | Missing: what "minimal devnet" actually means in concrete terms | Enhance with devnet definition |
+| 005-pallet-game-solver-simplification | Strong | Correct identification of stub path | Missing: which of 69 extrinsics survive stage-0 | Enhance with extrinsic allowlist |
+| 006-game-traits-and-poker-boundaries | Weak (bootstrap-only) | Good problem framing | All milestones produce spec/review files, not code. This is a planning plan, not an implementation plan. The game traits already exist and work. | Replace with implementation-focused plan that extends existing working code |
+| 007-miner-validator-bootstrap | Strong | Correct architecture (shared client), INV-003 harness | Missing: what the miner actually does (MCCFR step), what the validator actually scores | Enhance with concrete service behavior |
+| 008-artifact-wire-checkpoint-hardening | Strong | Correct security concerns identified | Missing: specific size caps, signing scheme, version format | Enhance with concrete security mitigations |
+| 009-play-tui-productization | Strong | Excellent IA mockups, state taxonomy | Missing: concrete code changes needed, test names that don't exist yet | Enhance with implementation specifics |
+| 010-ci-proof-gates-expansion | Strong | Doctrine checks in CI is excellent idea | Missing: what specifically the chain CI job runs | Enhance with exact CI job definitions |
+| 011-security-observability-release | Not fully reviewed | Likely strong framing | Likely missing specifics | Enhance |
 
-### Plan 3: `031926-design-myosu-fabro-workflow-library.md`
-**Rating: STRONG** — Workflow family mapping is excellent, library layout is specific, references actual Fabro source files.
-**Genesis action:** Carry forward as-is into `genesis/plans/003-fabro-workflow-library.md`. The 6 workflow families (implement/verify, services, maintenance, etc.) are a good taxonomy.
+### Prior dropped-plan records
 
-### Plan 4: `031926-decompose-myosu-into-raspberry-programs.md`
-**Rating: VERY STRONG** — Source map from archived specs to frontier programs is the most practically useful artifact in the plan set. The 6-program decomposition (bootstrap, chain-core, services, product, platform, recurring) is sound.
-**Genesis action:** Carry forward as-is into `genesis/plans/004-raspberry-program-decomposition.md`. This plan is partially executed — all 6 program manifests exist and have been seeded.
+| Record | Disposition | Notes |
+|--------|------------|-------|
+| 012-dropped-031826-clean-up-myosu-for-fabro | Correct drop | Work already executed |
+| 013-dropped-031826-bootstrap-fabro-executor | Correct drop | Work already executed |
+| 014-dropped-031926-design-fabro-workflow | Correct drop | Insights merged into active plans |
+| 015-dropped-031926-decompose-raspberry | Correct drop | Insights merged into active plans |
+| 016-dropped-031926-iterative-execution | Correct drop | Stale run journal |
 
-### Plan 5: `031926-iterative-execution-and-raspberry-hardening.md`
-**Rating: STRONG (but drifted)** — This plan has become an execution journal rather than a plan. The original 3 milestones are buried at line 520+. The 60+ timestamped progress entries are valuable historical record but make the plan hard to follow as actionable guidance.
-**Genesis action:** REPLACE with `genesis/plans/005-iterative-execution-hardening.md`. The content is gold but needs restructuring: milestones front-and-center, execution log moved to a separate section.
+### Active specs assessment (specs/)
 
-### Missing Plans (Gaps in Current Portfolio)
-
-| Missing Plan | What It Should Cover | Why It's Critical |
-|-------------|---------------------|-------------------|
-| Chain restart | Re-enable `crates/myosu-chain` workspace, wire runtime, get chain building | Everything downstream of the chain is blocked |
-| NLHE game implementation | Implement `myosu-games-poker` thin-wrap of robopoker | The core product feature — without it, there's no game |
-| TUI full implementation | Wire game rendering into `myosu-tui` shell, add screens, pipe mode end-to-end | Primary human-facing surface |
-| Test coverage sprint | Add tests to `myosu-tui` and `myosu-games` | The quality inversion is a ticking time bomb |
-| CI/CD setup | GitHub Actions, cargo test on PR, lint gates | No automated quality gates exist |
-| Miner binary | `crates/myosu-miner` implementation | Core chain participant |
-| Validator binary | `crates/myosu-validator` implementation | Core chain participant |
-| SDK development | `crates/myosu-sdk` implementation | Third-party game registration |
-| Fabro quality hardening | Strengthen proof commands so compile != working | Autodev currently produces fake completions |
-
----
-
-## Architectural Assessment
-
-### What the System Actually Is
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     FABRO / RASPBERRY (control plane)                │
-│  fabro/programs/*.yaml  │  fabro/workflows/*.fabro  │  autodev loop │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┼────────────────┐
-                    ▼               ▼                ▼
-            ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-            │ myosu-games  │ │  myosu-tui  │ │  game-solver │
-            │ (traits)     │ │ (terminal)  │ │  (pallet)    │
-            │              │ │             │ │  [DISABLED]  │
-            └─────────────┘ └─────────────┘ └─────────────┘
-                    │               │                │
-                    └───────┬───────┘                │
-                            ▼                        │
-                     robopoker MCCFR                  │
-                     (rbp-core, rbp-mccfr)           │
-                     (private fork)                  │
-                                                        │
-                        ┌─────────────────────────────┘
-                        ▼
-              ┌──────────────────────┐
-              │   Substrate Chain    │
-              │ (NOT BUILT - staged) │
-              │  miners + validators  │
-              │  (NOT IMPLEMENTED)   │
-              └──────────────────────┘
-```
-
-### Key Architectural Decision Points
-
-1. **Fabro as executor, Raspberry as supervisor** — This is the right choice for a one-person project. The autodev loop generates work and monitors itself. But the quality of generated output needs hardening before it can be trusted.
-
-2. **Thin-wrap robopoker** — The decision to wrap (not reimplement) MCCFR via `myosu-games` traits is correct. Robopoker's `rbp-core` and `rbp-mccfr` are the actual solver; Myosu provides the chain + incentive layer.
-
-3. **Substrate fork strategy** — Forking Subtensor's Substrate implementation gives a working consensus + staking + emissions base. The risk is fork divergence from upstream (polkadot-sdk `stable2407`).
-
-4. **Chain-as-staged** — Keeping the chain disabled while building application layers first is a reasonable staging decision. But 6+ months of disabled chain increases the risk of upstream divergence.
-
----
-
-## No-Ship Conditions
-
-Per `INVARIANTS.md` and `OS.md`, this project should not ship if:
-
-1. **INV-003 violation:** Validator exploitability scores disagree above epsilon (1e-6) on identical inputs. Currently **not testable** — no validator implementation exists.
-
-2. **INV-004 violation:** Any direct dependency between `myosu-play` and `myosu-miner`. Currently **satisfied by absence** — neither crate is implemented yet.
-
-3. **False-green proof:** Any Fabro lane completes with a passing proof command that doesn't actually verify the intended behavior. Currently **known violation** — autodev produces compile-passing but non-functional code.
-
-4. **Structured closure failure:** Any Fabro turn lands on trunk without a trusted `RESULT:` or `BLOCKED:` outcome. Currently **partially addressed** — Fabro inspect-by-run-id is now stable, but detached-submit path is still being hardened.
-
----
-
-## Recommended Focus for 180 Days
-
-**The project has 4 things in reasonable shape and ~15 things in broken or missing shape. The turnaround requires ruthless prioritization.**
-
-### Top 4 Things That Work (Protect and Build On)
-1. Fabro/Raspberry execution substrate — the most mature part of the stack
-2. `myosu-games` trait abstraction — the right architectural bet
-3. Chain pallet test infrastructure — solid foundation for when chain restarts
-4. SPEC/PLANS infrastructure — excellent governance framework
-
-### Top 4 Things to Fix First (Unblock Everything Else)
-1. **Restart the chain** — re-enable `crates/myosu-chain`, wire runtime, get `cargo check` passing
-2. **Add tests to user-facing code** — `myosu-tui` (0 tests) and `myosu-games` (9 doc tests) are the most likely to silently break
-3. **Implement NLHE game engine** — `myosu-games-poker` thin-wrap is the core value proposition
-4. **Fix autodev quality** — strength proof commands so compile != working
-
-Everything else (miner binary, validator binary, SDK, multi-game, agent experience) is downstream of these four.
-
----
-
-*Assessment compiled 2026-03-21. Sources: 5 ExecPlans, 22 specs, 57 git commits, full source tree, dependency graph, test coverage inventory.*
+| Spec | Status | Quality | Notes |
+|------|--------|---------|-------|
+| 031626-00-master-index | Active | High | Comprehensive but references empty specs |
+| 031626-01-chain-fork-scaffold | Active | High | 11 ACs, detailed, well-reasoned |
+| 031626-02a-game-engine-traits | Active | High | Clear rationale, realistic scope |
+| 031626-02b-poker-engine | Active | High | Clean dependency on 02a |
+| 031626-03-game-solving-pallet | Active | High | 10 ACs, Yuma fidelity requirement clear |
+| 031626-04a-miner-binary | Active | Medium | Good but needs update for current code state |
+| 031626-04b-validator-oracle | Active | Medium | Good but INV-003 harness needs more detail |
+| 031626-05-gameplay-cli | Active | Medium | Partially superseded by working myosu-play |
+| 031626-06-multi-game-architecture | Active | Medium | Liar's Dice proof is now closed locally; the remaining gap is live second-game network symmetry |
+| 031626-07-tui-implementation | **EMPTY** | None | 0 bytes, referenced as active |
+| 031626-08-abstraction-pipeline | Active | Medium | Important for miner artifact quality |
+| 031626-09-launch-integration | Active | Medium | End-to-end integration spec |
+| 031626-10-agent-experience | **EMPTY** | None | 0 bytes, referenced as active |
+| 031626-11-agent-coordination | Active | Low | Duplicate of 031626-12 |
+| 031626-12-nlhe-incentive | Active | Medium | Canonical incentive spec (duplicate of 11) |
+| 031626-13-n-player-trait | Active | Medium | N-player generalization design |
+| 031626-14-poker-variant-family | Active | Medium | PLO/6-max/short-deck planning |
+| 031626-15-key-management | Active | Medium | Key infrastructure design |
+| 031626-16-cross-game-scoring | Active | Medium | Cross-game quality normalization |
+| 031626-17-spectator-protocol | Active | Low | Aspirational, no implementation path |
+| 031626-18-operational-rpcs | Active | Medium | Runtime API additions |
+| 031626-19-game-engine-sdk | Active | Medium | SDK scaffold for third-party games |
+| 031626-99 legacy executor enhancement spec | Historical drift | Low | Already historical-only in `specsarchive/`; keep out of the active control plane |
+| 13 non-numbered mirrors | Legacy | Low | Duplicates of numbered specs, should be archived |
