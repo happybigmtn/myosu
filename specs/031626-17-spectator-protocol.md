@@ -1,5 +1,10 @@
 # Specification: Spectator Protocol — Watching Agent vs Agent Play
 
+Historical note: this spec predates the current `myosu-play` subcommand CLI.
+For the live Stage 0 surface, read `myosu-play --pipe` as `myosu-play pipe`.
+Future spectator flags and sockets described here remain spec intent until they
+land in code.
+
 Source: DESIGN.md 9.24 spectator mode
 Status: Draft
 Date: 2026-03-17
@@ -28,7 +33,7 @@ Three possible data sources for spectator events:
 
 **Decision: local relay for Phase 0, miner axon for Phase 1.**
 
-Phase 0: spectator watches a local `myosu-play --pipe` session between two
+Phase 0: spectator watches a local `myosu-play pipe` session between two
 agents running on the same machine. The relay is just a Unix domain socket
 or named pipe that forwards game events.
 

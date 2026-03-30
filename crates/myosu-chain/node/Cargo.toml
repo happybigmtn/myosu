@@ -1,0 +1,130 @@
+[package]
+name = "myosu-chain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Stage-0 node package for the myosu chain restart"
+default-run = "myosu-chain"
+build = "build.rs"
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "myosu-chain"
+path = "src/main.rs"
+
+[dependencies]
+async-trait.workspace = true
+clap = { workspace = true, features = ["derive"] }
+codec.workspace = true
+futures = { workspace = true, features = ["thread-pool"] }
+hex.workspace = true
+jsonrpsee = { workspace = true, features = ["server"] }
+log.workspace = true
+memmap2.workspace = true
+myosu-chain-client.workspace = true
+myosu-chain-runtime = { workspace = true, features = ["std"] }
+num-traits = { workspace = true, features = ["std"] }
+pallet-drand.workspace = true
+pallet-transaction-payment.workspace = true
+pallet-transaction-payment-rpc.workspace = true
+pallet-transaction-payment-rpc-runtime-api.workspace = true
+polkadot-sdk = { workspace = true, features = ["cumulus-primitives-proof-size-hostfunction"] }
+sc-basic-authorship.workspace = true
+sc-chain-spec.workspace = true
+sc-chain-spec-derive.workspace = true
+sc-cli.workspace = true
+sc-client-api.workspace = true
+sc-consensus.workspace = true
+sc-consensus-aura.workspace = true
+sc-consensus-babe.workspace = true
+sc-consensus-babe-rpc.workspace = true
+sc-consensus-epochs.workspace = true
+sc-consensus-grandpa.workspace = true
+sc-consensus-grandpa-rpc.workspace = true
+sc-consensus-manual-seal.workspace = true
+sc-consensus-slots.workspace = true
+sc-executor.workspace = true
+sc-keystore.workspace = true
+sc-network.workspace = true
+sc-network-sync.workspace = true
+sc-offchain.workspace = true
+sc-rpc.workspace = true
+sc-rpc-api.workspace = true
+sc-service.workspace = true
+sc-telemetry.workspace = true
+sc-transaction-pool.workspace = true
+sc-transaction-pool-api.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+sp-api.workspace = true
+sp-block-builder.workspace = true
+sp-blockchain.workspace = true
+sp-consensus.workspace = true
+sp-consensus-aura.workspace = true
+sp-consensus-babe.workspace = true
+sp-consensus-grandpa.workspace = true
+sp-consensus-slots.workspace = true
+sp-core.workspace = true
+sp-crypto-ec-utils = { workspace = true, default-features = true, features = ["bls12-381"] }
+sp-inherents.workspace = true
+sp-io.workspace = true
+sp-keyring.workspace = true
+sp-keystore.workspace = true
+sp-offchain.workspace = true
+sp-runtime.workspace = true
+sp-session.workspace = true
+sp-timestamp.workspace = true
+sp-transaction-pool = { workspace = true, features = ["default"] }
+subtensor-custom-rpc = { workspace = true, features = ["std"] }
+subtensor-custom-rpc-runtime-api = { workspace = true, features = ["std"] }
+subtensor-macros.workspace = true
+subtensor-runtime-common = { workspace = true, features = ["std"] }
+substrate-frame-rpc-system.workspace = true
+substrate-prometheus-endpoint.workspace = true
+tokio.workspace = true
+
+frame-benchmarking.workspace = true
+frame-benchmarking-cli.workspace = true
+frame-metadata-hash-extension.workspace = true
+frame-system.workspace = true
+frame-system-rpc-runtime-api.workspace = true
+
+[build-dependencies]
+substrate-build-script-utils.workspace = true
+
+[features]
+rocksdb = [
+    "frame-benchmarking-cli/rocksdb",
+    "sc-cli/rocksdb",
+    "sc-service/rocksdb",
+]
+default = []
+fast-runtime = [
+    "myosu-chain-runtime/fast-runtime",
+    "subtensor-runtime-common/fast-runtime",
+]
+runtime-benchmarks = [
+    "frame-benchmarking-cli/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "myosu-chain-runtime/runtime-benchmarks",
+    "pallet-drand/runtime-benchmarks",
+    "pallet-transaction-payment/runtime-benchmarks",
+    "polkadot-sdk/runtime-benchmarks",
+    "sc-service/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-system/try-runtime",
+    "myosu-chain-runtime/try-runtime",
+    "pallet-drand/try-runtime",
+    "pallet-transaction-payment/try-runtime",
+    "polkadot-sdk/try-runtime",
+    "sp-runtime/try-runtime",
+]

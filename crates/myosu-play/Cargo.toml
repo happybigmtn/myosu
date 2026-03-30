@@ -1,0 +1,21 @@
+[package]
+name = "myosu-play"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Executable TUI and pipe-mode entrypoint for Myosu play"
+
+[[bin]]
+name = "myosu-play"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+myosu-chain-client.workspace = true
+myosu-games = { path = "../myosu-games" }
+myosu-games-liars-dice = { path = "../myosu-games-liars-dice" }
+myosu-games-poker = { path = "../myosu-games-poker" }
+myosu-tui = { path = "../myosu-tui" }
+ratatui = { workspace = true }
+subtensor-runtime-common.workspace = true
+tokio = { workspace = true, features = ["full"] }

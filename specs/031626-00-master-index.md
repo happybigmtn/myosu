@@ -25,7 +25,7 @@ Depends-on: none
 | `031626-08-abstraction-pipeline.md` | (new) | AP-01..03 | Draft |
 | `031626-09-launch-integration.md` | (new) | LI-01..06 | Draft |
 | `031626-10-agent-experience.md` | (new) | AX-01..06 | Draft |
-| `031626-11-agent-coordination-mechanism.md` | (new) | AC (design) | Draft |
+| `031626-11-agent-coordination-mechanism.md` | (new) | AC (design) | Superseded by 12 |
 | `031626-12-nlhe-incentive-mechanism.md` | (new) | IL (design) | Draft |
 | `031626-13-n-player-trait-design.md` | (new) | — (decision) | Draft |
 | `031626-14-poker-variant-family.md` | (new) | PV-01..06 | Draft |

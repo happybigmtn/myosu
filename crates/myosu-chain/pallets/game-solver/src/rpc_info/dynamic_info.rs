@@ -6,7 +6,7 @@ use substrate_fixed::types::I96F32;
 use subtensor_macros::freeze_struct;
 use subtensor_runtime_common::{AlphaCurrency, NetUid, TaoCurrency};
 
-#[freeze_struct("e526a1c6d2303d32")]
+#[freeze_struct("4fe687e0720aac0c")]
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct DynamicInfo<AccountId: TypeInfo + Encode + Decode> {
     netuid: Compact<NetUid>,
@@ -17,7 +17,6 @@ pub struct DynamicInfo<AccountId: TypeInfo + Encode + Decode> {
     tempo: Compact<u16>,
     last_step: Compact<u64>,
     blocks_since_last_step: Compact<u64>,
-    emission: Compact<u64>,
     alpha_in: Compact<AlphaCurrency>,
     alpha_out: Compact<AlphaCurrency>,
     tao_in: Compact<TaoCurrency>,
@@ -25,7 +24,6 @@ pub struct DynamicInfo<AccountId: TypeInfo + Encode + Decode> {
     alpha_in_emission: Compact<AlphaCurrency>,
     tao_in_emission: Compact<TaoCurrency>,
     pending_alpha_emission: Compact<AlphaCurrency>,
-    pending_root_emission: Compact<TaoCurrency>,
     subnet_volume: Compact<u128>,
     network_registered_at: Compact<u64>,
     subnet_identity: Option<SubnetIdentityV3>,
@@ -55,7 +53,6 @@ impl<T: Config> Pallet<T> {
             tempo: Tempo::<T>::get(netuid).into(),
             last_step: last_step.into(),
             blocks_since_last_step: blocks_since_last_step.into(),
-            emission: 0.into(),
             alpha_in: SubnetAlphaIn::<T>::get(netuid).into(),
             alpha_out: SubnetAlphaOut::<T>::get(netuid).into(),
             tao_in: SubnetTAO::<T>::get(netuid).into(),
@@ -65,18 +62,21 @@ impl<T: Config> Pallet<T> {
             pending_alpha_emission: PendingValidatorEmission::<T>::get(netuid)
                 .saturating_add(PendingServerEmission::<T>::get(netuid))
                 .into(),
-            pending_root_emission: TaoCurrency::from(0u64).into(),
             subnet_volume: SubnetVolume::<T>::get(netuid).into(),
             network_registered_at: NetworkRegisteredAt::<T>::get(netuid).into(),
             subnet_identity: SubnetIdentitiesV3::<T>::get(netuid),
             moving_price: SubnetMovingPrice::<T>::get(netuid),
         })
     }
-    pub fn get_all_dynamic_info() -> Vec<Option<DynamicInfo<T::AccountId>>> {
+    pub fn get_all_dynamic_info() -> Vec<DynamicInfo<T::AccountId>> {
         let netuids = Self::get_all_subnet_netuids();
-        let mut dynamic_info = Vec::<Option<DynamicInfo<T::AccountId>>>::new();
+        let mut dynamic_info = Vec::<DynamicInfo<T::AccountId>>::new();
         for netuid in netuids.clone().iter() {
-            dynamic_info.push(Self::get_dynamic_info(*netuid));
+            let Some(info) = Self::get_dynamic_info(*netuid) else {
+                continue;
+            };
+
+            dynamic_info.push(info);
         }
         dynamic_info
     }

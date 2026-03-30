@@ -2,7 +2,7 @@
 
 use crate::consensus::ConsensusMechanism;
 use futures::{FutureExt, channel::mpsc, future};
-use node_subtensor_runtime::{RuntimeApi, TransactionConverter, opaque::Block};
+use myosu_chain_runtime::{RuntimeApi, opaque::Block};
 use sc_chain_spec::ChainType;
 use sc_client_api::{Backend as BackendT, BlockBackend};
 use sc_consensus::{BasicQueue, BoxBlockImport};
@@ -21,20 +21,18 @@ use sp_core::crypto::KeyTypeId;
 use sp_keystore::Keystore;
 use sp_runtime::key_types;
 use sp_runtime::traits::{Block as BlockT, NumberFor};
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
-use std::{cell::RefCell, path::Path};
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use substrate_prometheus_endpoint::Registry;
 
 use crate::cli::Sealing;
 use crate::client::{FullBackend, FullClient, HostFunctions, RuntimeExecutor};
-use crate::ethereum::{
-    BackendType, EthConfiguration, FrontierBackend, FrontierPartialComponents, StorageOverride,
-    StorageOverrideHandler, db_config_dir, new_frontier_partial, spawn_frontier_tasks,
-};
-use crate::mev_shield::{author, proposer};
 
 const LOG_TARGET: &str = "node-service";
 
@@ -52,7 +50,6 @@ pub type BIQ<'a> = Box<
             Arc<FullClient>,
             Arc<FullBackend>,
             &Configuration,
-            &EthConfiguration,
             &TaskManager,
             Option<TelemetryHandle>,
             GrandpaBlockImport,
@@ -64,7 +61,6 @@ pub type BIQ<'a> = Box<
 #[allow(clippy::expect_used)]
 pub fn new_partial(
     config: &Configuration,
-    eth_config: &EthConfiguration,
     build_import_queue: BIQ,
 ) -> Result<
     PartialComponents<
@@ -73,13 +69,7 @@ pub fn new_partial(
         FullSelectChain,
         BasicQueue<Block>,
         TransactionPoolHandle<Block, FullClient>,
-        (
-            Option<Telemetry>,
-            BoxBlockImport<Block>,
-            GrandpaLinkHalf,
-            FrontierBackend,
-            Arc<dyn StorageOverride<Block>>,
-        ),
+        (Option<Telemetry>, BoxBlockImport<Block>, GrandpaLinkHalf),
     >,
     ServiceError,
 > {
@@ -101,6 +91,10 @@ pub fn new_partial(
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
             executor,
         )?;
+
+    ensure_local_authority_keys(&keystore_container.local_keystore(), config).map_err(|error| {
+        ServiceError::Other(format!("failed to seed local authority keys: {error}"))
+    })?;
 
     // Prepare keystore for authoring Babe blocks.
     copy_keys(
@@ -153,36 +147,6 @@ pub fn new_partial(
         skip_block_justifications,
     )?;
 
-    let storage_override = Arc::new(StorageOverrideHandler::<_, _, _>::new(client.clone()));
-    let frontier_backend = match eth_config.frontier_backend_type {
-        BackendType::KeyValue => FrontierBackend::KeyValue(Arc::new(fc_db::kv::Backend::open(
-            Arc::clone(&client),
-            &config.database,
-            &db_config_dir(config),
-        )?)),
-        BackendType::Sql => {
-            let db_path = db_config_dir(config).join("sql");
-            std::fs::create_dir_all(&db_path).expect("failed creating sql db directory");
-            let backend = futures::executor::block_on(fc_db::sql::Backend::new(
-                fc_db::sql::BackendConfig::Sqlite(fc_db::sql::SqliteBackendConfig {
-                    path: Path::new("sqlite:///")
-                        .join(db_path)
-                        .join("frontier.db3")
-                        .to_str()
-                        .unwrap_or(""),
-                    create_if_missing: true,
-                    thread_count: eth_config.frontier_sql_backend_thread_count,
-                    cache_size: eth_config.frontier_sql_backend_cache_size,
-                }),
-                eth_config.frontier_sql_backend_pool_size,
-                std::num::NonZeroU32::new(eth_config.frontier_sql_backend_num_ops_timeout),
-                storage_override.clone(),
-            ))
-            .unwrap_or_else(|err| panic!("failed creating sql backend: {err:?}"));
-            FrontierBackend::Sql(Arc::new(backend))
-        }
-    };
-
     let transaction_pool = Arc::from(
         sc_transaction_pool::Builder::new(
             task_manager.spawn_essential_handle(),
@@ -198,7 +162,6 @@ pub fn new_partial(
         client.clone(),
         backend.clone(),
         config,
-        eth_config,
         &task_manager,
         telemetry.as_ref().map(|x| x.handle()),
         grandpa_block_import,
@@ -213,13 +176,7 @@ pub fn new_partial(
         select_chain,
         import_queue,
         transaction_pool,
-        other: (
-            telemetry,
-            block_import,
-            grandpa_link,
-            frontier_backend,
-            storage_override,
-        ),
+        other: (telemetry, block_import, grandpa_link),
     })
 }
 
@@ -230,32 +187,25 @@ pub fn build_manual_seal_import_queue(
     client: Arc<FullClient>,
     _backend: Arc<FullBackend>,
     config: &Configuration,
-    _eth_config: &EthConfiguration,
     task_manager: &TaskManager,
     _telemetry: Option<TelemetryHandle>,
     grandpa_block_import: GrandpaBlockImport,
     _transaction_pool_handle: Arc<TransactionPoolHandle<Block, FullClient>>,
 ) -> Result<(BasicQueue<Block>, BoxBlockImport<Block>), ServiceError> {
-    let conditional_block_import =
-        crate::conditional_evm_block_import::ConditionalEVMBlockImport::new(
-            grandpa_block_import.clone(),
-            fc_consensus::FrontierBlockImport::new(grandpa_block_import.clone(), client.clone()),
-        );
     Ok((
         sc_consensus_manual_seal::import_queue(
-            Box::new(conditional_block_import.clone()),
+            Box::new(grandpa_block_import.clone()),
             &task_manager.spawn_essential_handle(),
             config.prometheus_registry(),
         ),
-        Box::new(conditional_block_import),
+        Box::new(grandpa_block_import),
     ))
 }
 
 /// Builds a new service for a full client.
 #[allow(clippy::expect_used)]
 pub async fn new_full<NB, CM>(
-    mut config: Configuration,
-    eth_config: EthConfiguration,
+    config: Configuration,
     sealing: Option<Sealing>,
     custom_service_signal: Option<Arc<AtomicBool>>,
 ) -> Result<TaskManager, ServiceError>
@@ -264,6 +214,26 @@ where
     NB: sc_network::NetworkBackend<Block, <Block as BlockT>::Hash>,
     CM: ConsensusMechanism,
 {
+    let startup_started_at = Instant::now();
+    let chain_name = config.chain_spec.name().to_string();
+    let node_name = config.network.node_name.clone();
+    let sync_mode = format!("{:?}", config.network.sync_mode);
+    let network_backend = format!("{:?}", config.network.network_backend);
+    let role_label = format!("{:?}", config.role);
+    let is_authority = config.role.is_authority();
+    let grandpa_enabled = !config.disable_grandpa && sealing.is_none();
+    let sealing_label = sealing
+        .as_ref()
+        .map(|mode| format!("{mode:?}"))
+        .unwrap_or_else(|| "consensus".to_string());
+
+    log::info!(
+        target: LOG_TARGET,
+        "node_service_start chain=\"{chain_name}\" node=\"{node_name}\" role=\"{role_label}\" authority={} sync_mode=\"{sync_mode}\" network_backend=\"{network_backend}\" sealing=\"{sealing_label}\" grandpa_enabled={}",
+        is_authority,
+        grandpa_enabled,
+    );
+
     // Substrate doesn't seem to support fast sync option in our configuration.
     if matches!(config.network.sync_mode, SyncMode::LightState { .. }) {
         log::error!(
@@ -284,14 +254,8 @@ where
         keystore_container,
         select_chain,
         transaction_pool,
-        other: (mut telemetry, block_import, grandpa_link, frontier_backend, storage_override),
-    } = new_partial(&config, &eth_config, build_import_queue)?;
-
-    let FrontierPartialComponents {
-        filter_pool,
-        fee_history_cache,
-        fee_history_cache_limit,
-    } = new_frontier_partial(&eth_config)?;
+        other: (mut telemetry, block_import, grandpa_link),
+    } = new_partial(&config, build_import_queue)?;
 
     let maybe_registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
     let mut net_config = sc_network::config::FullNetworkConfiguration::<_, _, NB>::new(
@@ -410,81 +374,20 @@ where
             ..Default::default()
         });
     let name = config.network.node_name.clone();
-    let frontier_backend = Arc::new(frontier_backend);
-    let enable_grandpa = !config.disable_grandpa && sealing.is_none();
     let prometheus_registry = config.prometheus_registry().cloned();
 
     // Channel for the rpc handler to communicate with the authorship task.
     let (command_sink, commands_stream) = mpsc::channel(1000);
 
-    // Sinks for pubsub notifications.
-    // Everytime a new subscription is created, a new mpsc channel is added to the sink pool.
-    // The MappingSyncWorker sends through the channel on block import and the subscription emits a notification to the subscriber on receiving a message through this channel.
-    // This way we avoid race conditions when using native substrate block import notification stream.
-    let pubsub_notification_sinks: fc_mapping_sync::EthereumBlockNotificationSinks<
-        fc_mapping_sync::EthereumBlockNotification<Block>,
-    > = Default::default();
-    let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
-
-    // for ethereum-compatibility rpc.
-    config.rpc.id_provider = Some(Box::new(fc_rpc::EthereumSubIdProvider));
-
     let rpc_builder = {
         let client = client.clone();
         let pool = transaction_pool.clone();
-        let network = network.clone();
-        let sync_service = sync_service.clone();
-
-        let is_authority = role.is_authority();
-        let enable_dev_signer = eth_config.enable_dev_signer;
-        let max_past_logs = eth_config.max_past_logs;
-        let execute_gas_limit_multiplier = eth_config.execute_gas_limit_multiplier;
-        let filter_pool = filter_pool.clone();
-        let frontier_backend = frontier_backend.clone();
-        let pubsub_notification_sinks = pubsub_notification_sinks.clone();
-        let storage_override = storage_override.clone();
-        let fee_history_cache = fee_history_cache.clone();
-        let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
-            task_manager.spawn_handle(),
-            storage_override.clone(),
-            eth_config.eth_log_block_cache,
-            eth_config.eth_statuses_cache,
-            prometheus_registry.clone(),
-        ));
-
-        let slot_duration = consensus_mechanism.slot_duration(&client)?;
-        let pending_create_inherent_data_providers =
-            move |_, ()| async move { CM::pending_create_inherent_data_providers(slot_duration) };
-
         let rpc_methods = consensus_mechanism.rpc_methods(
             client.clone(),
             keystore_container.keystore(),
             select_chain.clone(),
         )?;
         Box::new(move |subscription_task_executor| {
-            let eth_deps = crate::rpc::EthDeps {
-                client: client.clone(),
-                pool: pool.clone(),
-                graph: pool.clone(),
-                converter: Some(TransactionConverter::<Block>::default()),
-                is_authority,
-                enable_dev_signer,
-                network: network.clone(),
-                sync: sync_service.clone(),
-                frontier_backend: match &*frontier_backend {
-                    fc_db::Backend::KeyValue(b) => b.clone(),
-                    fc_db::Backend::Sql(b) => b.clone(),
-                },
-                storage_override: storage_override.clone(),
-                block_data_cache: block_data_cache.clone(),
-                filter_pool: filter_pool.clone(),
-                max_past_logs,
-                fee_history_cache: fee_history_cache.clone(),
-                fee_history_cache_limit,
-                execute_gas_limit_multiplier,
-                forced_parent_hashes: None,
-                pending_create_inherent_data_providers,
-            };
             let deps = crate::rpc::FullDeps {
                 client: client.clone(),
                 pool: pool.clone(),
@@ -493,19 +396,13 @@ where
                 } else {
                     None
                 },
-                eth: eth_deps,
             };
-            crate::rpc::create_full(
-                deps,
-                subscription_task_executor,
-                pubsub_notification_sinks.clone(),
-                CM::frontier_consensus_data_provider(client.clone())?,
-                rpc_methods.as_slice(),
-            )
-            .map_err(Into::into)
+            crate::rpc::create_full(deps, subscription_task_executor, rpc_methods.as_slice())
+                .map_err(Into::into)
         })
     };
 
+    let rpc_spawn_started_at = Instant::now();
     let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         config,
         client: client.clone(),
@@ -520,62 +417,17 @@ where
         sync_service: sync_service.clone(),
         telemetry: telemetry.as_mut(),
     })?;
+    let rpc_spawn_ms = rpc_spawn_started_at.elapsed().as_millis();
 
-    spawn_frontier_tasks(
-        &task_manager,
-        client.clone(),
-        backend,
-        frontier_backend,
-        filter_pool,
-        storage_override,
-        fee_history_cache,
-        fee_history_cache_limit,
-        sync_service.clone(),
-        pubsub_notification_sinks,
-    )
-    .await;
-
-    // ==== MEV-SHIELD HOOKS ====
-    let mut mev_timing: Option<author::TimeParams> = None;
-
-    if role.is_authority() {
-        let slot_duration = consensus_mechanism.slot_duration(&client)?;
-        let slot_duration_ms: u64 = u64::try_from(slot_duration.as_millis()).unwrap_or(u64::MAX);
-
-        // For 12s blocks: announce ≈ 7s, decrypt window ≈ 3s.
-        // For 250ms blocks: announce ≈ 145ms, decrypt window ≈ 62ms, etc.
-        let announce_at_ms_raw = slot_duration_ms.saturating_mul(7).saturating_div(12);
-
-        let decrypt_window_ms = slot_duration_ms.saturating_mul(3).saturating_div(12);
-
-        // Ensure announce_at_ms + decrypt_window_ms never exceeds slot_ms.
-        let max_announce = slot_duration_ms.saturating_sub(decrypt_window_ms);
-        let announce_at_ms = announce_at_ms_raw.min(max_announce);
-
-        let timing = author::TimeParams {
-            slot_ms: slot_duration_ms,
-            announce_at_ms,
-            decrypt_window_ms,
-        };
-        mev_timing = Some(timing.clone());
-
-        // Start author-side tasks with dynamic timing.
-        let mev_ctx = author::spawn_author_tasks::<Block, _, _>(
-            &task_manager.spawn_handle(),
-            client.clone(),
-            transaction_pool.clone(),
-            keystore_container.keystore(),
-            timing.clone(),
-        );
-
-        // Start last-portion-of-slot revealer (decrypt -> submit_one).
-        proposer::spawn_revealer::<Block, _, _>(
-            &task_manager.spawn_handle(),
-            client.clone(),
-            transaction_pool.clone(),
-            mev_ctx.clone(),
-        );
-    }
+    log::info!(
+        target: LOG_TARGET,
+        "node_rpc_ready chain=\"{chain_name}\" node=\"{node_name}\" rpc_spawn_ms={} startup_ms={} authority={} manual_seal={} grandpa_enabled={}",
+        rpc_spawn_ms,
+        startup_started_at.elapsed().as_millis(),
+        is_authority,
+        sealing.is_some(),
+        grandpa_enabled,
+    );
 
     if role.is_authority() {
         // manual-seal authorship
@@ -591,7 +443,13 @@ where
                 telemetry.as_ref(),
                 commands_stream,
             )?;
-            log::info!("Manual Seal Ready");
+            log::info!(
+                target: LOG_TARGET,
+                "node_service_ready chain=\"{chain_name}\" node=\"{node_name}\" mode=\"manual-seal\" startup_ms={} authority={} grandpa_enabled={}",
+                startup_started_at.elapsed().as_millis(),
+                is_authority,
+                grandpa_enabled,
+            );
             return Ok(task_manager);
         }
 
@@ -604,25 +462,6 @@ where
         );
 
         let slot_duration = consensus_mechanism.slot_duration(&client)?;
-
-        let start_fraction: f32 = {
-            let (slot_ms, decrypt_ms) = mev_timing
-                .as_ref()
-                .map(|t| (t.slot_ms, t.decrypt_window_ms))
-                .unwrap_or((slot_duration.as_millis(), 3_000));
-
-            let guard_ms: u64 = 200; // small cushion so reveals hit the pool first
-            let after_decrypt_ms = slot_ms.saturating_sub(decrypt_ms).saturating_add(guard_ms);
-
-            let f_raw = if slot_ms > 0 {
-                (after_decrypt_ms as f32) / (slot_ms as f32)
-            } else {
-                // Extremely defensive fallback; should never happen in practice.
-                0.75
-            };
-
-            f_raw.clamp(0.50, 0.98)
-        };
 
         let create_inherent_data_providers =
             move |_, ()| async move { CM::create_inherent_data_providers(slot_duration) };
@@ -641,14 +480,14 @@ where
                 force_authoring,
                 backoff_authoring_blocks,
                 keystore: keystore_container.keystore(),
-                block_proposal_slot_portion: SlotProportion::new(start_fraction),
+                block_proposal_slot_portion: SlotProportion::new(0.75),
                 max_block_proposal_slot_portion: None,
                 telemetry: telemetry.as_ref().map(|x| x.handle()),
             },
         )?;
     }
 
-    if enable_grandpa {
+    if grandpa_enabled {
         // if the node isn't actively participating in consensus then it doesn't
         // need a keystore, regardless of which protocol we use below.
         let keystore = if role.is_authority() {
@@ -696,29 +535,30 @@ where
             .spawn_blocking("grandpa-voter", None, grandpa_voter);
     }
 
+    log::info!(
+        target: LOG_TARGET,
+        "node_service_ready chain=\"{chain_name}\" node=\"{node_name}\" mode=\"{sealing_label}\" startup_ms={} authority={} grandpa_enabled={}",
+        startup_started_at.elapsed().as_millis(),
+        is_authority,
+        grandpa_enabled,
+    );
+
     Ok(task_manager)
 }
 
 pub async fn build_full<CM: ConsensusMechanism>(
     config: Configuration,
-    eth_config: EthConfiguration,
     sealing: Option<Sealing>,
     custom_service_signal: Option<Arc<AtomicBool>>,
 ) -> Result<TaskManager, ServiceError> {
     match config.network.network_backend {
         sc_network::config::NetworkBackendType::Libp2p => {
-            new_full::<sc_network::NetworkWorker<_, _>, CM>(
-                config,
-                eth_config,
-                sealing,
-                custom_service_signal,
-            )
-            .await
+            new_full::<sc_network::NetworkWorker<_, _>, CM>(config, sealing, custom_service_signal)
+                .await
         }
         sc_network::config::NetworkBackendType::Litep2p => {
             new_full::<sc_network::Litep2pNetworkBackend, CM>(
                 config,
-                eth_config,
                 sealing,
                 custom_service_signal,
             )
@@ -729,14 +569,12 @@ pub async fn build_full<CM: ConsensusMechanism>(
 
 pub fn new_chain_ops<CM: ConsensusMechanism>(
     config: &mut Configuration,
-    eth_config: &EthConfiguration,
 ) -> Result<
     (
         Arc<FullClient>,
         Arc<FullBackend>,
         BasicQueue<Block>,
         TaskManager,
-        FrontierBackend,
     ),
     ServiceError,
 > {
@@ -749,8 +587,9 @@ pub fn new_chain_ops<CM: ConsensusMechanism>(
         task_manager,
         other,
         ..
-    } = new_partial(config, eth_config, consensus_mechanism.build_biq()?)?;
-    Ok((client, backend, import_queue, task_manager, other.3))
+    } = new_partial(config, consensus_mechanism.build_biq()?)?;
+    let _ = other;
+    Ok((client, backend, import_queue, task_manager))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -881,6 +720,36 @@ fn copy_keys(
                 "Failed to copy key from {from_key_type:?} to {to_key_type:?} as the key phrase is not available"
             );
         }
+    }
+
+    Ok(())
+}
+
+fn ensure_local_authority_keys(
+    keystore: &LocalKeystore,
+    config: &Configuration,
+) -> Result<(), sp_keystore::Error> {
+    if config.chain_spec.chain_type() != ChainType::Local || !config.role.is_authority() {
+        return Ok(());
+    }
+
+    let suri = match config.network.node_name.as_str() {
+        "Alice" => "//Alice",
+        "Bob" => "//Bob",
+        "Charlie" => "//Charlie",
+        _ => "//Alice",
+    };
+
+    if keystore.sr25519_public_keys(key_types::AURA).is_empty() {
+        let public =
+            sp_keystore::Keystore::sr25519_generate_new(keystore, key_types::AURA, Some(suri))?;
+        log::info!(target: LOG_TARGET, "Inserted local Aura authority key {public:?} from {suri}");
+    }
+
+    if keystore.ed25519_public_keys(key_types::GRANDPA).is_empty() {
+        let public =
+            sp_keystore::Keystore::ed25519_generate_new(keystore, key_types::GRANDPA, Some(suri))?;
+        log::info!(target: LOG_TARGET, "Inserted local GRANDPA authority key {public:?} from {suri}");
     }
 
     Ok(())

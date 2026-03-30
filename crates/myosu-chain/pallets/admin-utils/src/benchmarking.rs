@@ -11,6 +11,7 @@ use frame_benchmarking::v1::account;
 use frame_benchmarking::v2::*;
 use frame_support::BoundedVec;
 use frame_system::RawOrigin;
+use pallet_game_solver as pallet_subtensor;
 use pallet_subtensor::SubnetworkN;
 
 use super::*;

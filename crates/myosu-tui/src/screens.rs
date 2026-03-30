@@ -57,6 +57,20 @@ impl Screen {
             Screen::Spectate => "SPECTATOR MODE",
         }
     }
+
+    /// Header context label for non-game screens.
+    pub fn header_context(self) -> &'static str {
+        match self {
+            Screen::Onboarding => "ONBOARDING",
+            Screen::Lobby => "LOBBY",
+            Screen::Game => "GAME",
+            Screen::Stats => "STATS",
+            Screen::Coaching => "COACHING",
+            Screen::History => "HISTORY",
+            Screen::Wallet => "WALLET",
+            Screen::Spectate => "SPECTATE",
+        }
+    }
 }
 
 /// Manages screen state and navigation history.
@@ -162,7 +176,7 @@ impl ScreenManager {
     ///
     /// Returns the target screen if a transition should occur.
     pub fn handle_command(&mut self, cmd: &str) -> Option<Screen> {
-        let parts: Vec<&str> = cmd.trim().split_whitespace().collect();
+        let parts: Vec<&str> = cmd.split_whitespace().collect();
         if parts.is_empty() {
             return None;
         }
@@ -201,10 +215,10 @@ impl ScreenManager {
             },
             _ => {
                 // Check for numeric input in lobby (subnet selection)
-                if self.current == Screen::Lobby {
-                    if let Ok(_subnet_id) = parts[0].parse::<u32>() {
-                        return Some(Screen::Game);
-                    }
+                if self.current == Screen::Lobby
+                    && let Ok(_subnet_id) = parts[0].parse::<u32>()
+                {
+                    return Some(Screen::Game);
                 }
                 None
             }
@@ -452,6 +466,14 @@ mod tests {
         assert_eq!(Screen::History.default_declaration(), "HAND HISTORY");
         assert_eq!(Screen::Wallet.default_declaration(), "ACCOUNT");
         assert_eq!(Screen::Spectate.default_declaration(), "SPECTATOR MODE");
+    }
+
+    #[test]
+    fn header_context_labels() {
+        assert_eq!(Screen::Onboarding.header_context(), "ONBOARDING");
+        assert_eq!(Screen::Lobby.header_context(), "LOBBY");
+        assert_eq!(Screen::Game.header_context(), "GAME");
+        assert_eq!(Screen::Wallet.header_context(), "WALLET");
     }
 
     #[test]

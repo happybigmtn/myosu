@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - trunk
+      - main
+  push:
+    branches:
+      - trunk
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo-shape:
+    name: Stage-0 Repo Shape
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Verify current stage-0 workspace and doctrine surface
+        run: bash .github/scripts/check_stage0_repo_shape.sh
+
+  active-crates:
+    name: Active Crates
+    runs-on: ubuntu-latest
+    needs: repo-shape
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cargo check
+        run: cargo check -p myosu-games -p myosu-tui -p myosu-games-poker -p myosu-play
+
+      - name: Focused property, shell-state, and smoke proofs
+        run: |
+          cargo test -p myosu-games --quiet serialization_roundtrip
+          cargo test -p myosu-tui shell_state
+          cargo test -p myosu-play smoke_report_proves_preflop_to_flop_progression --quiet
+          cargo run -p myosu-play --quiet -- --smoke-test
+
+      - name: Full active-crate test suite
+        run: cargo test -p myosu-games -p myosu-tui -p myosu-games-poker -p myosu-play --quiet
+
+      - name: Clippy
+        run: cargo clippy -p myosu-games -p myosu-tui -p myosu-games-poker -p myosu-play -- -D warnings
+
+      - name: Rustfmt
+        run: |
+          git ls-files \
+            'crates/myosu-tui/**/*.rs' \
+            'crates/myosu-games/**/*.rs' \
+            'crates/myosu-games-poker/**/*.rs' \
+            'crates/myosu-play/**/*.rs' \
+            | xargs rustfmt --edition 2024 --check
+
+  chain-core:
+    name: Chain Core
+    runs-on: ubuntu-latest
+    needs: repo-shape
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Runtime check
+        run: cargo check -p myosu-chain-runtime --features fast-runtime
+
+      - name: Pallet check
+        run: cargo check -p pallet-game-solver
+
+      - name: Node check
+        run: cargo check -p myosu-chain --features fast-runtime
+
+  doctrine:
+    name: Doctrine Integrity
+    runs-on: ubuntu-latest
+    needs: repo-shape
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Verify canonical spec integrity
+        run: bash .github/scripts/check_doctrine_integrity.sh
+
+  plan-quality:
+    name: Plan Quality
+    runs-on: ubuntu-latest
+    needs: repo-shape
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Verify genesis plans expose milestones and proof commands
+        run: bash .github/scripts/check_plan_quality.sh
+
+  chain-clippy:
+    name: Chain Clippy
+    runs-on: ubuntu-latest
+    needs: repo-shape
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Runtime clippy
+        run: cargo clippy -p myosu-chain-runtime --features fast-runtime -- -D warnings
+
+      - name: Pallet clippy
+        run: cargo clippy -p pallet-game-solver -- -D warnings
+
+      - name: Node clippy
+        run: cargo clippy -p myosu-chain --features fast-runtime -- -D warnings

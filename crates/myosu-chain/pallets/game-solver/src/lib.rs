@@ -24,7 +24,9 @@ use scale_info::TypeInfo;
 use sp_core::Get;
 use sp_runtime::{DispatchError, transaction_validity::TransactionValidityError};
 use sp_std::marker::PhantomData;
+use substrate_fixed::types::U96F32;
 use subtensor_runtime_common::{AlphaCurrency, Currency, CurrencyReserve, NetUid, TaoCurrency};
+use subtensor_swap_interface::{SwapEngine, SwapHandler, SwapResult};
 
 // ============================
 //	==== Benchmark Imports =====
@@ -65,6 +67,111 @@ pub const MAX_SUBNET_CLAIMS: usize = 5;
 
 pub const MAX_ROOT_CLAIM_THRESHOLD: u64 = 10_000_000;
 
+pub const MAX_CRV3_COMMIT_SIZE_BYTES: u32 = 5000;
+
+/// Narrow stage-0 swap seam used by the game-solver pallet.
+///
+/// This keeps the pallet honest about the live swap surface it still depends
+/// on, instead of requiring the full inherited swap handler contract.
+pub trait Stage0SwapInterface<T: Config> {
+    /// Executes a TAO-to-alpha swap against the subnet pool.
+    fn stage0_swap_tao_for_alpha(
+        netuid: NetUid,
+        order: GetAlphaForTao<T>,
+        price_limit: TaoCurrency,
+        drop_fees: bool,
+        should_rollback: bool,
+    ) -> Result<SwapResult<TaoCurrency, AlphaCurrency>, DispatchError>;
+
+    /// Simulates a TAO-to-alpha swap without mutating state.
+    fn stage0_sim_swap_tao_for_alpha(
+        netuid: NetUid,
+        order: GetAlphaForTao<T>,
+    ) -> Result<SwapResult<TaoCurrency, AlphaCurrency>, DispatchError>;
+
+    /// Executes an alpha-to-TAO swap against the subnet pool.
+    fn stage0_swap_alpha_for_tao(
+        netuid: NetUid,
+        order: GetTaoForAlpha<T>,
+        price_limit: TaoCurrency,
+        drop_fees: bool,
+        should_rollback: bool,
+    ) -> Result<SwapResult<AlphaCurrency, TaoCurrency>, DispatchError>;
+
+    /// Simulates an alpha-to-TAO swap without mutating state.
+    fn stage0_sim_swap_alpha_for_tao(
+        netuid: NetUid,
+        order: GetTaoForAlpha<T>,
+    ) -> Result<SwapResult<AlphaCurrency, TaoCurrency>, DispatchError>;
+
+    /// Estimates the fee for a swap amount.
+    fn stage0_approx_fee_amount<C: Currency>(netuid: NetUid, amount: C) -> C;
+
+    /// Returns the current alpha price for a subnet.
+    fn stage0_current_alpha_price(netuid: NetUid) -> U96F32;
+
+    /// Returns the highest acceptable price limit for a swap.
+    fn stage0_max_price<C: Currency>() -> C;
+
+    /// Returns the lowest acceptable price limit for a swap.
+    fn stage0_min_price<C: Currency>() -> C;
+}
+
+impl<T: Config, S> Stage0SwapInterface<T> for S
+where
+    S: SwapHandler + SwapEngine<GetAlphaForTao<T>> + SwapEngine<GetTaoForAlpha<T>>,
+{
+    fn stage0_swap_tao_for_alpha(
+        netuid: NetUid,
+        order: GetAlphaForTao<T>,
+        price_limit: TaoCurrency,
+        drop_fees: bool,
+        should_rollback: bool,
+    ) -> Result<SwapResult<TaoCurrency, AlphaCurrency>, DispatchError> {
+        <Self as SwapHandler>::swap(netuid, order, price_limit, drop_fees, should_rollback)
+    }
+
+    fn stage0_sim_swap_tao_for_alpha(
+        netuid: NetUid,
+        order: GetAlphaForTao<T>,
+    ) -> Result<SwapResult<TaoCurrency, AlphaCurrency>, DispatchError> {
+        <Self as SwapHandler>::sim_swap(netuid, order)
+    }
+
+    fn stage0_swap_alpha_for_tao(
+        netuid: NetUid,
+        order: GetTaoForAlpha<T>,
+        price_limit: TaoCurrency,
+        drop_fees: bool,
+        should_rollback: bool,
+    ) -> Result<SwapResult<AlphaCurrency, TaoCurrency>, DispatchError> {
+        <Self as SwapHandler>::swap(netuid, order, price_limit, drop_fees, should_rollback)
+    }
+
+    fn stage0_sim_swap_alpha_for_tao(
+        netuid: NetUid,
+        order: GetTaoForAlpha<T>,
+    ) -> Result<SwapResult<AlphaCurrency, TaoCurrency>, DispatchError> {
+        <Self as SwapHandler>::sim_swap(netuid, order)
+    }
+
+    fn stage0_approx_fee_amount<C: Currency>(netuid: NetUid, amount: C) -> C {
+        <Self as SwapHandler>::approx_fee_amount(netuid, amount)
+    }
+
+    fn stage0_current_alpha_price(netuid: NetUid) -> U96F32 {
+        <Self as SwapHandler>::current_alpha_price(netuid)
+    }
+
+    fn stage0_max_price<C: Currency>() -> C {
+        <Self as SwapHandler>::max_price()
+    }
+
+    fn stage0_min_price<C: Currency>() -> C {
+        <Self as SwapHandler>::min_price()
+    }
+}
+
 #[allow(deprecated)]
 #[deny(missing_docs)]
 #[import_section(errors::errors)]
@@ -76,9 +183,12 @@ pub const MAX_ROOT_CLAIM_THRESHOLD: u64 = 10_000_000;
 #[frame_support::pallet]
 #[allow(clippy::expect_used)]
 pub mod pallet {
+    #[cfg(feature = "legacy-subtensor-tests")]
+    use crate::MAX_CRV3_COMMIT_SIZE_BYTES;
     use crate::RateLimitKey;
-    use crate::migrations;
+    #[cfg(feature = "legacy-subtensor-tests")]
     use crate::subnets::leasing::{LeaseId, SubnetLeaseOf};
+    use codec::DecodeWithMemTracking;
     use frame_support::Twox64Concat;
     use frame_support::{
         BoundedVec,
@@ -89,7 +199,7 @@ pub mod pallet {
         },
     };
     use frame_system::pallet_prelude::*;
-        use runtime_common::prod_or_fast;
+    use runtime_common::prod_or_fast;
     use sp_core::{ConstU32, H160, H256};
     use sp_runtime::traits::{Dispatchable, TrailingZeroInput};
     use sp_std::collections::btree_map::BTreeMap;
@@ -920,12 +1030,6 @@ pub mod pallet {
     #[pallet::type_value]
     pub fn DefaultCommitRevealWeightsEnabled<T: Config>() -> bool {
         true
-    }
-
-    /// Default value for weight commit/reveal version.
-    #[pallet::type_value]
-    pub fn DefaultCommitRevealWeightsVersion<T: Config>() -> u16 {
-        4
     }
 
     /// -- ITEM (switches liquid alpha on)
@@ -2176,6 +2280,61 @@ pub mod pallet {
         OptionQuery,
     >;
 
+    /// MAP (netuid, epoch) → VecDeque<(who, commit_block, ciphertext, reveal_round)>
+    #[cfg(feature = "legacy-subtensor-tests")]
+    #[pallet::storage]
+    pub type TimelockedWeightCommits<T: Config> = StorageDoubleMap<
+        _,
+        Twox64Concat,
+        NetUidStorageIndex,
+        Twox64Concat,
+        u64,
+        VecDeque<(
+            T::AccountId,
+            u64,
+            BoundedVec<u8, ConstU32<{ MAX_CRV3_COMMIT_SIZE_BYTES }>>,
+            u64,
+        )>,
+        ValueQuery,
+    >;
+
+    /// MAP (netuid, epoch) → VecDeque<(who, ciphertext, reveal_round)>
+    /// DEPRECATED for CRV3WeightCommitsV2
+    #[cfg(feature = "legacy-subtensor-tests")]
+    #[pallet::storage]
+    pub type CRV3WeightCommits<T: Config> = StorageDoubleMap<
+        _,
+        Twox64Concat,
+        NetUidStorageIndex,
+        Twox64Concat,
+        u64,
+        VecDeque<(
+            T::AccountId,
+            BoundedVec<u8, ConstU32<{ MAX_CRV3_COMMIT_SIZE_BYTES }>>,
+            u64,
+        )>,
+        ValueQuery,
+    >;
+
+    /// MAP (netuid, epoch) → VecDeque<(who, commit_block, ciphertext, reveal_round)>
+    /// DEPRECATED for TimelockedWeightCommits
+    #[cfg(feature = "legacy-subtensor-tests")]
+    #[pallet::storage]
+    pub type CRV3WeightCommitsV2<T: Config> = StorageDoubleMap<
+        _,
+        Twox64Concat,
+        NetUidStorageIndex,
+        Twox64Concat,
+        u64,
+        VecDeque<(
+            T::AccountId,
+            u64,
+            BoundedVec<u8, ConstU32<{ MAX_CRV3_COMMIT_SIZE_BYTES }>>,
+            u64,
+        )>,
+        ValueQuery,
+    >;
+
     /// --- Map (netuid) --> Number of epochs allowed for commit reveal periods
     #[pallet::storage]
     pub type RevealPeriodEpochs<T: Config> =
@@ -2266,33 +2425,33 @@ pub mod pallet {
     /// ==== Subnet Leasing ====
     /// ========================
     /// --- MAP ( lease_id ) --> subnet lease | The subnet lease for a given lease id.
+    #[cfg(feature = "legacy-subtensor-tests")]
     #[pallet::storage]
     pub type SubnetLeases<T: Config> =
         StorageMap<_, Twox64Concat, LeaseId, SubnetLeaseOf<T>, OptionQuery>;
 
     /// --- DMAP ( lease_id, contributor ) --> shares | The shares of a contributor for a given lease.
+    #[cfg(feature = "legacy-subtensor-tests")]
     #[pallet::storage]
     pub type SubnetLeaseShares<T: Config> =
         StorageDoubleMap<_, Twox64Concat, LeaseId, Identity, T::AccountId, U64F64, ValueQuery>;
 
     /// --- MAP ( netuid ) --> lease_id | The lease id for a given netuid.
+    #[cfg(feature = "legacy-subtensor-tests")]
     #[pallet::storage]
     pub type SubnetUidToLeaseId<T: Config> =
         StorageMap<_, Twox64Concat, NetUid, LeaseId, OptionQuery>;
 
     /// --- ITEM ( next_lease_id ) | The next lease id.
+    #[cfg(feature = "legacy-subtensor-tests")]
     #[pallet::storage]
     pub type NextSubnetLeaseId<T: Config> = StorageValue<_, LeaseId, ValueQuery, ConstU32<0>>;
 
     /// --- MAP ( lease_id ) --> accumulated_dividends | The accumulated dividends for a given lease that needs to be distributed.
+    #[cfg(feature = "legacy-subtensor-tests")]
     #[pallet::storage]
     pub type AccumulatedLeaseDividends<T: Config> =
         StorageMap<_, Twox64Concat, LeaseId, AlphaCurrency, ValueQuery, DefaultZeroAlpha<T>>;
-
-    /// --- ITEM ( CommitRevealWeightsVersion )
-    #[pallet::storage]
-    pub type CommitRevealWeightsVersion<T> =
-        StorageValue<_, u16, ValueQuery, DefaultCommitRevealWeightsVersion<T>>;
 
     /// ITEM( NetworkRegistrationStartBlock )
     #[pallet::storage]
@@ -2365,10 +2524,12 @@ pub mod pallet {
     pub type PendingChildKeyCooldown<T: Config> =
         StorageValue<_, u64, ValueQuery, DefaultPendingChildKeyCooldown<T>>;
 
+    type GenesisStakeEntry<AccountId> = (AccountId, Vec<(AccountId, (u64, u16))>);
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         /// Stakes record in genesis.
-        pub stakes: Vec<(T::AccountId, Vec<(T::AccountId, (u64, u16))>)>,
+        pub stakes: Vec<GenesisStakeEntry<T::AccountId>>,
         /// The total issued balance in genesis
         pub balances_issuance: TaoCurrency,
         /// The delay before a subnet can call start
@@ -2613,7 +2774,6 @@ impl<T: Config + pallet_balances::Config<Balance = u64>>
             Error::<T>::HotKeyAccountNotExists
         );
 
-        // Increse alpha out counter
         SubnetAlphaOut::<T>::mutate(netuid, |total| {
             *total = total.saturating_add(alpha);
         });
@@ -2634,7 +2794,6 @@ impl<T: Config + pallet_balances::Config<Balance = u64>>
             Error::<T>::HotKeyAccountNotExists
         );
 
-        // Decrese alpha out counter
         SubnetAlphaOut::<T>::mutate(netuid, |total| {
             *total = total.saturating_sub(alpha);
         });

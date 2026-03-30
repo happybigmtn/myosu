@@ -11,7 +11,8 @@ use frame_support::{
 use frame_system::{
     self as system, EnsureRoot, RawOrigin, limits, offchain::CreateTransactionBase,
 };
-pub use pallet_subtensor::*;
+pub use pallet_game_solver as pallet_subtensor;
+pub use pallet_game_solver::*;
 pub use sp_core::U256;
 use sp_core::{ConstU64, H256};
 use sp_runtime::{
@@ -36,7 +37,7 @@ frame_support::construct_runtime!(
     pub enum Test {
         System: frame_system = 1,
         Balances: pallet_balances = 2,
-        SubtensorModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>, Error<T>} = 4,
+        GameSolver: pallet_game_solver::{Pallet, Call, Storage, Event<T>, Error<T>} = 4,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 5,
         Drand: pallet_drand::{Pallet, Call, Storage, Event<T>} = 6,
         Grandpa: pallet_grandpa = 7,
@@ -49,10 +50,19 @@ frame_support::construct_runtime!(
 );
 
 #[allow(dead_code)]
-pub type SubtensorCall = pallet_subtensor::Call<Test>;
+pub type GameSolverCall = pallet_game_solver::Call<Test>;
 
 #[allow(dead_code)]
-pub type SubtensorEvent = pallet_subtensor::Event<Test>;
+pub type SubtensorCall = GameSolverCall;
+
+#[allow(dead_code)]
+pub type GameSolverEvent = pallet_game_solver::Event<Test>;
+
+#[allow(dead_code)]
+pub type SubtensorEvent = GameSolverEvent;
+
+#[allow(dead_code)]
+pub type SubtensorModule = GameSolver;
 
 #[allow(dead_code)]
 pub type BalanceCall = pallet_balances::Call<Test>;
@@ -86,6 +96,13 @@ pub type TransactionExtensions = (
 );
 
 pub type UncheckedExtrinsic = TestXt<RuntimeCall, TransactionExtensions>;
+
+impl RuntimeCall {
+    #[allow(non_snake_case)]
+    pub fn SubtensorModule(call: pallet_game_solver::Call<Test>) -> Self {
+        Self::GameSolver(call)
+    }
+}
 
 impl frame_support::traits::OnRuntimeUpgrade for Test {
     fn on_runtime_upgrade() -> frame_support::weights::Weight {
@@ -228,7 +245,12 @@ parameter_types! {
     pub const EvmKeyAssociateRateLimit: u64 = 0;
 }
 
-impl pallet_subtensor::Config for Test {
+pub struct EmptyCommitments;
+
+impl pallet_game_solver::macros::config::GetCommitments<U256> for EmptyCommitments {}
+
+impl pallet_game_solver::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
     type Currency = Balances;
     type InitialIssuance = InitialIssuance;
@@ -296,11 +318,12 @@ impl pallet_subtensor::Config for Test {
     type HotkeySwapOnSubnetInterval = HotkeySwapOnSubnetInterval;
     type ProxyInterface = ();
     type LeaseDividendsDistributionInterval = LeaseDividendsDistributionInterval;
-    type GetCommitments = ();
+    type GetCommitments = EmptyCommitments;
     type MaxImmuneUidsPercentage = MaxImmuneUidsPercentage;
     type CommitmentsInterface = CommitmentsI;
     type EvmKeyAssociateRateLimit = EvmKeyAssociateRateLimit;
     type AuthorshipProvider = MockAuthorshipProvider;
+    type MaxContributors = MaxContributors;
 }
 
 parameter_types! {
@@ -407,11 +430,11 @@ parameter_types! {
 }
 
 impl pallet_subtensor_swap::Config for Test {
-    type SubnetInfo = SubtensorModule;
-    type BalanceOps = SubtensorModule;
+    type SubnetInfo = GameSolver;
+    type BalanceOps = GameSolver;
     type ProtocolId = SwapProtocolId;
-    type TaoReserve = pallet_subtensor::TaoCurrencyReserve<Self>;
-    type AlphaReserve = pallet_subtensor::AlphaCurrencyReserve<Self>;
+    type TaoReserve = pallet_game_solver::TaoCurrencyReserve<Self>;
+    type AlphaReserve = pallet_game_solver::AlphaCurrencyReserve<Self>;
     type MaxFeeRate = SwapMaxFeeRate;
     type MaxPositions = SwapMaxPositions;
     type MinimumLiquidity = SwapMinimumLiquidity;
@@ -428,7 +451,7 @@ impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
 }
 
 pub struct CommitmentsI;
-impl pallet_subtensor::CommitmentsInterface for CommitmentsI {
+impl pallet_game_solver::CommitmentsInterface for CommitmentsI {
     fn purge_netuid(_netuid: NetUid) {}
 }
 
@@ -556,12 +579,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 #[allow(dead_code)]
 pub(crate) fn run_to_block(n: u64) {
     while System::block_number() < n {
-        SubtensorModule::on_finalize(System::block_number());
+        GameSolver::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
         System::reset_events();
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
-        SubtensorModule::on_initialize(System::block_number());
+        GameSolver::on_initialize(System::block_number());
     }
 }
 
@@ -572,14 +595,14 @@ pub fn register_ok_neuron(
     coldkey_account_id: U256,
     start_nonce: u64,
 ) {
-    let block_number: u64 = SubtensorModule::get_current_block_as_u64();
-    let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+    let block_number: u64 = GameSolver::get_current_block_as_u64();
+    let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
         netuid,
         block_number,
         start_nonce,
         &hotkey_account_id,
     );
-    let result = SubtensorModule::register(
+    let result = GameSolver::register(
         <<Test as frame_system::Config>::RuntimeOrigin>::signed(hotkey_account_id),
         netuid,
         block_number,
@@ -593,11 +616,11 @@ pub fn register_ok_neuron(
 
 #[allow(dead_code)]
 pub fn add_dynamic_network(hotkey: &U256, coldkey: &U256) -> NetUid {
-    let netuid = SubtensorModule::get_next_netuid();
-    let lock_cost = SubtensorModule::get_network_lock_cost();
-    SubtensorModule::add_balance_to_coldkey_account(coldkey, lock_cost.into());
+    let netuid = GameSolver::get_next_netuid();
+    let lock_cost = GameSolver::get_network_lock_cost();
+    GameSolver::add_balance_to_coldkey_account(coldkey, lock_cost.into());
 
-    assert_ok!(SubtensorModule::register_network(
+    assert_ok!(GameSolver::register_network(
         RawOrigin::Signed(*coldkey).into(),
         *hotkey
     ));
@@ -679,9 +702,9 @@ pub(crate) fn swap_tao_to_alpha(netuid: NetUid, tao: TaoCurrency) -> (u64, u64) 
 
 #[allow(dead_code)]
 pub fn add_network(netuid: NetUid, tempo: u16) {
-    SubtensorModule::init_new_network(netuid, tempo);
-    SubtensorModule::set_network_registration_allowed(netuid, true);
-    SubtensorModule::set_network_pow_registration_allowed(netuid, true);
+    GameSolver::init_new_network(netuid, tempo);
+    GameSolver::set_network_registration_allowed(netuid, true);
+    GameSolver::set_network_pow_registration_allowed(netuid, true);
 }
 
 #[allow(dead_code)]
@@ -733,13 +756,8 @@ pub fn setup_subnets(sncount: u16, neurons: u16) -> TestSetup {
         setup_reserves(subnet.netuid, amount.into(), amount.into());
 
         // Cause the v3 pool to initialize
-        SubtensorModule::swap_tao_for_alpha(
-            subnet.netuid,
-            0.into(),
-            1_000_000_000_000.into(),
-            false,
-        )
-        .unwrap();
+        GameSolver::swap_tao_for_alpha(subnet.netuid, 0.into(), 1_000_000_000_000.into(), false)
+            .unwrap();
 
         subnets.push(subnet);
     }
@@ -758,9 +776,9 @@ pub(crate) fn remove_stake_rate_limit_for_tests(hotkey: &U256, coldkey: &U256, n
 #[allow(dead_code)]
 pub fn setup_stake(netuid: NetUid, coldkey: &U256, hotkey: &U256, amount: u64) {
     // Stake to hotkey account, and check if the result is ok
-    SubtensorModule::add_balance_to_coldkey_account(coldkey, amount + ExistentialDeposit::get());
+    GameSolver::add_balance_to_coldkey_account(coldkey, amount + ExistentialDeposit::get());
     remove_stake_rate_limit_for_tests(hotkey, coldkey, netuid);
-    assert_ok!(SubtensorModule::add_stake(
+    assert_ok!(GameSolver::add_stake(
         RuntimeOrigin::signed(*coldkey),
         *hotkey,
         netuid,

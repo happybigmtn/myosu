@@ -13,7 +13,6 @@ mod tests;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use super::*;
     use codec::Encode;
     use frame_support::{
         dispatch::{DispatchInfo, GetDispatchInfo, PostDispatchInfo},

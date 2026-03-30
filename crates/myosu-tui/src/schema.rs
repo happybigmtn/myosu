@@ -805,6 +805,119 @@ mod tests {
     }
 
     #[test]
+    fn nlhe_six_max_state_roundtrip() {
+        let state = NlheState {
+            board: vec!["Ah".to_string(), "Kd".to_string(), "7c".to_string()],
+            your_hand: vec!["Qs".to_string(), "Qh".to_string()],
+            your_stack: 182,
+            your_position: "CO".to_string(),
+            opponents: vec![
+                OpponentInfo {
+                    seat: "BTN".to_string(),
+                    stack: Some(210),
+                    hand_count: None,
+                    hand: None,
+                    discards: None,
+                    riichi: None,
+                },
+                OpponentInfo {
+                    seat: "SB".to_string(),
+                    stack: Some(96),
+                    hand_count: None,
+                    hand: None,
+                    discards: None,
+                    riichi: None,
+                },
+                OpponentInfo {
+                    seat: "BB".to_string(),
+                    stack: Some(154),
+                    hand_count: None,
+                    hand: None,
+                    discards: None,
+                    riichi: None,
+                },
+                OpponentInfo {
+                    seat: "UTG".to_string(),
+                    stack: Some(240),
+                    hand_count: None,
+                    hand: None,
+                    discards: None,
+                    riichi: None,
+                },
+                OpponentInfo {
+                    seat: "HJ".to_string(),
+                    stack: Some(188),
+                    hand_count: None,
+                    hand: None,
+                    discards: None,
+                    riichi: None,
+                },
+            ],
+            pot: 27,
+            to_act: "you".to_string(),
+            last_action: Some(LastAction {
+                player: "HJ".to_string(),
+                action: "bet".to_string(),
+                amount: Some(18),
+                extra: HashMap::new(),
+            }),
+            to_call: Some(18),
+            hand_strength: Some("overpair".to_string()),
+            street: "flop".to_string(),
+        };
+
+        let original = GameStateBuilder::new("nlhe_6max")
+            .hand_number(128)
+            .phase(GamePhase::Action)
+            .state(&state)
+            .unwrap()
+            .legal_actions(vec![
+                LegalAction::Fold,
+                LegalAction::Call { amount: 18 },
+                LegalAction::Raise { min: 36, max: 182 },
+            ])
+            .build()
+            .unwrap();
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: GameState = serde_json::from_str(&json).unwrap();
+        let roundtrip: NlheState =
+            serde_json::from_value(deserialized.state_wrapper.state.clone()).unwrap();
+
+        assert_eq!(deserialized.game_type, "nlhe_6max");
+        assert_eq!(deserialized.hand_number, Some(128));
+        assert_eq!(deserialized.legal_actions.len(), 3);
+        assert_eq!(roundtrip.your_position, "CO");
+        assert_eq!(roundtrip.opponents.len(), 5);
+        assert_eq!(roundtrip.to_call, Some(18));
+    }
+
+    #[test]
+    fn custom_action_variants_roundtrip() {
+        let legal = LegalAction::Custom {
+            action_type: "hint".to_string(),
+            params: HashMap::from([
+                ("target".to_string(), serde_json::json!("north")),
+                ("value".to_string(), serde_json::json!(3)),
+            ]),
+        };
+        let agent = AgentAction::Custom(serde_json::json!({
+            "action": "emote",
+            "payload": { "kind": "nod" }
+        }));
+
+        let legal_json = serde_json::to_string(&legal).unwrap();
+        let legal_roundtrip: LegalAction = serde_json::from_str(&legal_json).unwrap();
+        let agent_json = serde_json::to_string(&agent).unwrap();
+        let agent_roundtrip: AgentAction = serde_json::from_str(&agent_json).unwrap();
+
+        assert_eq!(legal, legal_roundtrip);
+        assert_eq!(agent, agent_roundtrip);
+        assert!(legal_json.contains("hint"));
+        assert!(agent_json.contains("emote"));
+    }
+
+    #[test]
     fn valid_action_accepted() {
         let action = AgentAction::Raise { amount: 15 };
         let json = serde_json::to_string(&action).unwrap();

@@ -9,7 +9,7 @@ frame-support.workspace = true
 frame-system.workspace = true
 log.workspace = true
 pallet-balances = { workspace = true, default-features = false }
-pallet-subtensor.workspace = true
+pallet-game-solver.workspace = true
 pallet-subtensor-swap.workspace = true
 pallet-transaction-payment.workspace = true
 smallvec.workspace = true
@@ -53,7 +53,7 @@ std = [
 	"pallet-grandpa/std",
 	"pallet-preimage/std",
 	"pallet-scheduler/std",
-	"pallet-subtensor/std",
+	"pallet-game-solver/std",
 	"pallet-subtensor-swap/std",
 	"pallet-transaction-payment/std",
 	"scale-info/std",
@@ -80,6 +80,6 @@ runtime-benchmarks = [
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-preimage/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",	
-	"pallet-subtensor/runtime-benchmarks",
+	"pallet-game-solver/runtime-benchmarks",
 	"pallet-subtensor-swap/runtime-benchmarks",
 ]

@@ -1,0 +1,31 @@
+[package]
+name = "myosu-chain-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+codec.workspace = true
+frame-metadata-hash-extension.workspace = true
+frame-system.workspace = true
+hex.workspace = true
+jsonrpsee = { workspace = true, features = ["client-core", "macros", "ws-client"] }
+myosu-chain-runtime = { workspace = true, features = ["std"] }
+pallet-admin-utils.workspace = true
+pallet-game-solver = { workspace = true, features = ["std"] }
+pallet-sudo.workspace = true
+pallet-transaction-payment.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sp-core.workspace = true
+sp-runtime.workspace = true
+subtensor-runtime-common.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[lints]
+workspace = true

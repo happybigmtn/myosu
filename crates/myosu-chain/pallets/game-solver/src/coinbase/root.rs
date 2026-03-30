@@ -20,7 +20,6 @@ use crate::CommitmentsInterface;
 use safe_math::*;
 use substrate_fixed::types::{I64F64, U96F32};
 use subtensor_runtime_common::{AlphaCurrency, Currency, NetUid, NetUidStorageIndex, TaoCurrency};
-use subtensor_swap_interface::SwapHandler;
 
 impl<T: Config> Pallet<T> {
     /// Fetches the total count of root network validators
@@ -213,9 +212,7 @@ impl<T: Config> Pallet<T> {
         Self::finalize_all_subnet_root_dividends(netuid);
 
         // --- Perform the cleanup before removing the network.
-        T::SwapInterface::dissolve_all_liquidity_providers(netuid)?;
         Self::destroy_alpha_in_out_stakes(netuid)?;
-        T::SwapInterface::clear_protocol_liquidity(netuid)?;
         T::CommitmentsInterface::purge_netuid(netuid);
 
         // --- Remove the network
@@ -379,9 +376,12 @@ impl<T: Config> Pallet<T> {
             LastUpdate::<T>::remove(netuid_index);
             Incentive::<T>::remove(netuid_index);
             let _ = WeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
-            let _ = TimelockedWeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
-            let _ = CRV3WeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
-            let _ = CRV3WeightCommitsV2::<T>::clear_prefix(netuid_index, u32::MAX, None);
+            #[cfg(feature = "legacy-subtensor-tests")]
+            {
+                let _ = TimelockedWeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
+                let _ = CRV3WeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
+                let _ = CRV3WeightCommitsV2::<T>::clear_prefix(netuid_index, u32::MAX, None);
+            }
             let _ = Bonds::<T>::clear_prefix(netuid_index, u32::MAX, None);
             let _ = Weights::<T>::clear_prefix(netuid_index, u32::MAX, None);
         }
@@ -473,11 +473,14 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        // --- 22. Subnet leasing: remove mapping and any lease-scoped state linked to this netuid.
-        if let Some(lease_id) = SubnetUidToLeaseId::<T>::take(netuid) {
-            SubnetLeases::<T>::remove(lease_id);
-            let _ = SubnetLeaseShares::<T>::clear_prefix(lease_id, u32::MAX, None);
-            AccumulatedLeaseDividends::<T>::remove(lease_id);
+        #[cfg(feature = "legacy-subtensor-tests")]
+        {
+            // Remove any carried lease-scoped state linked to this netuid.
+            if let Some(lease_id) = SubnetUidToLeaseId::<T>::take(netuid) {
+                SubnetLeases::<T>::remove(lease_id);
+                let _ = SubnetLeaseShares::<T>::clear_prefix(lease_id, u32::MAX, None);
+                AccumulatedLeaseDividends::<T>::remove(lease_id);
+            }
         }
 
         // --- Final removal logging.
