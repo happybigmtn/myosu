@@ -85,7 +85,7 @@ jobs:
 
       - name: Clippy (all active crates)
         run: |
-          cargo clippy -- -D warnings \
+          cargo clippy \
             -p myosu-games \
             -p myosu-games-poker \
             -p myosu-games-liars-dice \
@@ -93,7 +93,9 @@ jobs:
             -p myosu-play \
             -p myosu-chain-client \
             -p myosu-miner \
-            -p myosu-validator
+            -p myosu-validator \
+            -- \
+            -D warnings
 
       - name: Rustfmt (all active crates)
         run: |
