@@ -99,10 +99,9 @@ impl Cli {
             return Ok(key.clone());
         }
 
-        let config_dir = self
-            .key_config_dir
-            .as_deref()
-            .expect("clap should require one operator key source");
+        let Some(config_dir) = self.key_config_dir.as_deref() else {
+            return Err(myosu_keys::KeyError::MissingKeySource);
+        };
         load_active_secret_uri_from_env(config_dir, &self.key_password_env)
     }
 
