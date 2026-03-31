@@ -11,11 +11,9 @@ fn main() {
         std::env::set_var("WASM_BUILD_WORKSPACE_HINT", workspace_root);
     }
 
-    let skip_wasm_build = std::env::var_os("SKIP_WASM_BUILD");
+    let skip_wasm_build = top_level_skip_wasm_build_requested();
 
-    if skip_wasm_build.is_some()
-        && let Some(cached_wasm) = find_cached_runtime_wasm(workspace_root)
-    {
+    if skip_wasm_build && let Some(cached_wasm) = find_cached_runtime_wasm(workspace_root) {
         write_cached_wasm_binary_module(&cached_wasm);
         println!(
             "cargo:warning=using cached myosu-chain runtime wasm at {}",
@@ -24,7 +22,7 @@ fn main() {
         return;
     }
 
-    if skip_wasm_build.is_some() {
+    if skip_wasm_build {
         println!(
             "cargo:warning=SKIP_WASM_BUILD was set, but no cached runtime wasm was found; \
 building the runtime wasm instead"
@@ -42,6 +40,12 @@ building the runtime wasm instead"
         .export_heap_base()
         .import_memory()
         .build();
+}
+
+fn top_level_skip_wasm_build_requested() -> bool {
+    // `substrate_wasm_builder` sets `SKIP_WASM_BUILD=""` on its nested blob build
+    // to prevent the runtime build script from recursively spawning itself.
+    matches!(std::env::var("SKIP_WASM_BUILD"), Ok(value) if !value.is_empty())
 }
 
 fn find_cached_runtime_wasm(workspace_root: &Path) -> Option<PathBuf> {
