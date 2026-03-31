@@ -32,29 +32,44 @@ impl<'a> PipeMode<'a> {
 
     /// Output current game state to stdout.
     ///
-    /// This method writes `GameRenderer::pipe_output()` to stdout
-    /// and flushes immediately to ensure the agent receives timely updates.
+    /// This method writes a metadata line plus `GameRenderer::pipe_output()`
+    /// to stdout and flushes immediately to ensure the agent receives timely
+    /// updates.
     pub fn output_state(&mut self) -> io::Result<()> {
-        let state = self.renderer.pipe_output();
-        writeln!(self.output, "{}", state)?;
+        for line in self.frame_lines() {
+            writeln!(self.output, "{line}")?;
+        }
         self.output.flush()?;
         Ok(())
     }
 
-    /// Read a line from stdin and return the parsed action.
+    /// Render the current shell/game frame as plain-text protocol lines.
+    pub fn frame_lines(&self) -> Vec<String> {
+        vec![self.meta_line(), self.renderer.pipe_output()]
+    }
+
+    /// Render shell-level metadata for the current frame.
+    pub fn meta_line(&self) -> String {
+        format!(
+            "META game={:?} context={:?} declaration={:?}",
+            self.renderer.game_label(),
+            self.renderer.context_label(),
+            self.renderer.declaration()
+        )
+    }
+
+    /// Read a line from stdin and return the parsed action text.
     ///
-    /// Returns `None` if stdin is closed or the input is empty.
-    /// The caller should check `parse_input()` on the renderer
-    /// to convert the raw input to a game action.
+    /// Returns `None` only if stdin is closed. Blank lines are returned as an
+    /// empty string so the caller can decide whether to ignore them.
     pub fn read_input(&self) -> Option<String> {
         let stdin = io::stdin();
         let mut line = String::new();
-        stdin.lock().read_line(&mut line).ok()?;
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
+        let bytes_read = stdin.lock().read_line(&mut line).ok()?;
+        if bytes_read == 0 {
             None
         } else {
-            Some(trimmed.to_string())
+            Some(line.trim().to_string())
         }
     }
 
@@ -135,19 +150,17 @@ mod tests {
             "TEST"
         }
 
-        fn context_label(&self) -> &str {
-            "TEST HAND"
+        fn context_label(&self) -> String {
+            "TEST HAND".to_string()
         }
     }
 
     #[test]
     fn pipe_output_no_ansi() {
-        // Verify that plain text has no ANSI codes
         let plain = "STATE hand=47 pot=12 hero=AcKh";
         assert!(!PipeMode::has_ansi_codes(plain));
         assert!(is_plain_text(plain));
 
-        // Verify that text with ANSI codes is detected
         let with_ansi = "\x1b[32mSTATE\x1b[0m hand=47";
         assert!(PipeMode::has_ansi_codes(with_ansi));
         assert!(!is_plain_text(with_ansi));
@@ -155,8 +168,6 @@ mod tests {
 
     #[test]
     fn pipe_output_matches_design_md() {
-        // Pipe output should follow the format specified in design.md:
-        // STATE street|board|pot|hero|stack|to_call|actions
         let renderer = MockRenderer {
             hand_active: true,
             state_text: "STATE flop Ts7h2c pot=12bb hero=AcKh stack=88bb to_call=4bb actions=fold,call,raise",
@@ -167,6 +178,24 @@ mod tests {
         assert!(output.contains("pot="));
         assert!(output.contains("hero="));
         assert!(output.contains("actions="));
+    }
+
+    #[test]
+    fn frame_lines_include_meta_and_state() {
+        let renderer = MockRenderer {
+            hand_active: true,
+            state_text: "STATE hand=47 pot=12 hero=AcKh board=Ts7h2c",
+        };
+        let pipe = PipeMode::new(&renderer);
+
+        assert_eq!(
+            pipe.frame_lines(),
+            vec![
+                "META game=\"TEST\" context=\"TEST HAND\" declaration=\"THE SYSTEM AWAITS YOUR DECISION\""
+                    .to_string(),
+                "STATE hand=47 pot=12 hero=AcKh board=Ts7h2c".to_string(),
+            ]
+        );
     }
 
     #[test]
@@ -187,28 +216,23 @@ mod tests {
             state_text: "test",
         };
 
-        // Test shorthand parsing
         assert_eq!(renderer.parse_input("f"), Some("fold".to_string()));
         assert_eq!(renderer.parse_input("c"), Some("call".to_string()));
         assert_eq!(renderer.parse_input("r"), Some("raise".to_string()));
 
-        // Test full word parsing
         assert_eq!(renderer.parse_input("fold"), Some("fold".to_string()));
         assert_eq!(renderer.parse_input("call"), Some("call".to_string()));
         assert_eq!(renderer.parse_input("raise"), Some("raise".to_string()));
 
-        // Test invalid input
         assert_eq!(renderer.parse_input("invalid"), None);
     }
 
     #[test]
     fn is_plain_text_detects_ansi() {
-        // Common ANSI patterns
         assert!(!is_plain_text("\x1b[31mred\x1b[0m"));
         assert!(!is_plain_text("\x1b[1mbold\x1b[0m"));
         assert!(!is_plain_text("\x1b[32;1mgreen bold\x1b[0m"));
 
-        // Plain text
         assert!(is_plain_text("plain text"));
         assert!(is_plain_text("STATE hand=47"));
         assert!(is_plain_text("fold call raise"));

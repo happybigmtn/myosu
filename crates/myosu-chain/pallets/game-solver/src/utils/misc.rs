@@ -558,12 +558,9 @@ impl<T: Config> Pallet<T> {
         Self::deposit_event(Event::CommitRevealEnabled(netuid, enabled));
     }
     pub fn get_commit_reveal_weights_version() -> u16 {
-        CommitRevealWeightsVersion::<T>::get()
+        4
     }
-    pub fn set_commit_reveal_weights_version(version: u16) {
-        CommitRevealWeightsVersion::<T>::set(version);
-        Self::deposit_event(Event::CommitRevealVersionSet(version));
-    }
+    pub fn set_commit_reveal_weights_version(_version: u16) {}
     pub fn get_rho(netuid: NetUid) -> u16 {
         Rho::<T>::get(netuid)
     }

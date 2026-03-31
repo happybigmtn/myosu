@@ -69,10 +69,10 @@ impl<T: Config> Pallet<T> {
             if MechanismCountCurrent::<T>::get(netuid) > sub_id {
                 Ok((netuid, sub_id))
             } else {
-                Err(Error::<T>::MechanismDoesNotExist.into())
+                Err(Error::<T>::MechanismDoesNotExist)
             }
         } else {
-            Err(Error::<T>::MechanismDoesNotExist.into())
+            Err(Error::<T>::MechanismDoesNotExist)
         }
     }
 
@@ -184,13 +184,18 @@ impl<T: Config> Pallet<T> {
                     // Cleanup WeightCommits
                     let _ = WeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
 
-                    // Cleanup TimelockedWeightCommits
-                    let _ =
-                        TimelockedWeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
+                    #[cfg(feature = "legacy-subtensor-tests")]
+                    {
+                        let _ = TimelockedWeightCommits::<T>::clear_prefix(
+                            netuid_index,
+                            u32::MAX,
+                            None,
+                        );
+                    }
                 }
             }
 
-            MechanismCountCurrent::<T>::insert(netuid, MechId::from(new_count));
+            MechanismCountCurrent::<T>::insert(netuid, new_count);
 
             // Reset split back to even
             MechanismEmissionSplit::<T>::remove(netuid);

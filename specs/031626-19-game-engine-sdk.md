@@ -1,8 +1,12 @@
 # Specification: Game Engine SDK — Third-Party Game Development Kit
 
+Historical note: this is a Stage 2 platform-design slot, not a current
+stage-0 deliverable. The repo does not yet ship `myosu-sdk`, `myosu init`, or
+third-party game registration tooling.
+
 Source: CEO review — platform framing for the 20-game roadmap
 Status: Draft
-Date: 2026-03-17
+Date: 2026-03-30
 Depends-on: GT-01..05 (traits), MG-01..04 (multi-game architecture), 031626-13 (n-player)
 Blocks: Stage 2 (third-party game engines)
 
@@ -15,6 +19,16 @@ game, implement its solver, and participate in the incentive network.
 The difference is the difference between iPhone and App Store. The chain,
 the validator protocol, and the TUI shell are infrastructure. Games are
 applications that plug into that infrastructure.
+
+## Current Truth
+
+- the repo already has live shared trait, poker-wrapper, and TUI surfaces in
+  `myosu-games`, `myosu-games-poker`, and `myosu-tui`
+- those crates are still internal implementation surfaces rather than a stable
+  third-party SDK or scaffolding tool
+- there is no `crates/myosu-sdk/` crate or `myosu init` CLI today, so this
+  spec remains future platform work layered on top of the current in-repo
+  foundations
 
 This spec defines the developer experience for adding a new game to myosu:
 the SDK crate, the `myosu init` scaffolding tool, the testing harness, the

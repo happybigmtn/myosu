@@ -1,194 +1,457 @@
-# 180-Day Myosu Turnaround Master Plan
+# OS-Driven Stage-0 Master Plan
 
-**Plan ID:** 001
-**Status:** Draft — awaiting execution
-**Horizon:** 180 days from execution start
-
-This ExecPlan governs the 180-day turnaround for Myosu from bootstrapped scaffolding to a demonstrable, testable game-solving chain. It is the parent plan; all numbered plans are children.
-
-`PLANS.md` at `genesis/PLANS.md` governs this document. This plan must be updated as child plans complete or change scope.
-
----
+This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds. Maintained per `genesis/PLANS.md`.
 
 ## Purpose / Big Picture
 
-After 180 days, Myosu will have:
-- A **runnable local chain** with working game-solver pallet
-- A **working NLHE game engine** that can solve a poker situation and return a strategy
-- A **playable TUI** that lets a human play against the best bot strategy
-- **Comprehensive test coverage** on all user-facing code
-- A **CI/CD pipeline** with automated quality gates
-- At least **two complete Fabro lanes** through bootstrap + implementation
+`OS.md` says Myosu is building a decentralized game-solving chain, not a
+planning framework. The repo drifted toward doctrine cleanup and Genesis
+adjudication work, but the kernel doctrine is clear: stage 0 does not end until
+the chain produces blocks, the game-solving pallet runs Yuma, a miner and
+validator can participate, and one human can play against the resulting bot.
 
-The product will be demonstrable to a quantitative poker researcher. It will not be production-deployed.
+After this master plan is complete, the active next-step stack will again point
+at chain execution. A newcomer should be able to open this file, see the
+critical path from runtime strip-down to local devnet to miner/validator loop,
+and know which plans are active now versus merely useful later.
 
----
+## Progress
 
-## Phase 0: Stabilization (Days 1-30)
+- [x] (2026-03-28) Re-read `OS.md` and `AGENTS.md` to re-anchor the repo on the
+  stage-0 chain mission.
+- [x] (2026-03-28) Verified that `cargo check -p myosu-chain-runtime` succeeds
+  today, which means the bottleneck is no longer "make anything compile" but
+  "strip the chain to the stage-0 architecture we actually want."
+- [x] (2026-03-28) Determined that the existing doctrine-cutover master plan was
+  over-prioritizing meta work relative to the chain objective in `OS.md`.
+- [x] (2026-03-28) Started plan 003 execution by removing Drand, Crowdloan, the
+  commitments pallet, and the self-contained extrinsic wrapper from the live
+  runtime path while keeping `cargo check -p myosu-chain-runtime` green.
+- [x] (2026-03-28) Landed the first reproducible local devnet proof for plan
+  004: `myosu-chain --smoke-test` now boots the stripped node, imports blocks,
+  and observes local finality.
+- [x] (2026-03-28) Verified the live local RPC surface for plan 004:
+  `system_health` responds on `127.0.0.1:9944` and
+  `neuronInfo_getNeuronsLite` returns data from the running node.
+- [x] (2026-03-28) Started plan 005 reduction by removing the live
+  crowdloan/leasing and timelocked-weights extrinsics from
+  `pallet-game-solver` while keeping `cargo check` and `cargo clippy` green.
+- [x] (2026-03-28) Landed the first honest pallet proof for plan 005:
+  `cargo test -p pallet-game-solver stage_0_flow --quiet` now passes against a
+  reduced default test surface that keeps the stage-0 harness active and parks
+  stale subtensor-only unit modules behind `legacy-subtensor-tests`.
+- [x] (2026-03-29) Completed the active chain execution stack: plans 003, 004,
+  005, and 007 now all have executable proof paths and completed statuses.
+- [x] (2026-03-29) Resumed the retained downstream proof plans only after the
+  chain loop was materially alive, then closed both 012 and 013 on honest
+  executable surfaces.
+- [x] (2026-03-30) Closed doctrine/governance cleanup plans 014 through 018
+  locally, including the Genesis corpus sync that rewrote the report and
+  tightened stale assessment statements to the current adjudicated reality.
+- [x] (2026-03-30) Closed plan 019 locally by writing future Genesis synth
+  governance into `genesis/PLANS.md`, including launch procedure, provider
+  policy, and adjudication-before-merge discipline.
+- [x] (2026-03-30) Closed `010` on real hosted GitHub Actions evidence:
+  run `23741634642` finished fully green on the current draft PR branch with
+  all long lanes under the `<15 min` target.
+- [x] (2026-03-30) Reprioritized `002` as the active next-step plan after
+  `010` closure because the remaining doctrine gap is no longer CI proof but
+  canonical spec freshness: the namespace is clean, but the master index and
+  downstream Genesis summaries were still carrying stale pre-implementation
+  language.
+- [x] (2026-03-30) Closed reopened `002` locally after the canonical specs and
+  downstream Genesis/doctrine surfaces were refreshed to the current stage-0
+  implementation truth and future-facing docs were given explicit
+  present-tense disclaimers.
+- [x] (2026-03-30) Closed the remaining release-gate doctrine drift under
+  `011`: the invariants, release gate, no-ship ledger, and robopoker
+  fork-coherence proof now point at live repo surfaces, so the current stage-0
+  completion claim is no longer blocked by stale governance references.
+- [x] (2026-03-30) Promoted `021` as the next explicit lane: operator
+  hardening and named-network packaging now replace doctrine cleanup as the
+  highest-leverage remaining work above the closed stage-0 proof stack.
+- [x] (2026-03-30) Landed the first `021` proof slice: `myosu-keys` now exists
+  as a minimal shared key helper crate, and named `devnet` / `test_finney`
+  chain-spec builds no longer fail as unconditional placeholders.
+- [x] (2026-03-30) Landed the second `021` proof slice: `myosu-keys` now
+  persists an encrypted operator seed plus `config.toml` metadata and can
+  reload the active pair from disk, which turns the key-management lane from a
+  helper-only seam into the first honest persistent operator keystore surface.
+- [x] (2026-03-30) Landed the third `021` proof slice: `myosu-miner` and
+  `myosu-validator` can now consume the active configured operator account via
+  `--key-config-dir` plus password env, which turns the keystore from an
+  isolated library surface into the first real operator-owned signing path.
+- [x] (2026-03-30) Landed the fourth `021` proof slice: `myosu-keys` now ships
+  a minimal `create` / `show-active` CLI, which turns the keystore from a
+  library-plus-consumer seam into the first self-contained operator account
+  bootstrap path.
+- [x] (2026-03-30) Landed the fifth `021` proof slice: `myosu-keys` now ships
+  `list` / `switch-active`, which turns the bootstrap path into a minimal
+  multi-account operator control surface instead of a single-account keystore.
+- [x] (2026-03-30) Landed the sixth `021` proof slice: `myosu-keys` now ships
+  encrypted-keyfile import/export, which turns the operator keystore into a
+  portable config-to-config surface without exposing raw seed material.
+- [x] (2026-03-30) Landed the seventh `021` proof slice: `myosu-keys` now ships
+  env-var driven mnemonic/raw-seed import, which turns account recovery into a
+  real operator surface without normalizing argv-level secret handling.
+- [x] (2026-03-30) Landed the eighth `021` proof slice: `myosu-keys` now ships
+  active-account password rotation, which turns keystore hygiene into a real
+  operator command instead of a reimport ritual.
+- [x] (2026-03-30) Landed the ninth `021` proof slice: `myosu-keys` now ships
+  `print-bootstrap`, which turns the active operator account into concrete
+  `myosu-miner` and `myosu-validator` startup commands owned by the repo.
+- [x] (2026-03-30) Landed the tenth `021` proof slice:
+  `.github/scripts/check_operator_network_bootstrap.sh` now turns the printed
+  bootstrap path into a repo-owned smoke instead of a manual runbook ritual.
+- [x] (2026-03-30) Landed the eleventh `021` proof slice:
+  `.github/scripts/prepare_operator_network_bundle.sh` now writes reusable
+  operator wrapper scripts plus named-network spec helpers from the active
+  config, now ships a bundle-local verifier, and now materializes the named
+  spec JSONs plus a machine-readable bundle manifest into the bundle instead of
+  leaving the bootstrap path as copy-paste only.
+- [x] (2026-03-30) Landed the twelfth `021` proof slice:
+  `.github/workflows/ci.yml` now defines an `Operator Network` hosted lane for
+  the bundle/bootstrap proof, so the remaining closure step is hosted evidence
+  rather than missing CI shape.
+- [x] (2026-03-30) Hardened that hosted operator lane for cold runners:
+  `active-crates` now installs `protoc`, and the runtime build now falls back
+  to producing a real wasm when `SKIP_WASM_BUILD=1` is set but no cached
+  runtime artifact exists yet.
+- [x] (2026-03-30) Closed the next cold-runner gap in the hosted proof lanes:
+  the active-crates, chain, and operator jobs now install Rust `rust-src`
+  alongside `wasm32-unknown-unknown`, matching Substrate's real runtime-wasm
+  build requirement when the cache is empty.
 
-**Goal:** Fix the broken foundation so everything else can be built on solid ground.
+## Surprises & Discoveries
 
-| Plan | Name | Milestones | Proof |
-|------|------|------------|-------|
-| 002 | Fabro control-plane completion | 4 | Fabro lanes executable |
-| 005 | Test coverage sprint | 4 | `cargo test -p myosu-tui` passes with real tests |
-| 006 | CI/CD pipeline setup | 3 | GitHub Actions runs on PR |
-| 010 | Fabro quality hardening | 3 | Autodev no longer produces fake completions |
+- Observation: The runtime compiles even though it still carries the very
+  surfaces the doctrine says must be stripped.
+  Evidence: `cargo check -p myosu-chain-runtime` succeeds, but
+  `crates/myosu-chain/runtime/src/lib.rs` still wires `pallet_drand`,
+  `pallet_crowdloan`, `fp_self_contained`, Frontier/EVM, and the swap pallet.
 
----
+- Observation: The earlier audit's exact first blocker has shifted.
+  Evidence: `crates/myosu-chain/pallets/game-solver/src/macros/config.rs`
+  no longer requires `pallet_drand::Config + pallet_crowdloan::Config`; the
+  surviving blocker is now the runtime and pallet surface that still expose
+  drand, crowdloan, CRV3 timelock, and swap-heavy paths.
 
-## Phase 1: Foundation (Days 31-90)
-
-**Goal:** Build the core value chain — chain + game engine + TUI.
-
-| Plan | Name | Milestones | Proof |
-|------|------|------------|-------|
-| 007 | Chain restart | 6 | `cargo build -p myosu-chain` succeeds; devnet produces blocks |
-| 008 | NLHE game engine | 5 | `cargo test -p myosu-games-poker` passes; strategy query returns action |
-| 009 | TUI full implementation | 5 | Human can play NLHE vs. best bot via TUI |
-| 004 | Program decomposition completion | 3 | All 6 programs report meaningful milestone state |
-
----
-
-## Phase 2: Growth (Days 91-150)
-
-**Goal:** Expand the surface — miner, validator, SDK, multi-game.
-
-| Plan | Name | Milestones | Proof |
-|------|------|------------|-------|
-| 011 | Miner binary | 4 | Miner binary builds, connects to chain, submits weights |
-| 012 | Validator binary | 4 | Validator binary builds, connects to chain, submits exploitability scores |
-| 013 | Game engine SDK | 4 | Third party can implement a new game via SDK in < 30 min |
-| 014 | Liar's Dice proof | 3 | Liar's Dice engine works; 147,420 terminal states verified |
-| 015 | Agent experience | 3 | Agent memory/journal/promotion artifacts functional |
-
----
-
-## Phase 3: Polish (Days 151-180)
-
-**Goal:** Clean up, integrate, prepare for demo.
-
-| Plan | Name | Milestones | Proof |
-|------|------|------------|-------|
-| 016 | End-to-end demo | 5 | Full pipeline: miner → validator → chain → TUI gameplay |
-| 017 | Documentation | 3 | README, API docs, developer guide |
-| 018 | Operational setup | 3 | Devnet launch, monitoring, runbook |
-| 003 | Fabro workflow library | 2 | All workflow families complete and documented |
-
----
-
-## ASCII Roadmap
-
-```
-Day  1 ─────────────────────────────────────────────────────────────────── Day 180
-  │                                                                             │
-  ├─ Phase 0 ──────────────────┬─ Phase 1 ────────────────────┬─ Phase 2 ──────┤
-  │  │                         │  │                           │  │             │
-  │  P002 Fabro completion     │  P007 Chain restart         │  P011 Miner    │
-  │  P005 Test sprint         │  P008 NLHE engine           │  P012 Validator│
-  │  P006 CI/CD               │  P009 TUI full impl         │  P013 SDK      │
-  │  P010 Fabro quality       │  P004 Program decomp        │  P014 Liar's   │
-  │                           │                              │  P015 Agent    │
-  │                           │                              │                │
-  │                           │                              │                │
-  ├─ Phase 3 ──────────────────────────────────────────────────────────────┤
-  │  P016 E2E demo   P017 docs   P018 ops setup   P003 workflow library    │
-  │                                                                          │
-  ▼                                                                          ▼
-Stabilize                        Core value chain                           Polish
-```
-
----
-
-## Dependency Graph
-
-```
-P002 ──┬── P010 ── P004
-       │             │
-P005 ──┘             │
-       │             │
-       ▼             ▼
-P006            P007 ──┬── P008 ──┬── P009
-                      │          │
-                      │          ▼
-                      │      P016 (E2E demo)
-                      │
-P011 ──┬── P012 ──┬── P016
-       │          │
-P013 ──┘          │
-       │          │
-       ▼          ▼
-P014 ───────── P015
-```
-
----
+- Observation: We do not need a fresh plan namespace to refocus.
+  Evidence: Existing plans 003, 004, 005, and 007 already correspond to the
+  runtime, node, pallet, and miner/validator layers named in `OS.md`; they
+  simply needed to be rewritten to match the real code and current priorities.
 
 ## Decision Log
 
-- Decision: Run Phase 0 (stabilization) before Phase 1 (foundation).
-  Rationale: The autodev loop generates fake completions (compile-passing but non-functional code). Building on this foundation without fixing quality first means wasted work.
-  Date/Author: 2026-03-21 / Interim CEO
+- Decision: Reuse the existing chain plan slots instead of inventing more
+  meta-plans.
+  Rationale: `003`, `004`, `005`, and `007` already map cleanly to the real
+  chain execution path, so a truthful rewrite is better than adding more plan
+  surface.
+  Date/Author: 2026-03-28 / Codex
 
-- Decision: Chain restart is Phase 1, not Phase 0.
-  Rationale: Chain restart requires deep Substrate expertise and ~6 milestones. It should not block test sprint or CI/CD. The game engine can be developed against the robopoker thin-wrap without a live chain.
-  Date/Author: 2026-03-21 / Interim CEO
+- Decision: The active stack is now chain-first, not doctrine-first.
+  Rationale: `OS.md` and `AGENTS.md` both define stage 0 in terms of chain,
+  miner, validator, and gameplay exit criteria.
+  Inversion: Continuing to lead with documentation or Genesis governance work
+  would keep burning cycles above the actual product bottleneck.
+  Date/Author: 2026-03-28 / Codex
 
-- Decision: Miner and validator are Phase 2, not Phase 1.
-  Rationale: The chain must be buildable and the game engine must be working before miners and validators can be meaningfully implemented. They depend on both P007 and P008.
-  Date/Author: 2026-03-21 / Interim CEO
+- Decision: Runtime strip-down is destructive, not feature-gated by default.
+  Rationale: The repo doctrine says "replace, don't deprecate" and the stage-0
+  target is a smaller fork, not a permanently dual-path runtime.
+  Inversion: Carrying a reversible "full runtime" mode would preserve exactly
+  the complexity the chain fork is supposed to remove.
+  Date/Author: 2026-03-28 / Codex
 
-- Decision: NLHE is the only game in Phase 1.
-  Rationale: The narrowest wedge. One working game beats four partial games. Liar's Dice (architecture proof) moves to Phase 2.
-  Date/Author: 2026-03-21 / Interim CEO
+## Outcomes & Retrospective
 
-- Decision: Demo is the only Phase 3 deliverable that matters.
-  Rationale: If the full pipeline (miner → validator → chain → TUI) doesn't work end-to-end by day 180, the turnaround has failed. Everything else serves this goal.
-  Date/Author: 2026-03-21 / Interim CEO
+The reset succeeded. The chain-first stack was executed instead of collapsing
+back into doctrine churn: runtime reduction (003), node/devnet proof (004),
+pallet reduction (005), and miner/validator/bootstrap proof (007) all closed
+on executable evidence. Once that core loop was materially alive, the retained
+downstream proof work also moved from aspirational to real: the multi-game
+additive proof (012) and node-owned integration harness (013) are now closed
+on honest branch surfaces.
 
----
+## Context and Orientation
 
-## What Does NOT Belong in This Plan
+The controlling documents are:
 
-- Production deployment (no Kubernetes, no Terraform, no cloud infrastructure)
-- Token economics beyond basic emission accounting
-- Mobile or web UI (TUI only)
-- Multiple consensus mechanisms beyond Yuma
-- Formal security audit
-- External API integrations beyond chain RPC
+- `OS.md`, which says the product is a decentralized game-solving chain and
+  describes the four-layer architecture: chain, solvers, validators, gameplay.
+- `AGENTS.md`, which names the stage-0 work inventory and the chain fork
+  critical path: strip the runtime, minimize the node, finish the game-solving
+  pallet, then bring up miner and validator.
+- `crates/myosu-chain/runtime/src/lib.rs`, which still includes Drand,
+  Crowdloan, swap, Frontier/EVM, and self-contained Ethereum extrinsics.
+- `crates/myosu-chain/pallets/game-solver/`, which is the live pallet fork that
+  already dropped the old `pallet_drand`/`pallet_crowdloan` supertrait but
+  still carries CRV3 timelock and swap-era logic internally.
+- `crates/myosu-chain/node/`, which must become a minimal Aura/Grandpa devnet
+  node.
+- `Cargo.toml`, where `myosu-miner` and `myosu-validator` are active workspace
+  members and part of the current stage-0 proof surface.
 
----
+The completed and next-phase stack is now:
 
-## Proof of Master Plan Completeness
+```text
+COMPLETED
 
-The master plan is complete when:
-1. `cargo test -p myosu-games-poker` passes with real NLHE tests
-2. The chain builds and produces blocks on a local devnet
-3. A human can play NLHE against the best bot strategy via the TUI
-4. `cargo test -p myosu-tui` passes with integration tests
-5. CI passes on a PR
-6. Autodev produces no fake completions
-7. End-to-end demo runs: strategy query → miner submission → validator scoring → chain state → TUI display
+003  Strip runtime to the stage-0 chain core
+004  Minimize node and prove local devnet block production
+005  Reduce pallet-game-solver to the stage-0 Yuma/staking/weights surface
+006  Game traits and poker boundaries
+007  Bring up myosu-chain-client, myosu-miner, and myosu-validator
+008  Artifact / wire / checkpoint hardening
+009  Productize the poker play/TUI surface
+012  Prove additive multi-game architecture with Liar's Dice
+013  Add a node-owned end-to-end stage-0 integration harness
+014  Refresh OS/operator docs around the truthful bootstrap loop
+015  Retire Malinka from the active control plane
+016  Cut over the bootstrap-first Fabro/Raspberry control plane
+017  Rationalize Fabro workflow/program/run-config surfaces
+018  Adjudicate the Genesis corpus to the current completed/active/queued truth
+020  Prove a full second-game subnet execution path with Liar's Dice
 
----
+ACTIVE NEXT PHASE
 
-## Cross-Plan Coordination
+021  Operator hardening and network packaging
+```
 
-| Plan | Depends On | Enables |
-|------|-----------|---------|
-| P002 (Fabro completion) | P006 (CI) for quality gates | P004, P010 |
-| P004 (Program decomp) | P002 | P007, P011, P012, P013 |
-| P005 (Test sprint) | P002 | P008, P009, P011, P012 |
-| P006 (CI/CD) | P002 | All plans benefit |
-| P007 (Chain restart) | P004 | P008, P011, P012, P016 |
-| P008 (NLHE engine) | P005, P007 | P009, P011, P012, P014, P016 |
-| P009 (TUI full) | P005, P007, P008 | P016 |
-| P010 (Fabro quality) | P002 | P004 |
-| P011 (Miner) | P007, P008 | P016 |
-| P012 (Validator) | P007, P008 | P016 |
-| P013 (SDK) | P007, P008 | P014 |
-| P014 (Liar's Dice) | P008, P013 | P016 |
-| P015 (Agent experience) | P002 | — |
-| P016 (E2E demo) | P007, P008, P009, P011, P012 | — |
-| P017 (Docs) | All prior | — |
-| P018 (Ops setup) | P016 | — |
-| P003 (Workflow library) | All prior | — |
+## Completed Plans
+
+| # | Plan | Role | Depends On |
+|---|------|------|------------|
+| 003 | Strip Runtime to Stage-0 Chain Core | Remove drand, crowdloan, Frontier/EVM, and swap-heavy runtime baggage while keeping `GameSolver` at runtime index 7. | none |
+| 004 | Minimize Node for Working Devnet | Build a node that starts, authors blocks, and serves game-solver RPC on a local devnet. | 003 |
+| 005 | Reduce Pallet Game-Solver to Stage-0 Surface | Keep Yuma, staking, registration, serving, and commit-reveal v2; remove CRV3 timelock and AMM-era baggage. | 003 |
+| 006 | Harden Game Traits and Poker Engine Boundaries | Enforce the literal gameplay/miner boundary, lock the public growth seam, and prove additive custom-game extensibility. | none |
+| 007 | Bootstrap Miner, Validator, and Shared Chain Client | Bring up the first actual off-chain participants against the stripped chain. | 003, 004, 005 |
+| 008 | Artifact / Wire / Checkpoint Hardening | Harden artifact loading, bounded decode, mmap validation, and checkpoint/header trust boundaries. | 006 |
+| 009 | Productize Play + TUI Experience | Turn the local poker surface into a resilient stage-0 product with explicit startup states, onboarding, responsive layout tiers, and keyboard-usable shell behavior. | 006, 008 |
+| 011 | Security Audit, Observability, and Release Governance | Add grounded stage-0 audit doctrine, release gating, service timing logs, and chain/node health summaries. | 008, 010 |
+| 012 | Multi-Game Architecture Proof | Prove a second game can land additively through the shared game seam without reaching into poker code. | 006 |
+| 013 | Integration Test Harness | Turn the owned stage-0 smoke into a cargo-managed contract with cheap fixture regressions and an ignored live wrapper. | 007 |
+| 014 | OS Refresh and Operator Docs | Rewrite `OS.md`, sync `README.md`, and tighten durable playbooks around the truthful bootstrap, local advisor, and node-owned stage-0 loop. | none |
+| 015 | Retire Malinka and Cut Over to No-Autodev Doctrine | Archive the remaining root-level legacy executor surface and scrub active references so the live repo no longer advertises that execution model. | 014 |
+| 016 | Fabro / Raspberry Bootstrap Control-Plane Cutover | Make `myosu-bootstrap.yaml` the explicit primary entrypoint in control-plane docs and distinguish bootstrap `outputs/` roots from secondary portfolio roots. | 014, 015 |
+| 017 | Rationalize Fabro Workflow and Program Surfaces | Classify the checked-in Fabro programs, workflows, and run-config families so the execution substrate reads as intentional instead of uneven. | 016 |
+| 018 | Genesis Corpus Adjudication and Downstream Selection | Rewrite the Genesis report and stale assessment language so the corpus reflects the current completed/active/queued doctrine. | 014, 015, 016, 017 |
+| 019 | Future Synth Genesis Governance | Document the launch procedure, provider order, fallback posture, and adjudication-before-merge rule for all future `fabro synth genesis` runs. | 018 |
+| 020 | Second-Game Subnet Execution Proof | Extend the additive Liar's Dice seam into a full second-game miner/validator/play proof with a passing owned two-subnet coexistence harness. | 011, 012 |
+| 002 | Spec Corpus Normalization (freshness pass) | Finish the canonical-spec and downstream-doctrine freshness sync after the namespace cleanup and hosted-CI closure. | none |
+
+## Active Next-Step Plans
+
+`021` is now the promoted active next-step plan. The next control-plane move is
+not more doctrine cleanup; it is turning the current founder-operated local
+proof into a safer operator-facing devnet/testnet bring-up surface.
+
+## Next Queued Plan
+
+No queued follow-on plan is being promoted behind `021` yet.
+
+## Deferred Plans
+
+Plans `014` through `019` and reopened `002` are now complete locally. There is
+no promoted doctrine-cleanup lane left behind them.
+
+## Milestones
+
+### Milestone 1: Strip the chain to what stage 0 actually needs
+
+Goal: `myosu-chain-runtime` and `pallet-game-solver` stop pretending to be a
+general subtensor fork and become a stage-0 game-solving chain.
+
+Plans: 003 and 005.
+
+Exit proof:
+
+    cargo check -p myosu-chain-runtime
+    cargo test -p pallet-game-solver stage_0_flow --quiet
+    rg -n "pallet_drand|pallet_crowdloan|fp_self_contained" crates/myosu-chain/runtime/src/lib.rs
+
+Status:
+- Completed on 2026-03-29.
+
+### Milestone 2: Produce blocks on a minimal local devnet
+
+Goal: the node starts in local dev mode, authors blocks, and serves the
+game-solver RPC surface needed by the next layer.
+
+Plan: 004.
+
+Exit proof:
+
+    cargo run -p myosu-chain -- --smoke-test
+    curl -s -H "Content-Type: application/json" \
+      -d '{"id":1,"jsonrpc":"2.0","method":"system_health","params":[]}' \
+      http://localhost:9944
+
+Status:
+- Completed on 2026-03-29.
+
+### Milestone 3: Bring up the first real network participants
+
+Goal: one miner can train and serve strategy, one validator can score it and
+submit weights, and the repo begins behaving like a network rather than a local
+demo.
+
+Plan: 007.
+
+Exit proof:
+
+    cargo check -p myosu-chain-client -p myosu-miner -p myosu-validator
+    cargo test -p myosu-validator inv_003_determinism --quiet
+
+Status:
+- Completed on 2026-03-29.
+
+### Milestone 4: Prove the stage-0 loop and additive multi-game seam
+
+Goal: turn the live local loop into a cargo-owned integration contract and
+prove that a second game crate can land additively through the shared game
+boundary.
+
+Plans: 012 and 013.
+
+Exit proof:
+
+    cargo test -p myosu-games-liars-dice --quiet
+    cargo test -p myosu-chain --test stage0_local_loop --quiet
+
+Status:
+- Completed on 2026-03-29 on the honest branch surface. On this machine the
+  node test uses the same `SKIP_WASM_BUILD=1` proof path as the stripped
+  runtime checks because `wasm32-unknown-unknown` is not installed.
+
+### Milestone 5: Close downstream hardening and corpus drift
+
+Goal: finish the remaining non-core-but-still-live hardening work so the code,
+spec corpus, and review surfaces stop drifting apart.
+
+Plans: 006, 008, and 002.
+
+Exit proof:
+
+    cargo test -p myosu-games --quiet
+    cargo test -p myosu-games-poker --quiet
+    SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test
+    python - <<'PY'
+    from pathlib import Path
+    import re
+    specs = sorted(p.name for p in Path('specs').glob('031626-*.md'))
+    index = Path('specs/031626-00-master-index.md').read_text()
+    refs = sorted(set(re.findall(r'031626-\d{2}[a-z]?-[a-z-]+\.md', index)))
+    allowed = set(refs) | {'031626-00-master-index.md'}
+    extra = sorted(set(specs) - allowed)
+    missing = sorted(allowed - set(specs))
+    print('EXTRA', extra)
+    print('MISSING', missing)
+    PY
+
+Status:
+- Completed on 2026-03-29. The stronger consistency rule is now "every active
+  `031626-*` file in `specs/` is backed by the master index, and every
+  master-index target is present and non-empty."
+
+### Milestone 6: Productize poker and harden the ship path
+
+Goal: turn the working poker stage-0 surface into a more resilient and
+operator-friendly product surface, then add CI and release discipline around
+it before moving deeper into the multi-game thesis.
+
+Plans: 009, 010, and 011.
+
+Exit proof:
+
+    cargo test -p myosu-play -p myosu-tui --quiet
+    test -s ops/security-audit-stage0.md
+    test -s ops/release-gate-stage0.md
+    grep -q "chain-core\\|Doctrine Integrity\\|Plan Quality" .github/workflows/ci.yml .github/workflows/*.yml
+
+Status:
+- 009 completed on 2026-03-29.
+- 011 completed on 2026-03-29.
+- 010 completed on 2026-03-30. Hosted run `23741634642` proved the full
+  workflow green on the current draft PR branch, with `Active Crates`
+  `12m57s`, `Chain Core` `13m29s`, and `Chain Clippy` `13m34s`.
+- 020 completed locally on 2026-03-30, including the owned two-subnet
+  coexistence proof for poker and Liar's Dice.
+
+### Milestone 7: Promote the system from founder-owned proof to operator-facing package
+
+Goal: make the current green stage-0 surface safer and more legible for a
+second operator by hardening key handling, named network packaging, and the
+bring-up runbook.
+
+Plan: 021.
+
+Exit proof:
+
+    cargo check -p myosu-chain --features fast-runtime
+    rg -n "devnet|testnet|localnet" crates/myosu-chain/node/src/chain_spec
+    rg -n "operator|devnet|validator|miner|keys" docs/execution-playbooks README.md OS.md
+
+Status:
+- Active as of 2026-03-30.
+
+## Plan of Work
+
+1. Keep the completed chain-first stack documented as finished, not merely
+   assumed.
+2. Treat 020 and 019 as finished locally and execute `021` as the next explicit
+   phase from the current repo state.
+3. Do not quietly smuggle deferred work back into the active stack without an
+   explicit reprioritization decision.
+
+## Concrete Steps
+
+From `/home/r/coding/myosu`:
+
+    sed -n '111,220p' OS.md
+    sed -n '131,239p' AGENTS.md
+    cargo check -p myosu-chain-runtime
+    rg -n "pallet_drand|pallet_crowdloan|fp_self_contained|Swap: pallet_subtensor_swap" \
+      crates/myosu-chain/runtime/src/lib.rs
+
+## Validation and Acceptance
+
+This master plan is accepted when:
+
+- `001` reflects the completed plans truthfully instead of presenting them as
+  still active.
+- The chain plan files themselves no longer describe completed work as active.
+- the next explicit promoted lane after the closed stage-0 stack is `021`,
+  not residual doctrine cleanup.
+- Deferred doctrine/governance work is explicitly separated from both the
+  closed stage-0 stack and the chosen next phase.
+
+## Idempotence and Recovery
+
+This rewrite is document-only and safe to rerun. If the operator later chooses
+to reopen doctrine or Genesis governance work, that should appear as an
+explicit master-plan decision rather than ambient drift.
+
+## Interfaces and Dependencies
+
+```text
+003 runtime strip-down  --->  004 node devnet
+        |                          |
+        v                          |
+005 pallet stage-0 surface --------+
+        |
+        v
+007 chain client + miner + validator
+        |
+        +--> 013 integration harness
+        |
+        +--> 006 game-boundary hardening ---> 012 additive second-game proof
+        |
+        +--> 008 artifact/wire hardening
+        |
+        +--> 002 spec/review corpus normalization
+        |
+        +--> 021 operator hardening + network packaging
+```

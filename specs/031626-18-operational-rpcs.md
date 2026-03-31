@@ -2,7 +2,7 @@
 
 Source: DESIGN.md 10.1-10.4 operational screens
 Status: Draft
-Date: 2026-03-17
+Date: 2026-03-30
 Depends-on: GS-01..10 (game-solving pallet), CF-01..11 (chain scaffold)
 Blocks: DESIGN.md 10.1-10.4 implementation
 
@@ -18,11 +18,38 @@ Standard Substrate RPCs (`system_health`, `state_getStorage`) exist but
 require callers to decode raw storage. Custom RPCs provide typed, ergonomic
 access to game-solving-specific data.
 
+## Current State
+
+- `crates/myosu-chain/node/src/rpc.rs` already assembles the live node RPC
+  module set and merges the current custom runtime-facing methods
+- `crates/myosu-chain/pallets/game-solver/src/rpc_info/` already exposes typed
+  helper structs and query builders for subnet, metagraph, stake, delegate, and
+  neuron views
+- `crates/myosu-chain/node/src/service.rs` already logs startup and RPC
+  readiness timing as part of the current operator surface
+- `crates/myosu-chain/node/tests/stage0_local_loop.rs` already proves the
+  chain/gameplay/operator loop without the richer operational screens in
+  `DESIGN.md`
+
+## What Already Exists
+
+| Sub-problem | Existing code / flow | Reuse / extend / replace | Why |
+|-------------|----------------------|--------------------------|-----|
+| Node RPC assembly | `crates/myosu-chain/node/src/rpc.rs` | extend | This is the real merge point for any new operator RPCs |
+| Typed subnet and neuron views | `crates/myosu-chain/pallets/game-solver/src/rpc_info/` | reuse and extend | The pallet already owns typed query helpers here |
+| Operator startup health | `crates/myosu-chain/node/src/service.rs` | reuse | Current observability surface should stay aligned with richer RPCs |
+| End-to-end operator proof | `crates/myosu-chain/node/tests/stage0_local_loop.rs` | reuse | New RPCs should remain consistent with the owned stage-0 loop |
+
+The honest gap is no longer "there is no custom chain query surface." The gap
+is that the current query helpers and RPC assembly are narrower than the richer
+operational screens described in `DESIGN.md`.
+
 ## Scope
 
 ### AC-OR-01: Subnet Field RPC
 
-- Where: `crates/myosu-chain/pallets/game-solver/rpc/ (new)`
+- Where: `crates/myosu-chain/node/src/rpc.rs` plus
+  `crates/myosu-chain/pallets/game-solver/src/rpc_info/`
 - How: Custom RPC method returning the full subnet field for the network
   console (DESIGN.md 10.1):
 
@@ -65,7 +92,8 @@ access to game-solving-specific data.
 
 ### AC-OR-02: Miner Inspection RPC
 
-- Where: `crates/myosu-chain/pallets/game-solver/rpc/ (extend)`
+- Where: `crates/myosu-chain/node/src/rpc.rs` plus
+  `crates/myosu-chain/pallets/game-solver/src/rpc_info/`
 - How: Custom RPC for miner detail view (DESIGN.md 10.2):
 
   ```rust
@@ -121,7 +149,8 @@ access to game-solving-specific data.
 
 ### AC-OR-03: Validator Divergence RPC
 
-- Where: `crates/myosu-chain/pallets/game-solver/rpc/ (extend)`
+- Where: `crates/myosu-chain/node/src/rpc.rs` plus
+  `crates/myosu-chain/pallets/game-solver/src/rpc_info/`
 - How: Custom RPC for consensus monitoring (DESIGN.md 10.3):
 
   ```rust
@@ -177,7 +206,8 @@ access to game-solving-specific data.
 
 ### AC-OR-04: Signal Stream RPC
 
-- Where: `crates/myosu-chain/pallets/game-solver/rpc/ (extend)`
+- Where: `crates/myosu-chain/node/src/rpc.rs` plus existing node event/query
+  surfaces
 - How: Subscription-based RPC for the signal log in operational screens:
 
   ```rust

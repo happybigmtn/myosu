@@ -26,7 +26,7 @@ fn test_remove_stake_fees_tao() {
             &sn.hotkeys[0],
             stake_amount,
         );
-        SubtensorModule::add_balance_to_coldkey_account(&sn.coldkey, TAO);
+        GameSolver::add_balance_to_coldkey_account(&sn.coldkey, TAO);
 
         // Simulate stake removal to get how much TAO should we get for unstaked Alpha
         let (expected_unstaked_tao, _swap_fee) =
@@ -34,12 +34,12 @@ fn test_remove_stake_fees_tao() {
 
         // Remove stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_unstaked: unstake_amount,
@@ -57,7 +57,7 @@ fn test_remove_stake_fees_tao() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -93,19 +93,19 @@ fn test_remove_stake_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Remove stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_unstaked: unstake_amount,
@@ -123,7 +123,7 @@ fn test_remove_stake_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -154,20 +154,20 @@ fn test_remove_stake_root() {
 
         // Root stake
         add_network(netuid, 10);
-        pallet_subtensor::Owner::<Test>::insert(hotkey, coldkey);
-        pallet_subtensor::SubtokenEnabled::<Test>::insert(NetUid::from(0), true);
+        pallet_game_solver::Owner::<Test>::insert(hotkey, coldkey);
+        pallet_game_solver::SubtokenEnabled::<Test>::insert(NetUid::from(0), true);
         setup_stake(netuid, &coldkey, &hotkey, stake_amount);
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Remove stake
         let balance_before = Balances::free_balance(coldkey);
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey,
             netuid,
             amount_unstaked: unstake_amount.into(),
@@ -186,7 +186,7 @@ fn test_remove_stake_root() {
 
         let final_balance = Balances::free_balance(coldkey);
         let alpha_after =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
 
         let actual_tao_fee = balance_before + unstake_amount - final_balance;
         let actual_alpha_fee =
@@ -213,20 +213,20 @@ fn test_remove_stake_completely_root() {
 
         // Root stake
         add_network(netuid, 10);
-        pallet_subtensor::Owner::<Test>::insert(hotkey, coldkey);
-        pallet_subtensor::SubtokenEnabled::<Test>::insert(NetUid::from(0), true);
+        pallet_game_solver::Owner::<Test>::insert(hotkey, coldkey);
+        pallet_game_solver::SubtokenEnabled::<Test>::insert(NetUid::from(0), true);
         setup_stake(netuid, &coldkey, &hotkey, stake_amount);
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Remove stake
         let balance_before = Balances::free_balance(coldkey);
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey,
             netuid,
             amount_unstaked: unstake_amount.into(),
@@ -245,7 +245,7 @@ fn test_remove_stake_completely_root() {
 
         let final_balance = Balances::free_balance(coldkey);
         let alpha_after =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
 
         assert_eq!(alpha_after, 0.into());
         assert!(final_balance > balance_before);

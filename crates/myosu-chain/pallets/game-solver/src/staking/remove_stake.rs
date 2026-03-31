@@ -1,7 +1,8 @@
 use super::*;
+use crate::Stage0SwapInterface;
 use substrate_fixed::types::U96F32;
 use subtensor_runtime_common::{AlphaCurrency, Currency, NetUid, TaoCurrency};
-use subtensor_swap_interface::{Order, SwapHandler};
+use subtensor_swap_interface::Order;
 
 impl<T: Config> Pallet<T> {
     /// ---- The implementation for the extrinsic remove_stake: Removes stake from a hotkey account and adds it onto a coldkey.
@@ -72,7 +73,7 @@ impl<T: Config> Pallet<T> {
             &coldkey,
             netuid,
             alpha_unstaked,
-            T::SwapInterface::min_price(),
+            T::SwapInterface::stage0_min_price(),
             false,
         )?;
 
@@ -167,7 +168,7 @@ impl<T: Config> Pallet<T> {
                     &coldkey,
                     netuid,
                     alpha_unstaked,
-                    T::SwapInterface::min_price(),
+                    T::SwapInterface::stage0_min_price(),
                     false,
                 )?;
 
@@ -260,7 +261,7 @@ impl<T: Config> Pallet<T> {
                         &coldkey,
                         netuid,
                         alpha_unstaked,
-                        T::SwapInterface::min_price(),
+                        T::SwapInterface::stage0_min_price(),
                         false,
                     )?;
 
@@ -279,7 +280,7 @@ impl<T: Config> Pallet<T> {
             &coldkey,
             NetUid::ROOT,
             total_tao_unstaked,
-            T::SwapInterface::max_price(),
+            T::SwapInterface::stage0_max_price(),
             false, // no limit for Root subnet
             false,
         )?;
@@ -405,8 +406,9 @@ impl<T: Config> Pallet<T> {
 
         // Use reverting swap to estimate max limit amount
         let order = GetTaoForAlpha::<T>::with_amount(u64::MAX);
-        let result = T::SwapInterface::swap(netuid.into(), order, limit_price.into(), false, true)
-            .map(|r| r.amount_paid_in.saturating_add(r.fee_paid))?;
+        let result =
+            T::SwapInterface::stage0_swap_alpha_for_tao(netuid, order, limit_price, false, true)
+                .map(|r| r.amount_paid_in.saturating_add(r.fee_paid))?;
 
         if !result.is_zero() {
             Ok(result)
@@ -463,7 +465,7 @@ impl<T: Config> Pallet<T> {
                     .saturating_to_num::<u64>();
 
                 owner_emission_tao = if owner_alpha_u64 > 0 {
-                    let cur_price: U96F32 = T::SwapInterface::current_alpha_price(netuid.into());
+                    let cur_price: U96F32 = T::SwapInterface::stage0_current_alpha_price(netuid);
                     let val_u64 = U96F32::from_num(owner_alpha_u64)
                         .saturating_mul(cur_price)
                         .floor()

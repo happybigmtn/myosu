@@ -1,0 +1,21 @@
+[package]
+name = "myosu-keys"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+crypto_secretbox = "0.1.1"
+hex.workspace = true
+scrypt = { version = "0.11.0", default-features = false, features = ["std"] }
+serde = { workspace = true, features = ["alloc"] }
+serde_json = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["std"] }
+thiserror.workspace = true
+toml_edit.workspace = true
+
+[lints]
+workspace = true

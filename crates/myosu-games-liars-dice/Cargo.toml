@@ -1,0 +1,19 @@
+[package]
+name = "myosu-games-liars-dice"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Minimal Liar's Dice state and TUI surfaces for myosu"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+myosu-games = { path = "../myosu-games" }
+myosu-tui = { path = "../myosu-tui" }
+bincode = "1.3"
+rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-transport = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+ratatui = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

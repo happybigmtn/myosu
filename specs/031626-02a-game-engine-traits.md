@@ -2,7 +2,7 @@
 
 Source: Master spec AC-GE-01, robopoker v1.0.0 trait analysis
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: none (pure library, no chain dependency)
 Blocked-by: robopoker fork with `serde` feature for rbp-nlhe (see Blocking Prerequisites)
 
@@ -34,13 +34,14 @@ Current state:
 - robopoker's `Profile` trait has `exploitability()` and
   `averaged_distribution()` methods built in
 - robopoker has a Rock-Paper-Scissors reference implementation in `rps/`
-- No myosu game abstraction exists
+- `crates/myosu-games/` already exists as the live shared trait and registry
+  crate used by the stage-0 repo
 
 This spec adds:
-- `myosu-games` crate with selective re-exports of robopoker's trait system
-- Serialization layer for network transport of game states and strategies
-- Game registry with typed game parameters for runtime game selection
-- Upstream robopoker PR adding serde derives to NLHE types
+- the truthful contract for the shared game abstraction layer that now exists
+- any remaining serialization or trait-surface hardening needed on top of the
+  live `myosu-games` crate
+- the ownership map for the actual registry and trait modules in-repo
 
 ## Blocking Prerequisites
 
@@ -102,8 +103,14 @@ Out of scope:
 
 ## Current State
 
-- `crates/myosu-games/src/lib.rs` — stub, compiles but empty
-- `crates/myosu-games/Cargo.toml` — exists with basic deps, no robopoker
+- `crates/myosu-games/src/lib.rs` — live crate root re-exporting the shared
+  registry and trait surface
+- `crates/myosu-games/src/traits.rs` — live selective re-exports plus shared
+  `GameConfig`, `GameType`, `GameParams`, and strategy query/response types
+- `crates/myosu-games/src/registry.rs` — live game-descriptor and registry
+  surface
+- `crates/myosu-games/Cargo.toml` — live workspace member with the current
+  stage-0 game-abstraction dependencies
 - robopoker v1.0.0 at `/home/r/coding/robopoker` with:
   - `rbp-mccfr/src/state/game.rs` — `CfrGame` trait (Copy + Send + Sync)
   - `rbp-mccfr/src/state/edge.rs` — `CfrEdge` trait (Copy + Hash + Ord)
@@ -138,12 +145,11 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Re-export traits | New | crates/myosu-games/src/traits.rs |
-| Serialization layer | New | crates/myosu-games/src/wire.rs |
-| Game registry | New | crates/myosu-games/src/registry.rs |
-| Exploitability fn | New | crates/myosu-games/src/exploit.rs |
-| Config types | New | crates/myosu-games/src/config.rs |
-| Crate root | Extend | crates/myosu-games/src/lib.rs |
+| Re-export traits + shared config types | Implemented | crates/myosu-games/src/traits.rs |
+| Game registry | Implemented | crates/myosu-games/src/registry.rs |
+| Crate root | Implemented | crates/myosu-games/src/lib.rs |
+| Dedicated wire module | Not yet split out | shared strategy/query types currently live in `traits.rs` |
+| Dedicated exploit/config modules | Not yet split out | current shared types live in `traits.rs` instead |
 
 ---
 

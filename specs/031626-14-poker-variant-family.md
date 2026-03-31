@@ -1,8 +1,12 @@
 # Specification: Poker Variant Family — NLHE 6-max, PLO, Short Deck, Tournament/ICM
 
+Historical note: this is a future expansion spec built on the live NLHE HU
+wrapper, not a current stage-0 implementation target. The repo does not yet
+ship dedicated six-max, PLO, short-deck, or tournament modules.
+
 Source: OS.md games 2-5, DESIGN.md 9.10-9.13
 Status: Draft
-Date: 2026-03-17
+Date: 2026-03-30
 Depends-on: PE-01..04 (NLHE HU engine), AP-01..03 (abstraction pipeline), GT-01..05 (traits)
 Blocks: Stage 1 game expansion
 
@@ -22,6 +26,17 @@ and MCCFR solver approach, but each introduces distinct challenges:
 These four represent the $6B+ poker solver market. PioSolver charges $250+
 for NLHE. MonkerSolver's entire business is PLO. No ICM-aware CFR solver
 exists. Short Deck has limited solver support.
+
+## Current Truth
+
+- the current poker surface lives in `crates/myosu-games-poker/` and remains
+  centered on NLHE HU plus shared solver/artifact/renderer utilities
+- no variant-specific modules such as `sixmax.rs`, `plo.rs`, `shortdeck.rs`, or
+  `tournament.rs` exist yet
+- the current renderer reference remains
+  `crates/myosu-games-poker/src/renderer.rs`
+- this spec is therefore a future family-expansion plan layered on the current
+  heads-up poker base
 
 ## Architecture
 
@@ -260,7 +275,8 @@ Out of scope:
 
 ### AC-PV-05: Shared Poker Abstraction Extensions
 
-- Where: `crates/myosu-abstraction/src/ (extend)`
+- Where: future shared abstraction surface, with current adjacent artifact
+  reality in `crates/myosu-games-poker/src/artifacts.rs`
 - How: Extend the abstraction pipeline (AP-01..03) for variant-specific needs:
 
   **PLO hand clustering**: C(52,4) = 270,725 starting hands. Use Earth
@@ -294,7 +310,8 @@ Out of scope:
 
 ### AC-PV-06: Variant TUI Renderers
 
-- Where: `crates/myosu-tui/src/games/ (new)`
+- Where: future game-specific renderer surfaces, with current adjacent poker
+  reference in `crates/myosu-games-poker/src/renderer.rs`
 - How: Implement `GameRenderer` for each variant per DESIGN.md mockups:
 
   | Variant | DESIGN.md section | Key rendering difference |

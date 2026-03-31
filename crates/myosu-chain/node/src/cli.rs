@@ -1,10 +1,9 @@
 use crate::{
     client::{FullBackend, FullClient},
     consensus::{AuraConsensus, BabeConsensus},
-    ethereum::{EthConfiguration, FrontierBackend},
     service::new_chain_ops,
 };
-use node_subtensor_runtime::opaque::Block;
+use myosu_chain_runtime::opaque::Block;
 use sc_cli::RunCmd;
 use sc_consensus::BasicQueue;
 use sc_service::{Configuration, TaskManager};
@@ -14,6 +13,18 @@ use std::sync::Arc;
 pub struct Cli {
     #[command(subcommand)]
     pub subcommand: Option<Subcommand>,
+
+    /// Run a bounded local devnet smoke test and exit.
+    #[arg(long)]
+    pub smoke_test: bool,
+
+    /// Run the full stage-0 local miner/validator loop smoke test and exit.
+    #[arg(long)]
+    pub stage0_local_loop_smoke: bool,
+
+    /// Run a bounded live smoke that registers two subnets back-to-back.
+    #[arg(long)]
+    pub dual_register_smoke: bool,
 
     #[clap(flatten)]
     pub run: RunCmd,
@@ -30,9 +41,6 @@ pub struct Cli {
     /// TODO: Remove this after the Babe transition has settled.
     #[arg(long, value_enum, ignore_case = true, default_value_t=SupportedConsensusMechanism::default())]
     pub initial_consensus: SupportedConsensusMechanism,
-
-    #[command(flatten)]
-    pub eth: EthConfiguration,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -98,20 +106,18 @@ impl SupportedConsensusMechanism {
     pub fn new_chain_ops(
         &self,
         config: &mut Configuration,
-        eth_config: &EthConfiguration,
     ) -> Result<
         (
             Arc<FullClient>,
             Arc<FullBackend>,
             BasicQueue<Block>,
             TaskManager,
-            FrontierBackend,
         ),
         sc_service::Error,
     > {
         match self {
-            SupportedConsensusMechanism::Aura => new_chain_ops::<AuraConsensus>(config, eth_config),
-            SupportedConsensusMechanism::Babe => new_chain_ops::<BabeConsensus>(config, eth_config),
+            SupportedConsensusMechanism::Aura => new_chain_ops::<AuraConsensus>(config),
+            SupportedConsensusMechanism::Babe => new_chain_ops::<BabeConsensus>(config),
         }
     }
 }

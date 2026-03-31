@@ -53,6 +53,7 @@ impl GameConfig {
 /// New game types can be registered on-chain using a unique string identifier.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum GameType {
     /// No-Limit Hold'em heads-up (2 players)
     NlheHeadsUp,
@@ -139,6 +140,7 @@ impl GameType {
 /// allowing extensibility via the `Custom` variant for new game types.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case", tag = "game", content = "params")]
+#[non_exhaustive]
 pub enum GameParams {
     /// No-Limit Hold'em parameters
     NlheHeadsUp {
@@ -222,6 +224,7 @@ impl<E: Serialize> StrategyResponse<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn reexports_compile() {
@@ -292,6 +295,15 @@ mod tests {
             let recovered = GameType::from_bytes(&bytes).expect("should parse");
             assert_eq!(gt, recovered);
         }
+    }
+
+    #[test]
+    fn game_type_unicode_custom_roundtrips() {
+        let game_type = GameType::Custom("liars_dice_묘수".to_string());
+        let bytes = game_type.to_bytes();
+        let recovered = GameType::from_bytes(&bytes).expect("unicode custom type should parse");
+
+        assert_eq!(recovered, game_type);
     }
 
     #[test]
@@ -367,5 +379,91 @@ mod tests {
         assert_eq!(response.probability_for(&'b'), 0.3);
         assert_eq!(response.probability_for(&'c'), 0.2);
         assert_eq!(response.probability_for(&'z'), 0.0); // not present
+    }
+
+    #[test]
+    fn strategy_response_zero_probability_edges_can_still_be_valid() {
+        let response = StrategyResponse::new(vec![('a', 0.0), ('b', 1.0), ('c', 0.0)]);
+
+        assert!(response.is_valid());
+        assert_eq!(response.probability_for(&'a'), 0.0);
+        assert_eq!(response.probability_for(&'b'), 1.0);
+        assert_eq!(response.probability_for(&'c'), 0.0);
+    }
+
+    fn arb_game_type() -> impl Strategy<Value = GameType> {
+        prop_oneof![
+            Just(GameType::NlheHeadsUp),
+            Just(GameType::NlheSixMax),
+            Just(GameType::LiarsDice),
+            "[a-z0-9_]{1,16}".prop_map(GameType::Custom),
+        ]
+    }
+
+    fn arb_game_config() -> impl Strategy<Value = GameConfig> {
+        prop_oneof![
+            (1u32..=10_000u32, proptest::option::of(0u32..=100u32)).prop_map(
+                |(stack_bb, ante_bb)| GameConfig::new(
+                    GameType::NlheHeadsUp,
+                    2,
+                    GameParams::NlheHeadsUp { stack_bb, ante_bb },
+                ),
+            ),
+            (1u8..=8u8, 2u8..=20u8).prop_map(|(num_dice, num_faces)| {
+                GameConfig::new(
+                    GameType::LiarsDice,
+                    2,
+                    GameParams::LiarsDice {
+                        num_dice,
+                        num_faces,
+                    },
+                )
+            }),
+            "[a-z0-9_]{1,16}".prop_map(|name| {
+                GameConfig::new(
+                    GameType::Custom(name.clone()),
+                    2,
+                    GameParams::Custom(serde_json::json!({ "game": name })),
+                )
+            }),
+        ]
+    }
+
+    fn arb_strategy_response() -> impl Strategy<Value = StrategyResponse<String>> {
+        prop::collection::vec(("[a-z]{1,12}", 0.0f64..=1.0f64), 0..=8).prop_map(|actions| {
+            let actions = actions
+                .into_iter()
+                .map(|(action, probability)| (action, probability as Probability))
+                .collect();
+            StrategyResponse::new(actions)
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn serialization_roundtrip_game_type(game_type in arb_game_type()) {
+            let bytes = game_type.to_bytes();
+            let decoded = GameType::from_bytes(&bytes);
+            prop_assert_eq!(decoded, Some(game_type));
+        }
+
+        #[test]
+        fn serialization_roundtrip_game_config(config in arb_game_config()) {
+            let json = serde_json::to_string(&config).expect("config should serialize");
+            let decoded: GameConfig =
+                serde_json::from_str(&json).expect("config should deserialize");
+            prop_assert_eq!(decoded, config);
+        }
+
+        #[test]
+        fn serialization_roundtrip_strategy_response(
+            response in arb_strategy_response()
+        ) {
+            let json = serde_json::to_string(&response)
+                .expect("response should serialize");
+            let decoded: StrategyResponse<String> =
+                serde_json::from_str(&json).expect("response should deserialize");
+            prop_assert_eq!(decoded, response);
+        }
     }
 }

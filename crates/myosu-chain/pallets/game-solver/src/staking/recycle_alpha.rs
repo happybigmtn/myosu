@@ -1,5 +1,6 @@
 use super::*;
 use crate::{Error, system::ensure_signed};
+use sp_runtime::traits::Zero;
 use subtensor_runtime_common::{AlphaCurrency, NetUid};
 
 impl<T: Config> Pallet<T> {
