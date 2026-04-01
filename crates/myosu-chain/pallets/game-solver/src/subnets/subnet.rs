@@ -81,9 +81,7 @@ impl<T: Config> Pallet<T> {
     ///
     /// * `bool` - `true` if registrations are allowed for the subnet, `false` otherwise.
     pub fn is_registration_allowed(netuid: NetUid) -> bool {
-        Self::get_subnet_hyperparams(netuid)
-            .map(|params| params.registration_allowed)
-            .unwrap_or(false)
+        Self::if_subnet_exist(netuid) && Self::get_network_registration_allowed(netuid)
     }
 
     /// Facilitates user registration of a new subnetwork.
@@ -134,10 +132,13 @@ impl<T: Config> Pallet<T> {
         );
 
         // --- 4. Rate limit for network registrations.
-        ensure!(
-            TransactionType::RegisterNetwork.passes_rate_limit::<T>(&coldkey),
-            Error::<T>::NetworkTxRateLimitExceeded
+        let network_rate_limit = TransactionType::RegisterNetwork.rate_limit::<T>();
+        let network_last_registered = TransactionType::RegisterNetwork.last_block::<T>(&coldkey);
+        let passes_rate_limit = TransactionType::RegisterNetwork.passes_rate_limit::<T>(&coldkey);
+        log::info!(
+            "register_network_check coldkey={coldkey:?} current_block={current_block} network_rate_limit={network_rate_limit} network_last_registered={network_last_registered} passes_rate_limit={passes_rate_limit}"
         );
+        ensure!(passes_rate_limit, Error::<T>::NetworkTxRateLimitExceeded);
 
         // --- 5. Check if we need to prune a subnet (if at SubnetLimit).
         //         But do not prune yet; we only do it after all checks pass.

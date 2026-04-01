@@ -1,0 +1,12 @@
+version = 1
+graph = "../../workflows/implement/workflow.fabro"
+goal = """
+Implement and verify a games:traits slice.
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"

@@ -10,7 +10,7 @@ crate-type = ["lib"]
 
 [dependencies]
 serde = { workspace = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["alloc"] }
 thiserror = { workspace = true }
 rand = { workspace = true }
 
@@ -19,4 +19,5 @@ rbp-core = { git = "https://github.com/happybigmtn/robopoker", rev = "0471631014
 rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
 
 [dev-dependencies]
+proptest = "1"
 tokio-test = { workspace = true }

@@ -2,7 +2,7 @@
 
 Source: Master spec AC-VL-01, chain pallet + poker engine analysis
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: GS-01..09 (pallet accepts weights), PE-01..04 (exploitability computable), MN-01..05 (miners serve axons)
 
 ## Purpose
@@ -24,18 +24,19 @@ must produce identical scores within floating-point tolerance.
 ## Whole-System Goal
 
 Current state:
-- Chain pallet accepts `set_weights` and `commit_weights` extrinsics (GS-04)
-- Poker engine computes exploitability (PE-04)
-- Miners serve strategy queries via HTTP axon (MN-03)
-- No validator binary exists
+- Chain pallet and shared client already support the stage-0 weight path
+- Poker scoring and checkpoint-backed query surfaces are already live
+- Miners already expose the stage-0 HTTP axon surface
+- `myosu-validator` exists today, but it is still a bootstrap-oriented
+  validator rather than the full periodic multi-miner oracle loop described by
+  this spec
 
-This spec adds:
-- `myosu-validator` binary crate
-- Periodic miner evaluation loop
-- Exploitability-based scoring
-- Weight vector submission (direct and commit-reveal)
-- Deterministic test position generation
-- Chain staking for voting power
+This spec defines the remaining work to turn the existing validator bootstrap
+crate into the fuller long-running oracle described here:
+- periodic miner discovery and evaluation
+- more explicit deterministic position generation
+- cleaner scoring and submission decomposition
+- a stronger end-to-end validator loop beyond the current stage-0 bootstrap
 
 If all ACs land:
 - `myosu-validator --chain ws://localhost:9944 --subnet 1 --key //Bob` starts evaluating miners
@@ -84,37 +85,40 @@ Out of scope:
 
 ## Current State
 
-- No validator code exists
-- `poker_exploitability()` and `remote_poker_exploitability()` available (PE-04)
-- Chain pallet accepts `set_weights`, `commit_weights`, `reveal_weights`, `add_stake` (GS-*)
-- Miners serve `POST /strategy` and `GET /health` (MN-03)
+- `crates/myosu-validator/` already exists with `cli.rs`, `chain.rs`, and
+  `validation.rs`
+- The current binary can probe the chain, register, ensure validator permit
+  readiness, score checkpoint-backed strategy responses, and submit stage-0
+  weights
+- The missing gap is not crate creation; it is the fuller always-on
+  multi-miner evaluation loop and the more decomposed module structure
+  described by this spec
 
 ## What Already Exists
 
 | Sub-problem | Existing code / flow | Reuse / extend / replace | Why |
 |-------------|----------------------|--------------------------|-----|
-| Exploitability | `poker_exploitability()` (PE-04) | reuse | Core scoring function |
-| Chain client | same as miner (subxt/RPC) | reuse | Shared chain interaction library |
-| Weight submission | `set_weights` extrinsic (GS-04) | reuse | On-chain weight storage |
-| Commit-reveal | `commit_weights`/`reveal_weights` (GS-04) | reuse | Anti-gaming mechanism |
-| Miner discovery | `Axons` storage query (GS-07) | reuse | On-chain miner registry |
+| CLI | `crates/myosu-validator/src/cli.rs` | extend | Bootstrap flags already exist |
+| Chain client | `crates/myosu-validator/src/chain.rs` + `myosu-chain-client` | extend | Registration, permit, and weight submission already exist |
+| Scoring | `crates/myosu-validator/src/validation.rs` | extend | Checkpoint-backed validation and reporting already exist |
+| Weight submission | `crates/myosu-validator/src/chain.rs` | extend | Stage-0 weight path already exists |
+| Miner discovery / live querying | `crates/myosu-play/src/discovery.rs` and miner HTTP surface as reference | extend | The repo already has a proven live-query seam to build on |
 
 ## Ownership Map
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| CLI + main | New | crates/myosu-validator/src/main.rs |
-| Chain client | New (shared with miner) | crates/myosu-validator/src/chain.rs |
-| Miner evaluator | New | crates/myosu-validator/src/evaluator.rs |
-| Scoring engine | New | crates/myosu-validator/src/scoring.rs |
-| Test positions | New | crates/myosu-validator/src/positions.rs |
-| Weight submitter | New | crates/myosu-validator/src/submitter.rs |
+| CLI + main | Live | crates/myosu-validator/src/main.rs, crates/myosu-validator/src/cli.rs |
+| Chain client | Live | crates/myosu-validator/src/chain.rs + crates/myosu-chain-client/ |
+| Validation and scoring | Partially live | crates/myosu-validator/src/validation.rs |
+| Position generation | Draft future split | currently folded into validation design, not a dedicated module yet |
+| Weight submitter | Partially live | crates/myosu-validator/src/chain.rs |
 
 ---
 
 ### AC-VO-01: CLI and Chain Registration
 
-- Where: `crates/myosu-validator/src/main.rs (new)`, `src/chain.rs (new)`
+- Where: `crates/myosu-validator/src/main.rs`, `crates/myosu-validator/src/chain.rs`
 - How: Binary with clap CLI:
   ```
   myosu-validator --chain ws://localhost:9944 --subnet 1 --key //Bob --stake 10000
@@ -132,7 +136,7 @@ Out of scope:
 
 ### AC-VO-02: Miner Discovery and Query
 
-- Where: `crates/myosu-validator/src/evaluator.rs (new)`
+- Where: future split from `crates/myosu-validator/src/validation.rs`
 - How: Query the chain for all registered miners (neurons with axon endpoints)
   on the subnet. For each miner:
   1. Read `Axons[subnet][hotkey]` to get IP:port
@@ -155,7 +159,7 @@ Out of scope:
 
 ### AC-VO-03: Deterministic Test Position Generation
 
-- Where: `crates/myosu-validator/src/positions.rs (new)`
+- Where: future split from `crates/myosu-validator/src/validation.rs`
 - How: Generate a set of N test positions (game states) for miner evaluation.
   Positions must be:
   1. **Deterministic** given a seed — same seed → same positions (INV-003)
@@ -197,7 +201,7 @@ Out of scope:
 
 ### AC-VO-04: Exploitability Scoring
 
-- Where: `crates/myosu-validator/src/scoring.rs (new)`
+- Where: future split from `crates/myosu-validator/src/validation.rs`
 - How: For each miner, compute a score from their strategy responses:
 
   ```rust
@@ -234,7 +238,7 @@ Out of scope:
 
 ### AC-VO-05: Weight Submission (Direct and Commit-Reveal)
 
-- Where: `crates/myosu-validator/src/submitter.rs (new)`
+- Where: future split from `crates/myosu-validator/src/chain.rs`
 - How: After scoring all miners, construct and submit the weight vector:
 
   **Direct mode** (simpler, for devnet):

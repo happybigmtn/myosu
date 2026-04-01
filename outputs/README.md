@@ -20,3 +20,37 @@ Implementation-lane convention:
 
 Fabro run branches and `.fabro` runtime state remain execution-plane details.
 `outputs/` is the first durable control-plane artifact surface.
+
+## Current Bootstrap Roots
+
+The currently promoted bootstrap program is
+`fabro/programs/myosu-bootstrap.yaml`. Its output roots are:
+
+- `outputs/games/traits/`
+- `outputs/tui/shell/`
+- `outputs/chain/runtime/`
+- `outputs/chain/pallet/`
+
+Those four roots are the current bootstrap-first deliverables referenced by the
+live operator docs.
+
+## Secondary Roots
+
+Other roots under `outputs/` are still meaningful curated artifacts, but they
+belong to broader secondary program manifests or follow-on work rather than the
+current bootstrap entrypoint. Examples:
+
+- `outputs/play/tui/`
+- `outputs/agent/experience/`
+- `outputs/games/poker-engine/`
+- `outputs/games/multi-game/`
+- `outputs/sdk/core/`
+- `outputs/miner/service/`
+- `outputs/validator/oracle/`
+- `outputs/security/audit/`
+- `outputs/operations/scorecard/`
+- `outputs/learning/improvement/`
+- `outputs/strategy/planning/`
+
+Treat those as secondary portfolio surfaces unless and until the operator
+explicitly widens the promoted control plane.

@@ -1,0 +1,46 @@
+version: 1
+program: myosu-recurring
+target_repo: ../..
+state_path: ../../.raspberry/myosu-recurring-state.json
+max_parallel: 2
+units:
+- id: strategy-planning
+  lane_key: strategy:planning
+  title: Strategy planning
+  output_root: ../../outputs/strategy/planning
+  run_config: ../run-configs/maintenance/strategy-planning.toml
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+- id: security-audit
+  lane_key: security:audit
+  title: Security audit
+  output_root: ../../outputs/security/audit
+  run_config: ../run-configs/maintenance/security-audit.toml
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+- id: operations-scorecard
+  lane_key: operations:scorecard
+  title: Operations scorecard
+  output_root: ../../outputs/operations/scorecard
+  run_config: ../run-configs/maintenance/operations-scorecard.toml
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+- id: learning-improvement
+  lane_key: learning:improvement
+  title: Learning improvement
+  output_root: ../../outputs/learning/improvement
+  run_config: ../run-configs/maintenance/learning-improvement.toml
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md

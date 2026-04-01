@@ -163,4 +163,5 @@ runtime-benchmarks = [
 	"pallet-timestamp/runtime-benchmarks"
 ]
 pow-faucet = []
+fast-blocks = ["fast-runtime"]
 fast-runtime = ["subtensor-runtime-common/fast-runtime"]

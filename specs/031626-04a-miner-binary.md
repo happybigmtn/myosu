@@ -2,7 +2,7 @@
 
 Source: Master spec AC-MN-01, robopoker solver + chain pallet analysis
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: GS-01..09 (pallet accepts registrations + weights), PE-01..04 (poker solver works)
 
 ## Purpose
@@ -22,16 +22,19 @@ the training state.
 ## Whole-System Goal
 
 Current state:
-- Chain pallet (GS-*) accepts neuron registration, weight submission, axon serving
-- Poker engine (PE-*) provides PokerSolver with training and query interfaces
-- No miner binary exists
+- Chain pallet and shared client already support stage-0 miner bootstrap
+  actions such as registration and axon advertisement
+- Poker advice artifacts, checkpoint-backed strategy queries, and bounded local
+  training are already live in the repo
+- `myosu-miner` exists today, but it is still a bootstrap-style service rather
+  than the full always-training daemon described by this spec
 
-This spec adds:
-- `myosu-miner` binary crate
-- Chain client for registration and axon advertisement
-- Training loop running continuously in the background
-- HTTP axon endpoint serving strategy queries
-- Checkpoint management for training persistence
+This spec defines the remaining work to turn the existing bootstrap-style
+`myosu-miner` crate into the fuller long-running miner described here:
+- stronger continuous training orchestration
+- durable checkpoint lifecycle
+- stable HTTP axon serving
+- cleaner on-chain advertisement and restart behavior
 
 If all ACs land:
 - `myosu-miner --chain ws://localhost:9944 --subnet 1 --key //Alice` registers and starts training
@@ -76,19 +79,23 @@ Out of scope:
 
 ## Current State
 
-- No miner code exists
-- `myosu-games-poker` provides `PokerSolver` (PE-01)
-- Chain pallet provides `register_neuron`, `serve_axon` extrinsics (GS-03, GS-07)
+- `crates/myosu-miner/` already exists with `cli.rs`, `chain.rs`,
+  `training.rs`, `strategy.rs`, and `axon.rs`
+- The current binary can probe the chain, optionally register, optionally
+  advertise an axon, run a bounded training batch, serve a single strategy
+  query from a checkpoint, or start an HTTP axon server
+- The missing gap is not crate creation; it is evolving this bootstrap surface
+  into the fuller continuously improving miner described by this spec
 
 ## What Already Exists
 
 | Sub-problem | Existing code / flow | Reuse / extend / replace | Why |
 |-------------|----------------------|--------------------------|-----|
-| Solver training | `PokerSolver::train()` (PE-01) | reuse | MCCFR training loop |
-| Strategy queries | `PokerSolver::handle_query()` (PE-02) | reuse | Query handler |
-| Chain interaction | subxt or jsonrpsee | new | Need RPC client for extrinsics |
-| HTTP server | actix-web or axum | new | Axon endpoint |
-| CLI | clap | new | Argument parsing |
+| CLI | `crates/myosu-miner/src/cli.rs` | extend | Argument parsing and stage-0 bootstrap flags already exist |
+| Chain interaction | `crates/myosu-miner/src/chain.rs` + `myosu-chain-client` | extend | Probe/register/serve paths already exist |
+| Training | `crates/myosu-miner/src/training.rs` | extend | Bounded local training batch and checkpoint writing already exist |
+| Strategy queries | `crates/myosu-miner/src/strategy.rs` | extend | Checkpoint-backed single-query serving already exists |
+| HTTP server | `crates/myosu-miner/src/axon.rs` | extend | Stage-0 `/health` and `/strategy` surface already exists |
 
 ## Non-goals
 
@@ -101,17 +108,18 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| CLI + main | New | crates/myosu-miner/src/main.rs |
-| Chain client | New (shared crate) | crates/myosu-chain-client/ (shared with validator + play) |
-| Training loop | New | crates/myosu-miner/src/training.rs |
-| Axon server | New | crates/myosu-miner/src/axon.rs |
-| Checkpoint mgmt | New | crates/myosu-miner/src/checkpoint.rs |
+| CLI + main | Live | crates/myosu-miner/src/main.rs, crates/myosu-miner/src/cli.rs |
+| Chain client | Live | crates/myosu-miner/src/chain.rs + crates/myosu-chain-client/ |
+| Training loop | Partially live | crates/myosu-miner/src/training.rs |
+| Strategy serving | Live | crates/myosu-miner/src/strategy.rs |
+| Axon server | Live | crates/myosu-miner/src/axon.rs |
+| Checkpoint mgmt | Partially live | crates/myosu-miner/src/training.rs, crates/myosu-miner/src/strategy.rs |
 
 ---
 
 ### AC-MN-01: CLI and Chain Registration
 
-- Where: `crates/myosu-miner/src/main.rs (new)`, `src/chain.rs (new)`
+- Where: `crates/myosu-miner/src/main.rs`, `crates/myosu-miner/src/chain.rs`
 - How: Binary with clap CLI:
   ```
   myosu-miner --chain ws://localhost:9944 --subnet 1 --key //Alice --port 8080 --data-dir ./miner-data
@@ -141,7 +149,7 @@ Out of scope:
 
 ### AC-MN-02: Background Training Loop
 
-- Where: `crates/myosu-miner/src/training.rs (new)`
+- Where: `crates/myosu-miner/src/training.rs`
 - How: Spawn a background task (tokio::spawn) that runs MCCFR training
   continuously:
   ```rust
@@ -198,7 +206,7 @@ Out of scope:
 
 ### AC-MN-03: HTTP Axon Server
 
-- Where: `crates/myosu-miner/src/axon.rs (new)`
+- Where: `crates/myosu-miner/src/axon.rs`
 - How: HTTP server (axum or actix-web) on the configured port:
 
   `POST /strategy` — accepts `WireStrategy` query, returns `WireStrategy` response.

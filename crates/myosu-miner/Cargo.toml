@@ -1,0 +1,27 @@
+[package]
+name = "myosu-miner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+clap.workspace = true
+myosu-chain-client.workspace = true
+myosu-games-liars-dice = { path = "../myosu-games-liars-dice" }
+myosu-games-poker = { path = "../myosu-games-poker" }
+myosu-keys.workspace = true
+subtensor-runtime-common.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+myosu-games = { path = "../myosu-games" }
+rbp-cards = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-gameplay = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
+
+[lints]
+workspace = true

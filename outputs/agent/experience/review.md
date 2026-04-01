@@ -1,5 +1,8 @@
 # `agent:experience` Lane Review
 
+Historical note: this review predates the current `myosu-play` subcommand CLI.
+For the live Stage 0 surface, read `myosu-play --pipe` as `myosu-play pipe`.
+
 ## Judgment: **KEEP** — proceed to implementation-family workflow
 
 This lane is ready to move from specification into implementation. The source specs are
@@ -48,7 +51,7 @@ To consider this lane **proven**, the following evidence must be available:
 | Reflection prompt appears after hand | Pipe mode emits `HAND COMPLETE` + `reflect>`; empty line skips; non-empty line appears in journal |
 | `--narrate` produces board texture | Narrated output contains "dry" or "wet" or "connected"; same underlying `GameState` in both modes |
 | `--narrate` produces session arc | Narrated output contains stack trajectory or opponent history from context file |
-| Lobby presented without `--subnet` | `myosu-play --pipe` (no subnet) → lobby output → `info 1` → subnet detail output |
+| Lobby presented without `--subnet` | `myosu-play pipe` (no subnet) → lobby output → `info 1` → subnet detail output |
 | Spectator relay emits valid JSON | Connect to `~/.myosu/spectate/<id>.sock`; receive valid `GameEvent` JSON lines |
 | Spectator fog-of-war enforced at relay | Hole cards never appear in relay output during active play; only after `showdown` event |
 | Schema tests pass | `cargo test -p myosu-tui schema::tests` exits 0 |
@@ -76,7 +79,7 @@ past Slice 4 without confirming the `robopoker` dependency is resolved, because 
 ### 2. `myosu-play` Binary Does Not Exist (HIGH — blocks Slice 3+)
 
 The `myosu-play` binary is defined in `play:tui`'s spec and is the vehicle through which
-all `--pipe`, `--context`, `--narrate`, and `--spectate` flags are exposed. The binary
+the `pipe` mode plus future `--context`, `--narrate`, and spectator flags are exposed. The binary
 skeleton does not exist yet.
 
 **Impact on this lane**: Slices 3 (--context wiring), 6 (--narrate wiring), 7 (lobby),

@@ -2,15 +2,16 @@
 
 Source: PE-01 solver wrapper (needs populated NlheEncoder), RF-02 (non-DB constructor)
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: RF-01..02 (robopoker fork), PE-01 (poker solver wrapper)
 
 ## Purpose
 
-Define how miners generate the abstraction tables (Isomorphism → Abstraction
-mapping) needed to run MCCFR training. Currently robopoker's clustering
-pipeline requires PostgreSQL for storage. This spec defines a self-contained
-file-based pipeline that miners can run without database infrastructure.
+Define the remaining abstraction-generation boundary for poker artifacts.
+The repo no longer lacks file-based artifact loading: stage-0 poker already
+ships manifest-backed encoder directories and checkpoint-backed local advice.
+What is still missing is the standalone path that regenerates those artifacts
+from clustering logic instead of consuming a prebuilt bundle.
 
 The abstraction table is the bridge between concrete poker hands and abstract
 strategy buckets. Without it, the MCCFR encoder maps every hand to a default
@@ -19,19 +20,21 @@ bucket and the solver produces random strategies.
 ## Whole-System Goal
 
 Current state:
-- robopoker's clustering pipeline (`rbp-clustering`) generates
-  Isomorphism → Abstraction mappings via hierarchical k-means with
-  Earth Mover's Distance
-- Storage is PostgreSQL-only (`rbp-database`, `Hydrate` trait)
-- RF-02 adds `NlheEncoder::from_map()` but doesn't address HOW the map
-  is generated without a database
-- No self-contained clustering path exists
+- `crates/myosu-games-poker/src/artifacts.rs` already defines a manifest-backed
+  encoder artifact format and verified on-disk loader
+- `crates/myosu-miner/` and `crates/myosu-validator/` already consume
+  `--encoder-dir` as a stage-0 artifact input
+- `crates/myosu-games-poker/examples/bootstrap_artifacts.rs` already proves the
+  local bootstrap shape for encoder-dir plus query artifacts
+- the missing seam is now narrower: generating a full artifact directory from
+  clustering logic without relying on a database-heavy robopoker workflow
 
 This spec adds:
-- `myosu-cluster` binary that runs the full clustering pipeline
-- File-based output: binary abstraction table loadable by `NlheEncoder::from_file()`
-- Pre-computed abstraction artifact published as a versioned download
-- Miner bootstrap: download artifact OR compute locally
+- the standalone artifact-generation path that matches the loader contract the
+  repo already uses
+- a clearer boundary between "artifact consumption is live" and "artifact
+  regeneration is still future work"
+- the ownership map for the eventual clustering/export surface
 
 If all ACs land:
 - A miner can bootstrap with zero infrastructure: download abstraction table,
@@ -46,7 +49,7 @@ Still not solved here:
 - Incremental clustering (re-clustering when new isomorphisms are discovered)
 
 12-month direction:
-- Automated clustering pipeline as a malinka-driven task
+- Automated clustering pipeline as a Fabro/Raspberry-supervised artifact lane
 - Per-game abstraction artifacts published to a registry
 - Miners can specialize: run clustering for new games to discover novel buckets
 
@@ -76,10 +79,19 @@ Out of scope:
 
 ## Current State
 
-- `/home/r/coding/robopoker/crates/clustering/` — k-means with EMD on
-  equity distributions. Reads isomorphisms, clusters into ~500 buckets.
-- `/home/r/coding/robopoker/crates/autotrain/` — orchestrates clustering →
-  training pipeline. Requires PostgreSQL.
+- `/home/r/coding/myosu/crates/myosu-games-poker/src/artifacts.rs` — live
+  manifest-backed encoder artifact loading, hashing, and directory writing
+- `/home/r/coding/myosu/crates/myosu-games-poker/examples/bootstrap_artifacts.rs`
+  — live bootstrap example that writes a local encoder-dir and matching query
+  artifact
+- `/home/r/coding/myosu/crates/myosu-miner/src/training.rs` and
+  `/home/r/coding/myosu/crates/myosu-miner/src/strategy.rs` — live consumers of
+  encoder-dir-backed poker artifacts
+- `/home/r/coding/myosu/crates/myosu-validator/src/validation.rs` — live
+  validator-side artifact consumer
+- `/home/r/coding/robopoker/crates/clustering/` still contains the underlying
+  clustering logic, but the self-contained export path remains external to the
+  current repo
 - Clustering constants (from `rbp-core`):
   - Preflop: 169 isomorphisms → 169 buckets (1:1, no clustering)
   - Flop: ~1.3M isomorphisms → 128 buckets
@@ -92,12 +104,12 @@ Out of scope:
 
 | Sub-problem | Existing code / flow | Reuse / extend / replace | Why |
 |-------------|----------------------|--------------------------|-----|
-| K-means clustering | `rbp-clustering` crate | reuse | Proven algorithm with EMD metric |
-| Isomorphism exhaustion | `rbp-cards::Isomorphisms` | reuse | Enumerates all unique observations |
-| Equity computation | `rbp-cards::Evaluator` | reuse | Nanosecond hand evaluation |
-| EMD / optimal transport | `rbp-clustering` Sinkhorn/Greenkhorn | reuse | Distance metric for distributions |
-| Database storage | `rbp-database` + PostgreSQL | replace (with file) | Miners shouldn't need PostgreSQL |
-| Encoder loading | `NlheEncoder::hydrate()` | extend (add from_file) | RF-02 adds file-based constructor |
+| Artifact manifest and hashing | `myosu-games-poker::artifacts` | reuse | File-backed stage-0 contract already exists here |
+| Local bootstrap example | `myosu-games-poker/examples/bootstrap_artifacts.rs` | reuse | Current proof of encoder-dir creation shape |
+| Miner artifact loading | `myosu-miner` training and strategy paths | reuse | Stage-0 training already consumes encoder-dir |
+| Validator artifact loading | `myosu-validator::validation` | reuse | Stage-0 validation already consumes encoder-dir |
+| Clustering logic | `rbp-clustering` crate | extend via wrapper | The missing path is generation/export, not consumption |
+| Database-heavy orchestration | `rbp-database` + PostgreSQL | replace where possible | The future generator should not require stage-0 operators to run PostgreSQL |
 
 ## Non-goals
 
@@ -110,11 +122,12 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Cluster binary | New | crates/myosu-cluster/src/main.rs |
-| File writer | New | crates/myosu-cluster/src/writer.rs |
-| File reader | New (in robopoker fork) | rbp-nlhe/src/encoder.rs (from_file) |
-| Artifact manifest | New | artifacts/abstractions/manifest.json |
-| Download script | New | scripts/download-abstractions.sh |
+| Artifact manifest + loader | Implemented | crates/myosu-games-poker/src/artifacts.rs |
+| Bootstrap artifact example | Implemented | crates/myosu-games-poker/examples/bootstrap_artifacts.rs |
+| Miner artifact consumption | Implemented | crates/myosu-miner/src/training.rs, crates/myosu-miner/src/strategy.rs |
+| Validator artifact consumption | Implemented | crates/myosu-validator/src/validation.rs |
+| Standalone clustering/export binary | Planned | no canonical in-repo crate yet |
+| Published artifact distribution | Planned | no canonical distribution surface yet |
 
 ---
 

@@ -1,0 +1,47 @@
+version: 1
+program: myosu-platform
+target_repo: ../..
+state_path: ../../.raspberry/myosu-platform-state.json
+max_parallel: 1
+preconditions:
+- artifact: ../../outputs/games/traits/review.md
+units:
+- id: games-poker-engine
+  lane_key: games:poker-engine
+  title: NLHE game engine
+  output_root: ../../outputs/games/poker-engine
+  run_config: ../run-configs/review-promote/games-poker-engine.toml
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  success_when:
+  - artifact: spec
+  - artifact: review
+- id: games-multi-game
+  lane_key: games:multi-game
+  title: Multi-game architecture
+  output_root: ../../outputs/games/multi-game
+  run_config: ../run-configs/review-promote/games-multi-game.toml
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  success_when:
+  - artifact: spec
+  - artifact: review
+- id: sdk-core
+  lane_key: sdk:core
+  title: Game engine SDK
+  output_root: ../../outputs/sdk/core
+  run_config: ../run-configs/review-promote/sdk-core.toml
+  artifacts:
+  - id: spec
+    path: spec.md
+  - id: review
+    path: review.md
+  success_when:
+  - artifact: spec
+  - artifact: review

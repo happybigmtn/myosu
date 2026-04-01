@@ -1,9 +1,9 @@
 use super::*;
+use crate::Stage0SwapInterface;
 use safe_math::*;
 use sp_core::Get;
 use substrate_fixed::types::U64F64;
 use subtensor_runtime_common::{AlphaCurrency, Currency, NetUid, TaoCurrency};
-use subtensor_swap_interface::SwapHandler;
 
 impl<T: Config> Pallet<T> {
     /// Moves stake from one hotkey to another across subnets.
@@ -360,7 +360,7 @@ impl<T: Config> Pallet<T> {
                 origin_coldkey,
                 origin_netuid,
                 move_amount,
-                T::SwapInterface::min_price(),
+                T::SwapInterface::stage0_min_price(),
                 drop_fee_origin,
             )?;
 
@@ -378,7 +378,7 @@ impl<T: Config> Pallet<T> {
                     destination_coldkey,
                     destination_netuid,
                     tao_unstaked,
-                    T::SwapInterface::max_price(),
+                    T::SwapInterface::stage0_max_price(),
                     set_limit,
                     drop_fee_destination,
                 )?;
@@ -467,7 +467,7 @@ impl<T: Config> Pallet<T> {
         if (destination_netuid.is_root() || SubnetMechanism::<T>::get(destination_netuid) == 0)
             && (SubnetMechanism::<T>::get(origin_netuid) == 1)
         {
-            return Self::get_max_amount_remove(origin_netuid, limit_price).into();
+            return Self::get_max_amount_remove(origin_netuid, limit_price);
         }
 
         // Corner case: SubnetTAO for any of two subnets is zero
@@ -499,8 +499,8 @@ impl<T: Config> Pallet<T> {
         let limit_price_float: U64F64 = U64F64::saturating_from_num(limit_price)
             .checked_div(U64F64::saturating_from_num(1_000_000_000))
             .unwrap_or(U64F64::saturating_from_num(0));
-        let current_price = T::SwapInterface::current_alpha_price(origin_netuid.into()).safe_div(
-            T::SwapInterface::current_alpha_price(destination_netuid.into()),
+        let current_price = T::SwapInterface::stage0_current_alpha_price(origin_netuid).safe_div(
+            T::SwapInterface::stage0_current_alpha_price(destination_netuid),
         );
         if limit_price_float > current_price {
             return Err(Error::<T>::ZeroMaxStakeAmount.into());

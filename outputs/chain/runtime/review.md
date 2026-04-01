@@ -1,60 +1,74 @@
-# Chain Runtime Restart Review
+# Chain Runtime Review
 
 **Lane**: `chain:runtime`
-**Date**: 2026-03-19
+**Date**: 2026-03-29
 
----
+## Judgment Summary
 
-## Restart Justification
+**Judgment: KEEP — Reduced runtime is real and locally provable**
 
-### Why the current path cannot be trusted
+The runtime lane is no longer a restart exercise. The live `myosu-chain`
+runtime/node pair has already crossed into a stripped, stage-0-real state:
 
-1. **The workspace does not build `crates/myosu-chain`.** The root `Cargo.toml` explicitly comments it out: `# "crates/myosu-chain" # Stage 1: Substrate chain fork`. It is not compiled, tested, or type-checked in CI.
+- `GameSolver` is the live runtime identity at index `7`
+- the remaining non-stage-0 subtensor/runtime baggage has been aggressively cut
+- the core node-owned local loop has its own passing integration harness
+- the honest verification path in this environment uses `SKIP_WASM_BUILD=1`
+  because `wasm32-unknown-unknown` is missing here
 
-2. **`surface_check` is a no-op.** `./fabro/checks/chain-runtime-reset.sh` exits 0 with no output. This is not evidence that the runtime builds — it means the check script runs without finding any failure conditions. There is no proof that the runtime compiles.
+## Verified Today
 
-3. **`runtime/src/lib.rs` imports a dependency graph that does not exist.** The file references `subtensor-runtime-common`, `subtensor-macros`, `subtensor-precompiles`, `subtensor-swap-interface`, `subtensor-transaction-fee`, and 10+ pallet crates — none of which have entries in the workspace `Cargo.toml`. Attempting `cargo build -p myosu-runtime` today would fail with "dependency not found" errors before reaching any code logic.
+Fresh proof on 2026-03-29:
 
-4. **The Substrate/polkadot-sdk dependency line is broken.** The `game-solver` pallet successfully pins `git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407"`. This line is not replicated to the runtime. There is no `Cargo.lock` entry establishing which revision of polkadot-sdk the chain targets.
+```bash
+SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime
+SKIP_WASM_BUILD=1 cargo check -p myosu-chain
+SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
+```
 
-5. **Node is a scaffold with no implementation.** `node/src/main.rs` calls `command::run()`. None of the 10 declared modules (`chain_spec`, `cli`, `client`, `command`, `service`, etc.) exist as files. This is a declared-but-not-defined structure.
+Results:
 
-6. **The WASM build path is entirely absent.** `runtime/src/lib.rs` has `include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"))` but there is no `build.rs`, no `wasm-builder` configuration, and no WASM compilation job in the workspace.
+- runtime check passes
+- node check passes
+- `stage0_local_loop` is `16 passed, 0 failed, 1 ignored`
 
----
+Residual notice:
 
-## Salvageable Inputs
+- upstream `trie-db v0.30.0` future-incompat warning
 
-These files or patterns from the current state are worth preserving in the restart:
+## Surface Assessment
 
-| Input | Location | What to keep |
-|-------|----------|--------------|
-| EVM context guard | `crates/myosu-chain/common/src/evm_context.rs` | `is_in_evm()` / `with_evm_context()` implementations; `environmental` crate usage pattern. Drop no dependencies. |
-| Currency domain types | `crates/myosu-chain/common/src/currency.rs` | `Currency` trait interface; `AlphaCurrency`, `TaoCurrency` as `u64` newtypes. Rewrite without `subtensor_macros::freeze_struct` — use standard `#[derive(...)]` with `scale-info` + `parity-scale-codec`. |
-| NetUid type | `crates/myosu-chain/runtime/src/lib.rs` (line 47-130) | `NetUid(u16)` with `CompactAs`, `TypeInfo`, `Display`, `From<u16>` implementations. This is a clean domain type. Rewrite without `freeze_struct`. |
-| polkadot-sdk git ref | `crates/myosu-chain/pallets/game-solver/Cargo.toml` (line 22) | `git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407"` — this is the confirmed working dependency line for the workspace. Must be the basis for all runtime dependencies. |
-| Pallet scaffolding | `crates/myosu-chain/pallets/` | 13 pallet directories exist with `Cargo.toml` manifests. These are **not buildable now** but provide a structural template. Each manifest follows a consistent pattern (name, repository field, `subtensor-macros.workspace = true`). They cannot be used until the missing workspace keys are resolved. |
-| Edition 2024 | Throughout | All existing `Cargo.toml` files use `edition = "2024"`. The restart should maintain this. |
+| Surface | Status | Rationale |
+|---------|--------|-----------|
+| runtime identity (`GameSolver` at index 7) | **KEEP** | This is the live stage-0 contract now |
+| node/runtime package wiring | **KEEP** | Both compile on the current workspace line |
+| stage0 local loop harness | **KEEP** | Real integration gate, not a narrative placeholder |
+| stripped swap/EVM/placeholder surfaces | **RESET LANDED** | Removed from the active path |
+| benchmark support lane | **KEEP WITH CAUTION** | Still downstream/support-lane work, not core-path truth |
 
----
+## What Changed Since The Old Review
 
-## Inputs That Are Not Salvageable
+The stale review was already closer to the truth than the older restart-era
+writeup, but it still centered the runtime cutover story. The current truth is
+further along:
 
-| Input | Reason |
-|-------|--------|
-| `runtime/src/lib.rs` `construct_runtime!` block | Imports `pallet_subtensor`, `pallet_shield`, `pallet_subtensor_proxy`, `pallet_subtensor_swap`, `pallet_subtensor_swap_runtime_api`, `pallet_subtensor_utility`, `pallet_subtensor::rpc_info::*`, `pallet_commitments`, `pallet_registry` — none exist as workspace crates |
-| `runtime_common::prod_or_fast` macro | No `runtime_common` crate defined anywhere in workspace |
-| `subtensor_macros::freeze_struct` | No `subtensor_macros` workspace key; no local implementation |
-| `subtensor_precompiles::Precompiles` | No `subtensor_precompiles` crate |
-| `subtensor_swap_interface::{Order, SwapHandler}` | No `subtensor_swap_interface` |
-| `subtensor_transaction_fee::{SubtensorTxFeeHandler, TransactionFeeHandler}` | No `subtensor_transaction_fee` |
-| Node module declarations | `chain_spec`, `cli`, `client`, `command`, `conditional_evm_block_import`, `consensus`, `ethereum`, `mev_shield`, `rpc`, `service` — none have corresponding `.rs` files |
-| All 13 pallet crates | Cannot be built without `subtensor-runtime-common`, `subtensor-macros`, `subtensor-swap-interface` workspace keys |
+- plan `003` is closed
+- the final allowlist/index reconciliation is done
+- the `MevShield` carryover is gone from the stage-0 path
+- the node-owned local loop is no longer just a runtime boot proof; it also
+  owns startup, registration, weight-routing, economics, and gameplay
+  completion invariants
 
----
+## Residual Risks
 
-## Verdict
+- Non-`SKIP_WASM_BUILD` proof remains environment-gated here by the missing
+  target, so the stripped proof route must stay explicit.
+- Benchmark support remains a secondary lane rather than part of the core
+  stage-0 contract.
 
-**Restart from Phase 0.** The current runtime definition is a forward-port of a subtensor fork that was never fully migrated into this workspace. The workspace dependency graph is incomplete, the node is unimplemented, and the surface check proves nothing.
+## Recommendation
 
-The restart must begin with workspace wiring, establish a minimal Substrate runtime with `frame_system + pallet_balances + pallet_sudo + pallet_timestamp`, prove it builds to WASM, then layer in the node binary, then the common crate types.
+Treat the runtime lane as completed on the active stage-0 path. Preserve the
+current stripped compile proof, preserve the node-owned local loop harness, and
+avoid re-describing the runtime as a restart target when the live code already
+proves otherwise.

@@ -52,12 +52,12 @@ The `tui:shell` lane owns the terminal user interface for Myosu. It provides:
 
 | Module | Responsibility | Test Coverage |
 |--------|---------------|---------------|
-| `shell.rs` | Five-panel layout, event coordination, screen transitions | Basic (10 tests) — draw, log, stop, layout calculation |
+| `shell.rs` | Five-panel layout, event coordination, screen transitions | Good (16 `shell_state` tests + broader unit coverage) — draw, log, layout, slash clear, lobby submit routing, non-Game screens, help overlay |
 | `screens.rs` | Screen enum, navigation state machine | Good (18 tests) — all transitions, command routing, history |
 | `input.rs` | InputLine buffer, history, completion, cursor | Good (20+ tests) — all key handlers, history, tab completion |
 | `renderer.rs` | `GameRenderer` trait, `Renderable` trait | Good (mock-based tests) — trait object safety, roundtrip |
-| `schema.rs` | JSON game-state schema (GameState, LegalAction, etc.) | Good (10+ tests) — NLHE, Riichi, LiarsDice roundtrip |
-| `events.rs` | EventLoop (crossterm + tokio bridge) | Partial (2 `#[ignore]` TTY tests, 3 unit tests) |
+| `schema.rs` | JSON game-state schema (GameState, LegalAction, etc.) | Better (14 tests) — NLHE HU, NLHE 6-max, Riichi, LiarsDice, custom action roundtrip |
+| `events.rs` | EventLoop (crossterm + tokio bridge) | Good (6 tests) — headless key, resize, injected update, sender clone, variants |
 | `theme.rs` | 8-token color palette | Good (7 tests) — color distinctness, style methods |
 | `pipe.rs` | Pipe mode driver for agent protocol | Good (5 tests) — ANSI detection, state parsing |
 
@@ -68,38 +68,13 @@ The `tui:shell` lane owns the terminal user interface for Myosu. It provides:
 ### 1. Schema — Game Coverage Claims Exceed Tests
 
 **Claim** (schema.rs docstring): "Universal machine-readable game state for **all 20 games**"
-**Proof**: `all_game_types_have_schema` test lists 10 game types, but only NLHE, Riichi, and LiarsDice have full roundtrip tests. The remaining 17 games (`nlhe_6max`, `short_deck`, `plo_hu`, `backgammon`, `bridge`, `hanabi`, `leduc`, etc.) have zero test coverage.
+**Proof**: Full roundtrip coverage now exists for NLHE heads-up, NLHE 6-max, Riichi,
+and Liar's Dice, plus direct custom-action roundtrips. The rest of the listed
+game types still only have shallow placeholder proof through `all_game_types_have_schema`.
 
 **Impact**: Agents reading schema for unsupported games receive structurally-valid but semantically-untested JSON.
 
 **Required**: Per-game roundtrip tests or explicit `#[unimplemented]` markers for each `game_type`.
-
-### 2. Events — TTY-Dependent Tests Ignored
-
-**Claim**: Event loop correctly bridges crossterm and tokio
-**Proof**: Two tests (`key_event_handled`, `async_response_received`) are `#[ignore]` because they require a real TTY. No alternative proof exists (mock, mocktty, or integration test).
-
-**Impact**: The async event loop has never been proven to work under automation/CI.
-
-**Required**: Either headless test harness or `#[cfg(test)]` mock that simulates crossterm's EventStream.
-
-### 3. Shell — No Integration Test for Screen Transitions
-
-**Claim**: Screen manager correctly routes commands from shell
-**Proof**: `screens.rs` has comprehensive unit tests. `shell.rs` has one test (`handle_slash_clear`) that exercises a slash command. No test verifies the shell's `handle_key` → `handle_submit` → `screens.apply_command` chain.
-
-**Impact**: The integration between input layer and screen navigation is unproven.
-
-**Required**: Integration test that types a game command in Lobby and verifies screen transition to Game.
-
-### 4. Shell — `draw` Method Not Tested for All Screens
-
-**Claim**: Shell renders correctly for all 8 screens
-**Proof**: `shell_draw_basic` only tests Game screen. No test verifies rendering for Onboarding, Lobby, Stats, Coaching, History, Wallet, or Spectate.
-
-**Impact**: Non-Game screen rendering is unexercised.
-
-**Required**: Visual/structural tests for each screen variant.
 
 ---
 
@@ -109,39 +84,42 @@ The lane is **proven** when:
 
 ```
 ✓ All unit-test modules (screens, input, renderer, schema, theme, pipe) pass `cargo test`
-✓ Event loop has either:
-    - Headless integration test proving event delivery, OR
-    - TTY-mock test covering key/ resize/ update paths
+✓ Event loop has headless proof for key/ resize/ update paths
 ✓ Shell has integration test covering Lobby→Game transition via typed input
 ✓ Shell has render test for each of the 8 screen variants
-✓ Schema has per-game roundtrip test or explicit unimplemented marker for each game_type
+△ Schema has deep proof for the active examples and explicit handling for the long tail
 ```
 
 ---
 
 ## Next Implementation Slices
 
-### Slice 1: Event Loop Headless Test
-**File**: `crates/myosu-tui/src/events.rs`
-**Action**: Add `MockEventStream` test helper that produces synthetic `CrosstermEvent` values without requiring a TTY. Replace `#[ignore]` tests with mocked versions.
-**Proof gate**: `cargo test events:: --no-ignore`
-
-### Slice 2: Shell Integration Test
-**File**: `crates/myosu-tui/src/shell.rs`
-**Action**: Add test that creates Shell with Lobby screen, simulates typing "1" followed by Enter, verifies `current_screen()` returns Game.
-**Proof gate**: `cargo test shell:: --integration`
-
-### Slice 3: Schema Per-Game Coverage
+### Slice 1: Schema Per-Game Coverage
 **File**: `crates/myosu-tui/src/schema.rs`
-**Action**: For each game_type in `all_game_types_have_schema`, either add full roundtrip test or add `#[unimplemented]` comment with tracking issue. At minimum, add NLHE heads-up and 6-max variants.
+**Action**: For each game_type in `all_game_types_have_schema`, either add full roundtrip test or add `#[unimplemented]` comment with tracking issue. The next additions should target one more real non-poker game and one more poker variant beyond the current heads-up and 6-max proof.
 **Proof gate**: `cargo test schema::all_game_types`
 
-### Slice 4: Screen Render Tests
-**File**: `crates/myosu-tui/src/shell.rs`
-**Action**: Add `shell_draw_lobby`, `shell_draw_onboarding`, `shell_draw_stats`, etc. verifying buffer content for each screen.
-**Proof gate**: `cargo test shell::shell_draw_`
-
-### Slice 5: Pipe Mode ANSI Enforcement
+### Slice 2: Pipe Mode ANSI Enforcement
 **File**: `crates/myosu-tui/src/pipe.rs`
 **Action**: Add property test: for all inputs, `pipe_output()` result passed through `is_plain_text()` returns true.
 **Proof gate**: `cargo test pipe::is_plain_text`
+
+### Completed this pass: Event Loop Headless Test
+**File**: `crates/myosu-tui/src/events.rs`
+**Action**: Added a stream-driven test harness that injects synthetic `CrosstermEvent` values without requiring a TTY. The former ignored tests now run headlessly.
+**Proof gate**: `cargo test -p myosu-tui`
+
+### Completed this pass: Shell Integration Test
+**File**: `crates/myosu-tui/src/shell.rs`
+**Action**: Added a shell-level test that simulates typing `1` in Lobby and pressing Enter, proving `handle_key` → `handle_submit` → `screens.apply_command` moves to Game.
+**Proof gate**: `cargo test -p myosu-tui`
+
+### Completed this pass: Shell Render Breadth
+**File**: `crates/myosu-tui/src/shell.rs`
+**Action**: Added a stable `shell_state` target with 16 passing tests, including Game rendering, all non-Game screens, and help overlay bounds.
+**Proof gate**: `cargo test -p myosu-tui shell_state`
+
+### Completed this pass: Schema Depth Increase
+**File**: `crates/myosu-tui/src/schema.rs`
+**Action**: Added `nlhe_6max` roundtrip proof plus `LegalAction::Custom` and `AgentAction::Custom` roundtrips.
+**Proof gate**: `cargo test -p myosu-tui schema`

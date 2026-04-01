@@ -1433,6 +1433,70 @@ fn register_network_fails_before_prune_keeps_existing() {
 }
 
 #[test]
+fn register_network_allows_second_registration_when_rate_limit_is_zero() {
+    new_test_ext(0).execute_with(|| {
+        let first_cold = U256::from(61);
+        let first_hot = U256::from(62);
+        let second_cold = U256::from(63);
+        let second_hot = U256::from(64);
+        let needed: u64 = SubtensorModule::get_network_lock_cost().into();
+
+        SubtensorModule::set_network_rate_limit(0);
+        SubtensorModule::add_balance_to_coldkey_account(&first_cold, needed.saturating_mul(10));
+        SubtensorModule::add_balance_to_coldkey_account(&second_cold, needed.saturating_mul(10));
+        System::set_block_number(10);
+
+        assert_ok!(SubtensorModule::do_register_network(
+            RuntimeOrigin::signed(first_cold),
+            &first_hot,
+            1,
+            None,
+        ));
+        assert_eq!(SubtensorModule::get_network_last_lock_block(), 10);
+
+        assert_ok!(SubtensorModule::do_register_network(
+            RuntimeOrigin::signed(second_cold),
+            &second_hot,
+            1,
+            None,
+        ));
+        assert_eq!(SubtensorModule::get_network_last_lock_block(), 10);
+
+        let first_netuid = SubtensorModule::get_uid_for_net_and_hotkey(NetUid::from(2), &first_hot);
+        let second_netuid =
+            SubtensorModule::get_uid_for_net_and_hotkey(NetUid::from(3), &second_hot);
+        assert!(first_netuid.is_ok());
+        assert!(second_netuid.is_ok());
+    });
+}
+
+#[test]
+fn register_network_error_indices_snapshot() {
+    new_test_ext(0).execute_with(|| {
+        println!(
+            "NetworkTxRateLimitExceeded={:?}",
+            Error::<Test>::NetworkTxRateLimitExceeded.encode()
+        );
+        println!(
+            "SubNetRegistrationDisabled={:?}",
+            Error::<Test>::SubNetRegistrationDisabled.encode()
+        );
+        println!(
+            "SubnetLimitReached={:?}",
+            Error::<Test>::SubnetLimitReached.encode()
+        );
+        println!(
+            "CannotAffordLockCost={:?}",
+            Error::<Test>::CannotAffordLockCost.encode()
+        );
+        println!(
+            "MechanismDoesNotExist={:?}",
+            Error::<Test>::MechanismDoesNotExist.encode()
+        );
+    });
+}
+
+#[test]
 fn test_migrate_network_immunity_period() {
     new_test_ext(0).execute_with(|| {
         // --------------------------------------------------------------------

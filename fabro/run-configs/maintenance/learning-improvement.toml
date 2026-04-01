@@ -1,0 +1,12 @@
+version = 1
+graph = "../../workflows/maintenance/workflow.fabro"
+goal = """
+Refresh the learning improvement recurring report.
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

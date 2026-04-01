@@ -3,6 +3,9 @@ use super::*;
 use sp_std::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
 use subtensor_runtime_common::NetUid;
 
+type WeightedRelation<AccountId> = (u64, AccountId);
+type RelationUpdate<AccountId> = ((AccountId, NetUid), Vec<WeightedRelation<AccountId>>);
+
 pub struct PCRelations<T: Config> {
     /// The distinguished `hotkey` this structure is built around.
     pivot: T::AccountId,
@@ -802,7 +805,7 @@ impl<T: Config> Pallet<T> {
         // 1) ChildKeys: (parent, netuid) -> Vec<(w, child)>
         //    Remove any entries where child == parent.
         // -------------------------------
-        let mut to_update_ck: Vec<((T::AccountId, NetUid), Vec<(u64, T::AccountId)>)> = Vec::new();
+        let mut to_update_ck: Vec<RelationUpdate<T::AccountId>> = Vec::new();
         let mut to_remove_ck: Vec<(T::AccountId, NetUid)> = Vec::new();
 
         for (parent, netuid, children) in ChildKeys::<T>::iter() {
@@ -851,7 +854,7 @@ impl<T: Config> Pallet<T> {
         // 2) ParentKeys: (child, netuid) -> Vec<(w, parent)>
         //    Remove any entries where parent == child.
         // -------------------------------
-        let mut to_update_pk: Vec<((T::AccountId, NetUid), Vec<(u64, T::AccountId)>)> = Vec::new();
+        let mut to_update_pk: Vec<RelationUpdate<T::AccountId>> = Vec::new();
         let mut to_remove_pk: Vec<(T::AccountId, NetUid)> = Vec::new();
 
         for (child, netuid, parents) in ParentKeys::<T>::iter() {
@@ -933,7 +936,7 @@ impl<T: Config> Pallet<T> {
         // -------------------------------
         // 1) Prune ChildKeys by checking ParentKeys
         // -------------------------------
-        let mut ck_updates: Vec<((T::AccountId, NetUid), Vec<(u64, T::AccountId)>)> = Vec::new();
+        let mut ck_updates: Vec<RelationUpdate<T::AccountId>> = Vec::new();
         let mut ck_removes: Vec<(T::AccountId, NetUid)> = Vec::new();
 
         for (parent, netuid, children) in ChildKeys::<T>::iter() {
@@ -982,7 +985,7 @@ impl<T: Config> Pallet<T> {
         // -------------------------------
         // 2) Prune ParentKeys by checking ChildKeys
         // -------------------------------
-        let mut pk_updates: Vec<((T::AccountId, NetUid), Vec<(u64, T::AccountId)>)> = Vec::new();
+        let mut pk_updates: Vec<RelationUpdate<T::AccountId>> = Vec::new();
         let mut pk_removes: Vec<(T::AccountId, NetUid)> = Vec::new();
 
         for (child, netuid, parents) in ParentKeys::<T>::iter() {

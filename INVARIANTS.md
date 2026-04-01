@@ -7,11 +7,15 @@ Hard rules for the myosu game-solving subnet chain.
 - Statement: No dispatched turn may be treated as complete unless it ends in a
   trusted structured `RESULT:` or `BLOCKED:` outcome or fails closed.
 - Why: Truthful unattended execution is the platform's core promise.
-- Enforcement: adjudicator, supervisor, and the delivery contract in `WORKFLOW.md`.
+- Enforcement: proof-backed status mutation in `genesis/plans/`, plus the live
+  release-governance surfaces in `ops/release-gate-stage0.md`,
+  `ops/no-ship-ledger.md`, and `ops/stage0-completion-contract.md`.
 - Measurement: count turns that mutate plan or land trunk without a trusted
   terminal outcome.
 - No-ship rule: any confirmed violation is at least `S1`.
-- Fallback mode: mark the turn incomplete, preserve evidence, repair closure.
+- Fallback mode: mark the turn incomplete, preserve evidence, reopen the
+  affected plan or gate surface, and repair closure before reasserting
+  completion.
 
 ## INV-002: Proof Honesty
 
@@ -54,25 +58,30 @@ Hard rules for the myosu game-solving subnet chain.
 
 ## INV-005: Plan And Land Coherence
 
-- Statement: `IMPLEMENT.md` truth, git land behavior, and task runtime truth
-  must not drift apart.
+- Statement: active plan truth, completion-claim doctrine, git-hosted proof
+  references, and runtime evidence must not drift apart.
 - Why: A trustworthy platform cannot report a task complete when git state,
   plan state, and runtime evidence disagree.
-- Enforcement: rollback-on-land-failure behavior, plan mutation rules.
+- Enforcement: `ops/stage0-completion-contract.md`,
+  `ops/release-gate-stage0.md`, `ops/no-ship-ledger.md`, and synchronized
+  status in `genesis/plans/001-master-plan.md`.
 - Measurement: count of land attempts that leave plan/git/runtime in divergent
   states after recovery.
 - No-ship rule: unresolved divergence after recovery is at least `S1`.
-- Fallback mode: roll back plan status, preserve evidence, treat as incomplete.
+- Fallback mode: roll back the completion claim or promoted status, preserve
+  evidence, and treat the lane as incomplete until the synced surfaces agree
+  again.
 
 ## INV-006: Robopoker Fork Coherence
 
 - Statement: The robopoker fork (`happybigmtn/robopoker`) must track v1.0.0 as
-  its baseline. Changes must be documented in CHANGELOG.md with rationale.
-  Core MCCFR algorithm changes require review.
+  its baseline. The pinned workspace rev and repo-local fork changelog must
+  document every downstream change with rationale. Core MCCFR algorithm changes
+  require review.
 - Why: We own the fork but the v1.0.0 MCCFR engine is proven. Diverging from
   core algorithm correctness risks solver quality.
-- Enforcement: `Cargo.toml` git dependency pinned to fork branch/tag,
-  CHANGELOG.md in fork documents all changes from v1.0.0 baseline.
+- Enforcement: workspace `Cargo.toml` pins plus
+  `docs/robopoker-fork-changelog.md`.
 - Measurement: diff between fork and v1.0.0 tag is documented and intentional.
 - No-ship rule: undocumented algorithm changes are `S2`.
 - Fallback mode: document the change, review for correctness.

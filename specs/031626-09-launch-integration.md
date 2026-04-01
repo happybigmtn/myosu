@@ -2,7 +2,7 @@
 
 Source: Stage 0 + Stage 1 gap analysis for NLHE HU launch
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: ALL prior specs (this is the capstone)
 
 ## Purpose
@@ -21,16 +21,18 @@ wiring, and the end-to-end acceptance test.
 Current state:
 - 12 specs cover individual components (chain, pallet, traits, poker,
   miner, validator, gameplay, TUI, abstractions)
-- No spec covers running them all together
-- No spec defines the miner bootstrap sequence
-- GP-01..04 was written before TUI spec — doesn't use myosu-tui
+- the repo now has an owned local proof at
+  `myosu-chain --stage0-local-loop-smoke`
+- `myosu-play` already uses `myosu-tui` plus game-specific renderers under the
+  live gameplay shell
+- the remaining drift is packaging and operator doctrine, not the absence of an
+  end-to-end local proof
 
 This spec adds:
-- Devnet orchestration (docker-compose or process manager)
-- Miner bootstrap sequence (abstractions → register → train → serve)
-- GP ↔ TUI wiring (gameplay uses myosu-tui shell)
-- End-to-end acceptance test
-- Launch checklist
+- the truthful capstone layer on top of the owned local launch proof
+- operator-facing packaging and repeatability guidance for the live stack
+- the remaining launch hardening steps once the stage-0 local loop is already
+  working in-repo
 
 If all ACs land:
 - `docker compose up` starts chain + miner + validator
@@ -41,11 +43,11 @@ If all ACs land:
 ## Scope
 
 In scope:
-- Docker compose for devnet (chain node + miner + validator)
-- Miner bootstrap script (download abstractions → register → train)
-- myosu-play refactored to use myosu-tui as rendering backend
-- End-to-end integration test (all components, 1 hand to completion)
-- Launch readiness checklist
+- operator-friendly orchestration and packaging for the current local stack
+- miner bootstrap scripting and repeatability hardening
+- preserving the current `myosu-play` + `myosu-tui` integration honestly
+- end-to-end acceptance proof on top of the existing local loop
+- launch readiness checklist
 
 Out of scope:
 - Production/mainnet deployment (needs token economics spec)
@@ -57,7 +59,9 @@ Out of scope:
 
 ### AC-LI-01: Devnet Orchestration
 
-- Where: `ops/devnet/docker-compose.yml (new)`, `ops/devnet/README.md (new)`
+- Where: future operator packaging surface (for example `ops/devnet/`), with
+  current adjacent truth in `docs/execution-playbooks/stage0-local-loop.md` and
+  `docs/execution-playbooks/services.md`
 - How: Docker compose with 3 services:
 
   ```yaml
@@ -93,8 +97,10 @@ Out of scope:
   The miner service includes abstraction download in its entrypoint
   (check for files, download if missing, then start).
 
-  A genesis subnet (nlhe_hu, id=1) is pre-configured in the dev chain spec
-  (already specified in CF-04/GS-09).
+  The important current truth is that the repo already owns a successful local
+  proof without Docker through `myosu-chain --stage0-local-loop-smoke`. Any
+  operator packaging added here should preserve that proof rather than replace
+  it with a parallel, less-trusted path.
 
 - Whole-system effect: one command starts the entire stack.
 - Wiring contract:
@@ -170,7 +176,8 @@ Out of scope:
 
 ### AC-LI-03: Gameplay ↔ TUI Wiring
 
-- Where: `crates/myosu-play/src/main.rs (extend)`, `crates/myosu-games-poker/src/renderer.rs (new)`
+- Where: `crates/myosu-play/src/main.rs`, `crates/myosu-play/src/blueprint.rs`,
+  `crates/myosu-play/src/live.rs`, and `crates/myosu-games-poker/src/renderer.rs`
 - How: Refactor GP-01..04 to use myosu-tui as the rendering backend:
 
   1. `myosu-play` depends on `myosu-tui` and `myosu-games-poker`
@@ -184,7 +191,10 @@ Out of scope:
   4. Bot strategy queries happen via the event loop (TU-03) async channel
   5. Hand history recording (GP-04) hooks into the log panel
 
-  This replaces the ad-hoc CLI prompts in GP-02 with the proper TUI shell.
+  The important freshness correction is that most of this wiring is already
+  live. The remaining work here is to preserve parity and keep the current
+  gameplay shell, pipe mode, and live-query seams honest as launch packaging
+  evolves.
 
 - Whole-system effect: the gameplay experience matches design.md exactly.
 - Required tests:
@@ -311,9 +321,9 @@ Out of scope:
 - Where: `tests/e2e/invariant_gate.rs (new)`
 - How: Integration test that validates all code-verifiable invariants in a
   single pass. OS.md bootstrap exit requires "all 6 invariants pass (INV-001
-  through INV-006)." INV-001 and INV-002 are process invariants (tested by
-  malinka). This test covers INV-003, INV-004, and INV-006, plus the no-ship
-  conditions from OS.md:
+  through INV-006)." INV-001 and INV-002 are process invariants validated by
+  the repo's doctrine and release-gate surfaces. This test covers INV-003,
+  INV-004, and INV-006, plus the no-ship conditions from OS.md:
 
   ```rust
   #[test]
@@ -329,8 +339,8 @@ Out of scope:
       let tree_output = cargo_tree("myosu-miner");
       assert!(!tree_output.contains("myosu-play"), "INV-004 violated");
 
-      // INV-006: Robopoker fork changes documented
-      assert!(Path::new("vendor/robopoker/CHANGELOG.md").exists(), "INV-006: no CHANGELOG");
+      // INV-006: Robopoker fork provenance remains documented in active repo surfaces
+      assert!(Path::new("THEORY.MD").exists(), "INV-006: no active fork provenance surface");
 
       // No-ship: Emission accounting
       let (total_distributed, expected) = run_emission_check(...);

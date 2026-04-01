@@ -1,9 +1,9 @@
 use super::*;
+use crate::Stage0SwapInterface;
 use sp_core::{H256, U256};
 use sp_io::hashing::{keccak_256, sha2_256};
 use sp_runtime::Saturating;
 use subtensor_runtime_common::{Currency, NetUid};
-use subtensor_swap_interface::SwapHandler;
 use system::pallet_prelude::BlockNumberFor;
 
 const LOG_TARGET: &str = "runtime::subtensor::registration";
@@ -143,13 +143,11 @@ impl<T: Config> Pallet<T> {
         let burned_alpha = Self::swap_tao_for_alpha(
             netuid,
             actual_burn_amount,
-            T::SwapInterface::max_price(),
+            T::SwapInterface::stage0_max_price(),
             false,
         )?
         .amount_paid_out;
-        SubnetAlphaOut::<T>::mutate(netuid, |total| {
-            *total = total.saturating_sub(burned_alpha.into())
-        });
+        SubnetAlphaOut::<T>::mutate(netuid, |total| *total = total.saturating_sub(burned_alpha));
 
         // Actually perform the registration.
         let neuron_uid: u16 = Self::register_neuron(netuid, &hotkey)?;
@@ -158,7 +156,7 @@ impl<T: Config> Pallet<T> {
         BurnRegistrationsThisInterval::<T>::mutate(netuid, |val| val.saturating_inc());
         RegistrationsThisInterval::<T>::mutate(netuid, |val| val.saturating_inc());
         RegistrationsThisBlock::<T>::mutate(netuid, |val| val.saturating_inc());
-        Self::increase_rao_recycled(netuid, Self::get_burn(netuid).into());
+        Self::increase_rao_recycled(netuid, Self::get_burn(netuid));
 
         // --- 13. Deposit successful event.
         log::debug!("NeuronRegistered( netuid:{netuid:?} uid:{neuron_uid:?} hotkey:{hotkey:?}  ) ");

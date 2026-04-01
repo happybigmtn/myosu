@@ -1,193 +1,130 @@
 # Myosu Genesis Specification
 
-**Status:** Draft — for 180-day turnaround planning
-**Replaces:** `specs/031626-00-master-index.md` (the previous master index in the old spec corpus)
+Status: Active
+Date: 2026-03-28
+Supersedes: `archive/genesis_1774729423/SPEC.md`
+Owners: Interim CEO/CTO office (turnaround)
 
----
+## Purpose
 
-## Purpose / One-Line Definition
+Myosu is a game-solving protocol with two realities in one repository:
+- A functioning local poker training/advisor product (`myosu-play` + `myosu-tui` + `myosu-games-poker`).
+- An in-progress chain fork intended to score solver quality and distribute incentives.
 
-**Myosu is a decentralized game-solving subnet chain** where miners compete to produce optimal game strategies via MCCFR and validators verify quality through exploitability scoring — built on a Substrate fork with a Rust/Fabro agent orchestration layer and a terminal gameplay UI.
+This genesis spec defines the durable target for the next 180 days: align product, protocol, and doctrine so every claim in docs is provable in code and CI.
 
-묘수 (myosu) — Korean for "brilliant move" or "masterstroke."
+## One-Sentence Product Definition
 
----
+Myosu is a verifiable strategy-quality pipeline that starts as a local NLHE advisor and evolves into a chain-scored solver market.
 
-## Who It's For
+## Who This Is For
 
-**Primary:** Quantitative poker researchers and competitive poker players who currently pay $500-5,000/year for proprietary solvers (PioSolver, MonkerSolver) with no verification and no cross-game platform.
+Primary: Solo protocol engineer / founder-operator who must ship a verifiable stage-0 product with limited engineering bandwidth.
 
-**Secondary:** AI/crypto researchers interested in decentralized compute markets for game-solving. Bridge, mahjong, and backgammon players who have no professional-grade solver tools.
-
-**Operator:** A single developer (r@regenesis.dev) using Fabro agent orchestration to build and maintain the system.
-
----
+Secondary: Future contributors who need an unambiguous control plane. Validators, miners, and operators once network surfaces are live.
 
 ## Architecture
 
-```
-                    FABRO / RASPBERRY (control plane)
-                    runs at: /home/r/coding/myosu/
-                    autonomous loop: raspberry autodev
+```text
+                    CURRENT STATE                              180-DAY TARGET STATE
 
-         ┌──────────┴──────────┐
-         │  fabro/programs/     │  fabro/workflows/
-         │  outputs/           │  .raspberry/
-         └──────────┬──────────┘
-                    │
-    ┌───────────────┼────────────────────────┐
-    │               │                        │
-    ▼               ▼                        ▼
-┌─────────┐   ┌─────────┐          ┌─────────────────┐
-│myosu-games│  │myosu-tui │          │  game-solver     │
-│(traits)  │   │(shell)   │          │  pallet          │
-│          │   │          │          │  [DISABLED]      │
-│ thin-wrap│   │ five-panel│          │                  │
-│ robopoker│   │ TUI shell │          │ Yuma Consensus   │
-│ MCCFR    │   │          │          │ stake/emission   │
-└────┬─────┘   └────┬─────┘          └────────┬────────┘
-     │              │                         │
-     └──────────────┴─────────────────────────┘
-                    │
-                    ▼
-              ┌─────────────────────┐
-              │  robopoker MCCFR    │
-              │  (rbp-core,        │
-              │   rbp-mccfr)       │
-              │  private fork:     │
-              │  happybigmtn/robopoker│
-              └─────────────────────┘
-                    │
-                    ▼ (future)
-              ┌──────────────────────────────────────┐
-              │           Substrate Chain             │
-              │  [NOT BUILT — staged for Phase 2]    │
-              │                                       │
-              │  ┌──────────┐    ┌───────────────┐  │
-              │  │  miners   │◄───│ myosu-games   │  │
-              │  │(solvers)  │    │ (MCCFR impl)  │  │
-              │  └────┬─────┘    └───────────────┘  │
-              │       │ submit weights                │
-              │       ▼                               │
-              │  ┌──────────────┐                   │
-              │  │  validators   │                   │
-              │  │(oracle/proof) │                   │
-              │  └───────┬──────┘                   │
-              │          │                          │
-              │          ▼                          │
-              │  ┌──────────────┐                  │
-              │  │game-solver   │                  │
-              │  │  pallet      │                  │
-              │  │(consensus +  │                  │
-              │  │ emissions)   │                  │
-              │  └──────────────┘                  │
-              │          │                         │
-              │          ▼                         │
-              │  ┌──────────────────┐              │
-              │  │ human gameplay   │              │
-              │  │ (myosu-tui or   │              │
-              │  │  myosu-play CLI)│              │
-              │  └──────────────────┘              │
-              └──────────────────────────────────────┘
+  +-----------------+                            +-----------------+
+  | myosu-play      |  <-- works today           | myosu-play      |  <-- polished, artifact-verified
+  | myosu-tui       |                            | myosu-tui       |
+  | (local advisor) |                            | (local + chain) |
+  +--------+--------+                            +--------+--------+
+           |                                              |
+  +--------v--------+                            +--------v--------+
+  | myosu-games     |  <-- works today           | myosu-games     |  <-- multi-game (+ Liar's Dice)
+  | myosu-games-    |                            | myosu-games-    |
+  |   poker         |                            |   poker         |
+  +-----------------+                            | myosu-games-    |
+                                                 |   liars-dice    |
+           |                                     +--------+--------+
+           |                                              |
+           X  (not connected)              +------+-------+-------+------+
+           |                               |      |               |      |
+  +--------v--------+            +---------v--+ +-v-----------+ +-v------v----+
+  | myosu-chain     |            | myosu-chain| | myosu-miner | | myosu-      |
+  | runtime + node  |            | (reduced,  | | (train +    | |  validator  |
+  | (216K lines,    |            |  6 pallets,| |  serve)     | | (score +    |
+  |  20+ pallets,   |            |  devnet    | |             | |  submit)    |
+  |  EVM/Frontier)  |            |  working)  | +-------------+ +-------------+
+  +-----------------+            +------------+
 ```
 
----
+## Module Boundaries
+
+### Gameplay/Product (working)
+
+| Crate | Lines | Role |
+|-------|-------|------|
+| `myosu-games` | 683 | Shared game types, trait exports, GameRegistry |
+| `myosu-games-poker` | 3,738 | NLHE state, solver, renderer, wire, artifacts |
+| `myosu-tui` | 3,975 | Shell, event loop, screens, input, pipe, theme |
+| `myosu-play` | 31,337 | Train/pipe CLI, artifact auto-discovery |
+
+### Chain (in progress)
+
+| Crate | Lines | Role |
+|-------|-------|------|
+| `myosu-chain-runtime` | ~3K | Runtime composition (20+ pallets, needs reduction) |
+| `myosu-chain` (node) | ~5K | Service, RPC, chain spec, consensus |
+| `pallet-game-solver` | ~2.7K + modules | Core game-solving pallet (subtensor fork) |
+| 12 supporting pallets | ~160K | admin-utils, commitments, crowdloan, drand, proxy, registry, shield, subtensor, swap, utility, tx-fee |
+
+### Not Yet Created
+
+| Crate | Role | Stage-0 Critical? |
+|-------|------|-------------------|
+| `myosu-chain-client` | Shared RPC client for miner/validator | Yes |
+| `myosu-miner` | MCCFR training loop + strategy serving | Yes |
+| `myosu-validator` | Exploitability scoring + weight submission | Yes |
+| `myosu-games-liars-dice` | Architecture proof game | Yes |
+| `myosu-keys` | Key management | No (stage-1) |
+| `myosu-sdk` | Third-party game engine scaffold | No (stage-2) |
 
 ## Tech Stack
 
-| Layer | Technology | Version/Source |
-|-------|-----------|----------------|
-| **Chain** | Substrate (polkadot-sdk) | `stable2407` branch |
-| **Game Solver** | robopoker MCCFR | Private fork: `happybigmtn/robopoker` rev `0471631` |
-| **Async Runtime** | Tokio | v1 |
-| **CLI Parsing** | Clap | v4 |
-| **Serialization** | Serde + parity-scale-codec | serde v1, scale-codec via polkadot-sdk |
-| **TUI** | Ratatui + Crossterm | ratatui v0.29, crossterm v0.28 |
-| **Error Handling** | thiserror + anyhow | |
-| **Orchestration** | Fabro + Raspberry | `/home/r/coding/fabro/` sibling repo |
-| **Language** | Rust 2024 | Primary |
-| **Research** | Python + numpy | Experiment pipeline only |
+- Language: Rust (workspace-first), edition 2024
+- Product UI: `ratatui` 0.29, `crossterm` 0.28, async `tokio`
+- Solver core: robopoker fork (`happybigmtn/robopoker`, pinned rev)
+- Chain base: Substrate via `opentensor/polkadot-sdk` fork
+- EVM/networking: `opentensor/frontier` fork (to be reduced/removed in stage-0)
+- Fixed-point math: `encointer/substrate-fixed` (pinned for Yuma bit-identity)
+- Orchestration: Fabro + Raspberry (`fabro/`, `outputs/`)
 
----
+## Durable Decisions
 
-## What Already Exists
+1. Gameplay and chain are separate executable concerns; shared logic in game crates.
+2. Local advisor product is the immediate value wedge while chain complexity reduces.
+3. Numbered `specs/031626-*` are canonical after cleanup; mirror duplicates archived.
+4. `PLANS.md` ExecPlan contract unchanged; all turnaround work uses that format.
+5. CI must gate chain/runtime/node before claiming stage-0 exit.
+6. Prefer reversible reductions (stub/isolate) over broad rewrites.
+7. Single-token model (MYOSU) for stage-0; dual-token AMM deferred.
+8. Commit-reveal v2 only (hash-based); CRV3 timelock stripped.
+9. Emission split: 61% miners / 21% validators / 18% owner.
 
-### Active Workspace Members (build and test)
-- `crates/myosu-games` — Game trait abstraction layer (thin-wrap of robopoker)
-- `crates/myosu-tui` — Terminal UI shell (compiles, no tests)
-- `crates/myosu-chain/pallets/game-solver` — Core pallet (well-tested, not wired into runtime)
+## Non-Goals (180-Day Window)
 
-### Commented-Out Workspace Members (Stage 1+)
-- `crates/myosu-chain` — Full chain runtime (not wired)
-- `crates/myosu-miner` — Miner binary (does not exist)
-- `crates/myosu-validator` — Validator binary (does not exist)
-- `crates/myosu-play` — Gameplay CLI (scaffold only, in worktree)
+- No full multi-game production network.
+- No protocol tokenomics redesign beyond stage-0 proof.
+- No migration away from Fabro/Raspberry orchestration.
+- No web UI (TUI is the product surface).
+- No mainnet launch.
 
-### Fabro/Raspberry Control Plane
-- `fabro/programs/` — 7 program manifests (bootstrap, chain-core, services, product, platform, recurring + autodev)
-- `fabro/workflows/` — Workflow graphs for implement, services, maintenance, bootstrap
-- `fabro/run-configs/` — TOML run configurations
-- `outputs/` — Curated lane deliverables (games:traits is fully complete; others have reviewed specs)
-- `.raspberry/` — Raspberry supervisory state
+## Canonical Locations
 
-### Spec Corpus
-- 22 specs in `specs/` covering: game engine traits, poker engine, multi-game architecture, chain fork, miner/validator binaries, TUI, gameplay CLI, launch integration, agent experience, SDK, and more
-- 5 ExecPlans in `plans/` covering Fabro migration, bootstrap, workflow library, program decomposition, and iterative execution
-- Full legacy corpus preserved in `specsarchive/`
+- Doctrine: `SPEC.md`, `PLANS.md`, `INVARIANTS.md`, `OS.md`
+- Specifications: `specs/031626-*.md`
+- Turnaround plans: `genesis/plans/*.md`
+- Turnaround assessment: `genesis/ASSESSMENT.md`
+- Turnaround report: `genesis/GENESIS-REPORT.md`
+- Output artifacts: `outputs/`
+- Fabro control plane: `fabro/`
+- Archive: `archive/`, `specsarchive/`
 
----
+## Relationship to genesis/PLANS.md
 
-## Key Decisions Already Made
-
-1. **Thin-wrap, not reimplement MCCFR.** Use `rbp-core` and `rbp-mccfr` from robopoker directly. Myosu provides the chain + incentive layer, not the CFR algorithm.
-
-2. **Substrate fork base.** Fork subtensor's Substrate implementation for consensus, staking, and emissions. Avoid rebuilding Yuma Consensus from scratch.
-
-3. **Fabro as primary execution substrate.** All work is dispatched via Fabro/Raspberry. The autodev loop runs autonomously.
-
-4. **Five-panel TUI shell.** The terminal UI uses a fixed five-panel layout (header, transcript, state, declaration, input) with a `GameRenderer` trait for game-specific rendering.
-
-5. **Multi-game via trait abstraction.** The `GameConfig` / `CfrGame` / `StrategyQuery` trait hierarchy allows any game implementing MCCFR to plug in. NLHE is first; Liar's Dice is the architecture proof.
-
-6. **No dedicated blockchain RPC client.** The project uses jsonrpsee for on-chain RPC. No outbound HTTP/WebSocket clients needed.
-
-7. **No containerization in Phase 0-1.** Local development uses `cargo build`. Containerization (Docker) is deferred to launch integration.
-
----
-
-## What Does NOT Exist Yet
-
-| Component | Status |
-|-----------|--------|
-| Runnable chain | Disabled — workspace member commented out |
-| Miner binary | Not implemented |
-| Validator binary | Not implemented |
-| NLHE game engine | Thin-wrap scaffold in worktree only |
-| SDK crate | Scaffold in worktree only |
-| CI/CD pipeline | None |
-| Containerization | None |
-| Production deployment | None |
-| Real users | None |
-| Real compute market | None |
-
----
-
-## Dependencies on External Systems
-
-| System | Nature of Dependency | Risk |
-|--------|---------------------|------|
-| `github.com/happybigmtn/robopoker` | MCCFR solver (private fork) | **HIGH** — fork could go private or diverge |
-| `github.com/paritytech/polkadot-sdk` | Substrate framework (stable2407) | MEDIUM — fork divergence risk |
-| `github.com/opentensor/subtensor` | Referenced for chain design | LOW — used as reference, not imported |
-| MiniMax API | Fabro execution backend | MEDIUM — auth propagation issues |
-| Anthropic API | Fabro/Codex execution backend | LOW — well-integrated |
-
----
-
-## Spec Relationships
-
-This spec is the anchor for all genesis plans. It supersedes the old master index (`specs/031626-00-master-index.md`) for planning purposes, but the full spec corpus under `specs/` remains authoritative for architectural decisions. The genesis plans carry forward the 5 existing ExecPlans and fill the gaps identified in the assessment.
-
----
-
-*This spec governs the 180-day turnaround. It is authoritative for the duration of the turnaround program and should be updated if the architecture changes materially.*
+This spec is the durable architecture statement. Execution details, milestones, and progress tracking live in numbered ExecPlans under `genesis/plans/`.

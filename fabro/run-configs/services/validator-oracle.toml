@@ -1,0 +1,12 @@
+version = 1
+graph = "../../workflows/services/workflow.fabro"
+goal = """
+Bring up and verify the validator oracle surface.
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "always"

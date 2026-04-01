@@ -1,16 +1,20 @@
 # `play:tui` Lane Specification
 
+Historical note: this lane artifact was authored before Plan 009 landed. The
+current implementation has moved past the "missing crate" baseline below. Use
+the Genesis plans and live crate proofs for the current execution surface.
+
 ## Purpose and User-Visible Outcome
 
 `play:tui` is the **interactive NLHE poker gameplay lane** for Myosu. It delivers:
 
-1. **`myosu-play` binary** — the consumer-facing CLI; `myosu-play --train` for local practice, `myosu-play --chain ws://...` for miner-connected play
+1. **`myosu-play` binary** — the consumer-facing CLI; `myosu-play train` for local practice, future chain-connected play after the networking slice lands
 2. **NLHE `GameRenderer` implementation** — draws the game-state panel (board, hole cards, stacks, pot, street, hand strength) and log (prose action history with right-aligned pot)
 3. **Training mode** — heads-up NLHE practice with a blueprint (mmap MCCFR) or heuristic bot; no chain required
 4. **Solver advisor** — displays the trained solver's action distribution for the hero's pending decision as the "EQUILIBRIUM" section
-5. **`--pipe` mode** — plain-text state/output protocol for agent piping (`agent_a | myosu-play --pipe | agent_b`)
+5. **`pipe` mode** — plain-text state/output protocol for agent piping (`agent_a | myosu-play pipe | agent_b`)
 
-**User-visible behavior**: A player runs `myosu-play --train`, plays NLHE hands against a blueprint bot, and sees both the bot's actions and the solver's recommended action frequencies for each decision point.
+**User-visible behavior**: A player runs `myosu-play train`, plays NLHE hands against a blueprint bot, and sees both the bot's actions and the solver's recommended action frequencies for each decision point.
 
 ---
 
@@ -36,9 +40,9 @@
                          │  └──────────────────┘  └──────────────────────┘       │
                          │  ┌──────────────────────────────────────────────┐    │
                          │  │ myosu-play binary (main.rs)                   │    │
-                         │  │ ├── --train  (local bot)                      │    │
-                         │  │ ├── --chain   (miner axon)                    │    │
-                         │  │ └── --pipe    (agent protocol)                │    │
+                         │  │ ├── train    (local bot)                      │    │
+                         │  │ ├── chain    (future miner axon)              │    │
+                         │  │ └── pipe     (agent protocol)                 │    │
                          │  └──────────────────────────────────────────────┘    │
                          │                                                          │
   untrusted              │  ┌──────────────────────────────────────────────┐    │
@@ -161,13 +165,13 @@ Spec TU-11 defines:
 The lane is **proven** when all of the following pass:
 
 ```
-cargo build -p myosu-play --train
+cargo run -p myosu-play --quiet -- --smoke-test
 cargo test -p myosu-play training::tests::hand_completes_fold
 cargo test -p myosu-play training::tests::hand_completes_showdown
 cargo test -p myosu-play blueprint::tests::load_valid_artifact   # or mock
 cargo test -p myosu-play advisor::tests::format_distribution_text
 cargo test -p myosu-games-poker
-Hero plays 1 complete hand via myosu-play --train: deal → action → showdown → result
+Hero plays 1 complete hand via myosu-play train: deal → action → showdown → result
 Solver advisor shows EQUILIBRIUM section on hero's turn
 ```
 
@@ -178,7 +182,7 @@ Solver advisor shows EQUILIBRIUM section on hero's turn
 ### Slice 1: `myosu-play` Binary Skeleton + Shell Wiring
 **Files**: `crates/myosu-play/` (new crate scaffold)
 **What**: Bare `main.rs` with `--train` flag; creates `NlheRenderer` (hardcoded/hacky); wires into `Shell` from `myosu-tui`; proves render loop compiles and displays.
-**Proof gate**: `cargo build -p myosu-play` exits 0; `myosu-play --train` renders the 5-panel layout without panic.
+**Proof gate**: `cargo run -p myosu-play --quiet -- --smoke-test` prints `SMOKE myosu-play ok`; `myosu-play train` renders the 5-panel layout without panic.
 
 ### Slice 2: `NlheRenderer` with Hardcoded States
 **Files**: `crates/myosu-games-poker/src/renderer.rs` (new crate)

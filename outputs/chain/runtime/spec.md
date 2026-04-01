@@ -1,209 +1,210 @@
 # Chain Runtime Restart Spec
 
 **Lane**: `chain:runtime`
-**Date**: 2026-03-19
-**Status**: Restart required
+**Date**: 2026-03-28
+**Status**: Runtime and node restored, local devnet proof landed, `GameSolver` now occupies runtime index 7, and the active `myosu-chain` dependency graph no longer includes `pallet-subtensor`
 
 ---
 
-## 1. Current State Inventory
+## Current State Inventory
 
-### 1.1 What exists
+Fresh source inspection plus the restored runtime compile show a different shape
+than the earlier bootstrap review captured.
 
-| Surface | Path | Content | Buildable? |
-|---------|------|---------|-------------|
-| Runtime definition | `crates/myosu-chain/runtime/src/lib.rs` | ~2500 lines; `construct_runtime!` macro, 9 module declarations | **No** — imports `subtensor-runtime-common`, `subtensor-macros`, `subtensor_precompiles`, `subtensor_swap_interface`, `subtensor_transaction_fee`, `pallet_shield`, `pallet_subtensor`, `pallet_subtensor_proxy`, `pallet_subtensor_swap`, `pallet_subtensor_utility`, `pallet_subtensor_swap_runtime_api` — none defined in workspace |
-| Node CLI wrapper | `crates/myosu-chain/node/src/main.rs` | One-liner `command::run()` | **No** — module decls for `chain_spec`, `cli`, `client`, `command`, `conditional_evm_block_import`, `consensus`, `ethereum`, `mev_shield`, `rpc`, `service` have no corresponding `.rs` files |
-| Currency types | `crates/myosu-chain/common/src/currency.rs` | `AlphaCurrency`, `TaoCurrency` wrappers + `Currency` trait | **No** — imports `subtensor_macros::freeze_struct` (not in workspace) |
-| EVM context | `crates/myosu-chain/common/src/evm_context.rs` | `is_in_evm()`, `with_evm_context()` using `environmental` crate | **Yes** — self-contained; only dep is `environmental` (no workspace key needed) |
-| Subtensor pallets | `crates/myosu-chain/pallets/{subtensor,shield,swap,registry,...}` | 13 pallets from opentensor/subtensor fork | **No** — each depends on `subtensor-runtime-common` and `subtensor-macros` workspace keys that are undefined |
-| Game solver pallet | `crates/myosu-chain/pallets/game-solver/` | Pallet with `frame_support`/`frame_system` from `polkadot-sdk` | **Yes** — only active workspace member under `crates/myosu-chain/` |
-| Workspace definition | `Cargo.toml` | `crates/myosu-chain` commented out as `# "crates/myosu-chain" # Stage 1` | N/A |
+### What exists now
 
-### 1.2 Missing critical workspace members
+| Surface | Path | Current reality |
+|---------|------|-----------------|
+| Runtime sources | `crates/myosu-chain/runtime/src/lib.rs` | A large runtime file exists. This is no longer a missing-file problem. |
+| Node sources | `crates/myosu-chain/node/src/*.rs` | `main.rs`, `service.rs`, `rpc.rs`, `command.rs`, `cli.rs`, `client.rs`, and EVM-related files all exist. |
+| Common crate | `crates/myosu-chain/common/src/*.rs` | `currency.rs`, `evm_context.rs`, and `lib.rs` exist. |
+| Game-solver pallet | `crates/myosu-chain/pallets/game-solver/` | Active workspace member, green again on the restored workspace line, and now configured inside the runtime. |
+| Root workspace | `Cargo.toml` | Runtime and node are now real workspace members. |
+| Runtime manifest | `crates/myosu-chain/runtime/Cargo.toml` | Real package exists with `myosu_chain_runtime` as the lib crate name. |
+| Runtime build helper | `crates/myosu-chain/runtime/build.rs` | Real `substrate-wasm-builder` path now builds the runtime wasm instead of faking `WASM_BINARY = None`. |
+| Node manifest | `crates/myosu-chain/node/Cargo.toml` | Real package exists and now reaches an honest compile and local boot path. |
 
-The root `Cargo.toml` defines no keys for:
+### What is still broken
 
-```
-subtensor-runtime-common  → no crate, no git, no version
-subtensor-macros          → no crate, no git, no version
-subtensor-swap-interface  → no crate, no git, no version
-subtensor-tools           → defined in support/tools/Cargo.toml but not in workspace members
-pallet-subtensor          → defined in pallets/subtensor/Cargo.toml but not in workspace members
-... (all 13 pallets)
-```
+The runtime lane is no longer blocked on node restart, pallet dependency-line drift, first runtime
+integration, or final runtime identity. The remaining reopened surfaces are support-lane cleanup:
+the upstream Frontier benchmark incompatibility and historical subtensor-era cleanup outside the
+live node/runtime path.
 
-The `runtime/lib.rs` also calls `include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"))` — the WASM binary build path is entirely absent.
+1. The runtime crate compiles from the repo root and now uses a real wasm build path.
+2. The node crate compiles from the repo root, builds a local spec, and produces blocks on local
+   `--dev`.
+3. `pallet-game-solver` now compiles from the repo root on the same workspace line as the restored
+   chain.
+4. The local runtime still requires a tactical transaction-pool constraint: the fork-aware pool
+   tears down the restarted local chain during startup, so local chains now default to the stable
+   single-state pool unless the operator explicitly sets `--pool-type`.
+5. `runtime/src/lib.rs` now contains `impl pallet_game_solver::Config for Runtime`, and
+   `construct_runtime!` includes `GameSolver: pallet_game_solver = 7`.
+6. Runtime transaction-extension and coldkey-swap dispatch-guard ownership now come from
+   `pallet-game-solver`, not `pallet-subtensor`.
+7. The runtime API payload surface now comes from `pallet_game_solver::rpc_info::*`, and
+   `cargo check -p myosu-chain` stays green after that cutover.
+8. Generated/local chain specs now emit `gameSolver` instead of `subtensorModule`.
+9. The runtime version now advertises `spec_name = "myosu-chain"` and `impl_name = "myosu-chain"`,
+   while the node banner identifies as `Myosu Node`.
+10. `pallet_subtensor_swap::Config` now depends on `GameSolver` for `SubnetInfo`, `BalanceOps`,
+    `TaoReserve`, and `AlphaReserve` instead of mixing `GameSolver` and `pallet_subtensor`.
+11. The runtime helper cluster for identity registration, commitments, bond resets, and tempo
+    lookup now also points at `GameSolver`, and `runtime/src/lib.rs` no longer contains direct
+    `SubtensorModule::...` calls.
+12. The live `migrate_init_total_issuance` runtime-upgrade hook now points at
+    `pallet_game_solver::migrations::...` instead of `pallet_subtensor::migrations::...`.
+13. The swap-simulation runtime API now constructs orders through
+    `pallet_game_solver::{GetAlphaForTao, GetTaoForAlpha}` instead of the subtensor aliases.
+14. The active node crate no longer imports `pallet_subtensor` outside the runtime boundary; the
+    last leftover benchmark import was removed from `node/src/benchmarking.rs`.
+15. The runtime no longer publicly re-exports `pallet_subtensor`; remaining subtensor references
+    are internal runtime structure or dependent-pallet wiring, not downstream runtime exports.
+16. `subtensor-transaction-fee` now compiles and test-harnesses against `pallet_game_solver`
+    instead of `pallet_subtensor`.
+17. `admin-utils` now also compiles and test-harnesses against `pallet_game_solver` instead of
+    `pallet_subtensor`.
+18. The runtime safe-mode and proxy policy shell now matches `RuntimeCall::GameSolver(...)`
+    instead of carrying side-by-side `RuntimeCall::SubtensorModule(...)` call handling.
+19. The runtime benchmark manifest wiring now includes `frame-system-benchmarking` plus the local
+    runtime-benchmark feature fanout needed to reach the real next benchmark frontier.
+20. The direct runtime/node manifest dependency edges to `pallet-subtensor` are gone, so the old
+    pallet is no longer part of the active `myosu-chain` package graph.
 
-### 1.3 Why this is a restart, not a continuation
+### Verified failure evidence
 
-1. The chain runtime cannot be compiled. The `surface_check` script (`./fabro/checks/chain-runtime-reset.sh`) exits 0 with empty stdout/stderr because it is a no-op stub, not because the runtime builds.
-2. The Substrate/polkadot-sdk dependency chain is broken — no `git` refs, no version locks, no `Cargo.lock` entry for the polkadot-sdk fork that the game-solver pallet successfully uses.
-3. The node directory is a scaffold with no implementation files.
-4. All subtensor-derived pallets reference workspace keys that were never wired into the workspace.
+From verification on 2026-03-28:
 
----
+- `cargo metadata --format-version 1 --no-deps` now passes
+- `cargo check -p myosu-chain-runtime --quiet` now passes
+- `cargo check -p myosu-chain --quiet` now passes
+- `cargo check -p pallet-game-solver --quiet` now passes
+- `cargo run -p myosu-chain --quiet -- build-spec --chain dev` now succeeds
+- `cargo run -p myosu-chain --quiet -- --dev --tmp --one --force-authoring` now succeeds and
+  imports blocks on the default local path
+- `cargo run -p myosu-chain --quiet -- build-spec --chain dev | rg -n '"(gameSolver|subtensorModule)"'`
+  now reports `gameSolver`
+- the live node banner now prints `Myosu Node`
+- `rg -n "type (SubnetInfo|BalanceOps|TaoReserve|AlphaReserve) =" crates/myosu-chain/runtime/src/lib.rs`
+  now reports all four swap-runtime bindings on `GameSolver`
+- `rg -n "SubtensorModule::" crates/myosu-chain/runtime/src/lib.rs` now returns no matches
+- `rg -n "migrate_init_total_issuance" crates/myosu-chain/runtime/src/lib.rs`
+  now reports the runtime-upgrade hook under `pallet_game_solver::migrations`
+- `rg -n "GetAlphaForTao::<Runtime>|GetTaoForAlpha::<Runtime>" crates/myosu-chain/runtime/src/lib.rs`
+  now reports both swap-simulation order aliases under `pallet_game_solver`
+- `rg -n "pallet_subtensor\\b" crates/myosu-chain/node/src/benchmarking.rs crates/myosu-chain/node/src/command.rs crates/myosu-chain/node/src/rpc.rs crates/myosu-chain/node/src/service.rs crates/myosu-chain/node/src/cli.rs crates/myosu-chain/node/src/client.rs`
+  now returns no matches
+- `rg -n "myosu_chain_runtime::pallet_subtensor|pub use pallet_subtensor;" crates -g '!**/target/**'`
+  now returns no matches
+- `cargo check -p subtensor-transaction-fee --quiet` now passes
+- `cargo test -p subtensor-transaction-fee --no-run` now passes
+- `cargo test -p subtensor-transaction-fee --lib tests::test_remove_stake_fees_tao -- --exact`
+  now passes
+- `cargo check -p pallet-admin-utils --quiet` now passes
+- `cargo test -p pallet-admin-utils --no-run` now passes
+- `cargo test -p pallet-admin-utils --lib tests::test_sudo_set_default_take -- --exact`
+  now passes
+- `rg -n "RuntimeCall::SubtensorModule|\\[pallet_subtensor, SubtensorModule\\]" crates/myosu-chain/runtime/src/lib.rs`
+  now returns no matches
+- `rg -n "GameSolver: pallet_game_solver = 7|SubtensorModule: pallet_subtensor = 7|impl pallet_subtensor::Config for Runtime|pallet-subtensor\\.workspace" crates/myosu-chain/runtime/src/lib.rs crates/myosu-chain/runtime/Cargo.toml crates/myosu-chain/node/Cargo.toml`
+  now reports only `GameSolver: pallet_game_solver = 7`
+- `cargo tree -p myosu-chain --invert pallet-subtensor` now reports no active package path
+- `cargo check -p myosu-chain-runtime --features runtime-benchmarks --quiet` still fails, but the
+  failure is now a narrower Frontier benchmark incompatibility in `pallet-ethereum`
+  (`EnsureEthereumTransaction` missing `try_successful_origin`) rather than missing local runtime
+  benchmark manifest wiring
 
-## 2. Restart Boundary
-
-The restart begins at **the point where a minimal Substrate runtime compiles in this workspace**.
-
-The only salvageable inputs from the current state are:
-
-- **`crates/myosu-chain/common/src/evm_context.rs`** — `is_in_evm()` / `with_evm_context()` are self-contained. Can be reused verbatim after stripping `#[freeze_struct]` annotations.
-- **`crates/myosu-chain/common/src/currency.rs`** — The `Currency` trait and `AlphaCurrency`/`TaoCurrency` types encode domain logic that must be preserved. The `freeze_struct` dependency on `subtensor_macros` must be replaced with a standard `#[derive(...)]` block using the available `scale-info` + `parity-scale-codec` stack.
-- **`crates/myosu-chain/pallets/game-solver/`** — Already buildable; establishes the working Substrate/polkadot-sdk `git = "..."` dependency line.
-- **The `NetUid` type in `runtime/src/lib.rs`** — Domain type worth preserving; rewrite without `subtensor_macros::freeze_struct`.
-
----
-
-## 3. Required Manifests
-
-For each phase, the following files must exist before declaring the phase complete:
-
-### Phase 0 — Workspace Wiring
-
-```
-Cargo.toml                          # Uncomment crates/myosu-chain, add polkadot-sdk git ref, add all missing workspace keys
-crates/myosu-chain/Cargo.toml      # Workspace member manifest for the chain crate
-crates/myosu-chain/runtime/Cargo.toml
-crates/myosu-chain/node/Cargo.toml
-crates/myosu-chain/common/Cargo.toml
-```
-
-### Phase 1 — Minimal Runtime
-
-```
-crates/myosu-chain/runtime/src/lib.rs          # construct_runtime! with System + Balances + Sudo only
-crates/myosu-chain/runtime/src/chain_spec.rs   # Basic chain spec
-crates/myosu-chain/runtime/Cargo.toml          # Runtime manifest with all dependencies pinned
-```
-
-**Proof**: `cargo build -p myosu-runtime --release` exits 0; `cargo check` on runtime crate passes.
-
-### Phase 2 — Node + Common
-
-```
-crates/myosu-chain/node/src/lib.rs             # Full Substrate node service wiring
-crates/myosu-chain/node/src/service.rs
-crates/myosu-chain/node/src/command.rs
-crates/myosu-chain/node/src/rpc.rs
-crates/myosu-chain/common/src/lib.rs           # Clean re-exports of currency + evm_context
-crates/myosu-chain/common/src/currency.rs       # Rewritten without subtensor_macros
-crates/myosu-chain/common/src/evm_context.rs    # Cleaned but preserved
-```
-
-**Proof**: `cargo build -p myosu-node --release` exits 0.
-
----
-
-## 4. Phase Definitions
-
-### Phase 0: Workspace Wiring
-
-**Goal**: Make `crates/myosu-chain` an honest workspace member with all required dependencies.
-
-**Actions**:
-1. Add `polkadot-sdk` git dependency to root `Cargo.toml.dependencies` using the same `branch = "stable2407"` that `game-solver` uses.
-2. Uncomment `# "crates/myosu-chain"` in workspace members.
-3. Add `subtensor-runtime-common`, `subtensor-macros`, `subtensor-swap-interface` as git dependencies pointing to the local `support/macros` and `support/tools` paths, or remove their usage entirely from the pallets.
-4. Define `runtime = "some-git-ref"` workspace key pointing at a minimal `myosu-runtime` crate.
-
-**Blocker**: The 13 subtensor pallets cannot be built until their workspace keys are resolved. They are **not** in the critical path for Phase 1.
-
----
-
-### Phase 1: Minimal Runtime (System + Balances + Sudo)
-
-**Goal**: Produce a real `myosu-runtime` crate that compiles to a `.wasm` and `.compact` blob.
-
-**Runtime composition**:
-- `frame_system`
-- `pallet_balances`
-- `pallet_sudo`
-- `pallet_timestamp`
-- `frame_executive`
-- No custom pallets yet.
-
-**Chain spec**: Single validator, development chain ID.
-
-**Proof shape**:
-```
-$ cargo build -p myosu-runtime --release
-   Compiling myosu-runtime v0.1.0
-    Finished release [optimized]
-$ ls -la target/release/wbuild/myosu_runtime*.wasm
-mysu_runtime.wasm   # exists, non-zero size
-```
+This keeps the lane in restart mode only in the broader chain sense. The runtime/node restart
+portion is now real; the active restart frontier has moved past final runtime identity and into
+support-lane cleanup.
 
 ---
 
-### Phase 2: Node Binary + Common Crate
+## Restart Boundary
 
-**Goal**: Produce a `myosu-node` binary that runs the Phase 1 runtime.
+The restart begins at the point where the checked-in chain surface becomes
+honest:
 
-**Node composition**:
-- Full `sc_service::NewFull` setup
-- `BasicAura` or `AuraConsensus` block production
-- HTTP + WebSocket RPC
-- CLI with `clap`
+1. the root workspace includes the chain packages that are supposed to build,
+2. the runtime compiles against the current dependency graph, and
+3. the runtime and node crates exist as real packages that can be checked directly.
 
-**Common crate cleanup**:
-- Strip all `#[freeze_struct]` uses; replace with standard derive macros
-- Re-export `AlphaCurrency`, `TaoCurrency`, `Currency` trait, `NetUid` (rewritten), `is_in_evm`, `with_evm_context`
-- Publish as `myosu-chain-common`
+The active blocker is no longer package truth, runtime dependency truth, node source truth, the
+reopened pallet alignment problem, initial runtime integration, runtime API payload identity,
+native/node presentation identity, swap-pallet trait ownership, runtime helper ownership, the
+transaction-fee/admin-utils consumer paths, the runtime call-policy shell, or final cutover
+between `SubtensorModule` and `GameSolver`. It is now support-lane cleanup: the narrower local
+transaction-pool constraint, the upstream Frontier benchmark incompatibility, and historical
+subtensor-era cleanup outside the live path.
 
-**Proof shape**:
+---
+
+## Salvageable Inputs
+
+The following surfaces remain worth preserving during restart work:
+
+- `crates/myosu-chain/node/src/*.rs`
+  Reason: the node structure exists and should be repaired, not recreated.
+- `crates/myosu-chain/runtime/src/lib.rs`
+  Reason: runtime wiring exists and can serve as a concrete migration target.
+- `crates/myosu-chain/common/src/currency.rs`
+  Reason: domain types still matter, even if macros and imports must change.
+- `crates/myosu-chain/common/src/evm_context.rs`
+  Reason: self-contained helper surface.
+- `crates/myosu-chain/pallets/game-solver/src/stubs.rs`
+  Reason: already-authored local substitutes for stripped subtensor pieces.
+- `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs`
+  Reason: documents the intended no-op swap direction.
+
+---
+
+## Non-Salvageable or Must-Strip Inputs
+
+The following shapes still cannot be trusted as-is:
+
+- any assumption that the earlier `pallet-game-solver` green state still reflects the current
+  repo-root workspace
+
+---
+
+## Next Implementation Slices
+
+### Slice 1: Runtime package truth
+
+Keep the restored package manifests in place so Cargo can see the chain surfaces
+that actually exist.
+
+Proof target:
+
+```bash
+cargo metadata --format-version 1 --no-deps
 ```
-$ cargo build -p myosu-node --release
-   Compiling myosu-node v0.1.0
-    Finished release [optimized]
-$ ./target/release/myosu-node --help
-mysu-node 0.1.0
-...
+
+### Slice 2: Preserve node and devnet truth
+
+Keep the restored node dependency graph, chain spec, consensus wiring, and local dev boot path
+honest while downstream chain work resumes.
+
+Proof target:
+
+```bash
+cargo check -p myosu-chain --quiet
+cargo run -p myosu-chain --quiet -- build-spec --chain dev
+cargo run -p myosu-chain --quiet -- --dev --tmp --one --force-authoring
 ```
 
----
+### Slice 3: Support-lane cleanup truth
 
-### Phase 3: Custom Pallets (Future)
+Now that the standalone pallet compiles on the shared workspace line, owns the active runtime API
+payload surface, emits `gameSolver` in spec generation, and occupies runtime index 7, keep the
+support surfaces honest: dependency graph, benchmark lane, and historical cleanup.
 
-**Not in scope for this restart spec.** The 13 subtensor pallets are out-of-scope until the minimal runtime/node is proven.
+Proof target:
 
----
-
-## 5. What Is NOT Salvageable From Current `runtime/src/lib.rs`
-
-| Element | Reason not salvageable |
-|---------|------------------------|
-| `construct_runtime!` block | Imports pallets that don't exist in workspace |
-| `subtensor_precompiles::Precompiles` | No `subtensor_precompiles` crate |
-| `pallet_shield`, `pallet_subtensor`, `pallet_subtensor_*` | No workspace definitions |
-| `runtime_common::prod_or_fast` | No `runtime_common` crate |
-| `subtensor_macros::freeze_struct` | No `subtensor_macros` workspace key |
-| `subtensor_swap_interface::{Order, SwapHandler}` | No `subtensor_swap_interface` |
-| `subtensor_transaction_fee::{SubtensorTxFeeHandler, TransactionFeeHandler}` | No `subtensor_transaction_fee` |
-| `pallet_commitments::{CanCommit, OnMetadataCommitment, GetCommitments}` | Depends on `pallet_subtensor` and `subtensor_runtime_common` |
-| `pallet_registry::CanRegisterIdentity` | No `pallet_registry` workspace key |
-| WASM binary `include!` | No build path established |
-
----
-
-## 6. Recommended Restart Approach
-
-1. **Fork no Substrate code on day one.** Start with raw `frame_system` + `pallet_balances` + `pallet_sudo` + `pallet_timestamp` pinned to `polkadot-sdk stable2407`.
-2. **Do not attempt to port the subtensor pallets yet.** They bring in a deep dependency graph that will block the build path. Establish the runtime first.
-3. **Publish `myosu-chain-common`** as a separate crate early, with clean public API surface.
-4. **Do not use `subtensor_macros::freeze_struct`.** Use standard SCALE codec derives from `parity-scale-codec` + `scale-info`.
-5. **Build the WASM runtime first.** Node binary is downstream of the runtime.
-
----
-
-## 7. Review Summary
-
-The current `chain:runtime` effort is a **design document in code form**, not a buildable artifact. The `runtime/src/lib.rs` is a Substrate runtime definition that imports 15+ crates, none of which exist in the workspace. The node directory is a scaffold. The workspace explicitly marks the chain as "Stage 1" and keeps it commented out.
-
-**Salvageable**: `common/src/evm_context.rs`, the `Currency`/currency type idea from `common/src/currency.rs`, `pallets/game-solver/` as a template for the polkadot-sdk dependency line, and `NetUid` as a domain type.
-
-**Not salvageable**: The entire runtime `construct_runtime!` block, all subtensor pallet references, all `subtensor_*` workspace key dependencies.
-
-The next implementation slice must begin at **Phase 0** (workspace wiring) and prove each phase by building it before proceeding.
+```bash
+rg -n "GameSolver: pallet_game_solver = 7|SubtensorModule: pallet_subtensor = 7|impl pallet_subtensor::Config for Runtime|pallet-subtensor\\.workspace" crates/myosu-chain/runtime/src/lib.rs crates/myosu-chain/runtime/Cargo.toml crates/myosu-chain/node/Cargo.toml
+cargo tree -p myosu-chain --invert pallet-subtensor
+cargo run -p myosu-chain --quiet -- build-spec --chain dev | rg -n '"(gameSolver|subtensorModule)"'
+cargo check -p myosu-chain-runtime --features runtime-benchmarks --quiet
+```

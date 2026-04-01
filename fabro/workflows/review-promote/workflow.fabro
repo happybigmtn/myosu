@@ -1,0 +1,15 @@
+digraph ReviewPromoteWorkflow {
+    graph [
+        goal="Review/promote workflow: inspect a lane's output, verify claims, and publish reviewed artifacts without generating new implementation work."
+    ]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit [shape=Msquare, label="Exit"]
+
+    inspect [label="Inspect"]
+    verify [shape=parallelogram, label="Verify claims"]
+    promote [label="Promote review"]
+
+    start -> inspect -> verify -> promote -> exit
+}

@@ -1,12 +1,17 @@
 # `agent:experience` Lane Specification
 
+Historical note: this lane artifact predates the current `myosu-play`
+subcommand CLI. For the live Stage 0 surface, read `myosu-play --pipe` as
+`myosu-play pipe`. Future flags such as `--context`, `--narrate`, and
+spectator commands remain lane intent until they land in code.
+
 ## Purpose and User-Visible Outcome
 
 `agent:experience` is the **agent-facing presentation layer** for Myosu. It owns every surface through which programmatic agents — LLMs, bots, scripts — perceive and act upon the game world.
 
 The lane delivers:
 
-1. **`--pipe` mode** — a plain-text stdin/stdout protocol (`agent | myosu-play --pipe | opponent`) built on `GameRenderer::pipe_output()`, with two new flags: `--context <path>` and `--narrate`
+1. **`pipe` mode** — a plain-text stdin/stdout protocol (`agent | myosu-play pipe | opponent`) built on `GameRenderer::pipe_output()`, with two new flags: `--context <path>` and `--narrate`
 2. **JSON schema** — `docs/api/game-state.json` + `crates/myosu-tui/src/schema.rs` (fully implemented, trusted) — the machine-readable game state consumed by structured agents
 3. **Agent context file** — a JSON file (`--context <path>`) providing persistent identity, memory, and journal across sessions
 4. **Reflection channel** — a `reflect>` prompt after each hand in pipe mode; skippable via empty line; appended to the journal
@@ -15,7 +20,7 @@ The lane delivers:
 7. **Game selection** — lobby presented in pipe mode (no `--subnet` flag) so agents can choose which game to enter
 8. **Spectator relay** — Phase 0 local Unix-domain socket event stream (`AC-SP-01`); Phase 1 WebSocket via miner axon
 
-**User-visible behavior**: An agent connects via `myosu-play --pipe --context ./koan.json --narrate`. It receives narrated game state, plays hands, writes optional reflections, and builds a persistent journal over sessions. A separate `myosu-play --spectate` client watches the same session over a Unix socket.
+**User-visible behavior**: An agent connects via `myosu-play pipe --context ./koan.json --narrate`. It receives narrated game state, plays hands, writes optional reflections, and builds a persistent journal over sessions. A separate future spectator client watches the same session over a Unix socket.
 
 ---
 
@@ -41,7 +46,7 @@ miner axon (future) ───────► │  │ Unix socket → future WS 
                             │  └──────────────────────────────────────────────┘  │
                             │  ┌──────────────────────────────────────────────┐  │
                             │  │ myosu-play binary (extends play:tui binary)  │  │
-                            │  │ --pipe --context <path> --narrate           │  │
+                            │  │ pipe --context <path> --narrate             │  │
                             │  └──────────────────────────────────────────────┘  │
                             └──────────────────────────────────────────────────────┘
 ```
@@ -67,7 +72,7 @@ miner axon (future) ───────► │  │ Unix socket → future WS 
 | `docs/api/game-state.json` | **TRUSTED** | Complete JSON schema with 10 game types, exhaustive `legal_actions` |
 | `crates/myosu-tui/src/schema.rs` | **TRUSTED** | Full Rust implementation with `GameStateBuilder`, `LegalAction` enum, 16 tests passing |
 | `GameRenderer::pipe_output()` contract | **TRUSTED** | Trait method exists; `pipe.rs` driver skeleton exists; no narration yet |
-| `pipe.rs` — `PipeMode` driver | **TRUSTED** | 6 tests pass; `--pipe` flag exists; no `--context`, `--narrate`, `reflect>`, lobby |
+| `pipe.rs` — `PipeMode` driver | **TRUSTED** | 6 tests pass; `pipe` mode exists; no `--context`, `--narrate`, `reflect>`, lobby |
 | `crates/myosu-tui/src/agent_context.rs` | **MISSING** | No file at this path |
 | `crates/myosu-tui/src/narration.rs` | **MISSING** | No file at this path |
 | `crates/myosu-tui/src/journal.rs` | **MISSING** | No file at this path |
@@ -147,7 +152,7 @@ An empty line skips the reflection. A non-empty response is appended to the jour
 
 ### 6. Lobby + Game Selection in Pipe Mode — Absent
 
-AC-AX-05: When `--pipe` is used without `--subnet`, the agent receives the lobby and can choose which game to enter. Currently, no such lobby exists in pipe mode.
+AC-AX-05: When `pipe` mode is used without `--subnet`, the agent receives the lobby and can choose which game to enter. Currently, no such lobby exists in pipe mode.
 
 ```
 MYOSU/LOBBY

@@ -2,7 +2,7 @@
 
 Source: Master spec AC-GP-01
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: GS-01..09 (chain for miner discovery), PE-01..04 (poker engine), MN-01..05 (miners serve strategies)
 
 ## Purpose
@@ -23,18 +23,21 @@ strategy rather than blocking.
 ## Whole-System Goal
 
 Current state:
-- Chain pallet tracks miner incentive scores (GS-05, GS-06)
-- Miners serve strategy queries via HTTP axon (MN-03)
-- Poker engine provides game lifecycle (PE-01)
-- No gameplay interface exists
+- `myosu-play` already exists with a real train shell, pipe mode, smoke path,
+  artifact-backed poker advice, live miner discovery/query, and a local
+  Liar's Dice surface
+- The chain can already surface a discovered miner after the stage-0 local loop
+  reaches post-epoch incentive state
+- This spec is therefore partly implemented and partly superseded by later
+  productization work; the remaining value is keeping the intended gameplay
+  contract clear
 
-This spec adds:
-- `myosu-play` CLI binary
-- Best-miner discovery from chain incentive scores
-- Interactive game loop (human decisions via stdin)
-- Bot play via miner axon strategy queries
-- Hand history recording
-- Session statistics (hands played, win rate, profit)
+This spec now describes the gameplay contract that the current `myosu-play`
+surface is aiming at:
+- chain-aware miner discovery
+- interactive poker play against artifact-backed or live miner advice
+- durable session behavior
+- a clear user-facing path from solver output to human play
 
 If all ACs land:
 - `myosu-play --chain ws://localhost:9944 --subnet 1` starts a poker session
@@ -43,7 +46,7 @@ If all ACs land:
 - Each completed hand is recorded and stats are displayed
 
 Still not solved here:
-- TUI (graphical terminal interface) — text prompts only
+- richer table-style TUI presentation beyond the current stage-0 shell
 - Multiplayer (human vs human)
 - Web interface
 - Real money or token wagering
@@ -74,7 +77,7 @@ In scope:
 - Fallback to random strategy on miner disconnection
 
 Out of scope:
-- TUI with card graphics — text prompts are sufficient
+- a higher-fidelity table presentation beyond the current stage-0 shell
 - Real token wagering — play money only
 - Multiplayer (human vs human)
 - Tournament mode
@@ -85,18 +88,18 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| CLI + main | New | crates/myosu-play/src/main.rs |
-| Chain client | New (shared) | crates/myosu-play/src/chain.rs |
-| Best miner selector | New | crates/myosu-play/src/discovery.rs |
-| Game loop | New | crates/myosu-play/src/game_loop.rs |
-| Bot player | New | crates/myosu-play/src/bot.rs |
-| Hand recorder | New | crates/myosu-play/src/recorder.rs |
+| CLI + main | Live | crates/myosu-play/src/main.rs, crates/myosu-play/src/cli.rs |
+| Advice and renderer loading | Live | crates/myosu-play/src/blueprint.rs |
+| Best miner selector | Live | crates/myosu-play/src/discovery.rs |
+| Live miner query | Live | crates/myosu-play/src/live.rs |
+| Gameplay shell and pipe integration | Live | crates/myosu-play/src/main.rs + crates/myosu-tui/ |
+| Hand recording / session history | Not implemented yet | no dedicated module today |
 
 ---
 
 ### AC-GP-01: Best Miner Discovery
 
-- Where: `crates/myosu-play/src/discovery.rs (new)`
+- Where: `crates/myosu-play/src/discovery.rs`
 - How: Query the chain for the miner with the highest `Incentive` score on the
   target subnet. Read their `Axons` entry for IP:port. Verify the miner is
   responsive (`GET /health`). If the best miner is unreachable, try the
@@ -115,7 +118,7 @@ Out of scope:
 
 ### AC-GP-02: Interactive Game Loop
 
-- Where: `crates/myosu-play/src/game_loop.rs (new)`
+- Where: current shell flow in `crates/myosu-play/src/main.rs` and renderer state in `crates/myosu-play/src/blueprint.rs`
 - How: Text-based game loop using robopoker's `Game` engine:
 
   ```
@@ -156,7 +159,7 @@ Out of scope:
 
 ### AC-GP-03: Bot Strategy Integration
 
-- Where: `crates/myosu-play/src/bot.rs (new)`
+- Where: current live-query and renderer integration in `crates/myosu-play/src/live.rs` and `crates/myosu-play/src/blueprint.rs`
 - How: When it's the bot's turn:
   1. Convert current `Game` to `NlheInfo` via the encoder
   2. Query the miner's axon: `POST /strategy` with serialized info
@@ -182,7 +185,7 @@ Out of scope:
 
 ### AC-GP-04: Hand History Recording
 
-- Where: `crates/myosu-play/src/recorder.rs (new)`
+- Where: future dedicated module; not implemented in the current stage-0 surface
 - How: Record each completed hand as JSON:
   ```json
   {
@@ -216,8 +219,8 @@ Out of scope:
 
 ## Decision Log
 
-- 2026-03-16: Text prompts, not TUI — minimal implementation that proves
-  the product thesis. TUI is a separate enhancement spec.
+- 2026-03-16: Minimal shell first, richer table UI later — prove the gameplay
+  thesis before spending time on presentation depth.
 - 2026-03-16: 200-500ms bot delay — feels more natural than instant response.
 - 2026-03-16: Best-miner by incentive score — directly ties gameplay quality
   to the Yuma Consensus output.

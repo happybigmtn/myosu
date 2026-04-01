@@ -1,8 +1,13 @@
 # Specification: Key Management — Account Lifecycle for Players
 
+Historical note: this is still a future design slot, not a current stage-0
+implementation target for the full player wallet lifecycle. The repo now ships
+`crates/myosu-keys/` plus a minimal operator CLI, but not the broader wallet or
+onboarding surface described here.
+
 Source: DESIGN.md 8.0a-8.0d onboarding and wallet flows
 Status: Draft
-Date: 2026-03-17
+Date: 2026-03-30
 Depends-on: CF-01..11 (chain scaffold — sr25519 account model)
 Blocks: TU-05 Onboarding screen, TU-05 Wallet screen
 
@@ -20,6 +25,23 @@ The gameplay CLI (`myosu-play`) needs a keypair to:
 
 For Phase 0, key management is local-only. No hardware wallets, no browser
 extension integration, no remote key storage.
+
+## Current Truth
+
+- `myosu-play` already depends on chain-facing identity only indirectly through
+  the current stage-0 loop and dev keys
+- the repo now ships `crates/myosu-keys/`, encrypted key storage under
+  `~/.myosu/`, and a minimal `myosu-keys` CLI with `create`,
+  `import-keyfile`, `import-mnemonic`, `import-raw-seed`, `list`,
+  `export-active-keyfile`, `show-active`, `switch-active`,
+  `change-password`, and `print-bootstrap`, plus a checked-in operator bundle
+  helper that writes runnable miner/validator plus named-network spec wrapper
+  scripts from the active config, materialized named-network spec artifacts, a
+  machine-readable bundle manifest, and a bundle-local verifier
+- the repo still does **not** yet ship the onboarding screens, import/export
+  flows, mnemonic verification UI, or account-switching UX described here
+- this spec therefore remains the future implementation slot for the broader
+  player-owned account lifecycle
 
 ## Scope
 

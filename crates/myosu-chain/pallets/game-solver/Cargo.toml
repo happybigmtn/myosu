@@ -7,28 +7,67 @@ description = "Game-solving pallet for the myosu chain"
 
 [features]
 default = ["std"]
+fast-blocks = ["runtime-common/fast-blocks"]
+legacy-subtensor-tests = []
+pow-faucet = []
+runtime-benchmarks = []
 std = [
     "frame-support/std",
     "frame-system/std",
+    "libsecp256k1/std",
+    "pallet-balances/std",
+    "pallet-drand/std",
     "sp-runtime/std",
     "sp-core/std",
     "sp-std/std",
     "sp-io/std",
+    "sp-keyring/std",
     "scale-info/std",
-    "parity-scale-codec/std",
+    "codec/std",
+    "runtime-common/std",
+    "safe-math/std",
+    "share-pool/std",
+    "subtensor-runtime-common/std",
+    "subtensor-swap-interface/std",
+    "substrate-fixed/std",
 ]
+try-runtime = []
 
 [dependencies]
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
-parity-scale-codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
-scale-info = { version = "2.11.3", default-features = false, features = ["derive"] }
+frame-support.workspace = true
+frame-system.workspace = true
+libsecp256k1 = { version = "0.7.2", default-features = false }
+pallet-balances.workspace = true
+pallet-drand.workspace = true
+sp-keyring.workspace = true
+sp-runtime.workspace = true
+sp-core.workspace = true
+sp-std.workspace = true
+sp-io.workspace = true
+codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+log.workspace = true
+runtime-common = { path = "../../runtime-common", default-features = false }
+safe-math = { path = "../../primitives/safe-math", default-features = false }
+share-pool = { path = "../../primitives/share-pool", default-features = false }
+subtensor-macros = { path = "../../support/macros" }
+subtensor-runtime-common = { path = "../../common", default-features = false }
+subtensor-swap-interface = { path = "../swap-interface", default-features = false }
+substrate-fixed.workspace = true
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
+pallet-aura = { workspace = true, features = ["std"] }
+pallet-crowdloan = { workspace = true, features = ["std"] }
+pallet-preimage = { workspace = true, features = ["std"] }
+pallet-scheduler = { workspace = true, features = ["std"] }
+pallet-subtensor-proxy = { workspace = true, features = ["std"] }
+pallet-subtensor-swap = { workspace = true, features = ["std"] }
+pallet-subtensor-utility = { workspace = true, features = ["std"] }
+pallet-timestamp = { workspace = true, features = ["std"] }
+sp-consensus-aura = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["std"] }
+sp-io = { workspace = true, features = ["std"] }
+sp-runtime = { workspace = true, features = ["std"] }
+sp-tracing = { workspace = true, features = ["std"] }
+tracing-log.workspace = true
+tracing-subscriber.workspace = true

@@ -1,27 +1,44 @@
-# `games:traits` Verification — Slice 1
+# `games:traits` Verification
 
-## Proof Commands That Passed
+**Lane**: `games:traits`
+**Date**: 2026-03-27
 
-| Command | Exit Code | Result |
-|---------|-----------|--------|
-| `cargo check -p myosu-games` | 0 | Passed |
-| `cargo test -p myosu-games` | 0 | 10 unit + 4 doctest passed |
-| `cargo fetch` | 0 | Fetched 3 robopoker packages from git without local path |
+---
 
-## Risks Reduced
+## Commands Run
 
-- **Risk 1 (Robopoker Absolute Path Coupling):** Reduced. Both `rbp-core` and `rbp-mccfr` now resolved via git URL + pinned `rev` instead of absolute filesystem paths. The crate is now portable — any developer with network access can build it without a local robopoker clone.
-- **Risk 6 (No Version Pin on Robopoker After Slice 1 Migration):** Reduced. `rev = "04716310143094ab41ec7172e6cea5a2a66744ef"` pins to the current HEAD commit. `cargo update` will not auto-advance to a newer commit unless explicitly invoked.
+| Command | Result |
+|---------|--------|
+| `cargo test -p myosu-games -- --list` | Passed; 10 unit tests and 4 doctests listed |
+| `cargo test -p myosu-games --quiet serialization_roundtrip` | Passed; 3 property tests |
 
-## Risks That Remain
+The live crate state also shows:
 
-- **Risk 2 (Robopoker API Surface Leakage):** Unchanged. The re-export surface `pub use rbp_core::{Probability, Utility}` and `pub use rbp_mccfr::{CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, Profile}` remains. Future slices would need an adaptation layer to decouple from robopoker internals.
-- **Risk 3 (Probability Floating-Point Assumption):** Unchanged. `is_valid()` continues to use epsilon 0.001.
-- **Risk 4 (GameType Byte Encoding Is Off-Chain Convention):** Unchanged. The byte encoding conventions in `GameType::from_bytes`/`to_bytes` remain coupled to the chain pallet's storage format.
-- **Risk 5 (Edition 2024 Forces Non-Stable Rust):** Unchanged. The workspace still pins `edition = "2024"`. Rust 2024 is not yet stable as of early 2026.
+- pinned robopoker git dependencies in `crates/myosu-games/Cargo.toml`
+- explicit `[lib] crate-type = ["lib"]`
 
-## Next Slice
+---
 
-**Slice 3 — Resolve Edition 2024**
+## Verification Outcome
 
-Either downgrade the workspace `edition` to `"2021"` or add a `rust-toolchain.toml` pinning a nightly/beta toolchain. This is a tooling hygiene item with no impact on crate logic. It is a prerequisite for contributor friendliness (Rust 2024 is not stable as of early 2026).
+The bootstrap artifact is current after correcting two stale assumptions from
+the earlier snapshot:
+
+1. robopoker is no longer referenced through absolute local paths
+2. the library section is already explicit
+
+This lane should remain in the keep category.
+
+---
+
+## Next Verification Upgrade
+
+Add property-based tests so this lane has stronger proof than example-based
+unit tests alone. The first targeted property slice now exists; future work can
+expand it further.
+
+Target command:
+
+```bash
+cargo test -p myosu-games -- serialization_roundtrip
+```

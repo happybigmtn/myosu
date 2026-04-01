@@ -17,13 +17,13 @@ sp-runtime.workspace = true
 codec = { workspace = true, features = ["derive"] }
 subtensor-runtime-common.workspace = true
 # local
-pallet-subtensor.workspace = true
+pallet-game-solver.workspace = true
 
 [features]
 default = ["std"]
 std = [
 	"codec/std",
-	"pallet-subtensor/std",
+	"pallet-game-solver/std",
 	"sp-api/std",
 	"sp-runtime/std",
 	"subtensor-runtime-common/std",

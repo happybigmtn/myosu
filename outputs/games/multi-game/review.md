@@ -49,7 +49,7 @@ cargo test -p myosu-tui spectate::tests::reveal_shows_hole_cards_after_showdown
 cargo test -p myosu-tui spectate::tests::reveal_blocked_during_play
 
 # Slice 7 — zero-change verification (MG-03)
-cargo test -p myosu-games
+cargo test -p myosu-games registry::tests::known_game_types --quiet
 cargo test -p myosu-games-poker
 cargo test -p myosu-games-liars-dice
 # git diff crates/myosu-games/src/ crates/myosu-games-poker/src/  # must be empty

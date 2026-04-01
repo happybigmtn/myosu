@@ -2,7 +2,7 @@
 
 Source: Master spec AC-FG-01
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: GT-01..05 (trait system), PE-01..04 (poker engine proves pattern)
 
 ## Purpose
@@ -23,16 +23,19 @@ impl + new `Encoder` + new `GameType` enum variant.
 ## Whole-System Goal
 
 Current state:
-- Poker engine (PE-*) proves the pattern for one game
-- Game engine traits (GT-*) provide game-agnostic interface
-- Chain pallet stores opaque `game_type: Vec<u8>` per subnet
-- `GameType` enum has `NlheHeadsUp` and `Custom(String)` variants
+- The additive second-game proof is already real locally: Liar's Dice has its
+  own crate, local play surface, miner/validator compatibility, and owned
+  two-subnet coexistence proof beside poker
+- Game engine traits already support both poker and Liar's Dice without chain
+  rewrites
+- The remaining gap is not whether multi-game works at all; it is how far the
+  repo wants to standardize the future expansion guide beyond the current
+  executable proof
 
-This spec adds:
-- `myosu-games-liars-dice` crate implementing all CFR traits for Liar's Dice
-- `GameType::LiarsDice` variant in the registry
-- Architecture documentation for adding future games
-- Validation that exploitability = 0 for Liar's Dice Nash equilibrium
+This spec now serves two purposes:
+- record the already-landed Liar's Dice proof honestly
+- preserve the future expansion guidance for additional games beyond poker and
+  Liar's Dice
 
 If all ACs land:
 - Liar's Dice implements `CfrGame`, `CfrInfo`, `Profile`, `Encoder`
@@ -80,10 +83,11 @@ Out of scope:
 
 ## Current State
 
-- `myosu-games` provides `CfrGame`, `CfrInfo`, `Profile`, `Encoder` re-exports
-- `myosu-games-poker` proves the poker implementation pattern
-- `GameType` enum has `LiarsDice` variant (GT-03)
-- No Liar's Dice code exists
+- `myosu-games-liars-dice/` already exists with game, solver, renderer,
+  protocol, and wire modules
+- `myosu-play` can already load and render a local Liar's Dice surface
+- The local owned chain harness already proves poker and Liar's Dice as
+  distinct subnets coexisting on the same stage-0 chain
 
 ## What Already Exists
 
@@ -93,7 +97,7 @@ Out of scope:
 | RPS reference | `rbp-mccfr::rps` | reference | Shows how small games implement traits |
 | Poker pattern | `myosu-games-poker` (PE-*) | reference | Pattern for wrapping a game engine |
 | Exploitability | `Profile::exploitability()` | reuse | Works for any CfrGame |
-| GameType registry | `myosu-games::GameType` (GT-03) | extend | Add LiarsDice variant |
+| Live second-game proof | `crates/myosu-games-liars-dice/` + `myosu-play` + local chain harness | extend | The additive architecture has already been proven on a second real game |
 
 ## Non-goals
 
@@ -105,19 +109,17 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Liar's Dice game | New | crates/myosu-games-liars-dice/src/game.rs |
-| Liar's Dice edge | New | crates/myosu-games-liars-dice/src/edge.rs |
-| Liar's Dice turn | New | crates/myosu-games-liars-dice/src/turn.rs |
-| Liar's Dice info | New | crates/myosu-games-liars-dice/src/info.rs |
-| Liar's Dice encoder | New | crates/myosu-games-liars-dice/src/encoder.rs |
-| Liar's Dice profile | New | crates/myosu-games-liars-dice/src/profile.rs |
-| Expansion guide | New | docs/multi-game-expansion.md |
+| Liar's Dice game + protocol | Live | crates/myosu-games-liars-dice/src/game.rs, crates/myosu-games-liars-dice/src/protocol.rs |
+| Liar's Dice solver | Live | crates/myosu-games-liars-dice/src/solver.rs |
+| Liar's Dice renderer | Live | crates/myosu-games-liars-dice/src/renderer.rs |
+| Liar's Dice wire surface | Live | crates/myosu-games-liars-dice/src/wire.rs |
+| Expansion guide | Not yet split into a standalone doc | future documentation surface |
 
 ---
 
 ### AC-MG-01: Liar's Dice Game Engine
 
-- Where: `crates/myosu-games-liars-dice/ (new)`
+- Where: `crates/myosu-games-liars-dice/`
 - How: Implement `CfrGame` for 2-player Liar's Dice with 1 die each (6 faces):
 
   **Rules**: Each player rolls one die (hidden). Players alternate bidding

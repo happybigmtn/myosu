@@ -6,7 +6,7 @@ use frame_support::pallet_prelude::{Decode, Encode};
 use substrate_fixed::types::I64F64;
 use subtensor_runtime_common::{AlphaCurrency, NetUid, NetUidStorageIndex, TaoCurrency};
 
-#[freeze_struct("9354762261420485")]
+#[freeze_struct("31c3a8ad7248fa87")]
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug, TypeInfo)]
 pub struct SubnetState<AccountId: TypeInfo + Encode + Decode> {
     netuid: Compact<NetUid>,
@@ -26,7 +26,6 @@ pub struct SubnetState<AccountId: TypeInfo + Encode + Decode> {
     alpha_stake: Vec<Compact<AlphaCurrency>>,
     tao_stake: Vec<Compact<TaoCurrency>>,
     total_stake: Vec<Compact<TaoCurrency>>,
-    emission_history: Vec<Vec<Compact<AlphaCurrency>>>,
     // identities: Vec<ChainIdentityOf>,
     // tao_stake: Compact<u64>,
     // incentive: Compact<u16>,
@@ -38,33 +37,6 @@ pub struct SubnetState<AccountId: TypeInfo + Encode + Decode> {
 }
 
 impl<T: Config> Pallet<T> {
-    /// Retrieves the emission history for a list of hotkeys across all subnets.
-    ///
-    /// This function iterates over all subnets and collects the last emission value
-    /// for each hotkey in the provided list. The result is a vector of vectors, where
-    /// each inner vector contains the emission values for a specific subnet.
-    ///
-    /// # Arguments
-    ///
-    /// * `hotkeys` - A vector of hotkeys (account IDs) for which the emission history is to be retrieved.
-    ///
-    /// # Returns
-    ///
-    /// * `Vec<Vec<Compact<u64>>>` - A vector of vectors containing the emission history for each hotkey across all subnets.
-    pub fn get_emissions_history(hotkeys: Vec<T::AccountId>) -> Vec<Vec<Compact<AlphaCurrency>>> {
-        let mut result: Vec<Vec<Compact<AlphaCurrency>>> = vec![];
-        for netuid in Self::get_all_subnet_netuids() {
-            let mut hotkeys_emissions: Vec<Compact<AlphaCurrency>> = vec![];
-            for hotkey in hotkeys.clone() {
-                let last_emission: Compact<AlphaCurrency> =
-                    LastHotkeyEmissionOnNetuid::<T>::get(hotkey.clone(), netuid).into();
-                hotkeys_emissions.push(last_emission);
-            }
-            result.push(hotkeys_emissions.clone());
-        }
-        result
-    }
-
     /// Retrieves the state of a specific subnet.
     ///
     /// This function gathers various metrics and data points for a given subnet, identified by its `netuid`.
@@ -148,7 +120,6 @@ impl<T: Config> Pallet<T> {
             .iter()
             .map(|xi| Compact::from(TaoCurrency::from(fixed64_to_u64(*xi))))
             .collect();
-        let emission_history = Self::get_emissions_history(hotkeys.clone());
         Some(SubnetState {
             netuid: netuid.into(),
             hotkeys,
@@ -167,7 +138,6 @@ impl<T: Config> Pallet<T> {
             alpha_stake,
             tao_stake,
             total_stake,
-            emission_history,
         })
     }
 }

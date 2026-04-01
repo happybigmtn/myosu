@@ -2,7 +2,7 @@
 
 Source: DESIGN.md 9.23 lobby, VO-01..07 validator oracle
 Status: Draft
-Date: 2026-03-17
+Date: 2026-03-30
 Depends-on: GT-01..05 (traits), VO-01..07 (validator), 031626-13 (n-player design)
 Blocks: Lobby display correctness for multi-game subnets
 
@@ -18,6 +18,18 @@ This spec defines:
 1. How each game reports its exploitability metric (units, scale)
 2. How the lobby displays these metrics correctly
 3. How validators use game-specific metrics for weight calculation
+
+## Current Truth
+
+- the current validator implementation is still stage-0 narrow and lives under
+  `crates/myosu-validator/src/validation.rs`
+- the current shared game metadata surface lives under
+  `crates/myosu-games/src/registry.rs`
+- the repo does **not** yet ship a dedicated lobby screen module under
+  `crates/myosu-tui/src/screens/`; the current user-facing shell still lives in
+  `myosu-play`
+- this spec is therefore a future normalization layer on top of live
+  single-game stage-0 scoring, not an already-started implementation
 
 ## The problem
 
@@ -152,7 +164,8 @@ descriptor handles display formatting.
 
 ### AC-CS-02: Normalized Weight Calculation in Validator
 
-- Where: `crates/myosu-validator/src/oracle/ (extend)`
+- Where: `crates/myosu-validator/src/validation.rs` plus
+  `crates/myosu-games/src/registry.rs`
 - How: Replace hardcoded poker normalization with metric-driven normalization.
   Validator fetches `ExploitMetric` from `GameRegistry` for its subnet's game
   type and uses it for weight calculation.
@@ -168,7 +181,9 @@ descriptor handles display formatting.
 
 ### AC-CS-03: Lobby Exploit Display
 
-- Where: `crates/myosu-tui/src/screens/lobby.rs (extend)`
+- Where: future lobby/UI surface, with current adjacent gameplay shell in
+  `crates/myosu-play/src/main.rs` and shared metric metadata in
+  `crates/myosu-games/src/registry.rs`
 - How: Lobby screen fetches `ExploitMetric` per subnet and formats the
   display column accordingly. Right-align the exploit value, left-align
   the unit suffix.

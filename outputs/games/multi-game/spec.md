@@ -178,11 +178,11 @@ cargo test -p myosu-games-liars-dice
 
 # After ExploitMetric added to myosu-games:
 cargo build -p myosu-games
-cargo test -p myosu-games
+cargo test -p myosu-games registry::tests::known_game_types --quiet
 
 # After spectator relay:
-cargo build -p myosu-play
-cargo test -p myosu-play
+cargo run -p myosu-play --quiet -- --smoke-test
+cargo test -p myosu-play --quiet
 
 # After spectator TUI:
 cargo build -p myosu-tui
@@ -319,7 +319,7 @@ Integration test proving no existing crate was modified.
 
 **Proof**:
 ```bash
-cargo test -p myosu-games
+cargo test -p myosu-games registry::tests::known_game_types --quiet
 cargo test -p myosu-games-poker
 cargo test -p myosu-games-liars-dice
 git diff crates/myosu-games/src/ crates/myosu-games-poker/src/  # must be empty

@@ -7,9 +7,9 @@
 | `screens.rs` | **KEEP** | Well-tested, correct screen state machine |
 | `input.rs` | **KEEP** | Comprehensive test coverage, correct line editing |
 | `renderer.rs` | **KEEP** | Object-safe trait with adequate mock coverage |
-| `schema.rs` | **REOPEN** | Game coverage claim (20 games) exceeds proof (3 games fully tested) |
-| `events.rs` | **REOPEN** | TTY dependency blocks CI proof; no headless alternative |
-| `shell.rs` | **REOPEN** | Integration between input and screen navigation untested; non-Game screens unrendered |
+| `schema.rs` | **REOPEN** | Proof is deeper now, but the "all 20 games" claim still outruns the tested set. |
+| `events.rs` | **KEEP** | Headless synthetic-stream tests now cover key, resize, update, and sender clone paths. |
+| `shell.rs` | **KEEP** | Shell-state coverage now exercises Game render, all non-Game screens, and help overlay bounds. |
 | `theme.rs` | **KEEP** | 8-token palette tested for distinctness |
 | `pipe.rs` | **KEEP** (with caveats) | ANSI enforcement untested via property test |
 
@@ -49,11 +49,12 @@
 
 ### schema.rs — REOPEN
 
-**Coverage Gap**: Only NLHE, Riichi, and LiarsDice have full roundtrip tests. The docstring claims "all 20 games" but 17 game types have zero proof.
+**Coverage Gap**: The schema now has deeper proof than before, but the breadth claim still exceeds the tested set.
 
 **Claim vs Proof**:
-- `all_game_types_have_schema` test creates empty JSON state per game type, but this only proves `serde_json::json!()` works — not that the schema correctly serializes/deserializes game-specific fields.
-- `LegalAction` variants for 17 untested games (e.g., `Bridge` bidding, `Hanabi` hints) have never been exercised.
+- Full roundtrip examples now exist for NLHE heads-up, NLHE 6-max, Riichi, and Liar's Dice.
+- `LegalAction::Custom` and `AgentAction::Custom` are now exercised directly.
+- `all_game_types_have_schema` still creates shallow placeholder JSON per game type, which is not enough to justify the "all 20 games" docstring.
 
 **Risk**: An agent parsing schema for an untested game type may receive structurally-valid but semantically-broken JSON.
 
@@ -64,42 +65,40 @@
 
 ---
 
-### events.rs — REOPEN
+### events.rs — KEEP
 
-**Coverage Gap**: Two tests are `#[ignore]` due to TTY requirement. No alternative proof mechanism exists.
+**Coverage Upgrade**: The old ignored TTY tests have been replaced by a
+stream-driven harness that injects synthetic `CrosstermEvent` values.
 
-**Claim vs Proof**:
-- `EventLoop::new(tick_rate)` creates a tokio task reading from `crossterm::event::EventStream`
-- The task joins on loop break, properly closes receiver on Drop
-- **But**: The event delivery path (crossterm → mpsc → consumer) is completely unexercised in CI
+**Current Proof**:
+- key event delivery
+- resize event delivery
+- async update delivery
+- cloned update sender usage
+- update-event variant coverage
 
-**Risk**: Event loop may silently fail under headless/scripted environments (e.g., `script` command, CI containers).
-
-**Required Proof**:
-1. `MockEventStream` that produces synthetic `CrosstermEvent` values without terminal
-2. Test proving tick, key, resize, and update events all traverse the channel correctly
-3. Integration test with `PipeMode::run_once()` demonstrating end-to-end async behavior
+**Residual Risk**: There is still no full terminal integration proof, but the
+headless proof is now strong enough to keep this module trusted.
 
 ---
 
-### shell.rs — REOPEN
+### shell.rs — KEEP
 
-**Coverage Gap**: Shell is the integration point for all other modules but has minimal integration tests.
+**Coverage Upgrade**: Shell is no longer the weak point in the lane proof.
 
 **Claim vs Proof**:
-- `handle_key` → `handle_submit` → `screens.apply_command` chain is **never tested in combination**
-- `draw` tested only for Game screen; Onboarding, Lobby, Stats, Coaching, History, Wallet, Spectate rendering is **completely unexercised**
-- Help overlay rendering is **unexercised**
+- `handle_key` → `handle_submit` → `screens.apply_command` chain is now tested
+  for the Lobby → Game path
+- `cargo test -p myosu-tui shell_state` now exercises 16 shell-state tests
+- Game rendering is verified with transcript, declaration, input, and state-panel content in one buffer
+- Onboarding, Lobby, Stats, Coaching, History, Wallet, and Spectate are all rendered in a non-Game loop that proves the state panel stays collapsed
+- Help overlay rendering is verified for visible content and in-bounds placement
 
-**Risk**:
-1. Input text routing from `InputLine` to `ScreenManager` could silently break
-2. Screen-specific layout (e.g., state panel collapsing to 0 height on non-Game screens) is never verified
-3. Help overlay bounds calculation (`help_width = 50.min(...)`) could render incorrectly
+**Residual Risk**:
+1. Buffer-content assertions still use a mock renderer, so this is shell trust, not full per-game trust
+2. The help overlay proof checks bounds and visible content, not exact box glyph geometry across terminals
 
-**Required Proof**:
-1. Integration test: Lobby screen + typed "1" + Enter → assert Game screen
-2. Render test for each of the 8 screens verifying buffer content
-3. Help overlay test verifying centered box renders within terminal bounds
+**Judgment**: This module is now trustworthy enough to stay in the keep set.
 
 ---
 
@@ -132,9 +131,9 @@
 | screens | All 8 screens, all transitions | 18 tests, exhaustive | None |
 | input | All key handlers, history, completion | 20+ tests | None |
 | renderer | Trait object-safe, all methods | Mock-based tests | None |
-| schema | All 20 games | Only 3 games fully tested | **HIGH** |
-| events | Async event loop works | 2 tests ignored, no headless alternative | **HIGH** |
-| shell | Integration works | 10 basic tests, no integration chain | **HIGH** |
+| schema | All 20 games | Active examples have deeper proof; long tail still shallow | **MEDIUM** |
+| events | Async event loop works | Headless proof exists | **LOW** |
+| shell | Integration works | 16 shell-state tests cover render breadth and overlay bounds | **LOW** |
 | theme | 8 distinct tokens | 7 tests | None |
 | pipe | ANSI-free output | 5 unit tests | **LOW** |
 
@@ -144,6 +143,8 @@
 
 **Keep** `screens`, `input`, `renderer`, `theme` — these are production-quality trusted leaf surfaces.
 
-**Reopen** `schema`, `events`, `shell` — each has a high-severity proof gap that must be addressed before these modules can be treated as fully proven trusted surfaces.
+**Keep** `shell` and `events` — the shell/state proof is now strong enough to trust the lane surface.
 
-The lane cannot be declared "bootstrapped" until all three reopened modules achieve CI-compatible proof.
+**Reopen** `schema` — it is materially improved, but still over-claims breadth relative to tested game semantics.
+
+The lane still is not fully bootstrapped until the remaining schema-depth gap is reduced.

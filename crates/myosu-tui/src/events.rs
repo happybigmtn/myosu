@@ -1,5 +1,5 @@
 use crossterm::event::{Event as CrosstermEvent, KeyEvent};
-use futures::{FutureExt, StreamExt};
+use futures::{FutureExt, Stream, StreamExt};
 use std::time::Duration;
 use tokio::sync::mpsc;
 
@@ -27,8 +27,24 @@ pub enum UpdateEvent {
     StateChanged { state: String },
     /// Training progress update.
     TrainingProgress { iteration: u64, exploitability: f64 },
+    /// Structured shell status update.
+    Status {
+        state: InteractionState,
+        detail: Option<String>,
+    },
     /// New message to display.
     Message(String),
+}
+
+/// Shell-visible interaction states for loading and operator-facing feedback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InteractionState {
+    Neutral,
+    Loading,
+    Empty,
+    Partial,
+    Error,
+    Success,
 }
 
 /// Event loop for async terminal event handling.
@@ -51,7 +67,7 @@ impl EventLoop {
     /// * `tick_rate` - Duration between tick events for UI updates.
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// use std::time::Duration;
     /// use myosu_tui::events::EventLoop;
     ///
@@ -61,10 +77,46 @@ impl EventLoop {
     /// ```
     pub fn new(tick_rate: Duration) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
-        let (update_tx, mut update_rx) = mpsc::unbounded_channel::<UpdateEvent>();
+        let (update_tx, update_rx) = mpsc::unbounded_channel::<UpdateEvent>();
+        let _task = Self::spawn_task(
+            tx,
+            update_rx,
+            crossterm::event::EventStream::new(),
+            tick_rate,
+        );
 
-        let _task = tokio::spawn(async move {
-            let mut reader = crossterm::event::EventStream::new();
+        Self {
+            rx,
+            update_tx,
+            _task,
+        }
+    }
+
+    /// Receive the next event from the loop.
+    ///
+    /// Returns `None` if the event loop has shut down.
+    pub async fn next(&mut self) -> Option<Event> {
+        self.rx.recv().await
+    }
+
+    /// Get a sender for injecting external updates.
+    ///
+    /// This can be cloned and passed to async tasks that need to
+    /// communicate with the TUI (e.g., solver callbacks).
+    pub fn update_sender(&self) -> mpsc::UnboundedSender<UpdateEvent> {
+        self.update_tx.clone()
+    }
+
+    fn spawn_task<S>(
+        tx: mpsc::UnboundedSender<Event>,
+        mut update_rx: mpsc::UnboundedReceiver<UpdateEvent>,
+        mut reader: S,
+        tick_rate: Duration,
+    ) -> tokio::task::JoinHandle<()>
+    where
+        S: Stream<Item = std::io::Result<CrosstermEvent>> + Unpin + Send + 'static,
+    {
+        tokio::spawn(async move {
             let mut tick_interval = tokio::time::interval(tick_rate);
 
             loop {
@@ -103,28 +155,23 @@ impl EventLoop {
                     }
                 }
             }
-        });
+        })
+    }
+
+    #[cfg(test)]
+    fn with_stream<S>(tick_rate: Duration, reader: S) -> Self
+    where
+        S: Stream<Item = std::io::Result<CrosstermEvent>> + Unpin + Send + 'static,
+    {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let (update_tx, update_rx) = mpsc::unbounded_channel::<UpdateEvent>();
+        let _task = Self::spawn_task(tx, update_rx, reader, tick_rate);
 
         Self {
             rx,
             update_tx,
             _task,
         }
-    }
-
-    /// Receive the next event from the loop.
-    ///
-    /// Returns `None` if the event loop has shut down.
-    pub async fn next(&mut self) -> Option<Event> {
-        self.rx.recv().await
-    }
-
-    /// Get a sender for injecting external updates.
-    ///
-    /// This can be cloned and passed to async tasks that need to
-    /// communicate with the TUI (e.g., solver callbacks).
-    pub fn update_sender(&self) -> mpsc::UnboundedSender<UpdateEvent> {
-        self.update_tx.clone()
     }
 }
 
@@ -137,39 +184,35 @@ impl Drop for EventLoop {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use futures::stream;
 
-    /// Test that key events are properly handled by the event loop.
-    /// This verifies the crossterm event stream integration.
     #[tokio::test]
-    #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
     async fn key_event_handled() {
-        let mut loop_handle = EventLoop::new(Duration::from_millis(10));
-        
-        // Should receive tick events
+        let key = KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE);
+        let reader = stream::iter(vec![Ok(CrosstermEvent::Key(key))]);
+        let mut loop_handle = EventLoop::with_stream(Duration::from_secs(1), reader);
+
         let event = tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
             .await
             .expect("timeout waiting for event")
             .expect("event loop closed");
-        
-        assert_eq!(event, Event::Tick);
+
+        assert_eq!(event, Event::Key(key));
     }
 
-    /// Test that async updates can be injected into the event loop
-    /// from background tasks (e.g., miner responses).
     #[tokio::test]
-    #[ignore = "requires real TTY — crossterm EventStream panics without terminal"]
     async fn async_response_received() {
-        let mut loop_handle = EventLoop::new(Duration::from_secs(1)); // Slow ticks
+        let reader = stream::pending::<std::io::Result<CrosstermEvent>>();
+        let mut loop_handle = EventLoop::with_stream(Duration::from_secs(1), reader);
         let update_tx = loop_handle.update_sender();
 
-        // Send an update
         let update = UpdateEvent::Message("test".into());
         update_tx.send(update.clone()).expect("send failed");
 
-        // Collect events until we get our update
         let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
         let mut found = false;
-        
+
         while tokio::time::Instant::now() < deadline {
             let timeout = deadline - tokio::time::Instant::now();
             if let Ok(Some(event)) = tokio::time::timeout(timeout, loop_handle.next()).await {
@@ -180,15 +223,29 @@ mod tests {
                 }
             }
         }
-        
+
         assert!(found, "did not receive injected update");
+    }
+
+    #[tokio::test]
+    async fn resize_event_handled() {
+        let reader = stream::iter(vec![Ok(CrosstermEvent::Resize(120, 40))]);
+        let mut loop_handle = EventLoop::with_stream(Duration::from_secs(1), reader);
+
+        let event = tokio::time::timeout(Duration::from_millis(100), loop_handle.next())
+            .await
+            .expect("timeout waiting for event")
+            .expect("event loop closed");
+
+        assert_eq!(event, Event::Resize(120, 40));
     }
 
     /// Test that the update sender can be cloned and used from multiple
     /// background tasks concurrently.
     #[tokio::test]
     async fn update_sender_cloned() {
-        let loop_handle = EventLoop::new(Duration::from_secs(1));
+        let reader = stream::pending::<std::io::Result<CrosstermEvent>>();
+        let loop_handle = EventLoop::with_stream(Duration::from_secs(1), reader);
         let tx1 = loop_handle.update_sender();
         let tx2 = loop_handle.update_sender();
 
@@ -218,6 +275,18 @@ mod tests {
             UpdateEvent::TrainingProgress {
                 iteration: 1000,
                 exploitability: 0.05
+            }
+        );
+
+        let status = UpdateEvent::Status {
+            state: InteractionState::Partial,
+            detail: Some("live advice stale".into()),
+        };
+        assert_eq!(
+            status,
+            UpdateEvent::Status {
+                state: InteractionState::Partial,
+                detail: Some("live advice stale".into())
             }
         );
     }

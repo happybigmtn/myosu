@@ -2,7 +2,7 @@
 
 Source: Master spec AC-GE-02, robopoker fork crate analysis
 Status: Draft
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: GT-01..05 (game engine traits must exist)
 
 ## Purpose
@@ -19,8 +19,10 @@ strategy query handling, and the training pipeline interface.
 The primary consumers are `myosu-miner` (training + serving), `myosu-validator`
 (exploitability scoring), and `myosu-play` (human vs bot).
 
-**Key design constraint**: depend on robopoker via git tag, never vendor. Local
-patches documented in PATCHES.md and submitted upstream (INV-006).
+**Key design constraint**: keep the poker engine as a thin owned wrapper around
+the robopoker fork instead of re-implementing MCCFR locally. Stage 0 now
+depends on the live forked crate surface, not a hypothetical upstream-only
+patch queue.
 
 ## Whole-System Goal
 
@@ -29,14 +31,14 @@ Current state:
 - robopoker fork provides `rbp-nlhe` with `NlheSolver`, `NlheEncoder`,
   `NlheProfile`, `NlheGame`, `NlheEdge`, `NlheTurn`, `NlheInfo`
 - robopoker's `NlheProfile` already implements `Profile::exploitability()`
-- No poker-specific myosu integration exists
+- `crates/myosu-games-poker/` already exists as the live stage-0 poker wrapper
+  consumed by gameplay, miner, and validator paths
 
 This spec adds:
-- `myosu-games-poker` crate wrapping robopoker's NLHE implementation
-- Wire serialization for `NlheInfo` and `NlheEdge` types
-- Training pipeline interface (create solver, run iterations, checkpoint)
-- Strategy query handler (info → action distribution)
-- Exploitability integration using `Profile::exploitability()`
+- the truthful contract for the poker wrapper crate that now exists
+- any remaining seam-hardening around wire format, artifact loading, and
+  strategy request/response handling
+- an ownership map that matches the real in-repo module layout
 
 If all ACs land:
 - A miner can create an `NlheSolver`, train it, and serve strategy queries
@@ -82,15 +84,19 @@ Out of scope:
 
 ## Current State
 
-- robopoker `/home/r/coding/robopoker/crates/nlhe/src/solver.rs` — `NlheSolver<R,W,S>`
-  with `Solver` trait impl, `subgame()` method
-- robopoker `/home/r/coding/robopoker/crates/nlhe/src/encoder.rs` — `NlheEncoder`
-  mapping game states to abstract info sets
-- robopoker `/home/r/coding/robopoker/crates/nlhe/src/profile.rs` — `NlheProfile`
-  storing regrets and strategies in BTreeMap
-- robopoker `/home/r/coding/robopoker/crates/gameplay/src/game.rs` — `Game` struct
-  (Copy, 5 fields: pot, board, seats, dealer, ticker)
-- `crates/myosu-games/` — trait re-exports and wire serialization from GT-01..05
+- `crates/myosu-games-poker/src/lib.rs` — live poker wrapper re-export surface
+- `crates/myosu-games-poker/src/solver.rs` — live `PokerSolver` wrapper and
+  checkpoint-backed training surface
+- `crates/myosu-games-poker/src/wire.rs` — live request/response codec helpers
+- `crates/myosu-games-poker/src/request.rs` — live strategy request types
+- `crates/myosu-games-poker/src/state.rs` and `src/action.rs` — live gameplay
+  state and action surfaces shared with `myosu-play`
+- `crates/myosu-games-poker/src/renderer.rs` — live NLHE renderer for the TUI
+  and pipe surfaces
+- `crates/myosu-games-poker/src/artifacts.rs` — live encoder artifact loader
+  and manifest contract
+- robopoker remains the underlying solver/engine source at
+  `/home/r/coding/robopoker/`
 
 ## What Already Exists
 
@@ -115,11 +121,14 @@ Out of scope:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Poker crate | New | crates/myosu-games-poker/src/lib.rs |
-| Solver wrapper | New | crates/myosu-games-poker/src/solver.rs |
-| Query handler | New | crates/myosu-games-poker/src/query.rs |
-| Wire impl | New | crates/myosu-games-poker/src/wire.rs |
-| Training interface | New | crates/myosu-games-poker/src/training.rs |
+| Poker crate | Implemented | crates/myosu-games-poker/src/lib.rs |
+| Solver wrapper | Implemented | crates/myosu-games-poker/src/solver.rs |
+| Wire impl | Implemented | crates/myosu-games-poker/src/wire.rs |
+| Strategy request/response types | Implemented | crates/myosu-games-poker/src/request.rs |
+| Gameplay state/actions | Implemented | crates/myosu-games-poker/src/state.rs, crates/myosu-games-poker/src/action.rs |
+| TUI/pipe renderer | Implemented | crates/myosu-games-poker/src/renderer.rs |
+| Artifact loading | Implemented | crates/myosu-games-poker/src/artifacts.rs |
+| Dedicated `query.rs` / `training.rs` split | Not present | current functionality lives in `solver.rs`, `request.rs`, and `wire.rs` |
 
 ---
 
@@ -206,7 +215,9 @@ Out of scope:
 
 ### AC-PE-02: Strategy Query Handler
 
-- Where: `crates/myosu-games-poker/src/query.rs (new)`
+- Where: `crates/myosu-games-poker/src/solver.rs`,
+  `crates/myosu-games-poker/src/request.rs`,
+  `crates/myosu-games-poker/src/wire.rs`
 - How: Implement the bridge between network queries and solver lookups:
 
   ```rust
@@ -334,7 +345,7 @@ Out of scope:
 - State: no runtime state — computation.
 - Wiring contract:
   - Trigger: validator evaluation loop
-  - Callsite: myosu-validator/src/oracle/
+  - Callsite: `crates/myosu-validator/src/validation.rs`
   - State effect: N/A
   - Persistence effect: N/A
   - Observable signal: returns f64 exploitability value

@@ -46,4 +46,5 @@ ops/reconciliation/
 .malinka-scratch/
 .worktrees
 .paperclip/
+.fabro_cli/
 fabro/paperclip/*/bootstrap-state.json

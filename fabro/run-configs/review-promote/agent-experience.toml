@@ -1,0 +1,12 @@
+version = 1
+graph = "../../workflows/review-promote/workflow.fabro"
+goal = """
+Review and promote the agent:experience artifact surface.
+"""
+directory = "../../.."
+
+[sandbox]
+provider = "local"
+
+[sandbox.local]
+worktree_mode = "clean"

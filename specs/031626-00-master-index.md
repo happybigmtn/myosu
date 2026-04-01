@@ -2,7 +2,7 @@
 
 Source: Research analysis of opentensor/subtensor architecture + codexpoker solver infrastructure
 Status: Active (index document — individual specs are Draft)
-Date: 2026-03-16
+Date: 2026-03-30
 Depends-on: none
 
 > **This document is a master index.** Each original AC has been expanded into
@@ -25,7 +25,7 @@ Depends-on: none
 | `031626-08-abstraction-pipeline.md` | (new) | AP-01..03 | Draft |
 | `031626-09-launch-integration.md` | (new) | LI-01..06 | Draft |
 | `031626-10-agent-experience.md` | (new) | AX-01..06 | Draft |
-| `031626-11-agent-coordination-mechanism.md` | (new) | AC (design) | Draft |
+| `031626-11-agent-coordination-mechanism.md` | (new) | AC (design) | Superseded by 12 |
 | `031626-12-nlhe-incentive-mechanism.md` | (new) | IL (design) | Draft |
 | `031626-13-n-player-trait-design.md` | (new) | — (decision) | Draft |
 | `031626-14-poker-variant-family.md` | (new) | PV-01..06 | Draft |
@@ -57,8 +57,8 @@ MCCFR engine for all poker subnets.
 
 ## Whole-System Goal
 
-Current state:
-- No chain exists — this is greenfield
+Original design-time starting point:
+- The repo began before any in-repo chain implementation existed
 - Robopoker v1.0.0 provides a production MCCFR poker solver with clustering,
   abstraction, and blueprint training
 - Codexpoker has a gameplay layer (TUI, P2P, fairness crypto) that demonstrates
@@ -133,25 +133,32 @@ Design-complete but not yet implemented:
 
 ## Current State
 
-- Greenfield — no code exists in this repo yet
-- `robopoker` v1.0.0 exists upstream with MCCFR, clustering, hand evaluation
-- `subtensor` at SHA `7eb6f9bb` provides the Substrate fork target
-- `codexpoker` demonstrates the gameplay pattern (TUI, coaching, blueprint)
+- The repo is no longer greenfield. A local stage-0 loop exists here: the
+  stripped chain produces blocks, `myosu-miner` trains and serves bounded
+  strategy, `myosu-validator` scores and submits weights, and `myosu-play`
+  consumes both artifact-backed and live miner advice.
+- The additive second-game seam is also proven locally. Liar's Dice has its
+  own game crate and participates in the owned two-subnet coexistence proof.
+- `robopoker` v1.0.0 and `subtensor` remain the upstream baselines, but this
+  repo now carries stage-0 reductions, wrappers, and proof harnesses on top of
+  them rather than just planning against them.
+- Hosted CI proof exists on draft PR `#1`: run `23741634642` closed plan `010`
+  with green `Stage-0 Repo Shape`, doctrine, gameplay, and chain jobs under
+  the `<15 min` timing target.
 
 ## What Already Exists
 
 | Sub-problem | Existing code / flow | Reuse / extend / replace | Why |
 |-------------|----------------------|--------------------------|-----|
-| MCCFR solver | robopoker v1.0.0 | reuse | Production solver with Blueprint trait, NLHE encoder, clustering |
-| Hand evaluation | robopoker::cards | reuse | Nanosecond hand ranking, isomorphism, abstraction |
-| Game engine | robopoker::gameplay | reuse | Game, Edge, Turn, Seat types for NLHE |
-| Substrate runtime | subtensor runtime | extend | Fork and replace AI pallets with game-solving pallets |
-| Yuma Consensus | subtensor epoch/run_epoch.rs | reuse | Currency-agnostic weight matrix math |
-| Neuron registry | subtensor subnets/ | extend | UID management, registration, pruning |
-| Commit-reveal | subtensor subnets/weights.rs | reuse | Anti-gaming mechanism for hidden test positions |
-| Coldkey/hotkey | subtensor staking/ | reuse | Two-key pattern for operational security |
-| Gameplay TUI | codexpoker::tui | reference | Pattern for human vs bot play (not direct reuse) |
-| Coach system | codexpoker::coach | reference | Pattern for querying blueprints (not direct reuse) |
+| Shared game seam | `crates/myosu-games/` | extend | Live trait and registry layer for additive games |
+| Poker solver + renderer | `crates/myosu-games-poker/` | extend | Artifact-backed poker engine, wire types, and renderer are already live |
+| Second-game proof | `crates/myosu-games-liars-dice/` | extend | Additive non-poker game crate already proven through local play and chain coexistence |
+| Chain runtime + node + pallet | `crates/myosu-chain/` | reduce + extend | Local devnet, owned smoke path, and stage-0 pallet loop already exist |
+| Shared chain client | `crates/myosu-chain-client/` | use | RPC, storage, and signed extrinsic seam shared by miner, validator, and gameplay |
+| Miner service | `crates/myosu-miner/` | extend | Bounded training, checkpoint loading, and HTTP axon are already live |
+| Validator service | `crates/myosu-validator/` | extend | Deterministic scoring and weight submission are already live |
+| Gameplay surface | `crates/myosu-play/` + `crates/myosu-tui/` | extend | Training shell, pipe mode, smoke path, and live miner discovery/query are already live |
+| Upstream baselines | `robopoker`, `subtensor`, `codexpoker` | reference / fork | Provide the provenance and inherited primitives that the current repo has now reduced and integrated |
 
 ## Non-goals
 
@@ -166,14 +173,14 @@ Design-complete but not yet implemented:
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| Game engine (poker) | New (wraps robopoker) | crates/myosu-games-poker/ |
-| Game engine traits | New | crates/myosu-games/src/lib.rs |
-| Chain runtime | New (fork subtensor) | crates/myosu-chain/ |
-| Game-solving pallet | New | crates/myosu-chain/pallets/game-solver/ |
-| Miner binary | New | crates/myosu-miner/ |
-| Validator binary | New | crates/myosu-validator/ |
-| Gameplay CLI | New | crates/myosu-play/ |
-| Exploitability oracle | New | crates/myosu-validator/src/oracle/ |
+| Game engine (poker) | Live | crates/myosu-games-poker/ |
+| Game engine traits | Live | crates/myosu-games/src/lib.rs |
+| Chain runtime | Live stage-0 fork | crates/myosu-chain/ |
+| Game-solving pallet | Live stage-0 pallet | crates/myosu-chain/pallets/game-solver/ |
+| Miner binary | Live | crates/myosu-miner/ |
+| Validator binary | Live | crates/myosu-validator/ |
+| Gameplay CLI | Live | crates/myosu-play/ |
+| Exploitability scoring | Live | crates/myosu-validator/src/validation.rs |
 
 ## Architecture / Runtime Contract
 
@@ -390,7 +397,8 @@ Failure loop:
   implementing `Exploitability`.
 - Wiring contract:
   - Trigger: miner and validator create `NlheEngine` instances
-  - Callsite: `myosu-miner/src/main.rs`, `myosu-validator/src/oracle/`
+  - Callsite: `crates/myosu-miner/src/training.rs`,
+    `crates/myosu-validator/src/validation.rs`
   - State effect: game state transitions produce actions and utilities
   - Persistence effect: strategy profiles serialized for network transport
   - Observable signal: exploitability score computed for any strategy profile
