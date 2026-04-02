@@ -26,7 +26,7 @@ pallet-scheduler = { workspace = true, default-features = false, optional = true
 
 [dev-dependencies]
 frame-executive.workspace = true
-pallet-evm-chain-id.workspace = true
+pallet-evm-chain-id = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false, features = ["std"] }
 scale-info.workspace = true
 sp-consensus-aura.workspace = true
 sp-consensus-grandpa.workspace = true
@@ -49,7 +49,6 @@ std = [
 	"pallet-balances/std",
 	"pallet-crowdloan/std",
 	"pallet-drand/std",
-	"pallet-evm-chain-id/std",
 	"pallet-grandpa/std",
 	"pallet-preimage/std",
 	"pallet-scheduler/std",

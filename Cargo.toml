@@ -62,8 +62,6 @@ derive-syn-parse = "0.2"
 enumflags2 = "0.7.9"
 ethereum = { version = "0.18.2", default-features = false }
 expander = "2"
-fp-rpc = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fp-self-contained = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
 frame = { package = "polkadot-sdk-frame", git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 frame-benchmarking = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 frame-benchmarking-cli = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
@@ -92,13 +90,9 @@ num-traits = { version = "0.2.19", default-features = false }
 pallet-admin-utils = { path = "crates/myosu-chain/pallets/admin-utils", default-features = false }
 pallet-aura = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 pallet-balances = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
-pallet-base-fee = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
 pallet-contracts = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 pallet-crowdloan = { path = "crates/myosu-chain/pallets/crowdloan", default-features = false }
 pallet-drand = { path = "crates/myosu-chain/pallets/drand", default-features = false }
-pallet-ethereum = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-pallet-evm = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-pallet-evm-chain-id = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
 pallet-grandpa = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 pallet-game-solver = { path = "crates/myosu-chain/pallets/game-solver", default-features = false }
 pallet-insecure-randomness-collective-flip = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
@@ -199,16 +193,6 @@ syn = { version = "2.0.106", default-features = false }
 tle = { git = "https://github.com/ideal-lab5/timelock", rev = "5416406cfd32799e31e1795393d4916894de4468", default-features = false }
 toml_edit = "0.22"
 w3f-bls = { git = "https://github.com/opentensor/bls", branch = "fix-no-std", default-features = false }
-fc-api = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fc-aura = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fc-babe = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fc-consensus = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fc-db = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fc-mapping-sync = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fc-rpc = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fc-rpc-core = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fc-storage = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
-fp-consensus = { git = "https://github.com/opentensor/frontier", rev = "b51a81bb3f2a94eabaafcde40eab6a91accf3f36", default-features = false }
 
 [patch.crates-io]
 w3f-bls = { git = "https://github.com/opentensor/bls", branch = "fix-no-std" }

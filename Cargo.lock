@@ -7667,7 +7667,6 @@ dependencies = [
  "hex",
  "jsonrpsee",
  "myosu-chain-runtime",
- "pallet-admin-utils",
  "pallet-game-solver",
  "pallet-transaction-payment",
  "parity-scale-codec",

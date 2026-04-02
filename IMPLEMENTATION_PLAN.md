@@ -33,7 +33,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Stage-0 bootstrap defaults were moved off `Sudo` mutation helpers; validator and chain-client bootstrap flows now rely on runtime defaults for tempo/network limits.
     - The node proof path requires a cached runtime wasm under `target/debug/wbuild/myosu-chain-runtime/`; this increment refreshed that cache with a native `cargo build -p myosu-chain-runtime` after installing the `wasm32v1-none` target.
 
-- [ ] `RT-002` Strip EVM and Frontier service dependencies from node binary
+- [x] `RT-002` Strip EVM and Frontier service dependencies from node binary
   - Spec: `specs/040226-01-chain-runtime-reduction.md`
   - Why now: Node binary compiles Frontier/EVM service layer that stage-0 does not use. Removing it reduces build time and attack surface.
   - Codebase evidence:
@@ -55,6 +55,11 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
   - Dependencies: `none`
   - Completion signal: Node binary builds without any fc-*, fp-*, or pallet-evm crate in its dependency tree
+  - Implementation notes:
+    - The queued evidence was stale: `crates/myosu-chain/node/src/lib.rs`, `rpc.rs`, and `service.rs` were already Frontier-free, so RT-002 reduced to manifest pruning rather than service rewiring.
+    - Removed unused Frontier workspace declarations (`fc-*`, `fp-*`, `pallet-evm*`, `pallet-ethereum`, `pallet-base-fee`) from the root `Cargo.toml`.
+    - Cut the unused `pallet-admin-utils` dependency from `myosu-chain-client` and demoted `pallet-evm-chain-id` in `pallet-admin-utils` and `subtensor-transaction-fee` to test-only direct dev-dependencies so stage-0 node builds stop inheriting Frontier crates.
+    - Verified the post-change dependency tree with `cargo tree -p myosu-chain --prefix none | rg '^(fc-|fp-|pallet-evm|pallet-ethereum)'`, which now returns no matches.
 
 - [ ] `RT-003` Feature-gate unused pallet-game-solver extrinsics to ≤20
   - Spec: `specs/040226-01-chain-runtime-reduction.md`
