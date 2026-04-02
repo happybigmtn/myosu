@@ -13,3 +13,4 @@
 - `IT-001` commit `98630d847fef0f50b82ca8695095a69bc9f0aa92`; validation: `bash tests/e2e/helpers/start_devnet.sh && bash tests/e2e/helpers/wait_for_block.sh 1 && bash tests/e2e/helpers/stop_devnet.sh`
 - `EM-003` commit `57266177d74d667193f4c48980868be02dfe20ef`; validation: `bash tests/e2e/emission_flow.sh`
 - `IT-002` commit `3ec60ef057e3ce95cd30778e6fdf2212109a094b`; validation: `bash tests/e2e/local_loop.sh`
+- `IT-003` commit `1a77dac7623abb59b917b0c6eee0f6602c13da81`; validation: `bash tests/e2e/validator_determinism.sh`
