@@ -16,6 +16,8 @@ default = ["std"]
 fast-runtime = []
 fast-blocks = ["fast-runtime"]
 full-runtime = [
+    "pallet_subtensor/full-runtime",
+    "subtensor-transaction-fee/full-runtime",
     "dep:pallet-insecure-randomness-collective-flip",
     "dep:pallet-multisig",
     "dep:pallet-preimage",

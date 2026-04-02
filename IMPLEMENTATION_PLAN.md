@@ -61,7 +61,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Cut the unused `pallet-admin-utils` dependency from `myosu-chain-client` and demoted `pallet-evm-chain-id` in `pallet-admin-utils` and `subtensor-transaction-fee` to test-only direct dev-dependencies so stage-0 node builds stop inheriting Frontier crates.
     - Verified the post-change dependency tree with `cargo tree -p myosu-chain --prefix none | rg '^(fc-|fp-|pallet-evm|pallet-ethereum)'`, which now returns no matches.
 
-- [ ] `RT-003` Feature-gate unused pallet-game-solver extrinsics to ≤20
+- [x] `RT-003` Feature-gate unused pallet-game-solver extrinsics to ≤20
   - Spec: `specs/040226-01-chain-runtime-reduction.md`
   - Why now: Pallet exposes 63 extrinsics; spec requires ≤20. Reduces audit surface and aligns the pallet with stage-0 actual usage.
   - Codebase evidence:
@@ -83,6 +83,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet`
   - Dependencies: `RT-001`
   - Completion signal: Pallet exposes ≤20 extrinsics when built without the stage-1 feature flag; miner and validator tests pass
+  - Implementation notes:
+    - Default stage-0 builds now expose only the live chain-client surface: `set_weights`, `commit_weights`, `reveal_weights`, `add_stake`, `serve_axon`, `burned_register`, `register_network`, and `start_call`.
+    - `full-runtime` restores the inherited call surface for legacy tests and future stage-1 work; `stage_0_flow` now asserts the compiled default call list via `scale-info` and enforces the `<= 20` cap.
+    - Adjacent default-build helpers were aligned with the reduced surface: coldkey-swap guard/tests are disabled unless `full-runtime` is enabled, shared test registration falls back to `burned_register`, and `subtensor-transaction-fee` only matches alpha-fee calls when the full runtime surface is compiled.
 
 - [ ] `RT-004` Resolve TODO/FIXME backlog in myosu-chain to fewer than 20 remaining
   - Spec: `specs/040226-01-chain-runtime-reduction.md`

@@ -40,6 +40,7 @@ workspace = true
 
 [features]
 default = ["std"]
+full-runtime = ["pallet-game-solver/full-runtime"]
 std = [
 	"codec/std",
 	"frame-executive/std",
@@ -79,6 +80,7 @@ runtime-benchmarks = [
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-preimage/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",	
+	"full-runtime",
 	"pallet-game-solver/runtime-benchmarks",
 	"pallet-subtensor-swap/runtime-benchmarks",
 ]

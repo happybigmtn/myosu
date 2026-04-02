@@ -751,26 +751,45 @@ pub fn register_ok_neuron(
     coldkey_account_id: U256,
     start_nonce: u64,
 ) {
-    let block_number: u64 = SubtensorModule::get_current_block_as_u64();
-    let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-        netuid,
-        block_number,
-        start_nonce,
-        &hotkey_account_id,
-    );
-    let result = SubtensorModule::register(
-        <<Test as frame_system::Config>::RuntimeOrigin>::signed(hotkey_account_id),
-        netuid,
-        block_number,
-        nonce,
-        work,
-        hotkey_account_id,
-        coldkey_account_id,
-    );
-    assert_ok!(result);
-    log::info!(
-        "Register ok neuron: netuid: {netuid:?}, coldkey: {hotkey_account_id:?}, hotkey: {coldkey_account_id:?}"
-    );
+    #[cfg(feature = "full-runtime")]
+    {
+        let block_number: u64 = SubtensorModule::get_current_block_as_u64();
+        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+            netuid,
+            block_number,
+            start_nonce,
+            &hotkey_account_id,
+        );
+        let result = SubtensorModule::register(
+            <<Test as frame_system::Config>::RuntimeOrigin>::signed(hotkey_account_id),
+            netuid,
+            block_number,
+            nonce,
+            work,
+            hotkey_account_id,
+            coldkey_account_id,
+        );
+        assert_ok!(result);
+        log::info!(
+            "Register ok neuron: netuid: {netuid:?}, coldkey: {hotkey_account_id:?}, hotkey: {coldkey_account_id:?}"
+        );
+    }
+
+    #[cfg(not(feature = "full-runtime"))]
+    {
+        let _ = start_nonce;
+        let burn_cost = SubtensorModule::get_burn(netuid);
+        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost.into());
+        let result = SubtensorModule::burned_register(
+            <<Test as frame_system::Config>::RuntimeOrigin>::signed(coldkey_account_id),
+            netuid,
+            hotkey_account_id,
+        );
+        assert_ok!(result);
+        log::info!(
+            "Register ok neuron: netuid: {netuid:?}, coldkey: {hotkey_account_id:?}, hotkey: {coldkey_account_id:?}"
+        );
+    }
 }
 
 #[allow(dead_code)]

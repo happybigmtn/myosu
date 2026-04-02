@@ -21,6 +21,7 @@ use sp_runtime::{
 };
 
 // Pallets
+#[cfg(feature = "full-runtime")]
 use pallet_game_solver::Call as GameSolverCall;
 use pallet_transaction_payment::Config as PTPConfig;
 use pallet_transaction_payment::OnChargeTransaction;
@@ -237,60 +238,80 @@ impl<F, OU> SubtensorTxFeeHandler<F, OU> {
         CallOf<T>: IsSubType<pallet_game_solver::Call<T>>,
         OU: AlphaFeeHandler<T>,
     {
+        #[cfg(not(feature = "full-runtime"))]
+        {
+            let _ = who;
+            let _ = call;
+            return Vec::new();
+        }
+
+        #[cfg(feature = "full-runtime")]
         let mut alpha_vec: Vec<(AccountIdOf<T>, NetUid)> = Vec::new();
 
         // Otherwise, switch to Alpha for the extrinsics that assume converting Alpha
         // to TAO
         // TODO: Populate the list
+        #[cfg(feature = "full-runtime")]
         match call.is_sub_type() {
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::remove_stake { hotkey, netuid, .. }) => {
                 alpha_vec.push((hotkey.clone(), *netuid))
             }
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::remove_stake_limit { hotkey, netuid, .. }) => {
                 alpha_vec.push((hotkey.clone(), *netuid))
             }
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::remove_stake_full_limit { hotkey, netuid, .. }) => {
                 alpha_vec.push((hotkey.clone(), *netuid))
             }
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::unstake_all { hotkey, .. }) => {
                 let netuids = OU::get_all_netuids_for_coldkey_and_hotkey(who, hotkey);
                 netuids
                     .into_iter()
                     .for_each(|netuid| alpha_vec.push((hotkey.clone(), netuid)));
             }
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::unstake_all_alpha { hotkey, .. }) => {
                 let netuids = OU::get_all_netuids_for_coldkey_and_hotkey(who, hotkey);
                 netuids
                     .into_iter()
                     .for_each(|netuid| alpha_vec.push((hotkey.clone(), netuid)));
             }
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::move_stake {
                 origin_hotkey,
                 destination_hotkey: _,
                 origin_netuid,
                 ..
             }) => alpha_vec.push((origin_hotkey.clone(), *origin_netuid)),
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::transfer_stake {
                 destination_coldkey: _,
                 hotkey,
                 origin_netuid,
                 ..
             }) => alpha_vec.push((hotkey.clone(), *origin_netuid)),
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::swap_stake {
                 hotkey,
                 origin_netuid,
                 ..
             }) => alpha_vec.push((hotkey.clone(), *origin_netuid)),
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::swap_stake_limit {
                 hotkey,
                 origin_netuid,
                 ..
             }) => alpha_vec.push((hotkey.clone(), *origin_netuid)),
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::recycle_alpha {
                 hotkey,
                 amount: _,
                 netuid,
             }) => alpha_vec.push((hotkey.clone(), *netuid)),
+            #[cfg(feature = "full-runtime")]
             Some(GameSolverCall::burn_alpha {
                 hotkey,
                 amount: _,
@@ -299,6 +320,7 @@ impl<F, OU> SubtensorTxFeeHandler<F, OU> {
             _ => {}
         }
 
+        #[cfg(feature = "full-runtime")]
         alpha_vec
     }
 }

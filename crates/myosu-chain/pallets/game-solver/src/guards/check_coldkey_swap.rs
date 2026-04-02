@@ -1,4 +1,6 @@
-use crate::{Call, ColdkeySwapAnnouncements, ColdkeySwapDisputes, Config, Error};
+use crate::{Call, Config};
+#[cfg(feature = "full-runtime")]
+use crate::{ColdkeySwapAnnouncements, ColdkeySwapDisputes, Error};
 use frame_support::dispatch::{
     DispatchGuard, DispatchInfo, DispatchResultWithPostInfo, PostDispatchInfo,
 };
@@ -38,30 +40,40 @@ where
             return Ok(().into());
         };
 
-        if ColdkeySwapAnnouncements::<T>::contains_key(who) {
-            if ColdkeySwapDisputes::<T>::contains_key(who) {
-                return Err(Error::<T>::ColdkeySwapDisputed.into());
-            }
-
-            let is_allowed_direct = matches!(
-                call.is_sub_type(),
-                Some(
-                    Call::announce_coldkey_swap { .. }
-                        | Call::swap_coldkey_announced { .. }
-                        | Call::dispute_coldkey_swap { .. }
-                )
-            );
-
-            if !is_allowed_direct {
-                return Err(Error::<T>::ColdkeySwapAnnounced.into());
-            }
+        #[cfg(not(feature = "full-runtime"))]
+        {
+            let _ = who;
+            let _ = call;
+            return Ok(().into());
         }
 
-        Ok(().into())
+        #[cfg(feature = "full-runtime")]
+        {
+            if ColdkeySwapAnnouncements::<T>::contains_key(who) {
+                if ColdkeySwapDisputes::<T>::contains_key(who) {
+                    return Err(Error::<T>::ColdkeySwapDisputed.into());
+                }
+
+                let is_allowed_direct = matches!(
+                    call.is_sub_type(),
+                    Some(
+                        Call::announce_coldkey_swap { .. }
+                            | Call::swap_coldkey_announced { .. }
+                            | Call::dispute_coldkey_swap { .. }
+                    )
+                );
+
+                if !is_allowed_direct {
+                    return Err(Error::<T>::ColdkeySwapAnnounced.into());
+                }
+            }
+
+            Ok(().into())
+        }
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full-runtime"))]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use crate::{ColdkeySwapAnnouncements, ColdkeySwapDisputes, Error, tests::mock::*};

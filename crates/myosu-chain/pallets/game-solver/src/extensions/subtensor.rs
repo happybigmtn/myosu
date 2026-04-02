@@ -7,16 +7,19 @@ use sp_runtime::traits::{
     AsSystemOriginSigner, DispatchInfoOf, Dispatchable, Implication, TransactionExtension,
     ValidateResult,
 };
+#[cfg(feature = "full-runtime")]
 use sp_runtime::transaction_validity::{InvalidTransaction, TransactionValidityError};
 use sp_runtime::{
     impl_tx_ext_default,
     transaction_validity::{TransactionSource, TransactionValidity, ValidTransaction},
 };
 use sp_std::marker::PhantomData;
+#[cfg(feature = "full-runtime")]
 use sp_std::vec::Vec;
 use subtensor_macros::freeze_struct;
 use subtensor_runtime_common::{NetUid, NetUidStorageIndex};
 
+#[cfg(feature = "full-runtime")]
 const ADD_STAKE_BURN_PRIORITY_BOOST: u64 = 100;
 
 type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
@@ -152,6 +155,7 @@ where
                     Err(CustomTransactionError::StakeAmountTooLow.into())
                 }
             }
+            #[cfg(feature = "full-runtime")]
             Some(Call::batch_reveal_weights {
                 netuid,
                 uids_list,
@@ -207,7 +211,22 @@ where
                     Err(CustomTransactionError::StakeAmountTooLow.into())
                 }
             }
+            #[cfg(feature = "full-runtime")]
             Some(Call::register { netuid, .. } | Call::burned_register { netuid, .. }) => {
+                let registrations_this_interval =
+                    Pallet::<T>::get_registrations_this_interval(*netuid);
+                let max_registrations_per_interval =
+                    Pallet::<T>::get_target_registrations_per_interval(*netuid);
+                if registrations_this_interval >= (max_registrations_per_interval.saturating_mul(3))
+                {
+                    // If the registration limit for the interval is exceeded, reject the transaction
+                    return Err(CustomTransactionError::RateLimitExceeded.into());
+                }
+
+                Ok((Default::default(), (), origin))
+            }
+            #[cfg(not(feature = "full-runtime"))]
+            Some(Call::burned_register { netuid, .. }) => {
                 let registrations_this_interval =
                     Pallet::<T>::get_registrations_this_interval(*netuid);
                 let max_registrations_per_interval =
@@ -254,6 +273,7 @@ where
 
                 Ok((Default::default(), (), origin))
             }
+            #[cfg(feature = "full-runtime")]
             Some(Call::associate_evm_key { netuid, .. }) => {
                 let uid = Pallet::<T>::get_uid_for_net_and_hotkey(*netuid, who)
                     .map_err(|_| CustomTransactionError::UidNotFound)?;
@@ -261,6 +281,7 @@ where
                     .map_err(|_| CustomTransactionError::EvmKeyAssociateRateLimitExceeded)?;
                 Ok((Default::default(), (), origin))
             }
+            #[cfg(feature = "full-runtime")]
             Some(Call::add_stake_burn { netuid, .. }) => {
                 Pallet::<T>::ensure_subnet_owner(origin.clone(), *netuid).map_err(|_| {
                     TransactionValidityError::Invalid(InvalidTransaction::BadSigner)

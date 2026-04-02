@@ -18,6 +18,10 @@ mod dispatches {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #![deny(clippy::expect_used)]
+        // Stage-0 keeps only the dispatchables exercised by the live miner,
+        // validator, and chain-client loop. Enable `full-runtime` to restore
+        // the inherited subtensor-era call surface for legacy tests and stage-1
+        // restoration work.
 
         /// --- Sets the caller weights for the incentive mechanism. The call can be
         /// made from the hotkey account so is potentially insecure, however, the damage
@@ -156,6 +160,7 @@ mod dispatches {
         ///
         /// * 'MaxWeightExceeded':
         /// 	- Attempting to set weights with max value exceeding limit.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(119)]
         #[pallet::weight((Weight::from_parts(15_540_000_000, 0)
         .saturating_add(T::DbWeight::get().reads(4111))
@@ -200,6 +205,7 @@ mod dispatches {
         /// * BatchWeightItemFailed;
         /// 	- On failure for each failed item in the batch.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(80)]
         #[pallet::weight((Weight::from_parts(95_460_000, 0)
         .saturating_add(T::DbWeight::get().reads(15_u64))
@@ -266,6 +272,7 @@ mod dispatches {
         /// * `TooManyUnrevealedCommits`:
         ///   - Attempting to commit when the user has more than the allowed limit of unrevealed commits.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(115)]
         #[pallet::weight((Weight::from_parts(55_130_000, 0)
 		.saturating_add(T::DbWeight::get().reads(7))
@@ -301,6 +308,7 @@ mod dispatches {
         /// * BatchWeightItemFailed;
         /// 	- On failure for each failed item in the batch.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(100)]
         #[pallet::weight((Weight::from_parts(100_500_000, 0)
         .saturating_add(T::DbWeight::get().reads(11_u64))
@@ -405,6 +413,7 @@ mod dispatches {
         /// * `InvalidRevealCommitHashNotMatch`:
         ///   - The revealed hash does not match any committed hash.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(116)]
         #[pallet::weight((Weight::from_parts(122_000_000, 0)
 		.saturating_add(T::DbWeight::get().reads(16))
@@ -477,6 +486,7 @@ mod dispatches {
         ///
         /// * `InvalidInputLengths`:
         ///   - The input vectors are of mismatched lengths.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(98)]
         #[pallet::weight((Weight::from_parts(412_000_000, 0)
 		.saturating_add(T::DbWeight::get().reads(17_u64))
@@ -532,6 +542,7 @@ mod dispatches {
         /// * 'DelegateTakeTooLow':
         /// 	- The delegate is setting a take which is not lower than the previous.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(65)]
         #[pallet::weight((Weight::from_parts(30_020_000, 0)
 		.saturating_add(T::DbWeight::get().reads(3))
@@ -574,6 +585,7 @@ mod dispatches {
         /// * 'DelegateTakeTooHigh':
         /// 	- The delegate is setting a take which is not greater than the previous.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(66)]
         #[pallet::weight((Weight::from_parts(36_710_000, 0)
 		.saturating_add(T::DbWeight::get().reads(5))
@@ -663,6 +675,7 @@ mod dispatches {
         /// * 'NotEnoughStakeToWithdraw':
         /// 	- Thrown if there is not enough stake on the hotkey to withdwraw this amount.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(3)]
         #[pallet::weight((Weight::from_parts(196_800_000, 0)
 		.saturating_add(T::DbWeight::get().reads(19))
@@ -811,6 +824,7 @@ mod dispatches {
         /// * 'ServingRateLimitExceeded':
         /// 	- Attempting to set prometheus information withing the rate limit min.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(40)]
         #[pallet::weight((Weight::from_parts(32_510_000, 0)
 		.saturating_add(T::DbWeight::get().reads(4))
@@ -861,6 +875,7 @@ mod dispatches {
         /// * 'ip_type' (u8):
         /// 	- The ip type v4 or v6.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(5)]
         #[pallet::weight((Weight::from_parts(29_760_000, 0)
 		.saturating_add(T::DbWeight::get().reads(4))
@@ -923,6 +938,7 @@ mod dispatches {
         /// * 'InvalidSeal':
         /// 	- The seal is incorrect.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(6)]
         #[pallet::weight((Weight::from_parts(197_900_000, 0)
 		.saturating_add(T::DbWeight::get().reads(24_u64))
@@ -940,6 +956,7 @@ mod dispatches {
         }
 
         /// Register the hotkey to root network
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(62)]
         #[pallet::weight((Weight::from_parts(135_900_000, 0)
 		.saturating_add(T::DbWeight::get().reads(19_u64))
@@ -962,6 +979,7 @@ mod dispatches {
         }
 
         /// The extrinsic for user to change its hotkey in subnet or all subnets.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(70)]
         #[pallet::weight((Weight::from_parts(275_300_000, 0)
         .saturating_add(T::DbWeight::get().reads(52_u64))
@@ -978,6 +996,7 @@ mod dispatches {
         /// Performs an arbitrary coldkey swap for any coldkey.
         ///
         /// Only callable by root as it doesn't require an announcement and can be used to swap any coldkey.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(71)]
         #[pallet::weight(Weight::from_parts(161_700_000, 0)
         .saturating_add(T::DbWeight::get().reads(17_u64))
@@ -1031,6 +1050,7 @@ mod dispatches {
         /// * `TxChildkeyTakeRateLimitExceeded`:
         ///     - The rate limit for changing childkey take has been exceeded.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(75)]
         #[pallet::weight((
             Weight::from_parts(66_450_000, 0)
@@ -1064,6 +1084,7 @@ mod dispatches {
         /// # Errors:
         /// * `BadOrigin` - If the origin is not root.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(69)]
         #[pallet::weight(Weight::from_parts(5_660_000, 0)
         .saturating_add(T::DbWeight::get().reads(0))
@@ -1088,6 +1109,7 @@ mod dispatches {
         /// # Errors:
         /// * `BadOrigin` - If the origin is not root.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(76)]
         #[pallet::weight(Weight::from_parts(6_000, 0)
         .saturating_add(T::DbWeight::get().reads(1))
@@ -1109,6 +1131,7 @@ mod dispatches {
         /// # Errors:
         /// * `BadOrigin` - If the origin is not root.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(77)]
         #[pallet::weight(Weight::from_parts(6_000, 0)
         .saturating_add(T::DbWeight::get().reads(1))
@@ -1131,6 +1154,7 @@ mod dispatches {
         /// Facility extrinsic for user to get taken from faucet
         /// It is only available when pow-faucet feature enabled
         /// Just deployed in testnet and devnet for testing purpose
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(60)]
         #[pallet::weight((Weight::from_parts(91_000_000, 0)
         .saturating_add(T::DbWeight::get().reads(27))
@@ -1151,6 +1175,7 @@ mod dispatches {
 
         /// Remove a user's subnetwork
         /// The caller must be the owner of the network
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(61)]
         #[pallet::weight(Weight::from_parts(119_000_000, 0)
 		.saturating_add(T::DbWeight::get().reads(6))
@@ -1209,6 +1234,7 @@ mod dispatches {
         /// 7. **Old Children Cleanup**: Removes the hotkey from the parent list of its old children.
         /// 8. **New Children Assignment**: Assigns the new child to the hotkey and updates the parent list for the new child.
         // TODO: Benchmark this call
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(67)]
         #[pallet::weight((Weight::from_parts(119_000_000, 0)
 		.saturating_add(T::DbWeight::get().reads(6))
@@ -1226,6 +1252,7 @@ mod dispatches {
         /// Schedules a coldkey swap operation to be executed at a future block.
         ///
         /// WARNING: This function is deprecated, please migrate to `announce_coldkey_swap`/`coldkey_swap`
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(73)]
         #[pallet::weight(T::DbWeight::get().reads(5))]
         #[deprecated(note = "Deprecated, please migrate to `announce_coldkey_swap`/`coldkey_swap`")]
@@ -1256,6 +1283,7 @@ mod dispatches {
         /// * 'ip_type' (u8):
         /// 	- The ip type v4 or v6.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(68)]
         #[pallet::weight((Weight::from_parts(38_230_000, 0)
 		.saturating_add(T::DbWeight::get().reads(3))
@@ -1298,6 +1326,7 @@ mod dispatches {
         ///
         /// * `subnet_contact` (Vec<u8>):
         ///     - The contact information for the subnet.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(78)]
         #[pallet::weight((Weight::from_parts(24_350_000, 0)
 		.saturating_add(T::DbWeight::get().reads(1))
@@ -1329,6 +1358,7 @@ mod dispatches {
         }
 
         /// User register a new subnetwork
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(79)]
         #[pallet::weight((Weight::from_parts(396_000_000, 0)
             .saturating_add(T::DbWeight::get().reads(35_u64))
@@ -1366,6 +1396,7 @@ mod dispatches {
         ///
         /// * `TxRateLimitExceeded`:
         ///     - Thrown if key has hit transaction rate limit
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(83)]
         #[pallet::weight((Weight::from_parts(28_830_000, 0)
         .saturating_add(T::DbWeight::get().reads(6))
@@ -1399,6 +1430,7 @@ mod dispatches {
         ///
         /// * `TxRateLimitExceeded`:
         ///     - Thrown if key has hit transaction rate limit
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(84)]
         #[pallet::weight((Weight::from_parts(358_500_000, 0)
         .saturating_add(T::DbWeight::get().reads(41_u64))
@@ -1428,6 +1460,7 @@ mod dispatches {
         /// * `alpha_amount` (T::AccountId):
         ///     - The alpha stake amount to move.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(85)]
         #[pallet::weight((Weight::from_parts(164_300_000, 0)
         .saturating_add(T::DbWeight::get().reads(15_u64))
@@ -1471,6 +1504,7 @@ mod dispatches {
         ///
         /// # Events
         /// May emit a `StakeTransferred` event on success.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(86)]
         #[pallet::weight((Weight::from_parts(160_300_000, 0)
         .saturating_add(T::DbWeight::get().reads(13_u64))
@@ -1512,6 +1546,7 @@ mod dispatches {
         ///
         /// # Events
         /// May emit a `StakeSwapped` event on success.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(87)]
         #[pallet::weight((
             Weight::from_parts(351_300_000, 0)
@@ -1578,6 +1613,7 @@ mod dispatches {
         ///  * 'BalanceWithdrawalError':
         ///  	- Errors stemming from transaction pallet.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(88)]
         #[pallet::weight((Weight::from_parts(402_900_000, 0)
 		.saturating_add(T::DbWeight::get().reads(25_u64))
@@ -1643,6 +1679,7 @@ mod dispatches {
         /// * 'NotEnoughStakeToWithdraw':
         /// 	- Thrown if there is not enough stake on the hotkey to withdwraw this amount.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(89)]
         #[pallet::weight((Weight::from_parts(377_400_000, 0)
 		.saturating_add(T::DbWeight::get().reads(28_u64))
@@ -1686,6 +1723,7 @@ mod dispatches {
         ///
         /// # Events
         /// May emit a `StakeSwapped` event on success.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(90)]
         #[pallet::weight((
             Weight::from_parts(411_500_000, 0)
@@ -1722,6 +1760,7 @@ mod dispatches {
         ///
         /// # Note
         /// Will charge based on the weight even if the hotkey is already associated with a coldkey.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(91)]
         #[pallet::weight((
             Weight::from_parts(27_150_000, 0).saturating_add(T::DbWeight::get().reads_writes(3, 3)),
@@ -1783,6 +1822,7 @@ mod dispatches {
         ///
         /// # Events
         /// May emit a `EvmKeyAssociated` event on success
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(93)]
         #[pallet::weight((
             Weight::from_parts(3_000_000, 0).saturating_add(T::DbWeight::get().reads_writes(2, 1)),
@@ -1809,6 +1849,7 @@ mod dispatches {
         ///
         /// # Events
         /// Emits a `TokensRecycled` event on success.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(101)]
         #[pallet::weight((
             Weight::from_parts(113_400_000, 0).saturating_add(T::DbWeight::get().reads_writes(7, 4)),
@@ -1834,6 +1875,7 @@ mod dispatches {
         ///
         /// # Events
         /// Emits a `TokensBurned` event on success.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(102)]
         #[pallet::weight((
             Weight::from_parts(112_200_000, 0).saturating_add(T::DbWeight::get().reads_writes(7, 3)),
@@ -1850,6 +1892,7 @@ mod dispatches {
         }
 
         /// Sets the pending childkey cooldown (in blocks). Root only.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(109)]
         #[pallet::weight(Weight::from_parts(1_970_000_000_000, 0))]
         pub fn set_pending_childkey_cooldown(
@@ -1865,6 +1908,7 @@ mod dispatches {
         /// This extrinsic allows to specify the limit price for alpha token
         /// at which or better (higher) the staking should execute.
         /// Without limit_price it remove all the stake similar to `remove_stake` extrinsic
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(103)]
         #[pallet::weight((Weight::from_parts(395_300_000, 10142)
 			.saturating_add(T::DbWeight::get().reads(28_u64))
@@ -1893,6 +1937,7 @@ mod dispatches {
         ///
         /// # Events
         /// Emits a `SymbolUpdated` event on success.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(112)]
         #[pallet::weight((
             Weight::from_parts(26_200_000, 0).saturating_add(T::DbWeight::get().reads_writes(4, 1)),
@@ -1926,6 +1971,7 @@ mod dispatches {
         ///
         /// * `hotkey` (T::AccountId):
         ///     - The hotkey account to designate as the autostake destination.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(114)]
         #[pallet::weight((Weight::from_parts(29_930_000, 0)
 		.saturating_add(T::DbWeight::get().reads(4_u64))
@@ -1974,6 +2020,7 @@ mod dispatches {
 
         /// Remove a subnetwork
         /// The caller must be root
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(120)]
         #[pallet::weight(Weight::from_parts(119_000_000, 0)
 		.saturating_add(T::DbWeight::get().reads(6))
@@ -1994,6 +2041,7 @@ mod dispatches {
         ///
         /// # Raises:
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(121)]
         #[pallet::weight((
             Weight::from_parts(117_000_000, 7767)
@@ -2029,6 +2077,7 @@ mod dispatches {
         /// * RootClaimTypeSet;
         /// 	- On the successfully setting the root claim type for the coldkey.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(122)]
         #[pallet::weight((
             Weight::from_parts(19_420_000, 0)
@@ -2054,6 +2103,7 @@ mod dispatches {
         }
 
         /// --- Sets root claim number (sudo extrinsic). Zero disables auto-claim.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(123)]
         #[pallet::weight(Weight::from_parts(4_000_000, 0)
         .saturating_add(T::DbWeight::get().reads(0_u64))
@@ -2072,6 +2122,7 @@ mod dispatches {
         }
 
         /// --- Sets root claim threshold for subnet (sudo or owner origin).
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(124)]
         #[pallet::weight((
             Weight::from_parts(5_711_000, 0)
@@ -2111,6 +2162,7 @@ mod dispatches {
         ///
         /// The `ColdkeySwapAnnounced` event is emitted on successful announcement.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(125)]
         #[pallet::weight(
             Weight::from_parts(55_700_000, 0)
@@ -2153,6 +2205,7 @@ mod dispatches {
         ///   the same as the announced coldkey hash.
         ///
         /// The `ColdkeySwapped` event is emitted on successful swap.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(126)]
         #[pallet::weight(
             Weight::from_parts(110_700_000, 0)
@@ -2188,6 +2241,7 @@ mod dispatches {
         ///
         /// - `coldkey`: The coldkey to dispute the swap for.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(127)]
         #[pallet::weight(
             Weight::from_parts(20_750_000, 0)
@@ -2219,6 +2273,7 @@ mod dispatches {
         ///
         /// - `coldkey`: The coldkey to reset the swap for.
         ///
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(128)]
         #[pallet::weight(
             Weight::from_parts(8_977_000, 0)
@@ -2248,6 +2303,7 @@ mod dispatches {
         /// # Errors:
         /// * `SubnetNotExist` - If the subnet does not exist.
         /// * `NotSubnetOwner` - If the caller is not the subnet owner or root.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(129)]
         #[pallet::weight(Weight::from_parts(10_000, 0)
         .saturating_add(T::DbWeight::get().reads(2))
@@ -2274,6 +2330,7 @@ mod dispatches {
         /// * `SubnetNotExist` - If the subnet does not exist.
         /// * `NotSubnetOwner` - If the caller is not the subnet owner or root.
         /// * `VotingPowerTrackingNotEnabled` - If voting power tracking is not enabled.
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(130)]
         #[pallet::weight(Weight::from_parts(10_000, 0)
         .saturating_add(T::DbWeight::get().reads(2))
@@ -2301,6 +2358,7 @@ mod dispatches {
         /// * `BadOrigin` - If the origin is not root.
         /// * `SubnetNotExist` - If the subnet does not exist.
         /// * `InvalidVotingPowerEmaAlpha` - If alpha is greater than 10^18 (1.0).
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(131)]
         #[pallet::weight(Weight::from_parts(6_000, 0)
         .saturating_add(T::DbWeight::get().reads(1))
@@ -2316,6 +2374,7 @@ mod dispatches {
 
         /// --- The extrinsic is a combination of add_stake(add_stake_limit) and burn_alpha. We buy
         /// alpha token first and immediately burn the acquired amount of alpha (aka Subnet buyback).
+        #[cfg(feature = "full-runtime")]
         #[pallet::call_index(132)]
         #[pallet::weight((
 		    Weight::from_parts(368_000_000, 8556)

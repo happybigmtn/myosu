@@ -8,9 +8,10 @@ description = "Game-solving pallet for the myosu chain"
 [features]
 default = ["std"]
 fast-blocks = ["runtime-common/fast-blocks"]
-legacy-subtensor-tests = []
-pow-faucet = []
-runtime-benchmarks = []
+full-runtime = []
+legacy-subtensor-tests = ["full-runtime"]
+pow-faucet = ["full-runtime"]
+runtime-benchmarks = ["full-runtime"]
 std = [
     "frame-support/std",
     "frame-system/std",

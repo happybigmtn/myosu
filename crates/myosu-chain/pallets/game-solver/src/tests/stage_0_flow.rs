@@ -7,6 +7,7 @@ use crate::*;
 use codec::{Compact, Decode, Encode};
 use frame_support::{assert_noop, assert_ok};
 use safe_math::FixedExt;
+use scale_info::{Registry, TypeDef, meta_type};
 use sp_core::U256;
 use substrate_fixed::types::{I32F32, I96F32, U64F64, U96F32};
 use subtensor_runtime_common::{AlphaCurrency, MechId, NetUid, NetUidStorageIndex, TaoCurrency};
@@ -258,6 +259,46 @@ fn decode_dynamic_infos(info: &impl Encode) -> Vec<DecodedDynamicInfo> {
     );
 
     decoded
+}
+
+#[test]
+fn stage_0_flow_dispatch_surface_matches_live_chain_loop() {
+    let mut registry = Registry::new();
+    let type_id = registry.register_type(&meta_type::<crate::Call<Test>>());
+    let registry: scale_info::PortableRegistry = registry.into();
+    let type_info = registry
+        .resolve(type_id.id)
+        .expect("pallet call type should resolve");
+
+    let TypeDef::Variant(variants) = &type_info.type_def else {
+        panic!("pallet call type should be an enum");
+    };
+
+    let mut actual = variants
+        .variants
+        .iter()
+        .map(|variant| variant.name.as_str())
+        .collect::<Vec<_>>();
+    actual.sort_unstable();
+
+    let mut expected = vec![
+        "add_stake",
+        "burned_register",
+        "commit_weights",
+        "register_network",
+        "reveal_weights",
+        "serve_axon",
+        "set_weights",
+        "start_call",
+    ];
+    expected.sort_unstable();
+
+    assert_eq!(actual, expected);
+    assert!(
+        variants.variants.len() <= 20,
+        "stage-0 default call surface exceeded budget: {}",
+        variants.variants.len()
+    );
 }
 
 #[test]
