@@ -166,7 +166,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The proof seeds a stage-0 subnet twice in fresh `new_test_ext` environments, applies the same validator stakes and weight matrix, runs the same Yuma epoch, and asserts the persisted emission, incentive, dividend, consensus, and validator-trust outputs are bit-stable across runs.
     - The test also checks the spec’s 1e-6 threshold explicitly by comparing the per-uid server, validator, and combined emission ratios from both runs against an epsilon derived from the fixed total epoch emission.
 
-- [ ] `EM-003` Prove end-to-end emission flow on local devnet with reproducible script
+- [x] `EM-003` Prove end-to-end emission flow on local devnet with reproducible script
   - Spec: `specs/040226-02-single-token-emission-accounting.md`
   - Why now: Spec requires proving emission accounting integrity (stage-0 exit criterion 12) on a running chain, not just in unit tests.
   - Codebase evidence:
@@ -185,6 +185,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `bash tests/e2e/emission_flow.sh`
   - Dependencies: `EM-001`, `IT-001`
   - Completion signal: Script exits 0 after proving emission invariant holds on a live local devnet
+  - Implementation notes:
+    - Added `tests/e2e/emission_flow.sh`, which boots the IT-001 helper devnet, generates a temporary `myosu-chain-client` example inside the workspace so Cargo reuses the repo lockfile, and runs the full owner/miner/validator registration plus commit-reveal weight flow against `ws://127.0.0.1:9955`.
+    - The proof queries live chain state for subnet emission vectors and owner stake deltas, then cross-checks them against the pallet’s `block_step_summary` log for the exact drained epoch block.
+    - Live stage-0 accounting drains pending emissions once per subnet epoch, so the invariant is `sum(distributions) ~= block_emission * (tempo + 1)` for the drained subnet window; the script enforces exact bucket agreement (`emission_sum == server + validator`, `owner_delta == owner_cut`) and allows only the observed fixed-point truncation loss budget on the final epoch total (6 rao on the proof run).
 
 - [x] `OBS-001` Add tracing subscriber initialization to myosu-play binary
   - Spec: `specs/040226-03-unified-observability.md`
