@@ -5,6 +5,7 @@ use crate::chain_spec::{
 };
 use sc_service::ChainType;
 use sp_core::sr25519;
+use subtensor_runtime_common::AccountId;
 
 /// Builds the local development chain spec.
 pub fn localnet_config(single_authority: bool) -> Result<ChainSpec, String> {
@@ -34,13 +35,57 @@ pub fn localnet_config(single_authority: bool) -> Result<ChainSpec, String> {
         .build())
 }
 
+pub(super) fn localnet_balances() -> Vec<(AccountId, u128)> {
+    vec![
+        (
+            get_account_id_from_seed::<sr25519::Public>("Alice"),
+            1_000_000_000_000_000u128,
+        ),
+        (
+            get_account_id_from_seed::<sr25519::Public>("Bob"),
+            1_000_000_000_000_000u128,
+        ),
+        (
+            get_account_id_from_seed::<sr25519::Public>("Charlie"),
+            1_000_000_000_000_000u128,
+        ),
+        (
+            get_account_id_from_seed::<sr25519::Public>("Dave"),
+            2_000_000_000_000u128,
+        ),
+        (
+            get_account_id_from_seed::<sr25519::Public>("Eve"),
+            2_000_000_000_000u128,
+        ),
+        (
+            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+            2_000_000_000_000u128,
+        ),
+        (
+            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+            2_000_000_000_000u128,
+        ),
+    ]
+}
+
 pub(super) fn localnet_genesis(
     initial_authorities: Vec<(
         sp_consensus_aura::sr25519::AuthorityId,
         sp_consensus_grandpa::AuthorityId,
     )>,
 ) -> serde_json::Value {
-    serde_json::json!({
+    genesis_patch(initial_authorities, localnet_balances(), None)
+}
+
+pub(super) fn genesis_patch(
+    initial_authorities: Vec<(
+        sp_consensus_aura::sr25519::AuthorityId,
+        sp_consensus_grandpa::AuthorityId,
+    )>,
+    endowed_accounts: Vec<(AccountId, u128)>,
+    subtensor_module: Option<serde_json::Value>,
+) -> serde_json::Value {
+    let mut genesis = serde_json::json!({
         "aura": {
             "authorities": initial_authorities
                 .iter()
@@ -48,36 +93,7 @@ pub(super) fn localnet_genesis(
                 .collect::<Vec<_>>()
         },
         "balances": {
-            "balances": vec![
-                (
-                    get_account_id_from_seed::<sr25519::Public>("Alice"),
-                    1_000_000_000_000_000u128,
-                ),
-                (
-                    get_account_id_from_seed::<sr25519::Public>("Bob"),
-                    1_000_000_000_000_000u128,
-                ),
-                (
-                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
-                    1_000_000_000_000_000u128,
-                ),
-                (
-                    get_account_id_from_seed::<sr25519::Public>("Dave"),
-                    2_000_000_000_000u128,
-                ),
-                (
-                    get_account_id_from_seed::<sr25519::Public>("Eve"),
-                    2_000_000_000_000u128,
-                ),
-                (
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-                    2_000_000_000_000u128,
-                ),
-                (
-                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-                    2_000_000_000_000u128,
-                ),
-            ],
+            "balances": endowed_accounts,
         },
         "grandpa": {
             "authorities": initial_authorities
@@ -85,5 +101,14 @@ pub(super) fn localnet_genesis(
                 .map(|(_, grandpa)| (grandpa.clone(), 1))
                 .collect::<Vec<_>>()
         }
-    })
+    });
+
+    if let Some(subtensor_module) = subtensor_module {
+        genesis
+            .as_object_mut()
+            .expect("genesis patch must stay as an object")
+            .insert("subtensorModule".into(), subtensor_module);
+    }
+
+    genesis
 }

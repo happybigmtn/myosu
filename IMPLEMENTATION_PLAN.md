@@ -466,7 +466,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
 
 ## Follow-On Work
 
-- [ ] `DN-001` Create production-quality devnet chain spec with proper genesis configuration
+- [x] `DN-001` Create production-quality devnet chain spec with proper genesis configuration
   - Spec: `specs/040226-06-multi-node-devnet.md`
   - Why now: Existing devnet.rs uses development seeds (Alice/Bob/Charlie) and ChainType::Local. A production devnet needs real initial authorities and pre-configured subnets.
   - Codebase evidence:
@@ -485,6 +485,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `SKIP_WASM_BUILD=1 cargo run -p myosu-chain -- build-spec --chain devnet --raw > /dev/null`
   - Dependencies: `RT-001`
   - Completion signal: devnet chain spec generates a raw spec with non-development authority keys and a pre-configured subnet
+  - Implementation notes:
+    - `crates/myosu-chain/node/src/chain_spec/devnet.rs` now derives three authorities and the initial operator set from dedicated `//myosu//devnet//...` secret URIs instead of the inherited Alice/Bob/Charlie development seeds, and it advertises `ChainType::Custom("devnet")`.
+    - The runtime genesis patch surface only accepts supported `subtensorModule` fields such as `balancesIssuance`, so the subnet-7 bootstrap now happens by building the normal genesis storage and then post-processing it through `BasicExternalities` before returning the chain spec. This keeps pallet genesis unchanged while still producing a raw spec with subnet `7` pre-registered.
+    - Added focused node-chain-spec proofs for both the non-development authority patch and the subnet-7 storage bootstrap before validating the task contract with `build-spec --chain devnet --raw`.
 
 - [ ] `DN-002` Create bootnode deployment script with persistent storage
   - Spec: `specs/040226-06-multi-node-devnet.md`
