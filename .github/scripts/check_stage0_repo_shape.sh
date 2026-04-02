@@ -14,9 +14,9 @@ required_files=(
   "crates/myosu-chain-client/Cargo.toml"
   "crates/myosu-chain/runtime/Cargo.toml"
   "crates/myosu-chain/node/Cargo.toml"
-  "genesis/plans/002-spec-corpus-normalization.md"
-  "genesis/plans/010-ci-proof-gates-expansion.md"
-  "genesis/plans/020-second-game-subnet-execution-proof.md"
+  "genesis/corpus/plans/002-ci-genesis-plan-sync.md"
+  "genesis/corpus/plans/006-integration-test-harness.md"
+  "genesis/corpus/plans/011-third-game-integration.md"
   "specs/031626-00-master-index.md"
 )
 
