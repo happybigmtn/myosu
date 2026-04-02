@@ -237,7 +237,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The current ignore set is limited to seven inherited chain-stack advisories already present in `Cargo.lock`: `RUSTSEC-2025-0009` (`ring` through node/libp2p QUIC), `RUSTSEC-2025-0055` (`tracing-subscriber 0.2.25` through the inherited runtime graph that still reaches `myosu-chain-client`), and the five `wasmtime 8.0.1` advisories (`RUSTSEC-2023-0091`, `RUSTSEC-2024-0438`, `RUSTSEC-2025-0118`, `RUSTSEC-2026-0020`, `RUSTSEC-2026-0021`) from the inherited Substrate executor stack.
     - Local proof stays aligned with CI by running `cargo audit` with the same seven `--ignore` flags until the upstream opentensor/Substrate fork drift is reduced.
 
-- [ ] `SEC-002` Create SECURITY.md with vulnerability disclosure guidance
+- [x] `SEC-002` Create SECURITY.md with vulnerability disclosure guidance
   - Spec: `specs/040226-04-security-audit-process.md`
   - Why now: No vulnerability disclosure process exists. Required before external operators join devnet.
   - Codebase evidence:
@@ -256,6 +256,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `grep -q SECURITY.md README.md`
   - Dependencies: `none`
   - Completion signal: SECURITY.md exists at repo root with disclosure process and README.md links to it
+  - Implementation notes:
+    - Added a repo-root `SECURITY.md` covering the stage-0 support window (`trunk` plus the latest tag), private reporting expectations, response SLAs, scope, and safe-harbor terms.
+    - The reporting channel avoids inventing new infrastructure: it prefers GitHub private vulnerability reporting for `happybigmtn/myosu` and falls back to private contact with `@happybigmtn` on GitHub if the repository UI does not expose that flow.
+    - `README.md` now links the security policy from the top-level orientation list so operators have a stable disclosure entrypoint.
 
 - [ ] `SEC-003` Document upstream CVE tracking process for Substrate and robopoker forks
   - Spec: `specs/040226-04-security-audit-process.md`

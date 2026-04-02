@@ -14,6 +14,7 @@ Current top-level entrypoints:
 - [OS.md](OS.md) for live doctrine, current operator loop, and stage-0 meaning
 - [SPEC.md](SPEC.md) for durable repo decisions
 - [INVARIANTS.md](INVARIANTS.md) for non-negotiable constraints
+- [SECURITY.md](SECURITY.md) for vulnerability disclosure and response guidance
 - [genesis/plans/001-master-plan.md](genesis/plans/001-master-plan.md) for the
   active plan stack
 - [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml)
