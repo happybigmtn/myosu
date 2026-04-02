@@ -47,18 +47,6 @@ pub struct Cli {
     #[arg(long, default_value_t = false)]
     pub enable_subtoken: bool,
 
-    /// Override the subnet tempo through the local sudo path before validation continues.
-    #[arg(long)]
-    pub sudo_tempo: Option<u16>,
-
-    /// Override the subnet weights set rate limit through the local sudo path.
-    #[arg(long)]
-    pub sudo_weights_rate_limit: Option<u64>,
-
-    /// Disable commit-reveal on the subnet before weight submission.
-    #[arg(long, default_value_t = false)]
-    pub disable_commit_reveal: bool,
-
     /// Submit one bootstrap weight vector on-chain after validation.
     #[arg(long, default_value_t = false)]
     pub submit_weights: bool,
@@ -135,11 +123,6 @@ mod tests {
             "//Bob",
             "--register",
             "--enable-subtoken",
-            "--sudo-tempo",
-            "2",
-            "--sudo-weights-rate-limit",
-            "0",
-            "--disable-commit-reveal",
             "--submit-weights",
             "--stake-amount",
             "100000000000000",
@@ -164,9 +147,6 @@ mod tests {
         assert_eq!(cli.key_password_env, "MYOSU_KEY_PASSWORD");
         assert!(cli.register);
         assert!(cli.enable_subtoken);
-        assert_eq!(cli.sudo_tempo, Some(2));
-        assert_eq!(cli.sudo_weights_rate_limit, Some(0));
-        assert!(cli.disable_commit_reveal);
         assert!(cli.submit_weights);
         assert_eq!(cli.stake_amount, Some(100_000_000_000_000));
         assert_eq!(cli.weight_hotkey.as_deref(), Some("//Alice"));

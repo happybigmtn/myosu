@@ -84,9 +84,6 @@ pub(super) fn localnet_genesis(
                 .iter()
                 .map(|(_, grandpa)| (grandpa.clone(), 1))
                 .collect::<Vec<_>>()
-        },
-        "sudo": {
-            "key": get_account_id_from_seed::<sr25519::Public>("Alice")
         }
     })
 }

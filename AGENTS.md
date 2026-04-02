@@ -1,7 +1,7 @@
 ---
 os_kind: autonomous_kernel
 os_version: "3.0"
-last_updated: "2026-03-17"
+last_updated: "2026-04-02"
 system: myosu
 state: stage_0
 domain: game_solving_chain
@@ -297,6 +297,10 @@ Preferred runtime truth sources:
 
 Avoid building control-plane logic around raw Fabro run-directory layout unless
 there is no stable inspection surface available yet.
+
+Runtime wasm cache for node smoke proofs:
+- `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet` still requires a cached runtime wasm at `target/debug/wbuild/myosu-chain-runtime/myosu_chain_runtime.wasm`
+- On Rust 1.94 in this repo, install `wasm32v1-none` once via `rustup target add wasm32v1-none`, then refresh the cache with `cargo build -p myosu-chain-runtime` before trusting node smoke results after runtime edits
 
 ## Bootstrap Lanes
 

@@ -4,7 +4,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
 
 ## Priority Work
 
-- [ ] `RT-001` Feature-gate inherited pallets from runtime construct_runtime macro
+- [x] `RT-001` Feature-gate inherited pallets from runtime construct_runtime macro
   - Spec: `specs/040226-01-chain-runtime-reduction.md`
   - Why now: Runtime carries 16 pallets; spec requires ≤7. Removing unused pallets is the highest-leverage reduction and unblocks extrinsic capping and TODO resolution.
   - Codebase evidence:
@@ -28,6 +28,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
   - Dependencies: `none`
   - Completion signal: construct_runtime! macro contains ≤9 pallets (7 target + Aura + Grandpa) and all three test commands pass
+  - Implementation notes:
+    - Default runtime now uses a minimal `construct_runtime!` variant while `full-runtime` preserves the inherited pallet set behind an explicit feature.
+    - Stage-0 bootstrap defaults were moved off `Sudo` mutation helpers; validator and chain-client bootstrap flows now rely on runtime defaults for tempo/network limits.
+    - The node proof path requires a cached runtime wasm under `target/debug/wbuild/myosu-chain-runtime/`; this increment refreshed that cache with a native `cargo build -p myosu-chain-runtime` after installing the `wasm32v1-none` target.
 
 - [ ] `RT-002` Strip EVM and Frontier service dependencies from node binary
   - Spec: `specs/040226-01-chain-runtime-reduction.md`

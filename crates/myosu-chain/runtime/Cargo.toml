@@ -15,6 +15,15 @@ path = "src/lib.rs"
 default = ["std"]
 fast-runtime = []
 fast-blocks = ["fast-runtime"]
+full-runtime = [
+    "dep:pallet-insecure-randomness-collective-flip",
+    "dep:pallet-multisig",
+    "dep:pallet-preimage",
+    "dep:pallet-safe-mode",
+    "dep:pallet-scheduler",
+    "dep:pallet-subtensor-proxy",
+    "dep:pallet-sudo",
+]
 pow-faucet = []
 runtime-benchmarks = [
     "frame-benchmarking",
@@ -24,8 +33,9 @@ runtime-benchmarks = [
     "pallet-admin-utils/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet_subtensor/runtime-benchmarks",
-    "pallet-subtensor-proxy/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+    "full-runtime",
+    "pallet-subtensor-proxy?/runtime-benchmarks",
 ]
 std = [
     "codec/std",
@@ -42,14 +52,14 @@ std = [
     "pallet-balances/std",
     "pallet_subtensor/std",
     "pallet-grandpa/std",
-    "pallet-insecure-randomness-collective-flip/std",
-    "pallet-multisig/std",
-    "pallet-preimage/std",
-    "pallet-safe-mode/std",
-    "pallet-scheduler/std",
-    "pallet-subtensor-proxy/std",
+    "pallet-insecure-randomness-collective-flip?/std",
+    "pallet-multisig?/std",
+    "pallet-preimage?/std",
+    "pallet-safe-mode?/std",
+    "pallet-scheduler?/std",
+    "pallet-subtensor-proxy?/std",
     "pallet-subtensor-utility/std",
-    "pallet-sudo/std",
+    "pallet-sudo?/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
@@ -93,14 +103,14 @@ pallet-aura.workspace = true
 pallet-balances.workspace = true
 pallet_subtensor = { package = "pallet-game-solver", path = "../pallets/game-solver", default-features = false }
 pallet-grandpa.workspace = true
-pallet-insecure-randomness-collective-flip.workspace = true
-pallet-multisig.workspace = true
-pallet-preimage.workspace = true
-pallet-safe-mode.workspace = true
-pallet-scheduler.workspace = true
-pallet-subtensor-proxy.workspace = true
+pallet-insecure-randomness-collective-flip = { workspace = true, optional = true }
+pallet-multisig = { workspace = true, optional = true }
+pallet-preimage = { workspace = true, optional = true }
+pallet-safe-mode = { workspace = true, optional = true }
+pallet-scheduler = { workspace = true, optional = true }
+pallet-subtensor-proxy = { workspace = true, optional = true }
 pallet-subtensor-utility.workspace = true
-pallet-sudo.workspace = true
+pallet-sudo = { workspace = true, optional = true }
 pallet-timestamp.workspace = true
 pallet-transaction-payment.workspace = true
 pallet-transaction-payment-rpc-runtime-api.workspace = true

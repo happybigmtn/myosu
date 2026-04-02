@@ -382,13 +382,6 @@ fn run_dual_register_smoke() -> sc_cli::Result<()> {
         runtime
             .block_on(async {
                 let client = ChainClient::connect(STAGE0_RPC_ENDPOINT).await?;
-                client
-                    .ensure_subnet_limit_via_sudo("//Alice", 128, CHAIN_ACTION_TIMEOUT)
-                    .await?;
-                client
-                    .ensure_network_rate_limit_via_sudo("//Alice", 0, CHAIN_ACTION_TIMEOUT)
-                    .await?;
-
                 let first = client
                     .register_network("//Alice", CHAIN_ACTION_TIMEOUT)
                     .await?;
@@ -480,27 +473,6 @@ fn run_stage0_local_loop_smoke() -> sc_cli::Result<()> {
         let repo_root = workspace_root()?;
         let poker_harness = Stage0HarnessPaths::new(repo_root.clone(), "poker")?;
         let liars_dice_harness = Stage0HarnessPaths::new(repo_root.clone(), "liars-dice")?;
-        println!("STAGE0_STEP raising_subnet_limit");
-        runtime
-            .block_on(async {
-                let client = ChainClient::connect(STAGE0_RPC_ENDPOINT).await?;
-                client
-                    .ensure_subnet_limit_via_sudo("//Alice", 128, CHAIN_ACTION_TIMEOUT)
-                    .await?;
-                Ok::<(), myosu_chain_client::ChainClientError>(())
-            })
-            .map_err(boxed_application_error)?;
-        println!("STAGE0_STEP lowering_network_registration_rate_limit");
-        runtime
-            .block_on(async {
-                let client = ChainClient::connect(STAGE0_RPC_ENDPOINT).await?;
-                client
-                    .ensure_network_rate_limit_via_sudo("//Alice", 0, CHAIN_ACTION_TIMEOUT)
-                    .await?;
-                Ok::<(), myosu_chain_client::ChainClientError>(())
-            })
-            .map_err(boxed_application_error)?;
-
         println!("STAGE0_STEP registering_poker_subnet");
         let poker_subnet = runtime
             .block_on(async {
@@ -585,10 +557,6 @@ fn run_stage0_local_loop_smoke() -> sc_cli::Result<()> {
                 "--key",
                 "//Alice",
                 "--enable-subtoken",
-                "--sudo-tempo",
-                "2",
-                "--sudo-weights-rate-limit",
-                "0",
             ],
         )?;
         println!("STAGE0_STEP running_poker_bob_validator subnet={poker_subnet}");
@@ -848,27 +816,6 @@ fn run_stage0_local_loop_smoke() -> sc_cli::Result<()> {
                 "--key",
                 LIARS_DICE_MINER_KEY_URI,
                 "--enable-subtoken",
-            ],
-        )?;
-        run_cargo_command(
-            &liars_dice_harness.repo_root,
-            "myosu-validator-root-liars-dice",
-            &[
-                "run",
-                "--quiet",
-                "-p",
-                "myosu-validator",
-                "--",
-                "--chain",
-                STAGE0_RPC_ENDPOINT,
-                "--subnet",
-                &liars_dice_subnet_arg,
-                "--key",
-                "//Alice",
-                "--sudo-tempo",
-                "2",
-                "--sudo-weights-rate-limit",
-                "0",
             ],
         )?;
         println!("STAGE0_STEP running_liars_dice_bob_validator subnet={liars_dice_subnet}");

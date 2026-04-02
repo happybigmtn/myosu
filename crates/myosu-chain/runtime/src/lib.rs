@@ -19,16 +19,19 @@ pub mod transaction_payment_wrapper;
 extern crate alloc;
 
 use codec::Encode;
+#[cfg(feature = "full-runtime")]
+use frame_support::traits::LinearStoragePrice;
 use frame_support::{
     dispatch::DispatchResult,
     genesis_builder_helper::{build_state, get_preset},
-    traits::{Contains, InsideBoth, LinearStoragePrice, fungible::HoldConsideration},
+    traits::{fungible::HoldConsideration, Contains},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess};
-use pallet_grandpa::{AuthorityId as GrandpaId, fg_primitives};
+use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId};
 use pallet_subtensor::macros::config::GetCommitments;
 use pallet_subtensor::rpc_info::neuron_info::NeuronInfoLite;
-use pallet_subtensor::{CommitmentsInterface, ProxyInterface};
+use pallet_subtensor::CommitmentsInterface;
+#[cfg(feature = "full-runtime")]
 use pallet_subtensor_proxy as pallet_proxy;
 use pallet_subtensor_utility as pallet_utility;
 use runtime_common::prod_or_fast;
@@ -37,37 +40,40 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_babe::BabeConfiguration;
 use sp_consensus_babe::BabeEpochConfiguration;
 use sp_core::{
-    OpaqueMetadata,
     crypto::{ByteArray, KeyTypeId},
+    OpaqueMetadata,
 };
 use sp_runtime::Cow;
 use sp_runtime::{
-    AccountId32, ApplyExtrinsicResult, Percent, generic, impl_opaque_keys,
+    generic, impl_opaque_keys,
     traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, One, Verify},
     transaction_validity::{TransactionSource, TransactionValidity},
+    AccountId32, ApplyExtrinsicResult, Percent,
 };
+#[cfg(feature = "full-runtime")]
 use sp_std::cmp::Ordering;
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use subtensor_runtime_common::{AlphaCurrency, AuthorshipInfo, TaoCurrency, time::*, *};
+use subtensor_runtime_common::{time::*, AlphaCurrency, AuthorshipInfo, TaoCurrency, *};
 use subtensor_swap_interface::{Order, SwapEngine, SwapHandler, SwapResult};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-    StorageValue, construct_runtime, parameter_types,
+    construct_runtime, parameter_types,
     traits::{
-        ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, FindAuthor, InstanceFilter,
-        KeyOwnerProofSystem, OnFinalize, OnTimestampSet, PrivilegeCmp, Randomness, StorageInfo,
+        ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, FindAuthor, InstanceFilter,
+        KeyOwnerProofSystem, OnFinalize, OnTimestampSet, StorageInfo,
     },
     weights::{
-        IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
-        WeightToFeePolynomial,
         constants::{
             BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
         },
+        IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+        WeightToFeePolynomial,
     },
+    StorageValue,
 };
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
@@ -307,6 +313,7 @@ where
 }
 
 // Subtensor module
+#[cfg(feature = "full-runtime")]
 pub use pallet_scheduler;
 pub use pallet_subtensor;
 
@@ -416,7 +423,7 @@ impl Contains<RuntimeCall> for NoNestingCallFilter {
 
 impl frame_system::Config for Runtime {
     // The basic call filter to use in dispatchable.
-    type BaseCallFilter = InsideBoth<SafeMode, NoNestingCallFilter>;
+    type BaseCallFilter = NoNestingCallFilter;
     // Block & extrinsics weights: base values and limits.
     type BlockWeights = BlockWeights;
     // The maximum length of a block (in bytes).
@@ -473,9 +480,8 @@ impl frame_system::Config for Runtime {
 
 // SEC-001: This pallet provides weak randomness derived from block hashes.
 // It is NOT consumed by game-solver or any production on-chain logic today.
-// Retained at pallet index 1 to avoid breaking storage key layout.
-// Must be replaced or removed before any public network launch where
-// randomness-dependent operations (e.g., PoW registration) are enabled.
+// Keep it behind `full-runtime` only so stage-0 defaults compile without it.
+#[cfg(feature = "full-runtime")]
 impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_aura::Config for Runtime {
@@ -538,6 +544,7 @@ impl pallet_utility::Config for Runtime {
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
+#[cfg(feature = "full-runtime")]
 parameter_types! {
     pub const DisallowPermissionlessEnterDuration: BlockNumber = 0;
     pub const DisallowPermissionlessExtendDuration: BlockNumber = 0;
@@ -551,7 +558,9 @@ parameter_types! {
     pub const DisallowPermissionlessRelease: Option<BlockNumber> = None;
 }
 
+#[cfg(feature = "full-runtime")]
 pub struct SafeModeWhitelistedCalls;
+#[cfg(feature = "full-runtime")]
 impl Contains<RuntimeCall> for SafeModeWhitelistedCalls {
     fn contains(call: &RuntimeCall) -> bool {
         matches!(
@@ -569,6 +578,7 @@ impl Contains<RuntimeCall> for SafeModeWhitelistedCalls {
     }
 }
 
+#[cfg(feature = "full-runtime")]
 impl pallet_safe_mode::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
@@ -654,6 +664,7 @@ impl pallet_transaction_payment::Config for Runtime {
     type WeightInfo = pallet_transaction_payment::weights::SubstrateWeight<Runtime>;
 }
 
+#[cfg(feature = "full-runtime")]
 impl pallet_sudo::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
@@ -661,6 +672,7 @@ impl pallet_sudo::Config for Runtime {
     type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
+#[cfg(feature = "full-runtime")]
 parameter_types! {
     // According to multisig pallet, key and value size be computed as follows:
     // value size is `4 + sizeof((BlockNumber, Balance, AccountId))` bytes
@@ -672,6 +684,7 @@ parameter_types! {
     pub const MaxSignatories: u32 = 100;
 }
 
+#[cfg(feature = "full-runtime")]
 impl pallet_multisig::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
@@ -684,6 +697,7 @@ impl pallet_multisig::Config for Runtime {
 }
 
 // Proxy Pallet config
+#[cfg(feature = "full-runtime")]
 parameter_types! {
     // One storage item; key size sizeof(AccountId) = 32, value sizeof(Balance) = 8; 40 total
     pub const ProxyDepositBase: Balance = deposit(1, 40);
@@ -697,6 +711,7 @@ parameter_types! {
     pub const AnnouncementDepositFactor: Balance = deposit(0, 68);
 }
 
+#[cfg(feature = "full-runtime")]
 impl InstanceFilter<RuntimeCall> for ProxyType {
     fn filter(&self, c: &RuntimeCall) -> bool {
         match self {
@@ -915,6 +930,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
     }
 }
 
+#[cfg(feature = "full-runtime")]
 impl pallet_proxy::Config for Runtime {
     type RuntimeCall = RuntimeCall;
     type Currency = Balances;
@@ -930,8 +946,10 @@ impl pallet_proxy::Config for Runtime {
     type BlockNumberProvider = System;
 }
 
+#[cfg(feature = "full-runtime")]
 pub struct Proxier;
-impl ProxyInterface<AccountId> for Proxier {
+#[cfg(feature = "full-runtime")]
+impl pallet_subtensor::ProxyInterface<AccountId> for Proxier {
     fn add_lease_beneficiary_proxy(lease: &AccountId, beneficiary: &AccountId) -> DispatchResult {
         pallet_proxy::Pallet::<Runtime>::add_proxy_delegate(
             lease,
@@ -959,6 +977,7 @@ impl CommitmentsInterface for CommitmentsI {
     fn purge_netuid(_netuid: NetUid) {}
 }
 
+#[cfg(feature = "full-runtime")]
 parameter_types! {
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
         BlockWeights::get().max_block;
@@ -967,8 +986,10 @@ parameter_types! {
 }
 
 /// Used the compare the privilege of an origin inside the scheduler.
+#[cfg(feature = "full-runtime")]
 pub struct OriginPrivilegeCmp;
 
+#[cfg(feature = "full-runtime")]
 impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
     fn cmp_privilege(left: &OriginCaller, right: &OriginCaller) -> Option<Ordering> {
         if left == right {
@@ -984,6 +1005,7 @@ impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
     }
 }
 
+#[cfg(feature = "full-runtime")]
 impl pallet_scheduler::Config for Runtime {
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeEvent = RuntimeEvent;
@@ -998,6 +1020,7 @@ impl pallet_scheduler::Config for Runtime {
     type BlockNumberProvider = System;
 }
 
+#[cfg(feature = "full-runtime")]
 parameter_types! {
     pub const PreimageMaxSize: u32 = 4096 * 1024;
     pub const PreimageBaseDeposit: Balance = deposit(2, 64);
@@ -1006,6 +1029,7 @@ parameter_types! {
         RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
+#[cfg(feature = "full-runtime")]
 impl pallet_preimage::Config for Runtime {
     type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
     type RuntimeEvent = RuntimeEvent;
@@ -1026,7 +1050,7 @@ impl GetCommitments<AccountId> for GetCommitmentsStruct {
     }
 }
 
-pub const INITIAL_SUBNET_TEMPO: u16 = prod_or_fast!(360, 10);
+pub const INITIAL_SUBNET_TEMPO: u16 = 2;
 
 // 30 days at 12 seconds per block = 216000
 pub const INITIAL_CHILDKEY_TAKE_RATELIMIT: u64 = prod_or_fast!(216000, 5);
@@ -1081,7 +1105,7 @@ parameter_types! {
     pub const SubtensorInitialMinLockCost: u64 = 1_000_000_000_000; // 1000 TAO
     pub const SubtensorInitialSubnetOwnerCut: u16 = 11_796; // 18 percent
     pub const SubtensorInitialNetworkLockReductionInterval: u64 = 14 * 7200;
-    pub const SubtensorInitialNetworkRateLimit: u64 = 7200;
+    pub const SubtensorInitialNetworkRateLimit: u64 = 0;
     pub const SubtensorInitialKeySwapCost: u64 = 100_000_000; // 0.1 TAO
     pub const InitialAlphaHigh: u16 = 58982; // Represents 0.9 as per the production default
     pub const InitialAlphaLow: u16 = 45875; // Represents 0.7 as per the production default
@@ -1104,9 +1128,7 @@ parameter_types! {
 impl pallet_subtensor::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
-    type SudoRuntimeCall = RuntimeCall;
     type Currency = Balances;
-    type Scheduler = Scheduler;
     type InitialRho = SubtensorInitialRho;
     type InitialAlphaSigmoidSteepness = SubtensorInitialAlphaSigmoidSteepness;
     type InitialKappa = SubtensorInitialKappa;
@@ -1159,7 +1181,6 @@ impl pallet_subtensor::Config for Runtime {
     type LiquidAlphaOn = InitialLiquidAlphaOn;
     type Yuma3On = InitialYuma3On;
     type InitialTaoWeight = SubtensorInitialTaoWeight;
-    type Preimages = Preimage;
     type InitialColdkeySwapAnnouncementDelay = InitialColdkeySwapAnnouncementDelay;
     type InitialColdkeySwapReannouncementDelay = InitialColdkeySwapReannouncementDelay;
     type InitialDissolveNetworkScheduleDuration = InitialDissolveNetworkScheduleDuration;
@@ -1168,7 +1189,6 @@ impl pallet_subtensor::Config for Runtime {
     type SwapInterface = Stage0NoopSwap;
     type KeySwapOnSubnetCost = SubtensorInitialKeySwapOnSubnetCost;
     type HotkeySwapOnSubnetInterval = HotkeySwapOnSubnetInterval;
-    type ProxyInterface = Proxier;
     type LeaseDividendsDistributionInterval = LeaseDividendsDistributionInterval;
     type GetCommitments = GetCommitmentsStruct;
     type MaxContributors = MaxContributors;
@@ -1211,6 +1231,7 @@ parameter_types! {
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
+#[cfg(feature = "full-runtime")]
 construct_runtime!(
     pub struct Runtime
     {
@@ -1233,6 +1254,25 @@ construct_runtime!(
         Proxy: pallet_proxy = 16,
         AdminUtils: pallet_admin_utils = 19,
         SafeMode: pallet_safe_mode = 20,
+    }
+);
+
+#[cfg(not(feature = "full-runtime"))]
+construct_runtime!(
+    pub struct Runtime
+    {
+        System: frame_system = 0,
+        Timestamp: pallet_timestamp = 2,
+        Aura: pallet_aura = 3,
+        Grandpa: pallet_grandpa = 4,
+        Balances: pallet_balances = 5,
+        TransactionPayment: pallet_transaction_payment = 6,
+        SubtensorModule: pallet_subtensor = 7,
+        // pallet_collective::<Instance1> (triumvirate) was 8
+        // pallet_membership::<Instance1> (triumvirate members) was 9
+        // pallet_membership::<Instance2> (senate members) was 10
+        Utility: pallet_utility = 11,
+        AdminUtils: pallet_admin_utils = 19,
     }
 );
 
@@ -1290,10 +1330,8 @@ mod benches {
         [frame_system, SystemBench::<Runtime>]
         [pallet_balances, Balances]
         [pallet_timestamp, Timestamp]
-        [pallet_sudo, Sudo]
         [pallet_admin_utils, AdminUtils]
         [pallet_subtensor, SubtensorModule]
-        [pallet_subtensor_proxy, Proxy]
     );
 }
 

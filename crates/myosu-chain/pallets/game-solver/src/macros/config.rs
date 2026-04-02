@@ -27,25 +27,11 @@ mod config {
             + IsType<<Self as frame_system::Config>::RuntimeCall>
             + From<frame_system::Call<Self>>;
 
-        type SudoRuntimeCall: Parameter
-            + UnfilteredDispatchable<RuntimeOrigin = Self::RuntimeOrigin>
-            + GetDispatchInfo;
-
         type Currency: fungible::Balanced<Self::AccountId, Balance = u64>
             + fungible::Mutate<Self::AccountId>;
 
-        type Scheduler: ScheduleAnon<
-                BlockNumberFor<Self>,
-                LocalCallOf<Self>,
-                PalletsOriginOf<Self>,
-                Hasher = Self::Hashing,
-            >;
-
-        type Preimages: QueryPreimage<H = Self::Hashing> + StorePreimage;
-
         type SwapInterface: Stage0SwapInterface<Self>;
 
-        type ProxyInterface: crate::ProxyInterface<Self::AccountId>;
         type GetCommitments: GetCommitments<Self::AccountId>;
         type CommitmentsInterface: CommitmentsInterface;
         type EvmKeyAssociateRateLimit: Get<u64>;

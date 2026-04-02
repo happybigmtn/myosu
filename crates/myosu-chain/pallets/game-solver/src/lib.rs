@@ -821,7 +821,7 @@ pub mod pallet {
     /// Default value for weights set rate limit.
     #[pallet::type_value]
     pub fn DefaultWeightsSetRateLimit<T: Config>() -> u64 {
-        100
+        0
     }
 
     /// Default block number at registration.

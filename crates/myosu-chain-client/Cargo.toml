@@ -14,7 +14,6 @@ jsonrpsee = { workspace = true, features = ["client-core", "macros", "ws-client"
 myosu-chain-runtime = { workspace = true, features = ["std"] }
 pallet-admin-utils.workspace = true
 pallet-game-solver = { workspace = true, features = ["std"] }
-pallet-sudo.workspace = true
 pallet-transaction-payment.workspace = true
 serde.workspace = true
 serde_json.workspace = true

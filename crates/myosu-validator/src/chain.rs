@@ -1,14 +1,11 @@
 use myosu_chain_client::ChainClient;
 use myosu_chain_client::ChainClientError;
-use myosu_chain_client::CommitRevealToggleReport;
 use myosu_chain_client::RegistrationReport;
 use myosu_chain_client::RpcMethods;
 use myosu_chain_client::StakeAddReport;
 use myosu_chain_client::SubtokenEnableReport;
 use myosu_chain_client::SystemHealth;
-use myosu_chain_client::TempoSetReport;
 use myosu_chain_client::WeightSubmissionReport;
-use myosu_chain_client::WeightsRateLimitReport;
 use std::time::Duration;
 use subtensor_runtime_common::NetUid;
 use thiserror::Error;
@@ -42,33 +39,6 @@ pub struct SubtokenBootstrapReport {
     pub subnet: NetUid,
     pub extrinsic_hash: Option<String>,
     pub already_enabled: bool,
-}
-
-/// Explicit subnet tempo summary for local devnet bootstrap.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SubnetTempoBootstrapReport {
-    pub subnet: NetUid,
-    pub tempo: u16,
-    pub extrinsic_hash: Option<String>,
-    pub already_set: bool,
-}
-
-/// Explicit subnet weights-rate-limit summary for local devnet bootstrap.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WeightsRateLimitBootstrapReport {
-    pub subnet: NetUid,
-    pub weights_set_rate_limit: u64,
-    pub extrinsic_hash: Option<String>,
-    pub already_set: bool,
-}
-
-/// Explicit commit-reveal toggle summary for local devnet bootstrap.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CommitRevealBootstrapReport {
-    pub subnet: NetUid,
-    pub enabled: bool,
-    pub extrinsic_hash: Option<String>,
-    pub already_set: bool,
 }
 
 /// Errors returned by the validator's initial chain probe.
@@ -139,56 +109,6 @@ pub async fn ensure_subtoken_enabled(
         .await?;
 
     Ok(subtoken_bootstrap_report(report))
-}
-
-/// Sets a subnet tempo override through the local sudo path.
-pub async fn ensure_subnet_tempo(
-    endpoint: &str,
-    key_uri: &str,
-    subnet: NetUid,
-    tempo: u16,
-) -> Result<SubnetTempoBootstrapReport, ChainActionError> {
-    let client = ChainClient::connect(endpoint).await?;
-    let report = client
-        .ensure_subnet_tempo_via_sudo(key_uri, subnet, tempo, Duration::from_secs(20))
-        .await?;
-
-    Ok(subnet_tempo_bootstrap_report(report))
-}
-
-/// Sets a subnet weights-set rate limit override through the local sudo path.
-pub async fn ensure_weights_set_rate_limit(
-    endpoint: &str,
-    key_uri: &str,
-    subnet: NetUid,
-    weights_set_rate_limit: u64,
-) -> Result<WeightsRateLimitBootstrapReport, ChainActionError> {
-    let client = ChainClient::connect(endpoint).await?;
-    let report = client
-        .ensure_weights_set_rate_limit_via_sudo(
-            key_uri,
-            subnet,
-            weights_set_rate_limit,
-            Duration::from_secs(20),
-        )
-        .await?;
-
-    Ok(weights_rate_limit_bootstrap_report(report))
-}
-
-/// Enables or disables commit-reveal through the subnet owner admin path.
-pub async fn ensure_commit_reveal_enabled(
-    endpoint: &str,
-    key_uri: &str,
-    subnet: NetUid,
-    enabled: bool,
-) -> Result<CommitRevealBootstrapReport, ChainActionError> {
-    let client = ChainClient::connect(endpoint).await?;
-    let report = client
-        .ensure_commit_reveal_weights_enabled(key_uri, subnet, enabled, Duration::from_secs(20))
-        .await?;
-
-    Ok(commit_reveal_bootstrap_report(report))
 }
 
 /// Ensures the validator has enough stake to acquire validator permit and waits for it.
@@ -262,34 +182,5 @@ fn subtoken_bootstrap_report(report: SubtokenEnableReport) -> SubtokenBootstrapR
         subnet: report.subnet,
         extrinsic_hash: report.extrinsic_hash,
         already_enabled: report.already_enabled,
-    }
-}
-
-fn subnet_tempo_bootstrap_report(report: TempoSetReport) -> SubnetTempoBootstrapReport {
-    SubnetTempoBootstrapReport {
-        subnet: report.subnet,
-        tempo: report.tempo,
-        extrinsic_hash: report.extrinsic_hash,
-        already_set: report.already_set,
-    }
-}
-
-fn weights_rate_limit_bootstrap_report(
-    report: WeightsRateLimitReport,
-) -> WeightsRateLimitBootstrapReport {
-    WeightsRateLimitBootstrapReport {
-        subnet: report.subnet,
-        weights_set_rate_limit: report.weights_set_rate_limit,
-        extrinsic_hash: report.extrinsic_hash,
-        already_set: report.already_set,
-    }
-}
-
-fn commit_reveal_bootstrap_report(report: CommitRevealToggleReport) -> CommitRevealBootstrapReport {
-    CommitRevealBootstrapReport {
-        subnet: report.subnet,
-        enabled: report.enabled,
-        extrinsic_hash: report.extrinsic_hash,
-        already_set: report.already_set,
     }
 }

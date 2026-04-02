@@ -44,43 +44,6 @@ pub fn subtoken_bootstrap_report(report: &crate::chain::SubtokenBootstrapReport)
     )
 }
 
-/// Formats a stable operator-facing summary for subnet tempo changes.
-pub fn subnet_tempo_bootstrap_report(report: &crate::chain::SubnetTempoBootstrapReport) -> String {
-    format!(
-        "TEMPO myosu-validator subnet ok\nsubnet={}\ntempo={}\nalready_set={}\nextrinsic_hash={}\n",
-        report.subnet,
-        report.tempo,
-        report.already_set,
-        report.extrinsic_hash.as_deref().unwrap_or("none"),
-    )
-}
-
-/// Formats a stable operator-facing summary for subnet weights-rate-limit changes.
-pub fn weights_rate_limit_bootstrap_report(
-    report: &crate::chain::WeightsRateLimitBootstrapReport,
-) -> String {
-    format!(
-        "WEIGHTS_RATE_LIMIT myosu-validator subnet ok\nsubnet={}\nweights_set_rate_limit={}\nalready_set={}\nextrinsic_hash={}\n",
-        report.subnet,
-        report.weights_set_rate_limit,
-        report.already_set,
-        report.extrinsic_hash.as_deref().unwrap_or("none"),
-    )
-}
-
-/// Formats a stable operator-facing summary for commit-reveal toggles.
-pub fn commit_reveal_bootstrap_report(
-    report: &crate::chain::CommitRevealBootstrapReport,
-) -> String {
-    format!(
-        "COMMIT_REVEAL myosu-validator subnet ok\nsubnet={}\nenabled={}\nalready_set={}\nextrinsic_hash={}\n",
-        report.subnet,
-        report.enabled,
-        report.already_set,
-        report.extrinsic_hash.as_deref().unwrap_or("none"),
-    )
-}
-
 /// Formats a stable operator-facing summary for stake bootstrap and permit readiness.
 pub fn permit_bootstrap_report(report: &crate::chain::ValidatorPermitBootstrapReport) -> String {
     format!(
@@ -141,22 +104,16 @@ mod tests {
     use subtensor_runtime_common::NetUid;
 
     use crate::chain::ChainProbeReport;
-    use crate::chain::CommitRevealBootstrapReport;
-    use crate::chain::SubnetTempoBootstrapReport;
     use crate::chain::SubtokenBootstrapReport;
     use crate::chain::ValidatorPermitBootstrapReport;
-    use crate::chain::WeightsRateLimitBootstrapReport;
     use crate::cli::GameSelection;
-    use crate::commit_reveal_bootstrap_report;
     use crate::permit_bootstrap_report;
     use crate::registration_report;
     use crate::startup_report;
-    use crate::subnet_tempo_bootstrap_report;
     use crate::subtoken_bootstrap_report;
     use crate::validation::ValidationReport;
     use crate::validation_report;
     use crate::weight_submission_report;
-    use crate::weights_rate_limit_bootstrap_report;
 
     #[test]
     fn startup_report_includes_probe_summary() {
@@ -211,51 +168,6 @@ mod tests {
         assert!(report.contains("SUBTOKEN myosu-validator subnet ok"));
         assert!(report.contains("subnet=1"));
         assert!(report.contains("extrinsic_hash=0xsudo"));
-    }
-
-    #[test]
-    fn subnet_tempo_bootstrap_report_includes_tempo_summary() {
-        let report = SubnetTempoBootstrapReport {
-            subnet: NetUid::from(2_u16),
-            tempo: 2,
-            extrinsic_hash: Some("0xtempo".to_string()),
-            already_set: false,
-        };
-
-        let report = subnet_tempo_bootstrap_report(&report);
-        assert!(report.contains("TEMPO myosu-validator subnet ok"));
-        assert!(report.contains("tempo=2"));
-        assert!(report.contains("extrinsic_hash=0xtempo"));
-    }
-
-    #[test]
-    fn weights_rate_limit_bootstrap_report_includes_rate_limit_summary() {
-        let report = WeightsRateLimitBootstrapReport {
-            subnet: NetUid::from(2_u16),
-            weights_set_rate_limit: 0,
-            extrinsic_hash: Some("0xweights".to_string()),
-            already_set: false,
-        };
-
-        let report = weights_rate_limit_bootstrap_report(&report);
-        assert!(report.contains("WEIGHTS_RATE_LIMIT myosu-validator subnet ok"));
-        assert!(report.contains("weights_set_rate_limit=0"));
-        assert!(report.contains("extrinsic_hash=0xweights"));
-    }
-
-    #[test]
-    fn commit_reveal_bootstrap_report_includes_toggle_summary() {
-        let report = CommitRevealBootstrapReport {
-            subnet: NetUid::from(2_u16),
-            enabled: false,
-            extrinsic_hash: Some("0xcommit".to_string()),
-            already_set: false,
-        };
-
-        let report = commit_reveal_bootstrap_report(&report);
-        assert!(report.contains("COMMIT_REVEAL myosu-validator subnet ok"));
-        assert!(report.contains("enabled=false"));
-        assert!(report.contains("extrinsic_hash=0xcommit"));
     }
 
     #[test]

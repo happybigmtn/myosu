@@ -1,25 +1,19 @@
 use clap::Parser;
-use myosu_validator::chain::ensure_commit_reveal_enabled;
 use myosu_validator::chain::ensure_registered;
-use myosu_validator::chain::ensure_subnet_tempo;
 use myosu_validator::chain::ensure_subtoken_enabled;
 use myosu_validator::chain::ensure_validator_permit_ready;
 use myosu_validator::chain::ensure_weights_set;
-use myosu_validator::chain::ensure_weights_set_rate_limit;
 use myosu_validator::chain::probe_chain;
 use myosu_validator::cli::Cli;
-use myosu_validator::commit_reveal_bootstrap_report;
 use myosu_validator::permit_bootstrap_report;
 use myosu_validator::registration_report;
 use myosu_validator::startup_report;
-use myosu_validator::subnet_tempo_bootstrap_report;
 use myosu_validator::subtoken_bootstrap_report;
 use myosu_validator::validation::ValidatorBootstrapError;
 use myosu_validator::validation::score_response;
 use myosu_validator::validation::validation_plan_from_cli;
 use myosu_validator::validation_report;
 use myosu_validator::weight_submission_report;
-use myosu_validator::weights_rate_limit_bootstrap_report;
 use std::time::Instant;
 use subtensor_runtime_common::NetUid;
 use tracing::info;
@@ -49,30 +43,6 @@ async fn main() -> Result<(), ValidatorBootstrapError> {
         let report =
             ensure_subtoken_enabled(&cli.chain, &key_uri, NetUid::from(cli.subnet)).await?;
         print!("{}", subtoken_bootstrap_report(&report));
-    }
-
-    if let Some(tempo) = cli.sudo_tempo {
-        let report =
-            ensure_subnet_tempo(&cli.chain, &key_uri, NetUid::from(cli.subnet), tempo).await?;
-        print!("{}", subnet_tempo_bootstrap_report(&report));
-    }
-
-    if let Some(weights_set_rate_limit) = cli.sudo_weights_rate_limit {
-        let report = ensure_weights_set_rate_limit(
-            &cli.chain,
-            &key_uri,
-            NetUid::from(cli.subnet),
-            weights_set_rate_limit,
-        )
-        .await?;
-        print!("{}", weights_rate_limit_bootstrap_report(&report));
-    }
-
-    if cli.disable_commit_reveal {
-        let report =
-            ensure_commit_reveal_enabled(&cli.chain, &key_uri, NetUid::from(cli.subnet), false)
-                .await?;
-        print!("{}", commit_reveal_bootstrap_report(&report));
     }
 
     if let Some(stake_amount) = cli.stake_amount {
