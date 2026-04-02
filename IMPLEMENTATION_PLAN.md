@@ -490,7 +490,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The runtime genesis patch surface only accepts supported `subtensorModule` fields such as `balancesIssuance`, so the subnet-7 bootstrap now happens by building the normal genesis storage and then post-processing it through `BasicExternalities` before returning the chain spec. This keeps pallet genesis unchanged while still producing a raw spec with subnet `7` pre-registered.
     - Added focused node-chain-spec proofs for both the non-development authority patch and the subnet-7 storage bootstrap before validating the task contract with `build-spec --chain devnet --raw`.
 
-- [ ] `DN-002` Create bootnode deployment script with persistent storage
+- [x] `DN-002` Create bootnode deployment script with persistent storage
   - Spec: `specs/040226-06-multi-node-devnet.md`
   - Why now: No bootnode deployment infrastructure exists. A persistent bootnode is required for peer discovery on the devnet.
   - Codebase evidence:
@@ -510,6 +510,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `bash ops/deploy-bootnode.sh --dry-run`
   - Dependencies: `DN-001`
   - Completion signal: Script can deploy a persistent bootnode that advertises its multiaddr for peer discovery
+  - Implementation notes:
+    - Added `ops/deploy-bootnode.sh`, which prepares a durable bootnode root under `target/bootnode/devnet/` by default, persists a libp2p node key, derives the peer ID with `myosu-chain key inspect-node-key`, and prints the resulting bootnode multiaddr plus RPC/Prometheus endpoints.
+    - The script now renders both a reusable launcher script and a systemd unit file into the bootnode base path, satisfying the persistence contract without assuming root access or a pre-installed service manager during the dry-run proof.
+    - `--dry-run` is intentionally truthful rather than side-effect-free: it prepares the durable assets so future loops can reuse the same stable node identity and advertised multiaddr without having to start the node first.
 
 - [ ] `DN-003` Verify two-node peer discovery and block synchronization
   - Spec: `specs/040226-06-multi-node-devnet.md`
