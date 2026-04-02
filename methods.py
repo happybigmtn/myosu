@@ -11,6 +11,7 @@ from data import (
     ABSTRACTION_FAMILIES,
     ALGORITHM_FAMILIES,
     METRIC_FAMILIES,
+    RAW_GAMES,
     RISK_FAMILIES,
 )
 
@@ -804,7 +805,7 @@ class EstablishedMethod1Baseline(BaseCondition):
         #   stochasticity, hidden_info, perfect_recall, infoset/60, branching/40,
         #   action_granularity, compute_pressure, abstraction_gain, citation/8]
         # Indices below are relative to the full feature vector.
-        num_domain = len(set(r["domain"] for r in __import__("data").RAW_GAMES))
+        num_domain = len(set(r["domain"] for r in RAW_GAMES))
         players = features[:, num_domain + 1:num_domain + 2]
         zero_sum = features[:, num_domain + 1:num_domain + 2]
         partnership = features[:, num_domain + 2:num_domain + 3]

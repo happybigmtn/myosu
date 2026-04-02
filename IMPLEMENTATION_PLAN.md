@@ -416,7 +416,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The job installs `wasm32v1-none` and `protobuf-compiler`, matching the actual requirements baked into `tests/e2e/helpers/start_devnet.sh` and the chain node build.
     - Shared the Rust cache key between `chain-core` and `integration-e2e` so the devnet job can reuse prior chain artifacts instead of always cold-building the runtime and node on a fresh runner.
 
-- [ ] `PY-001` Fix __import__() anti-pattern in methods.py
+- [x] `PY-001` Fix __import__() anti-pattern in methods.py
   - Spec: `specs/040226-10-python-research-quality-gates.md`
   - Why now: methods.py line 807 uses `__import__("data")` instead of the standard import already present at line 10. This is a code quality defect that breaks static analysis.
   - Codebase evidence:
@@ -435,6 +435,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `grep -c '__import__' methods.py | grep -q '^0$'`
   - Dependencies: `none`
   - Completion signal: Zero __import__() calls remain in methods.py; module imports cleanly
+  - Implementation notes:
+    - Imported `RAW_GAMES` through the existing top-level `from data import (...)` statement and replaced the runtime `__import__("data").RAW_GAMES` lookup with the direct symbol reference.
+    - Verified there is no circular import from `data.py` back into `methods.py`, so the anti-pattern was unnecessary in the current tree.
+    - The task's import proof currently depends on `numpy` being installed in the default `python` interpreter because the repo does not yet carry a managed Python environment or dependency manifest.
 
 - [ ] `PY-002` Fix exponential complexity in metrics.py paired_sign_flip_test
   - Spec: `specs/040226-10-python-research-quality-gates.md`

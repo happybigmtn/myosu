@@ -308,6 +308,7 @@ Runtime wasm cache for node smoke proofs:
 - `SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet` can cold-build `wasm-opt-sys` and stay quiet for several minutes; do not treat the silence as a hang while `cargo` still has active compiler children
 - `cargo test -p pallet-game-solver coinbase --quiet` exercises the default-build stage-0 coinbase assertions from `src/tests/stage_0_flow.rs`; the inherited `src/tests/coinbase.rs` suite still sits behind `legacy-subtensor-tests`
 - Local security-audit proof currently needs the CI ignore set: run `cargo audit` with ignores for `RUSTSEC-2025-0009`, `RUSTSEC-2025-0055`, `RUSTSEC-2023-0091`, `RUSTSEC-2024-0438`, `RUSTSEC-2025-0118`, `RUSTSEC-2026-0020`, and `RUSTSEC-2026-0021` until the inherited chain stack is rebased
+- Root-level `PY-*` proof commands currently assume the default `python` interpreter already has `numpy`; until `PY-003` adds a managed Python environment, install it once with `python -m pip install numpy` before running the Python quality-gate checks
 
 ## Bootstrap Lanes
 
