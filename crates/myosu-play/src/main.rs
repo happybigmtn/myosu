@@ -14,6 +14,7 @@ use myosu_tui::events::UpdateEvent;
 use myosu_tui::{GameRenderer, InteractionState, PipeMode, Screen, Shell};
 use subtensor_runtime_common::NetUid;
 use tokio::sync::mpsc;
+use tracing::debug;
 
 const DEFAULT_TICK_RATE: Duration = Duration::from_millis(100);
 
@@ -65,8 +66,19 @@ enum LiveAdviceConnectivity {
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
+    init_tracing();
+
     let cli = Cli::parse();
     let discovery_request = DiscoveryRequest::from_cli(&cli)?;
+    debug!(
+        game = ?cli.game,
+        mode = mode_label(cli.smoke_test, cli.command.as_ref()),
+        discovery_requested = discovery_request.is_requested(),
+        require_artifact = cli.require_artifact,
+        require_discovery = cli.require_discovery,
+        require_live_query = cli.require_live_query,
+        "parsed myosu-play cli"
+    );
 
     if cli.smoke_test {
         return run_smoke_test(
@@ -102,6 +114,7 @@ async fn run_smoke_test(
     require_live_query: bool,
 ) -> io::Result<()> {
     let context = resolve_context(game, args, discovery_request).await?;
+    log_render_context("smoke_test", &context);
     print!(
         "{}",
         smoke_report(
@@ -269,6 +282,7 @@ async fn run_train(
     args: AdviceArgs,
     discovery_request: DiscoveryRequest,
 ) -> io::Result<()> {
+    log_mode_launch("train", game, &args, &discovery_request);
     let mut shell = Shell::with_screen(Screen::Lobby);
     shell.set_status(
         InteractionState::Loading,
@@ -333,7 +347,9 @@ async fn run_pipe(
     args: AdviceArgs,
     discovery_request: DiscoveryRequest,
 ) -> io::Result<()> {
+    log_mode_launch("pipe", game, &args, &discovery_request);
     let context = resolve_context(game, args, discovery_request).await?;
+    log_render_context("pipe", &context);
     let pipe = PipeMode::new(context.advice.surface.renderer());
 
     println!("{}", context.startup_status_line());
@@ -354,6 +370,60 @@ async fn run_pipe(
     }
 
     Ok(())
+}
+
+fn init_tracing() {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "myosu_play=info".into()),
+        )
+        .with_target(true)
+        .try_init();
+}
+
+fn mode_label(smoke_test: bool, command: Option<&Mode>) -> &'static str {
+    if smoke_test {
+        return "smoke_test";
+    }
+
+    match command {
+        Some(Mode::Train(_)) => "train",
+        Some(Mode::Pipe(_)) => "pipe",
+        None => "none",
+    }
+}
+
+fn log_mode_launch(
+    mode: &'static str,
+    game: GameSelection,
+    args: &AdviceArgs,
+    discovery_request: &DiscoveryRequest,
+) {
+    debug!(
+        mode,
+        game = ?game,
+        discovery_requested = discovery_request.is_requested(),
+        has_checkpoint = args.checkpoint.is_some(),
+        has_encoder_dir = args.encoder_dir.is_some(),
+        "launching myosu-play mode"
+    );
+}
+
+fn log_render_context(mode: &'static str, context: &RenderContext) {
+    debug!(
+        mode,
+        game = ?context.advice.game,
+        advice_source = context.advice.source,
+        advice_selection = context.advice.selection,
+        advice_origin = context.advice.origin,
+        advice_reason = context.advice.reason,
+        startup_state = startup_state_label(context.startup_state()),
+        discovery_source = context.discovery.source,
+        live_query_source = context.live_query.source,
+        startup_detail = %context.startup_detail(),
+        "resolved myosu-play context"
+    );
 }
 
 impl DiscoverySelection {

@@ -186,7 +186,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
   - Dependencies: `EM-001`, `IT-001`
   - Completion signal: Script exits 0 after proving emission invariant holds on a live local devnet
 
-- [ ] `OBS-001` Add tracing subscriber initialization to myosu-play binary
+- [x] `OBS-001` Add tracing subscriber initialization to myosu-play binary
   - Spec: `specs/040226-03-unified-observability.md`
   - Why now: myosu-play is the only binary without tracing subscriber setup. It uses raw println! for output, making it invisible to RUST_LOG filtering.
   - Codebase evidence:
@@ -208,6 +208,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `RUST_LOG=myosu_play=debug SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test 2>&1 | grep -q myosu_play`
   - Dependencies: `none`
   - Completion signal: myosu-play respects RUST_LOG filtering and produces structured tracing output for diagnostic messages while preserving pipe-mode protocol on stdout
+  - Implementation notes:
+    - `crates/myosu-play` now carries direct `tracing` and `tracing-subscriber` workspace dependencies and initializes a subscriber before CLI parsing with an `EnvFilter` default of `myosu_play=info`.
+    - Added debug-only launch/context events for smoke-test and pipe paths, plus pre-TUI launch logging, so operators get `RUST_LOG`-filterable stderr diagnostics without introducing raw log lines during the interactive shell.
+    - Pipe-mode and smoke-test stdout protocol lines remain `print!`/`println!` driven, preserving the existing text protocol while making `RUST_LOG=myosu_play=debug` surface the `myosu_play` target on stderr.
 
 - [ ] `SEC-001` Add cargo-audit dependency scanning to CI pipeline
   - Spec: `specs/040226-04-security-audit-process.md`
