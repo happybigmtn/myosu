@@ -47,4 +47,7 @@ ops/reconciliation/
 .worktrees
 .paperclip/
 .fabro_cli/
+.codex-cargo-home/
+*.ipynb
+.ipynb_checkpoints/
 fabro/paperclip/*/bootstrap-state.json
