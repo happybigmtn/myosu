@@ -196,10 +196,15 @@ impl CodexpokerIsomorphism {
                     path: path.to_path_buf(),
                 }
             })?;
-        // SAFETY: Mmap::map requires the file not be modified or truncated while
-        // mapped. Blueprint files are read-only artifacts produced by the solver;
-        // they are never written after creation. All subsequent accesses go through
-        // entry_at() which uses mmap.get(start..end) for bounds-checked slicing.
+        // SAFETY: Invariant: this path only maps solver-produced blueprint
+        // isomorphism artifacts that are opened read-only and treated as immutable
+        // for the lifetime of the map. Failure mode: if another process replaces
+        // or truncates the file after we read metadata, the mapping could expose
+        // inconsistent bytes or fault on access; we reject immediate length drift
+        // below and treat malformed entries as decode failures. Boundary
+        // conditions: all reads go through entry_at(), which uses
+        // mmap.get(start..end) for bounds-checked slicing rather than raw pointer
+        // arithmetic.
         let mmap = unsafe { Mmap::map(&file) }.map_err(|source| CodexpokerBlueprintError::Io {
             path: path.to_path_buf(),
             source,
@@ -304,8 +309,14 @@ fn open_mmap(path: &Path) -> Result<Mmap, CodexpokerBlueprintError> {
         path: path.to_path_buf(),
         source,
     })?;
-    // SAFETY: Blueprint files are read-only solver artifacts, never modified after
-    // creation. All callers access the returned Mmap through bounds-checked slicing.
+    // SAFETY: Invariant: the keys and values paths passed here are blueprint
+    // artifact files opened read-only and never mutated through this process.
+    // Failure mode: concurrent truncation or replacement by another process could
+    // make the mapping observe invalid bytes or fault on later access; callers
+    // therefore validate structure and lengths before decoding and treat malformed
+    // content as an error. Boundary conditions: open_mmap only returns a read-only
+    // Mmap, and all downstream consumers access it through bounds-checked slices
+    // (`get(start..end)`) rather than unchecked pointer math.
     unsafe { Mmap::map(&file) }.map_err(|source| CodexpokerBlueprintError::Io {
         path: path.to_path_buf(),
         source,

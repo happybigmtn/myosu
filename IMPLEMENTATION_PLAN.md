@@ -287,7 +287,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Linked the process from `SECURITY.md` and the stage-0 security audit snapshot so upstream advisory review is now part of the repo's operator-facing security evidence instead of an implicit maintainer chore.
     - Extended `docs/robopoker-fork-changelog.md` so any future robopoker security-driven pin change must update both the fork changelog and the CVE tracking evidence in the same slice.
 
-- [ ] `SEC-004` Verify unsafe code documentation covers invariant, failure mode, and boundary conditions
+- [x] `SEC-004` Verify unsafe code documentation covers invariant, failure mode, and boundary conditions
   - Spec: `specs/040226-04-security-audit-process.md`
   - Why now: Spec requires every unsafe block to have a SAFETY comment documenting invariant, failure mode, and boundary conditions.
   - Codebase evidence:
@@ -305,6 +305,9 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet`
   - Dependencies: `none`
   - Completion signal: Every unsafe block in the active codebase has a SAFETY comment documenting invariant, failure mode, and boundary conditions
+  - Implementation notes:
+    - Expanded both `Mmap::map` SAFETY comments in `crates/myosu-games-poker/src/codexpoker.rs` so they now explicitly name the immutability invariant, the concurrent truncation/replacement failure mode, and the bounds-checked read boundary conditions.
+    - Verified the owned crate proof path with the task’s exact checks: the file still carries both SAFETY markers and `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet` stays green.
 
 - [ ] `IT-001` Create devnet lifecycle helper scripts for e2e test orchestration
   - Spec: `specs/040226-05-integration-test-harness.md`
