@@ -368,7 +368,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The script generates a temporary `myosu-chain-client` example inside the workspace so it can use the real typed RPC surface for subnet registration plus post-action verification (`validator permit`, `[(miner_uid, 65535)]` weights, chain-visible endpoint, and positive epoch outputs) without adding a permanent repo helper crate.
     - Poker bootstrap still prints an upstream robopoker panic on stderr when zero-iteration exploitability falls back to `unavailable: solver exploitability failed upstream: isomorphism not found in abstraction lookup`; the binary exits 0, emits the expected stdout contract, and produces a valid checkpoint/response pair, so the e2e proof treats stderr silence as non-authoritative for that step.
 
-- [ ] `IT-003` Write cross-validator determinism integration test script
+- [x] `IT-003` Write cross-validator determinism integration test script
   - Spec: `specs/040226-05-integration-test-harness.md`
   - Why now: Spec requires automated proof of INV-003 (two validators scoring identically within epsilon). No shell-level test exercises this.
   - Codebase evidence:
@@ -388,6 +388,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `bash tests/e2e/validator_determinism.sh`
   - Dependencies: `IT-001`
   - Completion signal: Script proves two independent validators produce identical scores for the same miner strategy
+  - Implementation notes:
+    - Added `tests/e2e/validator_determinism.sh`, which reuses the IT-001 helper-owned devnet lifecycle and the same poker bootstrap artifact flow already exercised by `local_loop.sh`.
+    - The script bootstraps one miner strategy snapshot, then runs two independent validator bootstrap+scoring passes with distinct validator hotkeys (`//Bob` and `//Charlie`) against the same checkpoint/query/response tuple.
+    - INV-003 is enforced through the validator stdout contract rather than ad hoc log scraping: the harness compares `action_count`, `exact_match`, `expected_action`, and `observed_action` exactly, and asserts both `l1_distance` and `score` agree within the configured `1e-6` epsilon.
 
 - [ ] `IT-004` Add e2e integration test job to GitHub Actions CI
   - Spec: `specs/040226-05-integration-test-harness.md`
