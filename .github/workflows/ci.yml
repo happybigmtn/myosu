@@ -126,6 +126,8 @@ jobs:
 
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: chain-stage0
 
       - name: Runtime check
         run: cargo check -p myosu-chain-runtime --features fast-runtime
@@ -141,6 +143,39 @@ jobs:
 
       - name: Runtime tests
         run: cargo test -p myosu-chain-runtime --quiet
+
+  integration-e2e:
+    name: E2E Integration
+    runs-on: ubuntu-latest
+    needs: chain-core
+    timeout-minutes: 10
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: chain-stage0
+
+      - name: Local loop integration proof
+        run: bash tests/e2e/local_loop.sh
+
+      - name: Cross-validator determinism proof
+        run: bash tests/e2e/validator_determinism.sh
 
   doctrine:
     name: Doctrine Integrity

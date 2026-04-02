@@ -393,7 +393,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The script bootstraps one miner strategy snapshot, then runs two independent validator bootstrap+scoring passes with distinct validator hotkeys (`//Bob` and `//Charlie`) against the same checkpoint/query/response tuple.
     - INV-003 is enforced through the validator stdout contract rather than ad hoc log scraping: the harness compares `action_count`, `exact_match`, `expected_action`, and `observed_action` exactly, and asserts both `l1_distance` and `score` agree within the configured `1e-6` epsilon.
 
-- [ ] `IT-004` Add e2e integration test job to GitHub Actions CI
+- [x] `IT-004` Add e2e integration test job to GitHub Actions CI
   - Spec: `specs/040226-05-integration-test-harness.md`
   - Why now: Integration tests must run in CI to prevent regressions. Without a CI job, e2e tests are manual-only.
   - Codebase evidence:
@@ -411,6 +411,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `actionlint .github/workflows/ci.yml`
   - Dependencies: `IT-002`, `IT-003`
   - Completion signal: CI pipeline includes e2e job that runs integration test scripts and gates merges
+  - Implementation notes:
+    - Added an `E2E Integration` job to `.github/workflows/ci.yml` that runs only after `chain-core` succeeds, keeping the slower cross-binary proof off the repo-shape and active-crate critical path.
+    - The job installs `wasm32v1-none` and `protobuf-compiler`, matching the actual requirements baked into `tests/e2e/helpers/start_devnet.sh` and the chain node build.
+    - Shared the Rust cache key between `chain-core` and `integration-e2e` so the devnet job can reuse prior chain artifacts instead of always cold-building the runtime and node on a fresh runner.
 
 - [ ] `PY-001` Fix __import__() anti-pattern in methods.py
   - Spec: `specs/040226-10-python-research-quality-gates.md`
