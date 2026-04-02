@@ -25,6 +25,7 @@ mod coinbase;
 mod consensus;
 #[cfg(feature = "legacy-subtensor-tests")]
 mod delegate_info;
+mod determinism;
 #[cfg(feature = "legacy-subtensor-tests")]
 mod difficulty;
 #[cfg(feature = "legacy-subtensor-tests")]
