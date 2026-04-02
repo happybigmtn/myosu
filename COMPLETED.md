@@ -5,3 +5,4 @@
 - `RT-003` commit `550adc735e70767db56b5167669d6b47eac5c944`; validation: `cargo test -p pallet-game-solver stage_0_flow --quiet`; `SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet`
 - `EM-001` commit `0a5273c76d735fc85e50df80218e64492765626c`; validation: `cargo test -p pallet-game-solver coinbase --quiet`; `cargo test -p pallet-game-solver stage_0_flow --quiet`
 - `EM-002` commit `9941b62a0342f8b10ab32446f47cb013e23d7faf`; validation: `cargo test -p pallet-game-solver determinism --quiet`
+- `OBS-001` commit `e1de8b538237c23f18d4c30047e3e71ebd939a86`; validation: `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`; `RUST_LOG=myosu_play=debug SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test 2>&1 | grep -q myosu_play`
