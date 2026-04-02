@@ -341,7 +341,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `start_devnet.sh` now refreshes the runtime wasm cache with `cargo build -p myosu-chain-runtime`, builds `myosu-chain` with `fast-runtime`, and detaches the node through Python `subprocess.Popen(..., start_new_session=True)` so the devnet survives across separate `bash ...` invocations in the e2e harness.
     - The helper keeps the truthful local single-authority path by launching the node with `--dev` (which resolves to the repo’s `localnet` single-authority spec), while directing the node’s `--tmp` data under `target/e2e/devnet/tmp` via `TMPDIR` so `stop_devnet.sh` can clean the temp tree deterministically after killing the recorded PID.
 
-- [ ] `IT-002` Write full local loop integration test script
+- [x] `IT-002` Write full local loop integration test script
   - Spec: `specs/040226-05-integration-test-harness.md`
   - Why now: Spec requires a single script proving the complete stage-0 local loop (chain → miner → validator → play) in under 5 minutes on a clean checkout.
   - Codebase evidence:
@@ -362,6 +362,11 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `bash tests/e2e/local_loop.sh`
   - Dependencies: `IT-001`
   - Completion signal: Script exits 0 after proving full stage-0 loop end-to-end
+  - Implementation notes:
+    - Added `tests/e2e/local_loop.sh`, which boots the helper-owned devnet, overlaps `myosu-miner`/`myosu-validator`/`myosu-play` binary builds with the RPC warm-up window, and then drives the poker stage-0 path end-to-end.
+    - The shell proof mirrors the existing node-owned smoke contract instead of inventing new behavior: it writes poker bootstrap artifacts, bootstraps the miner checkpoint and response, enables subnet staking, runs validator scoring plus weight submission, starts the live miner HTTP axon, and finishes with `myosu-play --smoke-test --require-discovery --require-live-query --require-artifact`.
+    - The script generates a temporary `myosu-chain-client` example inside the workspace so it can use the real typed RPC surface for subnet registration plus post-action verification (`validator permit`, `[(miner_uid, 65535)]` weights, chain-visible endpoint, and positive epoch outputs) without adding a permanent repo helper crate.
+    - Poker bootstrap still prints an upstream robopoker panic on stderr when zero-iteration exploitability falls back to `unavailable: solver exploitability failed upstream: isomorphism not found in abstraction lookup`; the binary exits 0, emits the expected stdout contract, and produces a valid checkpoint/response pair, so the e2e proof treats stderr silence as non-authoritative for that step.
 
 - [ ] `IT-003` Write cross-validator determinism integration test script
   - Spec: `specs/040226-05-integration-test-harness.md`
