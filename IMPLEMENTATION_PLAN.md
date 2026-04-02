@@ -440,7 +440,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Verified there is no circular import from `data.py` back into `methods.py`, so the anti-pattern was unnecessary in the current tree.
     - The task's import proof currently depends on `numpy` being installed in the default `python` interpreter because the repo does not yet carry a managed Python environment or dependency manifest.
 
-- [ ] `PY-002` Fix exponential complexity in metrics.py paired_sign_flip_test
+- [x] `PY-002` Fix exponential complexity in metrics.py paired_sign_flip_test
   - Spec: `specs/040226-10-python-research-quality-gates.md`
   - Why now: metrics.py lines 74-84 enumerate all 2^n sign permutations via itertools.product, causing O(2^n) runtime. For n>20 this is unusable.
   - Codebase evidence:
@@ -458,6 +458,11 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `python -c "from metrics import paired_sign_flip_test; import numpy as np; paired_sign_flip_test(np.random.randn(50)); print('OK')"`
   - Dependencies: `none`
   - Completion signal: paired_sign_flip_test completes in <1 second for n=50; results are statistically equivalent to exact computation for small n
+  - Implementation notes:
+    - `paired_sign_flip_test()` now keeps the exact permutation path for `n <= 15`, but it computes that exact distribution with a vectorized bit-pattern expansion instead of Python-level `itertools.product(...)`.
+    - For `n > 15`, the function switches to a deterministic Monte Carlo estimate over `10_000` sign vectors seeded through the existing analysis seed, which keeps repeated runs reproducible.
+    - The Monte Carlo path always includes the identity sign vector in the sampled set so the estimated p-value cannot fall to a spurious zero that the exact permutation test would never produce.
+    - `paired_analysis()` now forwards its `seed` into `paired_sign_flip_test()`, so the p-value path and bootstrap confidence interval share the same reproducibility control.
 
 ## Follow-On Work
 

@@ -1,11 +1,42 @@
 """Metric utilities for deterministic Myosu survey experiments."""
 from __future__ import annotations
 
-import itertools
 import math
 from typing import Dict, List, Tuple
 
 import numpy as np
+
+
+EXACT_SIGN_FLIP_THRESHOLD = 15
+MONTE_CARLO_SIGN_FLIP_SAMPLES = 10_000
+
+
+def _exact_sign_flip_totals(differences: np.ndarray) -> np.ndarray:
+    n = len(differences)
+    permutation_count = 1 << n
+    pattern_ids = np.arange(permutation_count, dtype=np.uint32)[:, None]
+    bit_positions = np.arange(n, dtype=np.uint32)
+    signs = (((pattern_ids >> bit_positions) & 1).astype(np.int8) * 2) - 1
+    return np.abs((signs @ differences) / float(n))
+
+
+def _monte_carlo_sign_flip_p_value(
+    differences: np.ndarray,
+    observed: float,
+    seed: int,
+    samples: int,
+) -> float:
+    total_samples = max(samples, 1)
+    random_samples = max(total_samples - 1, 0)
+    exceedances = 1  # Include the identity sign vector so the estimate is never spuriously zero.
+    if random_samples > 0:
+        rng = np.random.default_rng(seed)
+        random_signs = (
+            rng.integers(0, 2, size=(random_samples, len(differences)), dtype=np.int8) * 2
+        ) - 1
+        random_totals = np.abs((random_signs @ differences) / float(len(differences)))
+        exceedances += int(np.count_nonzero(random_totals >= observed))
+    return float(exceedances) / float(total_samples)
 
 
 def compute_rank_correlation(predicted: np.ndarray, target: np.ndarray) -> float:
@@ -71,17 +102,26 @@ def bootstrap_confidence_interval(
     return float(np.quantile(draws, 0.025)), float(np.quantile(draws, 0.975))
 
 
-def paired_sign_flip_test(differences: np.ndarray) -> float:
+def paired_sign_flip_test(
+    differences: np.ndarray,
+    seed: int = 42,
+    exact_threshold: int = EXACT_SIGN_FLIP_THRESHOLD,
+    monte_carlo_samples: int = MONTE_CARLO_SIGN_FLIP_SAMPLES,
+) -> float:
+    differences = np.asarray(differences, dtype=np.float64).reshape(-1)
     n = len(differences)
     if n == 0:
         return 1.0
     observed = float(abs(float(np.mean(differences))))
-    totals = []
-    for signs in itertools.product(*((-1.0, 1.0),) * n):
-        signed = np.array(signs, dtype=np.float64) * differences
-        totals.append(float(abs(float(np.mean(signed)))))
-    totals_array = np.array(totals, dtype=np.float64)
-    return float(np.mean(totals_array >= observed))
+    if n <= exact_threshold:
+        totals = _exact_sign_flip_totals(differences)
+        return float(np.mean(totals >= observed))
+    return _monte_carlo_sign_flip_p_value(
+        differences,
+        observed,
+        seed=seed,
+        samples=monte_carlo_samples,
+    )
 
 
 def compute_effect_size(differences: np.ndarray) -> float:
@@ -229,7 +269,7 @@ def paired_analysis(
     std_diff = float(np.std(differences))
     stderr = std_diff / math.sqrt(max(len(differences), 1)) + 1e-12
     t_stat = mean_diff / stderr if stderr > 0.0 else 0.0
-    p_value = paired_sign_flip_test(differences)
+    p_value = paired_sign_flip_test(differences, seed=seed)
     ci_low, ci_high = bootstrap_confidence_interval(
         differences, seed=seed, samples=1000
     )
