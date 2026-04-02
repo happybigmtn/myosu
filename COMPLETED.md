@@ -15,3 +15,4 @@
 - `IT-002` commit `3ec60ef057e3ce95cd30778e6fdf2212109a094b`; validation: `bash tests/e2e/local_loop.sh`
 - `IT-003` commit `1a77dac7623abb59b917b0c6eee0f6602c13da81`; validation: `bash tests/e2e/validator_determinism.sh`
 - `IT-004` commit `9e890e7205e575d3fc226faeb4ad4fe628e40224`; validation: `actionlint .github/workflows/ci.yml`
+- `PY-001` commit `533ab22df004950fc5813a5b6305afa0ba0c4ab3`; validation: `python -c "import methods; print('OK')"`; `grep -c '__import__' methods.py | grep -q '^0$'`
