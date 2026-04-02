@@ -1,0 +1,17 @@
+malina corpus
+repo root:   /home/r/Coding/myosu
+planning:    /home/r/Coding/myosu/genesis
+model:       claude-opus-4-6
+max turns:   200
+parallelism: 5
+
+corpus complete
+assessment:  /home/r/Coding/myosu/genesis/ASSESSMENT.md
+spec:        /home/r/Coding/myosu/genesis/SPEC.md
+plans index: /home/r/Coding/myosu/genesis/PLANS.md
+report:      /home/r/Coding/myosu/genesis/GENESIS-REPORT.md
+design:      /home/r/Coding/myosu/genesis/DESIGN.md
+plan files:  13
+prompt log:  /home/r/Coding/myosu/.malina/logs/corpus-20260402-055200-prompt.md
+model log:   /home/r/Coding/myosu/.malina/logs/corpus-20260402-055200-response.txt
+json stream: /home/r/Coding/myosu/.malina/logs/corpus-20260402-055200-events.jsonl

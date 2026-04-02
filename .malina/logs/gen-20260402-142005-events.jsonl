@@ -1,0 +1,2 @@
+{"ts":"2026-04-02T14:20:05.354309328+00:00","event":"start","payload":{"planning_root":"genesis","target_repo":"/home/r/Coding/myosu-gen","output_dir":"gen-20260402-062410","plan_only":true,"model":"claude-opus-4-6"}}
+{"ts":"2026-04-02T14:20:05.357529009+00:00","event":"spec_phase_skipped","payload":{"spec_count":15,"output_dir":"gen-20260402-062410"}}

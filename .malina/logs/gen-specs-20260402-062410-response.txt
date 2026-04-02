@@ -1,0 +1,31 @@
+`★ Insight ─────────────────────────────────────`
+**Spec decomposition followed the crate boundary principle**: Each Rust workspace crate mapped to roughly one spec topic, which is a strong signal that the codebase has good separation of concerns. The only exceptions were the chain layer (pallet + runtime + node = 3 specs from one `myosu-chain` directory) because these serve genuinely distinct roles: the pallet is the application logic, the runtime is the composition layer, and the node is the infrastructure layer.
+
+**Reverse-engineering from code vs. planning intent**: Several planning corpus topics (chain runtime reduction, emission accounting, doctrine refresh) describe *desired future work*, not current capabilities. The specs intentionally document what the code *does today* — including the stage-0 swap stub (1:1 identity pricing) and known Python research issues — rather than what the plans aspire to. This is the core principle of reverse-engineered specs: code is truth.
+
+**The "one sentence without and" test caught real issues**: The game-solver pallet was the hardest to scope because it coordinates registration, staking, weights, and emissions. The key insight is that these are all sub-behaviors of a single capability: "on-chain coordination of the game-solving subnet economy." If I had split registration, staking, and emission into separate specs, I would have created artificial boundaries within a single pallet's coherent state machine.
+`─────────────────────────────────────────────────`
+
+---
+
+Spec pass complete. **15 specs written to `/home/r/Coding/myosu/gen-20260402-062410/specs/`**:
+
+| # | Spec | One-sentence scope |
+|---|------|--------------------|
+| 001 | game-trait-framework | Game-agnostic CFR trait abstraction for multi-game support |
+| 002 | poker-solver-engine | NLHE MCCFR solver with checkpointing and wire protocol |
+| 003 | liars-dice-engine | Second-game proof with minimal CFR game tree |
+| 004 | terminal-ui-framework | Game-agnostic five-panel TUI shell with pipe protocol |
+| 005 | gameplay-surface | Interactive play via TUI/pipe with strategy advisory |
+| 006 | chain-rpc-client | Shared JSON-RPC client for chain interaction |
+| 007 | miner-process | MCCFR strategy training and HTTP serving |
+| 008 | validator-process | Deterministic exploitability scoring and weight submission |
+| 009 | key-management | Encrypted operator keypair lifecycle |
+| 010 | game-solver-pallet | On-chain game-solving subnet economy coordination |
+| 011 | chain-runtime | Substrate runtime composition for stage-0 |
+| 012 | chain-node | Blockchain node with configurable consensus |
+| 013 | operator-deployment-bundle | Generated deployment scripts for operators |
+| 014 | ci-verification-pipeline | Automated quality gates across the workspace |
+| 015 | python-research-framework | Algorithm evaluation against game corpus |
+
+All specs follow canonical shape, pass the scope test, document code reality (not planning intent), and contain no implementation prescriptions or test commands.
