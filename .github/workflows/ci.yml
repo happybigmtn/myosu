@@ -154,6 +154,38 @@ jobs:
       - name: Verify canonical spec integrity
         run: bash .github/scripts/check_doctrine_integrity.sh
 
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    needs: repo-shape
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Cargo audit
+        run: |
+          # The current allowlist is restricted to inherited Substrate/opentensor
+          # fork advisories that are outside the owned stage-0 surface:
+          # - `ring` via libp2p QUIC in the node stack
+          # - `wasmtime` via the inherited executor/runtime stack
+          # - `tracing-subscriber 0.2.25` via the inherited runtime graph that
+          #   still reaches `myosu-chain-client`
+          cargo audit \
+            --ignore RUSTSEC-2025-0009 \
+            --ignore RUSTSEC-2025-0055 \
+            --ignore RUSTSEC-2023-0091 \
+            --ignore RUSTSEC-2024-0438 \
+            --ignore RUSTSEC-2025-0118 \
+            --ignore RUSTSEC-2026-0020 \
+            --ignore RUSTSEC-2026-0021
+
   plan-quality:
     name: Plan Quality
     runs-on: ubuntu-latest

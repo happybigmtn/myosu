@@ -213,7 +213,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Added debug-only launch/context events for smoke-test and pipe paths, plus pre-TUI launch logging, so operators get `RUST_LOG`-filterable stderr diagnostics without introducing raw log lines during the interactive shell.
     - Pipe-mode and smoke-test stdout protocol lines remain `print!`/`println!` driven, preserving the existing text protocol while making `RUST_LOG=myosu_play=debug` surface the `myosu_play` target on stderr.
 
-- [ ] `SEC-001` Add cargo-audit dependency scanning to CI pipeline
+- [x] `SEC-001` Add cargo-audit dependency scanning to CI pipeline
   - Spec: `specs/040226-04-security-audit-process.md`
   - Why now: No automated dependency vulnerability scanning exists. CI must fail on known vulnerabilities in active crates.
   - Codebase evidence:
@@ -232,6 +232,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `cargo audit` (must exit 0 or have only ignored advisories)
   - Dependencies: `none`
   - Completion signal: CI pipeline includes cargo-audit job that fails on new unignored advisories
+  - Implementation notes:
+    - Added a `dependency-audit` CI job that installs `cargo-audit` and runs the workspace lockfile check on every push and pull request.
+    - The current ignore set is limited to seven inherited chain-stack advisories already present in `Cargo.lock`: `RUSTSEC-2025-0009` (`ring` through node/libp2p QUIC), `RUSTSEC-2025-0055` (`tracing-subscriber 0.2.25` through the inherited runtime graph that still reaches `myosu-chain-client`), and the five `wasmtime 8.0.1` advisories (`RUSTSEC-2023-0091`, `RUSTSEC-2024-0438`, `RUSTSEC-2025-0118`, `RUSTSEC-2026-0020`, `RUSTSEC-2026-0021`) from the inherited Substrate executor stack.
+    - Local proof stays aligned with CI by running `cargo audit` with the same seven `--ignore` flags until the upstream opentensor/Substrate fork drift is reduced.
 
 - [ ] `SEC-002` Create SECURITY.md with vulnerability disclosure guidance
   - Spec: `specs/040226-04-security-audit-process.md`
