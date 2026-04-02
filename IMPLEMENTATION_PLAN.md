@@ -309,7 +309,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Expanded both `Mmap::map` SAFETY comments in `crates/myosu-games-poker/src/codexpoker.rs` so they now explicitly name the immutability invariant, the concurrent truncation/replacement failure mode, and the bounds-checked read boundary conditions.
     - Verified the owned crate proof path with the task’s exact checks: the file still carries both SAFETY markers and `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet` stays green.
 
-- [ ] `IT-001` Create devnet lifecycle helper scripts for e2e test orchestration
+- [x] `IT-001` Create devnet lifecycle helper scripts for e2e test orchestration
   - Spec: `specs/040226-05-integration-test-harness.md`
   - Why now: No shell-based e2e test infrastructure exists. Helper scripts (start_devnet, stop_devnet, wait_for_block) are prerequisites for all integration tests.
   - Codebase evidence:
@@ -332,6 +332,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `bash tests/e2e/helpers/start_devnet.sh && bash tests/e2e/helpers/wait_for_block.sh 1 && bash tests/e2e/helpers/stop_devnet.sh`
   - Dependencies: `none`
   - Completion signal: Helper scripts can start a local devnet, wait for block production, and cleanly shut down
+  - Implementation notes:
+    - Added `tests/e2e/helpers/{start_devnet,wait_for_block,stop_devnet}.sh` with `set -euo pipefail`, helper-owned state under `target/e2e/devnet/`, and RPC defaults aligned with the existing node-owned smoke flows (`9955` RPC, `30444` p2p, `9616` Prometheus).
+    - `start_devnet.sh` now refreshes the runtime wasm cache with `cargo build -p myosu-chain-runtime`, builds `myosu-chain` with `fast-runtime`, and detaches the node through Python `subprocess.Popen(..., start_new_session=True)` so the devnet survives across separate `bash ...` invocations in the e2e harness.
+    - The helper keeps the truthful local single-authority path by launching the node with `--dev` (which resolves to the repo’s `localnet` single-authority spec), while directing the node’s `--tmp` data under `target/e2e/devnet/tmp` via `TMPDIR` so `stop_devnet.sh` can clean the temp tree deterministically after killing the recorded PID.
 
 - [ ] `IT-002` Write full local loop integration test script
   - Spec: `specs/040226-05-integration-test-harness.md`

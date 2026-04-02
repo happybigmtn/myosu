@@ -10,3 +10,4 @@
 - `SEC-002` commit `da1c4ec2d2b96d2b203e0f598550870ca5250786`; validation: `test -f SECURITY.md`; `grep -q SECURITY.md README.md`
 - `SEC-003` commit `80fe6a41acc8ba584ef824e525424ae5bece34a7`; validation: `test -f ops/cve-tracking-process.md`; `grep -q cve-tracking SECURITY.md`
 - `SEC-004` commit `07158dd798ecef6797f5d77163abaae9760b5f12`; validation: `grep -c 'SAFETY' crates/myosu-games-poker/src/codexpoker.rs | grep -q '[2-9]'`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet`
+- `IT-001` commit `575d332fc24b0e774559050f47c500398ad1e4ae`; validation: `bash tests/e2e/helpers/start_devnet.sh && bash tests/e2e/helpers/wait_for_block.sh 1 && bash tests/e2e/helpers/stop_devnet.sh`
