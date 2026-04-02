@@ -142,7 +142,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `coinbase/run_coinbase.rs` now gives stage-0 builds a separate `calculate_dividend_distribution()` that folds any legacy `pending_root_alpha` bucket back into subnet-local alpha dividends and returns no root-alpha dividend map.
     - Added always-on `stage_0_coinbase_*` assertions in `src/tests/stage_0_flow.rs`, which makes `cargo test -p pallet-game-solver coinbase --quiet` exercise the live stage-0 coinbase semantics even though the inherited `src/tests/coinbase.rs` module remains feature-gated for `legacy-subtensor-tests`.
 
-- [ ] `EM-002` Add cross-validator determinism unit test for Yuma emission output
+- [x] `EM-002` Add cross-validator determinism unit test for Yuma emission output
   - Spec: `specs/040226-02-single-token-emission-accounting.md`
   - Why now: Spec requires proving two validators agree within epsilon (1e-6) on identical inputs. No such test exists. This closes stage-0 exit criterion 6 (INV-003).
   - Codebase evidence:
@@ -161,6 +161,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `cargo test -p pallet-game-solver determinism --quiet`
   - Dependencies: `EM-001`
   - Completion signal: Test proves two independent Yuma runs with identical inputs produce identical emission vectors within 1e-6 epsilon
+  - Implementation notes:
+    - Added an always-on `tests/determinism.rs` module so the default pallet test build now carries the INV-003 proof instead of hiding it behind `legacy-subtensor-tests`.
+    - The proof seeds a stage-0 subnet twice in fresh `new_test_ext` environments, applies the same validator stakes and weight matrix, runs the same Yuma epoch, and asserts the persisted emission, incentive, dividend, consensus, and validator-trust outputs are bit-stable across runs.
+    - The test also checks the spec’s 1e-6 threshold explicitly by comparing the per-uid server, validator, and combined emission ratios from both runs against an epsilon derived from the fixed total epoch emission.
 
 - [ ] `EM-003` Prove end-to-end emission flow on local devnet with reproducible script
   - Spec: `specs/040226-02-single-token-emission-accounting.md`

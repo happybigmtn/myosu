@@ -4,3 +4,4 @@
 - `RT-002` commit `a1f70c04106bf818b685b33b57a4f317033761bb`; validation: `cargo check -p pallet-admin-utils --quiet`; `SKIP_WASM_BUILD=1 cargo check -p myosu-chain --quiet`; `cargo tree -p myosu-chain --prefix none | rg '^(fc-|fp-|pallet-evm|pallet-ethereum)'`; `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
 - `RT-003` commit `550adc735e70767db56b5167669d6b47eac5c944`; validation: `cargo test -p pallet-game-solver stage_0_flow --quiet`; `SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet`
 - `EM-001` commit `0a5273c76d735fc85e50df80218e64492765626c`; validation: `cargo test -p pallet-game-solver coinbase --quiet`; `cargo test -p pallet-game-solver stage_0_flow --quiet`
+- `EM-002` commit `9941b62a0342f8b10ab32446f47cb013e23d7faf`; validation: `cargo test -p pallet-game-solver determinism --quiet`
