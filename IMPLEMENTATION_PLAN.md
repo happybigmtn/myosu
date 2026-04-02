@@ -261,7 +261,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The reporting channel avoids inventing new infrastructure: it prefers GitHub private vulnerability reporting for `happybigmtn/myosu` and falls back to private contact with `@happybigmtn` on GitHub if the repository UI does not expose that flow.
     - `README.md` now links the security policy from the top-level orientation list so operators have a stable disclosure entrypoint.
 
-- [ ] `SEC-003` Document upstream CVE tracking process for Substrate and robopoker forks
+- [x] `SEC-003` Document upstream CVE tracking process for Substrate and robopoker forks
   - Spec: `specs/040226-04-security-audit-process.md`
   - Why now: Project depends on pinned forks of polkadot-sdk and robopoker with no process for tracking upstream security patches.
   - Codebase evidence:
@@ -282,6 +282,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `grep -q cve-tracking SECURITY.md`
   - Dependencies: `SEC-002`
   - Completion signal: CVE tracking process documented and referenced from SECURITY.md
+  - Implementation notes:
+    - Added `ops/cve-tracking-process.md` with the live pinned upstreams (`opentensor/polkadot-sdk`, in-tree `subtensor`, `happybigmtn/robopoker`, and `substrate-fixed`), a weekly-plus-release review cadence, triage rules, and the exact `cargo audit` ignore set currently carried in CI.
+    - Linked the process from `SECURITY.md` and the stage-0 security audit snapshot so upstream advisory review is now part of the repo's operator-facing security evidence instead of an implicit maintainer chore.
+    - Extended `docs/robopoker-fork-changelog.md` so any future robopoker security-driven pin change must update both the fork changelog and the CVE tracking evidence in the same slice.
 
 - [ ] `SEC-004` Verify unsafe code documentation covers invariant, failure mode, and boundary conditions
   - Spec: `specs/040226-04-security-audit-process.md`

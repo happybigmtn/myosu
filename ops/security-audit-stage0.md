@@ -112,3 +112,8 @@ runtime/pallet reduction, artifact boundary hardening, CI expansion, and the
 release-governance sync that grounded the remaining invariants on live repo
 surfaces. The largest remaining security gap is now stage-1 key-management
 maturity, not missing stage-0 gate categories.
+
+Ongoing upstream dependency review is handled by
+[`ops/cve-tracking-process.md`](cve-tracking-process.md). Any change to the
+`cargo audit` ignore set or pinned upstream revs should update that process and
+this snapshot together.

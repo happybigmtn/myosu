@@ -82,4 +82,8 @@ The current stage-0 audit snapshot lives in
 [`ops/security-audit-stage0.md`](ops/security-audit-stage0.md). It is a release
 gate input, not a substitute for reporting a vulnerability privately.
 
+The upstream dependency review and cve-tracking process lives in
+[`ops/cve-tracking-process.md`](ops/cve-tracking-process.md). Keep it aligned
+with the current `cargo audit` ignore list and any upstream pin changes.
+
 This repository does not currently run a bug bounty program.

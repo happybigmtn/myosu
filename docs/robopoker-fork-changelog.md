@@ -61,3 +61,6 @@ carries an equivalent `CHANGELOG.md`.
 
 If the fork grows beyond the current serde support, this file must be updated
 in the same slice that changes the pinned robopoker rev in the workspace.
+Security-driven pin changes follow
+[`ops/cve-tracking-process.md`](../ops/cve-tracking-process.md) and should
+update both this changelog and the stage-0 security audit snapshot together.
