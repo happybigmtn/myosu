@@ -16,3 +16,4 @@
 - `IT-003` commit `1a77dac7623abb59b917b0c6eee0f6602c13da81`; validation: `bash tests/e2e/validator_determinism.sh`
 - `IT-004` commit `9e890e7205e575d3fc226faeb4ad4fe628e40224`; validation: `actionlint .github/workflows/ci.yml`
 - `PY-001` commit `533ab22df004950fc5813a5b6305afa0ba0c4ab3`; validation: `python -c "import methods; print('OK')"`; `grep -c '__import__' methods.py | grep -q '^0$'`
+- `PY-002` commit `41bc48c3d34165cfd7f57517a03a4eff0f429f58`; validation: `python -c "from metrics import paired_sign_flip_test; import numpy as np; print(paired_sign_flip_test(np.array([0.1, -0.2, 0.3])))"`; `python -c "from metrics import paired_sign_flip_test; import numpy as np; paired_sign_flip_test(np.random.randn(50)); print('OK')"`
