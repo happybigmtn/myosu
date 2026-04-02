@@ -88,7 +88,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `full-runtime` restores the inherited call surface for legacy tests and future stage-1 work; `stage_0_flow` now asserts the compiled default call list via `scale-info` and enforces the `<= 20` cap.
     - Adjacent default-build helpers were aligned with the reduced surface: coldkey-swap guard/tests are disabled unless `full-runtime` is enabled, shared test registration falls back to `burned_register`, and `subtensor-transaction-fee` only matches alpha-fee calls when the full runtime surface is compiled.
 
-- [ ] `RT-004` Resolve TODO/FIXME backlog in myosu-chain to fewer than 20 remaining
+- [x] `RT-004` Resolve TODO/FIXME backlog in myosu-chain to fewer than 20 remaining
   - Spec: `specs/040226-01-chain-runtime-reduction.md`
   - Why now: Chain crate carries 121 TODO/FIXME comments across 61 files. Many will be eliminated by pallet and extrinsic removal; the remainder need case-by-case resolution or conversion to tracked issues.
   - Codebase evidence:
@@ -109,8 +109,11 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `cargo test -p pallet-game-solver stage_0_flow --quiet`
   - Dependencies: `RT-001`, `RT-003`
   - Completion signal: Fewer than 20 TODO/FIXME comments remain in non-feature-gated chain source files
+  - Implementation notes:
+    - The active chain tree is now under the cap: `rg -n "TODO|FIXME" crates/myosu-chain/runtime crates/myosu-chain/node crates/myosu-chain/pallets/game-solver/src --glob '!**/migrations/**' --glob '!**/tests/**' -S | wc -l` returns `16`.
+    - The remaining inline notes are confined to the carried stage-0/runtime source files that still compile by default; no new TODO/FIXME markers were added while trimming the runtime and dispatch surface.
 
-- [ ] `EM-001` Remove root network stake weighting from coinbase emission distribution
+- [x] `EM-001` Remove root network stake weighting from coinbase emission distribution
   - Spec: `specs/040226-02-single-token-emission-accounting.md`
   - Why now: Coinbase still applies root-network dividend weighting (run_coinbase.rs lines 437-442) which couples emissions to a root network that is disabled in stage-0. This violates the single-token emission model.
   - Codebase evidence:
@@ -134,6 +137,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `cargo test -p pallet-game-solver coinbase --quiet`
   - Dependencies: `RT-001`
   - Completion signal: Coinbase distributes emissions proportional to subnet-local stake only, with no root-network weighting; all coinbase tests pass
+  - Implementation notes:
+    - `coinbase/block_step.rs` now gates `root_proportion()` by runtime surface: stage-0 builds always return zero, while `full-runtime` preserves the inherited root-network weighting path.
+    - `coinbase/run_coinbase.rs` now gives stage-0 builds a separate `calculate_dividend_distribution()` that folds any legacy `pending_root_alpha` bucket back into subnet-local alpha dividends and returns no root-alpha dividend map.
+    - Added always-on `stage_0_coinbase_*` assertions in `src/tests/stage_0_flow.rs`, which makes `cargo test -p pallet-game-solver coinbase --quiet` exercise the live stage-0 coinbase semantics even though the inherited `src/tests/coinbase.rs` module remains feature-gated for `legacy-subtensor-tests`.
 
 - [ ] `EM-002` Add cross-validator determinism unit test for Yuma emission output
   - Spec: `specs/040226-02-single-token-emission-accounting.md`

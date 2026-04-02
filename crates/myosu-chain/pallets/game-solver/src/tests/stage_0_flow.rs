@@ -1,5 +1,7 @@
 #![allow(clippy::arithmetic_side_effects, clippy::unwrap_used)]
 
+use alloc::collections::BTreeMap;
+
 use super::mock::*;
 
 use crate::epoch::math::fixed64_to_u64;
@@ -426,6 +428,96 @@ fn stage_0_flow_registers_stakes_serves_and_emits() {
                 .copied()
                 .unwrap_or_default()
                 > 0
+        );
+    });
+}
+
+#[test]
+fn stage_0_coinbase_root_proportion_and_pending_root_divs_stay_zero() {
+    new_test_ext(1).execute_with(|| {
+        let owner_hotkey = U256::from(35);
+        let owner_coldkey = U256::from(36);
+        let netuid = add_dynamic_network_disable_commit_reveal(&owner_hotkey, &owner_coldkey);
+
+        setup_reserves(
+            netuid,
+            TaoCurrency::from(1_000_000_000_000u64),
+            AlphaCurrency::from(1_000_000_000_000u64),
+        );
+        SubtensorModule::set_tao_weight(u64::MAX);
+        SubnetTAO::<Test>::set(NetUid::ROOT, TaoCurrency::from(9_000_000_000_000u64));
+
+        let subnet_emissions = BTreeMap::from([(netuid, U96F32::from_num(1_000_000_000u64))]);
+
+        assert_eq!(
+            SubtensorModule::root_proportion(netuid),
+            U96F32::from_num(0)
+        );
+
+        SubtensorModule::emit_to_subnets(&[netuid], &subnet_emissions, true);
+
+        assert_eq!(
+            PendingRootAlphaDivs::<Test>::get(netuid),
+            AlphaCurrency::ZERO
+        );
+        assert!(PendingServerEmission::<Test>::get(netuid) > AlphaCurrency::ZERO);
+        assert!(PendingValidatorEmission::<Test>::get(netuid) > AlphaCurrency::ZERO);
+    });
+}
+
+#[test]
+fn stage_0_coinbase_dividend_distribution_folds_root_bucket_into_alpha_dividends() {
+    new_test_ext(1).execute_with(|| {
+        let first_hotkey = U256::from(45);
+        let second_hotkey = U256::from(46);
+        let pending_alpha = AlphaCurrency::from(600u64);
+        let pending_root_alpha = AlphaCurrency::from(400u64);
+
+        let (alpha_dividends, root_alpha_dividends) =
+            SubtensorModule::calculate_dividend_distribution(
+                pending_alpha,
+                pending_root_alpha,
+                U96F32::from_num(1.0),
+                BTreeMap::from([
+                    (
+                        first_hotkey,
+                        (AlphaCurrency::from(10u64), AlphaCurrency::from(10_000u64)),
+                    ),
+                    (
+                        second_hotkey,
+                        (AlphaCurrency::from(10u64), AlphaCurrency::from(1u64)),
+                    ),
+                ]),
+                BTreeMap::from([
+                    (first_hotkey, U96F32::from_num(3)),
+                    (second_hotkey, U96F32::from_num(1)),
+                ]),
+            );
+
+        assert!(root_alpha_dividends.is_empty());
+        assert_eq!(
+            alpha_dividends
+                .get(&first_hotkey)
+                .copied()
+                .expect("first hotkey should receive dividends")
+                .saturating_to_num::<u64>(),
+            750
+        );
+        assert_eq!(
+            alpha_dividends
+                .get(&second_hotkey)
+                .copied()
+                .expect("second hotkey should receive dividends")
+                .saturating_to_num::<u64>(),
+            250
+        );
+        assert_eq!(
+            alpha_dividends
+                .values()
+                .copied()
+                .sum::<U96F32>()
+                .saturating_to_num::<u64>(),
+            u64::from(pending_alpha.saturating_add(pending_root_alpha))
         );
     });
 }

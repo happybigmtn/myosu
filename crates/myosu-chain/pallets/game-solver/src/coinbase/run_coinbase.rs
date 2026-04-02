@@ -402,6 +402,36 @@ impl<T: Config> Pallet<T> {
         (incentives, dividends)
     }
 
+    #[cfg(not(feature = "full-runtime"))]
+    pub fn calculate_dividend_distribution(
+        pending_alpha: AlphaCurrency,
+        pending_root_alpha: AlphaCurrency,
+        tao_weight: U96F32,
+        stake_map: BTreeMap<T::AccountId, (AlphaCurrency, AlphaCurrency)>,
+        dividends: BTreeMap<T::AccountId, U96F32>,
+    ) -> (
+        BTreeMap<T::AccountId, U96F32>,
+        BTreeMap<T::AccountId, U96F32>,
+    ) {
+        let _ = tao_weight;
+        let zero: U96F32 = asfloat!(0.0);
+        let total_pending_alpha = asfloat!(pending_alpha.saturating_add(pending_root_alpha));
+        let total_dividends = dividends.values().copied().sum::<U96F32>();
+        let mut alpha_dividends: BTreeMap<T::AccountId, U96F32> = BTreeMap::new();
+
+        for (hotkey, dividend) in dividends {
+            if !stake_map.contains_key(&hotkey) {
+                continue;
+            }
+
+            let share = dividend.checked_div(total_dividends).unwrap_or(zero);
+            alpha_dividends.insert(hotkey, total_pending_alpha.saturating_mul(share));
+        }
+
+        (alpha_dividends, BTreeMap::new())
+    }
+
+    #[cfg(feature = "full-runtime")]
     pub fn calculate_dividend_distribution(
         pending_alpha: AlphaCurrency,
         pending_root_alpha: AlphaCurrency,

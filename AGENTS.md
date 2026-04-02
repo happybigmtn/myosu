@@ -302,6 +302,7 @@ Runtime wasm cache for node smoke proofs:
 - `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet` still requires a cached runtime wasm at `target/debug/wbuild/myosu-chain-runtime/myosu_chain_runtime.wasm`
 - On Rust 1.94 in this repo, install `wasm32v1-none` once via `rustup target add wasm32v1-none`, then refresh the cache with `cargo build -p myosu-chain-runtime` before trusting node smoke results after runtime edits
 - `SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet` can cold-build `wasm-opt-sys` and stay quiet for several minutes; do not treat the silence as a hang while `cargo` still has active compiler children
+- `cargo test -p pallet-game-solver coinbase --quiet` exercises the default-build stage-0 coinbase assertions from `src/tests/stage_0_flow.rs`; the inherited `src/tests/coinbase.rs` suite still sits behind `legacy-subtensor-tests`
 
 ## Bootstrap Lanes
 
