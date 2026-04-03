@@ -4,6 +4,7 @@ members = [
     "crates/myosu-games",
     "crates/myosu-games-poker",
     "crates/myosu-games-liars-dice",
+    "crates/myosu-games-kuhn",
     "crates/myosu-keys",
     "crates/myosu-tui",
     "crates/myosu-play",

@@ -45,6 +45,15 @@ impl GameConfig {
             },
         }
     }
+
+    /// Create the standard Kuhn poker configuration.
+    pub fn kuhn_poker() -> Self {
+        Self {
+            game_type: GameType::KuhnPoker,
+            num_players: 2,
+            params: GameParams::KuhnPoker,
+        }
+    }
 }
 
 /// Known game types supported by myosu.
@@ -59,6 +68,8 @@ pub enum GameType {
     NlheHeadsUp,
     /// No-Limit Hold'em 6-max
     NlheSixMax,
+    /// Kuhn Poker
+    KuhnPoker,
     /// Liar's Dice
     LiarsDice,
     /// Custom game type identified by string
@@ -78,6 +89,7 @@ impl GameType {
     ///
     /// assert_eq!(GameType::from_bytes(b"nlhe_hu"), Some(GameType::NlheHeadsUp));
     /// assert_eq!(GameType::from_bytes(b"nlhe_6max"), Some(GameType::NlheSixMax));
+    /// assert_eq!(GameType::from_bytes(b"kuhn_poker"), Some(GameType::KuhnPoker));
     /// assert_eq!(GameType::from_bytes(b"liars_dice"), Some(GameType::LiarsDice));
     /// assert_eq!(GameType::from_bytes(b"unknown"), Some(GameType::Custom("unknown".to_string())));
     /// ```
@@ -85,6 +97,7 @@ impl GameType {
         match bytes {
             b"nlhe_hu" => Some(Self::NlheHeadsUp),
             b"nlhe_6max" => Some(Self::NlheSixMax),
+            b"kuhn_poker" => Some(Self::KuhnPoker),
             b"liars_dice" => Some(Self::LiarsDice),
             _ => {
                 // Try to parse as UTF-8 string for custom types
@@ -102,11 +115,13 @@ impl GameType {
     ///
     /// assert_eq!(GameType::NlheHeadsUp.to_bytes(), b"nlhe_hu".to_vec());
     /// assert_eq!(GameType::NlheSixMax.to_bytes(), b"nlhe_6max".to_vec());
+    /// assert_eq!(GameType::KuhnPoker.to_bytes(), b"kuhn_poker".to_vec());
     /// ```
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
             Self::NlheHeadsUp => b"nlhe_hu".to_vec(),
             Self::NlheSixMax => b"nlhe_6max".to_vec(),
+            Self::KuhnPoker => b"kuhn_poker".to_vec(),
             Self::LiarsDice => b"liars_dice".to_vec(),
             Self::Custom(s) => s.as_bytes().to_vec(),
         }
@@ -121,12 +136,14 @@ impl GameType {
     ///
     /// assert_eq!(GameType::NlheHeadsUp.num_players(), 2);
     /// assert_eq!(GameType::NlheSixMax.num_players(), 6);
+    /// assert_eq!(GameType::KuhnPoker.num_players(), 2);
     /// assert_eq!(GameType::LiarsDice.num_players(), 2);
     /// ```
     pub fn num_players(&self) -> u8 {
         match self {
             Self::NlheHeadsUp => 2,
             Self::NlheSixMax => 6,
+            Self::KuhnPoker => 2,
             Self::LiarsDice => 2,
             // Default to 2 for custom games
             Self::Custom(_) => 2,
@@ -157,6 +174,8 @@ pub enum GameParams {
         /// Number of faces on each die
         num_faces: u8,
     },
+    /// Standard two-player Kuhn poker parameters
+    KuhnPoker,
     /// Custom parameters as opaque JSON
     Custom(serde_json::Value),
 }
@@ -268,6 +287,10 @@ mod tests {
             Some(GameType::NlheSixMax)
         );
         assert_eq!(
+            GameType::from_bytes(b"kuhn_poker"),
+            Some(GameType::KuhnPoker)
+        );
+        assert_eq!(
             GameType::from_bytes(b"liars_dice"),
             Some(GameType::LiarsDice)
         );
@@ -286,6 +309,7 @@ mod tests {
         let types = vec![
             GameType::NlheHeadsUp,
             GameType::NlheSixMax,
+            GameType::KuhnPoker,
             GameType::LiarsDice,
             GameType::Custom("my_game".to_string()),
         ];
@@ -310,6 +334,7 @@ mod tests {
     fn game_type_num_players() {
         assert_eq!(GameType::NlheHeadsUp.num_players(), 2);
         assert_eq!(GameType::NlheSixMax.num_players(), 6);
+        assert_eq!(GameType::KuhnPoker.num_players(), 2);
         assert_eq!(GameType::LiarsDice.num_players(), 2);
         assert_eq!(GameType::Custom("anything".to_string()).num_players(), 2);
     }
@@ -395,6 +420,7 @@ mod tests {
         prop_oneof![
             Just(GameType::NlheHeadsUp),
             Just(GameType::NlheSixMax),
+            Just(GameType::KuhnPoker),
             Just(GameType::LiarsDice),
             "[a-z0-9_]{1,16}".prop_map(GameType::Custom),
         ]
@@ -419,6 +445,11 @@ mod tests {
                     },
                 )
             }),
+            Just(GameConfig::new(
+                GameType::KuhnPoker,
+                2,
+                GameParams::KuhnPoker,
+            )),
             "[a-z0-9_]{1,16}".prop_map(|name| {
                 GameConfig::new(
                     GameType::Custom(name.clone()),

@@ -40,10 +40,11 @@ pub struct GameRegistry;
 
 impl GameRegistry {
     /// Return the built-in game types known to this repo.
-    pub fn supported() -> [GameDescriptor; 3] {
+    pub fn supported() -> [GameDescriptor; 4] {
         [
             GameDescriptor::builtin(GameType::NlheHeadsUp, "Heads-up no-limit hold'em"),
             GameDescriptor::builtin(GameType::NlheSixMax, "Six-max no-limit hold'em"),
+            GameDescriptor::builtin(GameType::KuhnPoker, "Two-player Kuhn poker"),
             GameDescriptor::builtin(GameType::LiarsDice, "Two-player liar's dice"),
         ]
     }
@@ -56,6 +57,9 @@ impl GameRegistry {
             }
             GameType::NlheSixMax => {
                 GameDescriptor::builtin(GameType::NlheSixMax, "Six-max no-limit hold'em")
+            }
+            GameType::KuhnPoker => {
+                GameDescriptor::builtin(GameType::KuhnPoker, "Two-player Kuhn poker")
             }
             GameType::LiarsDice => {
                 GameDescriptor::builtin(GameType::LiarsDice, "Two-player liar's dice")
@@ -83,14 +87,18 @@ mod tests {
     fn known_game_types() {
         let heads_up = GameRegistry::from_bytes(b"nlhe_hu").expect("known game should resolve");
         let six_max = GameRegistry::from_bytes(b"nlhe_6max").expect("known game should resolve");
+        let kuhn_poker =
+            GameRegistry::from_bytes(b"kuhn_poker").expect("known game should resolve");
         let liars_dice =
             GameRegistry::from_bytes(b"liars_dice").expect("known game should resolve");
 
         assert_eq!(heads_up.game_type, GameType::NlheHeadsUp);
         assert_eq!(six_max.game_type, GameType::NlheSixMax);
+        assert_eq!(kuhn_poker.game_type, GameType::KuhnPoker);
         assert_eq!(liars_dice.game_type, GameType::LiarsDice);
         assert!(heads_up.builtin);
         assert!(six_max.builtin);
+        assert!(kuhn_poker.builtin);
         assert!(liars_dice.builtin);
     }
 
@@ -147,5 +155,6 @@ mod tests {
         assert_eq!(descriptors[0].num_players, 2);
         assert_eq!(descriptors[1].num_players, 6);
         assert_eq!(descriptors[2].num_players, 2);
+        assert_eq!(descriptors[3].num_players, 2);
     }
 }

@@ -717,7 +717,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Updated `CHANGELOG.md` `Unreleased` to record the new operator-facing
       upgrade documentation alongside the existing release wrapper work.
 
-- [ ] `G3-001` Scaffold myosu-games-kuhn crate with Kuhn poker state machine
+- [x] `G3-001` Scaffold myosu-games-kuhn crate with Kuhn poker state machine
   - Spec: `specs/040226-09-third-game-extensibility-proof.md`
   - Why now: Third game validates that the game trait abstraction genuinely generalizes. Kuhn Poker has 12 information sets and solves exactly, maximizing architecture signal with minimal implementation.
   - Codebase evidence:
@@ -743,6 +743,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `cargo test -p myosu-games --quiet`
   - Dependencies: `none`
   - Completion signal: Kuhn Poker crate implements CfrGame trait, is registered in GameType enum, and passes unit tests with zero modifications to existing game crates
+  - Implementation notes:
+    - The shared built-in game wiring lives in `crates/myosu-games/src/traits.rs` and `crates/myosu-games/src/registry.rs`, not `crates/myosu-games/src/lib.rs`; this increment added `GameType::KuhnPoker`, `GameParams::KuhnPoker`, and `GameConfig::kuhn_poker()` there.
+    - Added a new workspace member `crates/myosu-games-kuhn/` with a full Kuhn poker state machine: 6 ordered chance deals, 12 reachable information sets, and terminal payoffs matching the standard 1-chip and 2-chip Kuhn outcomes.
+    - `KuhnSolver` is exact rather than MCCFR-driven: it exposes the closed-form equilibrium profile, and the crate proves the canonical player-one equilibrium value of `-1/18` in unit tests.
 
 - [ ] `G3-002` Implement Kuhn poker TUI renderer and wire protocol
   - Spec: `specs/040226-09-third-game-extensibility-proof.md`
