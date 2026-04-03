@@ -58,6 +58,25 @@ test -s "$bundle_dir/README.md"
 test -s "$bundle_dir/devnet-spec.json"
 test -s "$bundle_dir/test-finney-spec.json"
 "$bundle_dir/verify-bundle.sh" >/dev/null
+python - "$bundle_dir/bundle-manifest.toml" "$bundle_dir/devnet-spec.json" <<'PY'
+import json
+import sys
+import tomllib
+
+manifest_path, spec_path = sys.argv[1:3]
+with open(manifest_path, "rb") as manifest_file:
+    manifest = tomllib.load(manifest_file)
+with open(spec_path, "r", encoding="utf-8") as spec_file:
+    spec = json.load(spec_file)
+bootnode = manifest["bootnode_multiaddr"]
+rpc_endpoint = manifest["bootnode_rpc_endpoint"]
+if not bootnode or "/p2p/" not in bootnode:
+    raise SystemExit("bundle manifest is missing a truthful bootnode_multiaddr")
+if rpc_endpoint != "ws://127.0.0.1:9944":
+    raise SystemExit(f"unexpected bootnode_rpc_endpoint: {rpc_endpoint}")
+if bootnode not in spec.get("bootNodes", []):
+    raise SystemExit("devnet-spec.json is missing the manifest bootnode")
+PY
 
 env SKIP_WASM_BUILD=1 cargo run --quiet -p myosu-chain --features fast-runtime -- \
   build-spec --chain devnet \

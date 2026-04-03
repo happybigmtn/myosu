@@ -24,6 +24,8 @@ smallest honest end-to-end proof. That remains the preferred full-loop surface.
   now succeeds
 - `cargo run -p myosu-chain --features fast-runtime -- build-spec --chain test_finney`
   now succeeds
+- `bash ops/deploy-bootnode.sh --dry-run` now prepares a stable devnet
+  bootnode identity and metadata file under `target/bootnode/devnet/`
 - `crates/myosu-keys/` now exists as a shared library for mnemonic derivation,
   SS58 address formatting, default Myosu key/config paths, encrypted seed-file
   persistence, and active-account config loading
@@ -65,16 +67,54 @@ config dir, use:
 
 ```bash
 export MYOSU_KEY_PASSWORD='replace-me'
-bash .github/scripts/prepare_operator_network_bundle.sh ./operator-bundle
-./operator-bundle/verify-bundle.sh
+bash .github/scripts/prepare_operator_network_bundle.sh
+target/operator-network-bundle/verify-bundle.sh
 ```
 
 That bundle now includes:
 - runnable miner and validator wrapper scripts
 - runnable named-network spec refresh scripts
 - materialized `devnet-spec.json` and `test-finney-spec.json`
+- the devnet bootnode multiaddr and RPC endpoint in `bundle-manifest.toml`
 - machine-readable `bundle-manifest.toml`
 - a bundle-local verifier
+
+If the bootnode is not the default loopback host, set the advertised endpoint
+before preparing the bundle so the generated bootnode metadata is truthful:
+
+```bash
+export MYOSU_KEY_PASSWORD='replace-me'
+export MYOSU_OPERATOR_BOOTNODE_PUBLIC_HOST='devnet.myosu.example'
+export MYOSU_OPERATOR_BOOTNODE_RPC_PORT='9944'
+export MYOSU_OPERATOR_BOOTNODE_P2P_PORT='30333'
+bash .github/scripts/prepare_operator_network_bundle.sh ./operator-bundle
+```
+
+## Devnet Join Surface
+
+The bundle now carries the devnet bootnode address in two places:
+
+- `bundle-manifest.toml` exposes `bootnode_multiaddr` and `bootnode_rpc_endpoint`
+- `devnet-spec.json` is rewritten with that same `bootNodes` entry
+
+That means an operator can join the devnet without editing the chain spec by
+hand:
+
+```bash
+export MYOSU_KEY_PASSWORD='replace-me'
+bash .github/scripts/prepare_operator_network_bundle.sh ./operator-bundle
+
+cargo run -p myosu-chain -- \
+  --chain ./operator-bundle/devnet-spec.json \
+  --bootnodes "$(sed -n 's/^bootnode_multiaddr = \"\\(.*\\)\"$/\\1/p' ./operator-bundle/bundle-manifest.toml)" \
+  --rpc-port 9955 \
+  --prometheus-port 9616 \
+  --base-path /tmp/myosu-devnet-node
+```
+
+The explicit `--bootnodes` flag is optional once you use the bundled
+`devnet-spec.json`; it is shown here so operators can see the exact peer they
+should expect to connect to.
 
 If you are proving named-network packaging from a cold machine, install the
 Rust wasm target first:
@@ -195,7 +235,8 @@ The current operator-network slice is healthy when:
   `build-devnet-spec.sh`, `build-test-finney-spec.sh`, `verify-bundle.sh`, and
   a local README derived from the active config and bootstrap output, and it
   now materializes `devnet-spec.json`, `test-finney-spec.json`, and
-  `bundle-manifest.toml` into the bundle during preparation
+  `bundle-manifest.toml` into the bundle during preparation, with the devnet
+  bootnode recorded both in the manifest and the bundled `devnet-spec.json`
 - `bash .github/scripts/check_operator_network_bootstrap.sh` proves that the
   printed bootstrap commands reach the miner and validator `--help` surfaces
   and that the generated bundle plus named `build-spec` outputs still

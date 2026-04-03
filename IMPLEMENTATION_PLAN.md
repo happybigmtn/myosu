@@ -538,7 +538,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The proof launches a real `devnet` authority bootnode and a second full node on loopback, then asserts both nodes report one peer and the same best block height before tearing the pair down.
     - The owned multi-node path needed one adjacent node-service fix: `MYOSU_NODE_AUTHORITY_SURI` now lets authority nodes seed Aura and GRANDPA keys at startup for non-`Local` chains, because the inherited `myosu-chain key insert --chain devnet ...` path was not usable in this repo’s proof loop.
 
-- [ ] `DN-004` Update operator bundle for devnet connection with bootnode addresses
+- [x] `DN-004` Update operator bundle for devnet connection with bootnode addresses
   - Spec: `specs/040226-06-multi-node-devnet.md`
   - Why now: Operator bundle currently assumes local-only operation. Operators must be able to join the devnet without manual chain spec editing.
   - Codebase evidence:
@@ -559,6 +559,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `grep -q bootnode docs/execution-playbooks/operator-network.md`
   - Dependencies: `DN-001`, `DN-002`
   - Completion signal: Operator bundle includes devnet chain spec and bootnode address; playbook documents devnet connection
+  - Implementation notes:
+    - `prepare_operator_network_bundle.sh` now accepts a bare invocation, defaults the output to `target/operator-network-bundle/`, and derives truthful bootnode metadata from `ops/deploy-bootnode.sh --dry-run` before printing bootstrap commands.
+    - The bundled `devnet-spec.json` is now rewritten with the same `bootnode_multiaddr` recorded in `bundle-manifest.toml`, so operators can join the devnet without editing the chain spec by hand.
+    - `docs/execution-playbooks/operator-network.md` now documents the bootnode env overrides and the follower-node join flow, while `.github/scripts/check_operator_network_bootstrap.sh` asserts that the manifest and bundled devnet spec carry the same bootnode entry.
 
 - [ ] `OP-001` Write operator quickstart guide from zero to running miner and validator
   - Spec: `specs/040226-07-operator-onboarding.md`

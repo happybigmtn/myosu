@@ -4,17 +4,24 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
-  echo "usage: $0 <bundle-dir> [config-dir]" >&2
+if [[ $# -gt 2 ]]; then
+  echo "usage: $0 [bundle-dir] [config-dir]" >&2
   exit 1
 fi
 
-bundle_dir="$1"
-config_dir="${2:-$bundle_dir/config}"
+bundle_dir="${1:-${MYOSU_OPERATOR_BUNDLE_DIR:-$repo_root/target/operator-network-bundle}}"
+config_dir="${2:-${MYOSU_OPERATOR_CONFIG_DIR:-$bundle_dir/config}}"
 network="${MYOSU_OPERATOR_NETWORK:-devnet}"
-chain_endpoint="${MYOSU_OPERATOR_CHAIN:-ws://127.0.0.1:9944}"
 subnet="${MYOSU_OPERATOR_SUBNET:-7}"
 password_env="${MYOSU_OPERATOR_PASSWORD_ENV:-MYOSU_KEY_PASSWORD}"
+bootnode_base_path="${MYOSU_OPERATOR_BOOTNODE_BASE_PATH:-${repo_root}/target/bootnode/devnet}"
+bootnode_chain="${MYOSU_OPERATOR_BOOTNODE_CHAIN:-devnet}"
+bootnode_public_host="${MYOSU_OPERATOR_BOOTNODE_PUBLIC_HOST:-127.0.0.1}"
+bootnode_p2p_port="${MYOSU_OPERATOR_BOOTNODE_P2P_PORT:-30333}"
+bootnode_rpc_port="${MYOSU_OPERATOR_BOOTNODE_RPC_PORT:-9944}"
+bootnode_prometheus_port="${MYOSU_OPERATOR_BOOTNODE_PROMETHEUS_PORT:-9615}"
+bootnode_service_name="${MYOSU_OPERATOR_BOOTNODE_SERVICE_NAME:-myosu-devnet-bootnode}"
+bootnode_info_file="${bootnode_base_path}/config/${bootnode_service_name}.env"
 config_file="$config_dir/config.toml"
 
 if [[ -z "${!password_env:-}" ]]; then
@@ -24,6 +31,35 @@ fi
 
 mkdir -p "$bundle_dir"
 mkdir -p "$config_dir"
+
+read_bootnode_field() {
+  local field="$1"
+  sed -n "s/^${field}=//p" "$bootnode_info_file"
+}
+
+SKIP_WASM_BUILD=1 cargo build -p myosu-chain --features fast-runtime --quiet >/dev/null
+
+bash ops/deploy-bootnode.sh \
+  --dry-run \
+  --base-path "$bootnode_base_path" \
+  --chain "$bootnode_chain" \
+  --public-host "$bootnode_public_host" \
+  --p2p-port "$bootnode_p2p_port" \
+  --rpc-port "$bootnode_rpc_port" \
+  --prometheus-port "$bootnode_prometheus_port" \
+  --service-name "$bootnode_service_name" \
+  >/dev/null
+
+bootnode_multiaddr="$(read_bootnode_field bootnode_multiaddr)"
+bootnode_rpc_endpoint="$(read_bootnode_field rpc_endpoint)"
+bootnode_peer_id="$(read_bootnode_field peer_id)"
+
+if [[ -z "$bootnode_multiaddr" || -z "$bootnode_rpc_endpoint" || -z "$bootnode_peer_id" ]]; then
+  echo "failed to read bootnode metadata from $bootnode_info_file" >&2
+  exit 1
+fi
+
+chain_endpoint="${MYOSU_OPERATOR_CHAIN:-$bootnode_rpc_endpoint}"
 
 if [[ ! -f "$config_file" ]]; then
   cargo run -p myosu-keys --quiet -- create \
@@ -74,8 +110,29 @@ cat >"$bundle_dir/build-devnet-spec.sh" <<EOF
 set -euo pipefail
 cd $(printf '%q' "$repo_root")
 output_path="\${1:-$(printf '%q' "$bundle_dir/devnet-spec.json")}"
+temp_path="\$(mktemp)"
+bootnode_info_file=$(printf '%q' "$bootnode_info_file")
+bootnode_multiaddr=
+trap 'rm -f "\$temp_path"' EXIT
 SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- \\
-  build-spec --chain devnet >"\$output_path"
+  build-spec --chain devnet >"\$temp_path"
+bootnode_multiaddr="\$(sed -n 's/^bootnode_multiaddr=//p' "\$bootnode_info_file")"
+if [[ -z "\$bootnode_multiaddr" ]]; then
+  echo "missing bootnode metadata in \$bootnode_info_file" >&2
+  exit 1
+fi
+python - "\$temp_path" "\$output_path" "\$bootnode_multiaddr" <<'PY'
+import json
+import sys
+
+source_path, output_path, bootnode = sys.argv[1:4]
+with open(source_path, "r", encoding="utf-8") as source_file:
+    spec = json.load(source_file)
+spec["bootNodes"] = [bootnode]
+with open(output_path, "w", encoding="utf-8") as output_file:
+    json.dump(spec, output_file, indent=2)
+    output_file.write("\n")
+PY
 printf 'Wrote: %s\n' "\$output_path"
 EOF
 
@@ -89,24 +146,8 @@ SKIP_WASM_BUILD=1 cargo run -p myosu-chain --features fast-runtime -- \\
 printf 'Wrote: %s\n' "\$output_path"
 EOF
 
-cat >"$bundle_dir/verify-bundle.sh" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-bundle_dir="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-temp_dir="\$(mktemp -d)"
-trap 'rm -rf "\$temp_dir"' EXIT
-
-test -s "\$bundle_dir/bundle-manifest.toml"
-"\$bundle_dir/start-miner.sh" --help >/dev/null
-"\$bundle_dir/start-validator.sh" --help >/dev/null
-"\$bundle_dir/build-devnet-spec.sh" "\$temp_dir/devnet.json" >/dev/null
-"\$bundle_dir/build-test-finney-spec.sh" "\$temp_dir/test-finney.json" >/dev/null
-
-test -s "\$temp_dir/devnet.json"
-test -s "\$temp_dir/test-finney.json"
-
-echo "operator bundle ok"
-EOF
+bash "$bundle_dir/build-devnet-spec.sh" >/dev/null
+bash "$bundle_dir/build-test-finney-spec.sh" >/dev/null
 
 cat >"$bundle_dir/bundle-manifest.toml" <<EOF
 format_version = 1
@@ -118,6 +159,9 @@ network = "$active_network"
 chain_endpoint = "$chain_endpoint"
 subnet = $subnet
 password_env = "$password_env"
+bootnode_multiaddr = "$bootnode_multiaddr"
+bootnode_rpc_endpoint = "$bootnode_rpc_endpoint"
+bootnode_peer_id = "$bootnode_peer_id"
 
 [scripts]
 start_miner = "$bundle_dir/start-miner.sh"
@@ -139,6 +183,8 @@ Prepared from:
 - repo: $repo_root
 - config dir: $config_dir
 - chain: $chain_endpoint
+- bootnode: $bootnode_multiaddr
+- bootnode rpc: $bootnode_rpc_endpoint
 - subnet: $subnet
 - password env: $password_env
 
@@ -155,6 +201,21 @@ Materialized artifacts:
 - $bundle_dir/test-finney-spec.json
 - $bundle_dir/bundle-manifest.toml
 
+Join the devnet with the bundled bootnode metadata:
+
+\`\`\`bash
+cargo run -p myosu-chain -- \\
+  --chain $(printf '%q' "$bundle_dir/devnet-spec.json") \\
+  --bootnodes $(printf '%q' "$bootnode_multiaddr") \\
+  --rpc-port 9955 \\
+  --prometheus-port 9616 \\
+  --base-path /tmp/myosu-devnet-node
+\`\`\`
+
+The bundled \`devnet-spec.json\` already carries the same \`bootNodes\` entry,
+so the explicit \`--bootnodes\` flag above is for operator clarity rather than
+manual chain-spec editing.
+
 Refresh the named-network specs:
 
 \`\`\`bash
@@ -169,15 +230,49 @@ $bootstrap_output
 \`\`\`
 EOF
 
+cat >"$bundle_dir/verify-bundle.sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+bundle_dir="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+temp_dir="\$(mktemp -d)"
+trap 'rm -rf "\$temp_dir"' EXIT
+
+test -s "\$bundle_dir/bundle-manifest.toml"
+"\$bundle_dir/start-miner.sh" --help >/dev/null
+"\$bundle_dir/start-validator.sh" --help >/dev/null
+"\$bundle_dir/build-devnet-spec.sh" "\$temp_dir/devnet.json" >/dev/null
+"\$bundle_dir/build-test-finney-spec.sh" "\$temp_dir/test-finney.json" >/dev/null
+
+test -s "\$temp_dir/devnet.json"
+test -s "\$temp_dir/test-finney.json"
+grep -q 'bootnode_multiaddr = ' "\$bundle_dir/bundle-manifest.toml"
+grep -Fq -- $(printf '%q' "$bootnode_multiaddr") "\$bundle_dir/README.md"
+python - "\$bundle_dir/bundle-manifest.toml" "\$temp_dir/devnet.json" <<'PY'
+import json
+import sys
+import tomllib
+
+manifest_path, spec_path = sys.argv[1:3]
+with open(manifest_path, "rb") as manifest_file:
+    manifest = tomllib.load(manifest_file)
+with open(spec_path, "r", encoding="utf-8") as spec_file:
+    spec = json.load(spec_file)
+bootnode = manifest["bootnode_multiaddr"]
+if not bootnode or "/p2p/" not in bootnode:
+    raise SystemExit("invalid bootnode_multiaddr in bundle-manifest.toml")
+if bootnode not in spec.get("bootNodes", []):
+    raise SystemExit("devnet.json missing bootnode from bundle-manifest.toml")
+PY
+
+echo "operator bundle ok"
+EOF
+
 chmod +x \
   "$bundle_dir/start-miner.sh" \
   "$bundle_dir/start-validator.sh" \
   "$bundle_dir/build-devnet-spec.sh" \
   "$bundle_dir/build-test-finney-spec.sh" \
   "$bundle_dir/verify-bundle.sh"
-
-"$bundle_dir/build-devnet-spec.sh" >/dev/null
-"$bundle_dir/build-test-finney-spec.sh" >/dev/null
 
 printf '%s\n' "$bootstrap_output"
 printf 'Bundle: %s\n' "$bundle_dir"
