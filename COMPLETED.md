@@ -1,36 +1,3 @@
 # COMPLETED
 
-- `ADR-001` commit `28801090f35a3ac056202acf7264c6f28efd5aa2`; validation: `test -d docs/adr`; `test -f docs/adr/000-template.md`; `test -f docs/adr/README.md`
-- `RT-001` commit `baa9c11951259ee4f2b96dd6fb1f983321ff65eb`; validation: `SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime`; `cargo test -p pallet-game-solver stage_0_flow --quiet`; `rustup target add wasm32v1-none`; `cargo build -p myosu-chain-runtime`; `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
-- `RT-002` commit `a1f70c04106bf818b685b33b57a4f317033761bb`; validation: `cargo check -p pallet-admin-utils --quiet`; `SKIP_WASM_BUILD=1 cargo check -p myosu-chain --quiet`; `cargo tree -p myosu-chain --prefix none | rg '^(fc-|fp-|pallet-evm|pallet-ethereum)'`; `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
-- `RT-003` commit `550adc735e70767db56b5167669d6b47eac5c944`; validation: `cargo test -p pallet-game-solver stage_0_flow --quiet`; `SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet`
-- `EM-001` commit `0a5273c76d735fc85e50df80218e64492765626c`; validation: `cargo test -p pallet-game-solver coinbase --quiet`; `cargo test -p pallet-game-solver stage_0_flow --quiet`
-- `EM-002` commit `9941b62a0342f8b10ab32446f47cb013e23d7faf`; validation: `cargo test -p pallet-game-solver determinism --quiet`
-- `OBS-001` commit `e1de8b538237c23f18d4c30047e3e71ebd939a86`; validation: `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`; `RUST_LOG=myosu_play=debug SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test 2>&1 | grep -q myosu_play`
-- `SEC-001` commit `08f00a486a25a4bb16a2ae1e17e973eeb9ca92f1`; validation: `cargo audit --ignore RUSTSEC-2025-0009 --ignore RUSTSEC-2025-0055 --ignore RUSTSEC-2023-0091 --ignore RUSTSEC-2024-0438 --ignore RUSTSEC-2025-0118 --ignore RUSTSEC-2026-0020 --ignore RUSTSEC-2026-0021`
-- `SEC-002` commit `da1c4ec2d2b96d2b203e0f598550870ca5250786`; validation: `test -f SECURITY.md`; `grep -q SECURITY.md README.md`
-- `SEC-003` commit `80fe6a41acc8ba584ef824e525424ae5bece34a7`; validation: `test -f ops/cve-tracking-process.md`; `grep -q cve-tracking SECURITY.md`
-- `SEC-004` commit `07158dd798ecef6797f5d77163abaae9760b5f12`; validation: `grep -c 'SAFETY' crates/myosu-games-poker/src/codexpoker.rs | grep -q '[2-9]'`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet`
-- `IT-001` commit `98630d847fef0f50b82ca8695095a69bc9f0aa92`; validation: `bash tests/e2e/helpers/start_devnet.sh && bash tests/e2e/helpers/wait_for_block.sh 1 && bash tests/e2e/helpers/stop_devnet.sh`
-- `EM-003` commit `57266177d74d667193f4c48980868be02dfe20ef`; validation: `bash tests/e2e/emission_flow.sh`
-- `IT-002` commit `3ec60ef057e3ce95cd30778e6fdf2212109a094b`; validation: `bash tests/e2e/local_loop.sh`
-- `IT-003` commit `1a77dac7623abb59b917b0c6eee0f6602c13da81`; validation: `bash tests/e2e/validator_determinism.sh`
-- `IT-004` commit `9e890e7205e575d3fc226faeb4ad4fe628e40224`; validation: `actionlint .github/workflows/ci.yml`
-- `PY-001` commit `533ab22df004950fc5813a5b6305afa0ba0c4ab3`; validation: `python -c "import methods; print('OK')"`; `grep -c '__import__' methods.py | grep -q '^0$'`
-- `PY-002` commit `41bc48c3d34165cfd7f57517a03a4eff0f429f58`; validation: `python -c "from metrics import paired_sign_flip_test; import numpy as np; print(paired_sign_flip_test(np.array([0.1, -0.2, 0.3])))"`; `python -c "from metrics import paired_sign_flip_test; import numpy as np; paired_sign_flip_test(np.random.randn(50)); print('OK')"`
-- `DN-001` commit `2dca010f350d85bfc7a0228c2fa519e1d8f0c54a`; validation: `cargo test -p myosu-chain base_devnet_spec_uses_custom_chain_type_and_non_dev_authorities --quiet`; `cargo test -p myosu-chain devnet_config_bootstraps_subnet_seven_in_storage --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-chain -- build-spec --chain devnet --raw > /dev/null`
-- `DN-002` commit `0b36470be4cdcbb5675364185b6a2fc8212d57f1`; validation: `shellcheck ops/deploy-bootnode.sh`; `bash ops/deploy-bootnode.sh --dry-run`
-- `DN-003` commit `2b571db3c704c013d9afc784bf427cd6bdfe740f`; validation: `bash tests/e2e/two_node_sync.sh`; `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
-- `DN-004` commit `77973f980ee3122c10bb9b908ab8057ffa8fa230`; validation: `env MYOSU_KEY_PASSWORD='replace-me' bash .github/scripts/prepare_operator_network_bundle.sh`; `grep -q bootnode docs/execution-playbooks/operator-network.md`; `bash .github/scripts/check_operator_network_bootstrap.sh`
-- `OP-001` commit `dd04d561beed05b31f6032313d2f33e347e48cdd`; validation: `test -f docs/operator-guide/quickstart.md`; `grep -q 'myosu-keys' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/quickstart.md' README.md`; `bash .github/scripts/check_operator_network_bootstrap.sh`
-- `OP-002` commit `889871ee693c9f97cdff309e5f625b896d5dc57e`; validation: `test -f docs/operator-guide/architecture.md`; `grep -q 'architecture.md' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/architecture.md' README.md`
-- `OP-003` commit `4662046d3ab30c9d2e59c882de8d532aa7ba3d4e`; validation: `test -f docs/operator-guide/troubleshooting.md`; `test "$(grep -c '^## [0-9]' docs/operator-guide/troubleshooting.md)" -ge 10`; `grep -q 'troubleshooting.md' docs/operator-guide/quickstart.md`; `grep -q 'troubleshooting.md' docs/execution-playbooks/operator-network.md`
-- `RG-001` commit `2768b772fda35f11ff7066c2dadc8424423bd651`; validation: `test -f CHANGELOG.md`; `grep -q '0.1.0' CHANGELOG.md`; `grep -q 'CHANGELOG.md' README.md`
-- `RG-002` commit `3fef79fcbb6c928487e7b6c72567444d37d8d876`; validation: `shellcheck ops/release.sh`; `bash ops/release.sh --dry-run v0.1.0`
-- `RG-003` commit `85c0c46ce6bba0b1a0f5165209a110b693bd4c55`; validation: `test -f docs/operator-guide/upgrading.md`; `grep -q 'upgrading.md' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/upgrading.md' README.md`
-- `G3-001` commit `608f1786d9133cbf731e52eed3a069f343c65663`; validation: `cargo test -p myosu-games-kuhn --quiet`; `cargo test -p myosu-games --quiet`
-- `G3-002` commit `1ffa3299e719faba5d4c24bcaf72e8624200e6a6`; validation: `cargo test -p myosu-games-kuhn --quiet`
-- `G3-003` commit `9aef01245ad7617e6bbf6243db86945dfe88a784`; validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-play --quiet`; `cargo test -p myosu-games-kuhn --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --game kuhn --smoke-test`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`
-- `PY-003` commit `70309c09a259d7d1cbf283bd42ba19ebacddbb8b`; validation: `ruff check main.py methods.py runner.py metrics.py data.py`
-- `PY-004` commit `68b20b71e96dcc69962709504f5e515360bb708b`; validation: `python -m pytest tests/test_metrics.py tests/test_data.py -v`
-- `PY-005` commit `8b80c847775509779d503fbf5e604c181b3f2a31`; validation: `ruff check main.py methods.py runner.py metrics.py data.py`; `python -m pytest tests/test_metrics.py tests/test_data.py -v`; `actionlint .github/workflows/ci.yml`
+- `ADR-002` commit `6594b059a7c9a5675b5f8fbfdcce72f15d05ed2b`; validation: `test $(ls docs/adr/0*.md | wc -l) -ge 8`; `grep -l 'Status:' docs/adr/001-*.md docs/adr/007-*.md`
