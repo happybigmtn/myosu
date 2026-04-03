@@ -30,3 +30,4 @@
 - `G3-001` commit `608f1786d9133cbf731e52eed3a069f343c65663`; validation: `cargo test -p myosu-games-kuhn --quiet`; `cargo test -p myosu-games --quiet`
 - `G3-002` commit `1ffa3299e719faba5d4c24bcaf72e8624200e6a6`; validation: `cargo test -p myosu-games-kuhn --quiet`
 - `G3-003` commit `9aef01245ad7617e6bbf6243db86945dfe88a784`; validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-play --quiet`; `cargo test -p myosu-games-kuhn --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --game kuhn --smoke-test`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`
+- `PY-003` commit `70309c09a259d7d1cbf283bd42ba19ebacddbb8b`; validation: `ruff check main.py methods.py runner.py metrics.py data.py`
