@@ -515,7 +515,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The script now renders both a reusable launcher script and a systemd unit file into the bootnode base path, satisfying the persistence contract without assuming root access or a pre-installed service manager during the dry-run proof.
     - `--dry-run` is intentionally truthful rather than side-effect-free: it prepares the durable assets so future loops can reuse the same stable node identity and advertised multiaddr without having to start the node first.
 
-- [ ] `DN-003` Verify two-node peer discovery and block synchronization
+- [x] `DN-003` Verify two-node peer discovery and block synchronization
   - Spec: `specs/040226-06-multi-node-devnet.md`
   - Why now: Spec requires two independent nodes to discover each other and synchronize blocks. This is the core proof of multi-node readiness.
   - Codebase evidence:
@@ -533,6 +533,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `bash tests/e2e/two_node_sync.sh`
   - Dependencies: `DN-001`, `IT-001`
   - Completion signal: Script proves two local nodes achieve block sync within 60 seconds
+  - Implementation notes:
+    - Added `tests/e2e/two_node_sync.sh`, which reuses the repo’s cached runtime wasm and node binary when present, but still builds them on a cold checkout before launching the proof.
+    - The proof launches a real `devnet` authority bootnode and a second full node on loopback, then asserts both nodes report one peer and the same best block height before tearing the pair down.
+    - The owned multi-node path needed one adjacent node-service fix: `MYOSU_NODE_AUTHORITY_SURI` now lets authority nodes seed Aura and GRANDPA keys at startup for non-`Local` chains, because the inherited `myosu-chain key insert --chain devnet ...` path was not usable in this repo’s proof loop.
 
 - [ ] `DN-004` Update operator bundle for devnet connection with bootnode addresses
   - Spec: `specs/040226-06-multi-node-devnet.md`

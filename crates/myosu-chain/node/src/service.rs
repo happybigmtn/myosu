@@ -729,28 +729,46 @@ fn ensure_local_authority_keys(
     keystore: &LocalKeystore,
     config: &Configuration,
 ) -> Result<(), sp_keystore::Error> {
-    if config.chain_spec.chain_type() != ChainType::Local || !config.role.is_authority() {
+    let Some(suri) = resolve_authority_suri(config) else {
         return Ok(());
-    }
-
-    let suri = match config.network.node_name.as_str() {
-        "Alice" => "//Alice",
-        "Bob" => "//Bob",
-        "Charlie" => "//Charlie",
-        _ => "//Alice",
     };
 
     if keystore.sr25519_public_keys(key_types::AURA).is_empty() {
         let public =
-            sp_keystore::Keystore::sr25519_generate_new(keystore, key_types::AURA, Some(suri))?;
+            sp_keystore::Keystore::sr25519_generate_new(keystore, key_types::AURA, Some(&suri))?;
         log::info!(target: LOG_TARGET, "Inserted local Aura authority key {public:?} from {suri}");
     }
 
     if keystore.ed25519_public_keys(key_types::GRANDPA).is_empty() {
         let public =
-            sp_keystore::Keystore::ed25519_generate_new(keystore, key_types::GRANDPA, Some(suri))?;
+            sp_keystore::Keystore::ed25519_generate_new(keystore, key_types::GRANDPA, Some(&suri))?;
         log::info!(target: LOG_TARGET, "Inserted local GRANDPA authority key {public:?} from {suri}");
     }
 
     Ok(())
+}
+
+fn resolve_authority_suri(config: &Configuration) -> Option<String> {
+    if !config.role.is_authority() {
+        return None;
+    }
+
+    if let Ok(suri) = std::env::var("MYOSU_NODE_AUTHORITY_SURI") {
+        let trimmed = suri.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_owned());
+        }
+    }
+
+    if config.chain_spec.chain_type() != ChainType::Local {
+        return None;
+    }
+
+    Some(match config.network.node_name.as_str() {
+        "Alice" => "//Alice",
+        "Bob" => "//Bob",
+        "Charlie" => "//Charlie",
+        _ => "//Alice",
+    }
+    .to_owned())
 }
