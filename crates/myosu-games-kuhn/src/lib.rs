@@ -1,10 +1,19 @@
 //! Kuhn poker proof crate for validating additive game integration.
 
 pub mod game;
+pub mod protocol;
+pub mod renderer;
 pub mod solver;
+pub mod wire;
 
 pub use game::{KuhnCard, KuhnEdge, KuhnGame, KuhnHistory, KuhnInfo, KuhnPublic, KuhnTurn};
+pub use protocol::{KuhnStrategyQuery, KuhnStrategyResponse, recommended_edge};
+pub use renderer::{KuhnRenderer, KuhnSnapshot};
 pub use solver::KuhnSolver;
+pub use wire::{
+    WireCodecError, decode_info, decode_strategy_query, decode_strategy_response, encode_info,
+    encode_strategy_query, encode_strategy_response,
+};
 
 #[cfg(test)]
 mod tests {

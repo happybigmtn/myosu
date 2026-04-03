@@ -7756,10 +7756,14 @@ dependencies = [
 name = "myosu-games-kuhn"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "myosu-games",
+ "myosu-tui",
+ "ratatui",
  "rbp-mccfr",
  "rbp-transport",
  "serde",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

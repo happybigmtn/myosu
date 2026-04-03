@@ -748,7 +748,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Added a new workspace member `crates/myosu-games-kuhn/` with a full Kuhn poker state machine: 6 ordered chance deals, 12 reachable information sets, and terminal payoffs matching the standard 1-chip and 2-chip Kuhn outcomes.
     - `KuhnSolver` is exact rather than MCCFR-driven: it exposes the closed-form equilibrium profile, and the crate proves the canonical player-one equilibrium value of `-1/18` in unit tests.
 
-- [ ] `G3-002` Implement Kuhn poker TUI renderer and wire protocol
+- [x] `G3-002` Implement Kuhn poker TUI renderer and wire protocol
   - Spec: `specs/040226-09-third-game-extensibility-proof.md`
   - Why now: Third game must integrate into the full stack including TUI rendering and wire encoding.
   - Codebase evidence:
@@ -769,6 +769,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `cargo test -p myosu-games-kuhn --quiet`
   - Dependencies: `G3-001`
   - Completion signal: Kuhn Poker has TUI renderer and wire protocol with passing round-trip tests
+  - Implementation notes:
+    - Added additive `protocol.rs`, `renderer.rs`, and `wire.rs` modules to `crates/myosu-games-kuhn/`, then exported their public types from [`crates/myosu-games-kuhn/src/lib.rs`](crates/myosu-games-kuhn/src/lib.rs) so the new surfaces are reachable from the crate root.
+    - `KuhnRenderer` follows the live `GameRenderer` contract already used by poker and Liar's Dice: it renders a four-line state panel, exposes shell completions and shorthand input parsing, and emits plain-text `STATE ...` pipe output for active and terminal snapshots.
+    - The spec prose mentions versioned magic bytes, but the live additive game pattern is bounded bincode without an outer magic/version envelope; Kuhn now matches the existing poker and Liar's Dice wire transport shape with round-trip, truncation, and trailing-byte tests.
 
 - [ ] `G3-003` Register Kuhn poker in play binary and add CI smoke test gate
   - Spec: `specs/040226-09-third-game-extensibility-proof.md`
