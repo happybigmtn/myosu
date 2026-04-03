@@ -25,3 +25,4 @@
 - `OP-002` commit `889871ee693c9f97cdff309e5f625b896d5dc57e`; validation: `test -f docs/operator-guide/architecture.md`; `grep -q 'architecture.md' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/architecture.md' README.md`
 - `OP-003` commit `4662046d3ab30c9d2e59c882de8d532aa7ba3d4e`; validation: `test -f docs/operator-guide/troubleshooting.md`; `test "$(grep -c '^## [0-9]' docs/operator-guide/troubleshooting.md)" -ge 10`; `grep -q 'troubleshooting.md' docs/operator-guide/quickstart.md`; `grep -q 'troubleshooting.md' docs/execution-playbooks/operator-network.md`
 - `RG-001` commit `2768b772fda35f11ff7066c2dadc8424423bd651`; validation: `test -f CHANGELOG.md`; `grep -q '0.1.0' CHANGELOG.md`; `grep -q 'CHANGELOG.md' README.md`
+- `RG-002` commit `3fef79fcbb6c928487e7b6c72567444d37d8d876`; validation: `shellcheck ops/release.sh`; `bash ops/release.sh --dry-run v0.1.0`
