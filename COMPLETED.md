@@ -21,3 +21,4 @@
 - `DN-002` commit `0b36470be4cdcbb5675364185b6a2fc8212d57f1`; validation: `shellcheck ops/deploy-bootnode.sh`; `bash ops/deploy-bootnode.sh --dry-run`
 - `DN-003` commit `2b571db3c704c013d9afc784bf427cd6bdfe740f`; validation: `bash tests/e2e/two_node_sync.sh`; `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
 - `DN-004` commit `77973f980ee3122c10bb9b908ab8057ffa8fa230`; validation: `env MYOSU_KEY_PASSWORD='replace-me' bash .github/scripts/prepare_operator_network_bundle.sh`; `grep -q bootnode docs/execution-playbooks/operator-network.md`; `bash .github/scripts/check_operator_network_bootstrap.sh`
+- `OP-001` commit `dd04d561beed05b31f6032313d2f33e347e48cdd`; validation: `test -f docs/operator-guide/quickstart.md`; `grep -q 'myosu-keys' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/quickstart.md' README.md`; `bash .github/scripts/check_operator_network_bootstrap.sh`
