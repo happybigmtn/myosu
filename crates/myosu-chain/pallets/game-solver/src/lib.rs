@@ -2264,7 +2264,7 @@ pub mod pallet {
         StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultLastTxBlock<T>>;
 
     /// ITEM( weights_min_stake )
-    // FIXME: this storage is used interchangably for alpha/tao
+    // This carried storage key still backs both alpha- and tao-threshold flows.
     #[pallet::storage]
     pub type StakeThreshold<T> = StorageValue<_, u64, ValueQuery, DefaultStakeThreshold<T>>;
 
@@ -2656,8 +2656,8 @@ impl From<CustomTransactionError> for TransactionValidityError {
 
 use sp_std::vec;
 
-// TODO: unravel this rats nest, for some reason rustc thinks this is unused even though it's
-// used not 25 lines below
+// Rust still flags this import as unused even though the freeze-struct
+// expansion consumes it a few lines below.
 #[allow(unused)]
 use sp_std::vec::Vec;
 use subtensor_macros::freeze_struct;

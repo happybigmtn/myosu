@@ -333,7 +333,8 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn recycle_subnet_alpha(netuid: NetUid, amount: AlphaCurrency) {
-        // TODO: record recycled alpha in a tracker
+        // Stage-0 adjusts the running subnet total directly; it does not yet
+        // persist a separate recycled-alpha ledger.
         SubnetAlphaOut::<T>::mutate(netuid, |total| {
             *total = total.saturating_sub(amount);
         });
@@ -390,6 +391,6 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn burn_subnet_alpha(_netuid: NetUid, _amount: AlphaCurrency) {
-        // Do nothing; TODO: record burned alpha in a tracker
+        // Stage-0 intentionally leaves burned-alpha accounting untracked.
     }
 }

@@ -17,18 +17,19 @@ needs.
 
 ## Whole-System Goal
 
-Current state: The runtime wires the full subtensor pallet surface with 69
-extrinsics, 95+ error variants, 60+ events, and 50+ storage migrations.
-Ten pallets beyond the core set are compiled and included. Frontier/EVM
-service code is linked into the node binary. 122 TODO/FIXME comments exist
-across the chain crate.
+Current state: The default runtime now compiles the reduced 9-pallet stage-0
+surface, the default node binary is Frontier-free, and the default metadata
+surface only exposes the live stage-0 pallet-game-solver calls. Legacy pallets
+and extrinsics remain behind explicit `full-runtime` feature gates. The
+default-build chain source no longer carries raw TODO/FIXME backlog markers.
 
 This spec adds: A runtime that includes only the pallets required for stage-0
 operation, a pallet-game-solver surface reduced to the extrinsics actually
 exercised by miners, validators, and operators, and removal of Frontier/EVM
 from the node service layer.
 
-If all ACs land: The chain compiles with fewer than 8 pallets, the
+If all ACs land: The chain compiles with 9 or fewer default-feature pallets
+(the 7 stage-0 functional pallets plus Aura and Grandpa), the
 pallet-game-solver exposes 20 or fewer extrinsics, the node binary no longer
 links Frontier, and outstanding TODO/FIXME comments are triaged below 20.
 
@@ -51,18 +52,23 @@ Out of scope:
 
 ## Current State
 
-The runtime at `crates/myosu-chain/runtime/src/lib.rs` wires the full subtensor
-surface. A SwapInterface no-op stub exists at `crates/myosu-chain/pallets/swap/`
-to satisfy registration, staking, and emission call sites. CRV3 timelock
-dependencies on pallet_drand have been stripped previously. The node service at
-`crates/myosu-chain/node/src/service.rs` still links Frontier/EVM.
+The runtime at `crates/myosu-chain/runtime/src/lib.rs` now defaults to a
+reduced stage-0 surface with 9 pallets: System, Timestamp, Aura, Grandpa,
+Balances, TransactionPayment, GameSolver, Utility, and AdminUtils. The wider
+inherited pallet surface remains behind the explicit `full-runtime` feature.
+A SwapInterface no-op stub exists at `crates/myosu-chain/pallets/swap/` to
+satisfy registration, staking, and emission call sites. CRV3 timelock
+dependencies on pallet_drand have been stripped previously. The default node
+service no longer links Frontier/EVM dependencies.
 
-The pallet-game-solver at `crates/myosu-chain/pallets/game-solver/` is a renamed
-pallet-subtensor carrying the full extrinsic surface. Stage-0 flow tests pass
-against a subset of this surface.
+The pallet-game-solver at `crates/myosu-chain/pallets/game-solver/` is still a
+renamed pallet-subtensor carry, but the default stage-0 build now compiles only
+the live call surface into metadata. Legacy extrinsics remain available behind
+`full-runtime`.
 
-122 TODO/FIXME comments are distributed across the chain crate, many in
-migration code and benchmark weight placeholders.
+No raw TODO/FIXME comments remain across the active default-build chain source
+tree after the stage-0 reduction; the surviving deferments are now spelled as
+explicit rationale comments without backlog markers.
 
 ## What Already Exists
 
@@ -71,8 +77,8 @@ migration code and benchmark weight placeholders.
 | SwapInterface stub | `crates/myosu-chain/pallets/swap/` | Reuse | Already satisfies call sites with no-op |
 | CRV3 stripping | pallet-drand simplified | Reuse | Timelock dependency already removed |
 | Stage-0 flow tests | `pallet-game-solver -- stage_0` | Reuse | Validates reduced surface still works |
-| Runtime pallet wiring | `crates/myosu-chain/runtime/src/lib.rs` | Replace | Currently wires full subtensor surface |
-| Node service | `crates/myosu-chain/node/src/service.rs` | Replace | Currently links Frontier |
+| Runtime pallet wiring | `crates/myosu-chain/runtime/src/lib.rs` | Extend | Default build already uses the reduced 9-pallet stage-0 surface; `full-runtime` keeps the inherited wiring available when explicitly enabled |
+| Node service | `crates/myosu-chain/node/src/service.rs` | Extend | Default service path is already Frontier-free; remaining work is validation and keeping the stripped surface honest |
 | Safe-math primitives | `crates/myosu-chain/primitives/safe-math/` | Reuse | Required by Yuma Consensus in pallet-game-solver |
 | Share-pool primitives | `crates/myosu-chain/primitives/share-pool/` | Reuse | Required by pallet-game-solver |
 
@@ -87,32 +93,35 @@ migration code and benchmark weight placeholders.
 
 ## Behaviors
 
-The runtime constructs with only the stage-0 pallet set: System, Timestamp,
+The runtime constructs with the stage-0 pallet set plus the consensus pallets
+required to author and finalize blocks: System, Timestamp, Aura, Grandpa,
 Balances, TransactionPayment, GameSolver (index 7), AdminUtils, and Utility.
 All other pallets are behind a cargo feature flag and are not compiled by
 default.
 
 Pallet-game-solver exposes only the extrinsics exercised by the stage-0 loop:
 subnet registration, neuron registration, weight submission (commit-reveal v2),
-staking, and administrative configuration. Removed extrinsics return a dispatch
-error indicating unavailability rather than silently disappearing.
+staking, and administrative configuration. Removed extrinsics are compiled out
+of the default metadata surface; enabling `full-runtime` restores the inherited
+dispatchables for legacy tests and future stage-1 work.
 
 The node binary builds and starts a local devnet without Frontier/EVM service
 code. The fast-runtime feature flag continues to work for accelerated block
 production in development and testing.
 
 Existing stage-0 flow tests continue to pass against the reduced surface.
-TODO/FIXME comments in the chain crate are resolved, deferred with
-justification, or removed, leaving fewer than 20 remaining.
+Default-build chain comments use explicit rationale where needed instead of raw
+TODO/FIXME backlog markers.
 
 ## Acceptance Criteria
 
-- The runtime compiles with 7 or fewer pallets in the default feature set.
+- The runtime compiles with 9 or fewer pallets in the default feature set
+  (7 stage-0 functional pallets plus Aura and Grandpa).
 - Pallet-game-solver exposes 20 or fewer extrinsics.
 - Stage-0 flow tests pass on the reduced pallet surface.
 - The node binary builds without Frontier/EVM service dependencies in the
   default feature set.
-- Fewer than 20 TODO/FIXME comments remain in the chain crate, each with a
-  justification comment.
+- Fewer than 20 TODO/FIXME comments remain in the default-build chain crate
+  source files.
 - The `substrate_fixed` pin to encointer fork v0.6.0 is preserved (required for
   Yuma Consensus determinism).

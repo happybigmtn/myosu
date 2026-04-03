@@ -746,7 +746,8 @@ impl<T: Config> Pallet<T> {
         }
 
         // Step 3: Update StakingHotkeys if the hotkey's total alpha, across all subnets, is zero
-        // TODO const: fix.
+        // Historical staking-hotkey pruning stays disabled until the carried
+        // pallet logic is re-audited against the reduced stage-0 surface.
         // if Self::get_stake(hotkey, coldkey) == 0 {
         //     StakingHotkeys::<T>::mutate(coldkey, |hotkeys| {
         //         hotkeys.retain(|k| k != hotkey);
@@ -952,7 +953,8 @@ impl<T: Config> Pallet<T> {
         );
 
         // Step 3: Update StakingHotkeys if the hotkey's total alpha, across all subnets, is zero
-        // TODO: fix.
+        // Historical staking-hotkey pruning stays disabled until the carried
+        // pallet logic is re-audited against the reduced stage-0 surface.
         // if Self::get_stake(hotkey, coldkey) == 0 {
         //     StakingHotkeys::<T>::mutate(coldkey, |hotkeys| {
         //         hotkeys.retain(|k| k != hotkey);

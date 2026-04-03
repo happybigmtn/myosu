@@ -38,7 +38,8 @@ pub struct Cli {
     /// After starting, the consensus used by the node will automatically
     /// switch to whatever is required to continue validating / syncing.
     ///
-    /// TODO: Remove this after the Babe transition has settled.
+    /// Retain this override while first-start consensus compatibility still
+    /// needs to cover both Aura and legacy Babe expectations.
     #[arg(long, value_enum, ignore_case = true, default_value_t=SupportedConsensusMechanism::default())]
     pub initial_consensus: SupportedConsensusMechanism,
 }

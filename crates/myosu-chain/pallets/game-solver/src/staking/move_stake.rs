@@ -418,7 +418,8 @@ impl<T: Config> Pallet<T> {
     ///
     /// In the corner case when SubnetTAO(2) == SubnetTAO(1), no slippage is going to occur.
     ///
-    /// TODO: This formula only works for a single swap step, so it is not 100% correct for swap v3. We need an updated one.
+    /// This formula assumes a single swap step, so it remains an approximation
+    /// until the carried swap-v3 math is revisited.
     ///
     pub fn get_max_amount_move(
         origin_netuid: NetUid,
@@ -453,7 +454,8 @@ impl<T: Config> Pallet<T> {
                     .safe_div(U64F64::saturating_from_num(limit_price))
                     .saturating_mul(tao)
                     .saturating_to_num::<u64>();
-                // FIXME: mixed types alpha/tao
+                // The helper crosses alpha/tao wrapper types here but keeps the
+                // shared u64 price representation used by the carried staking code.
                 return Self::get_max_amount_add(
                     destination_netuid,
                     destination_subnet_price.into(),

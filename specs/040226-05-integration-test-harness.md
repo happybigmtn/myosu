@@ -19,10 +19,10 @@ verification with automated proof.
 
 Current state: `myosu-play --smoke-test` proves the play binary loads and
 renders. `pallet-game-solver -- stage_0` proves pallet logic in isolation.
-`myosu-chain --test stage0_local_loop` proves the chain boots. No test connects
-miner training through validator scoring through emission distribution through
-gameplay. The three remaining stage-0 exit criteria (6, 7, 12) have no automated
-verification.
+The repo now also carries shell-based proofs for the full local loop, validator
+determinism, and emission flow, plus a Rust `stage0_local_loop` integration
+test. The remaining work is keeping those proofs truthful, reproducible, and
+green in CI rather than inventing the harness from scratch.
 
 This spec adds: Shell-based integration test scripts that boot a local devnet,
 exercise the full loop, and assert on observable outcomes. A CI job that runs
@@ -55,9 +55,11 @@ Out of scope:
 
 ## Current State
 
-The CI pipeline runs 7 jobs. The `active-crates` job runs unit tests and a
-smoke test. The `chain-core` job runs pallet and runtime tests. No job exercises
-the cross-binary integration path.
+The CI pipeline now includes an `integration-e2e` job after `chain-core`. The
+repo carries `tests/e2e/helpers/start_devnet.sh`, `stop_devnet.sh`, and
+`wait_for_block.sh`, plus `tests/e2e/local_loop.sh`,
+`tests/e2e/validator_determinism.sh`, and `tests/e2e/emission_flow.sh` as the
+stage-0 proof surfaces.
 
 The operator bundle at `.github/scripts/prepare_operator_network_bundle.sh`
 contains startup scripts that could serve as a reference for devnet lifecycle
@@ -73,10 +75,11 @@ configuration). The chain binary takes 2-3 minutes to compile with
 |---|---|---|---|
 | Smoke test | `myosu-play --smoke-test` | Reuse | Already proves play binary loads |
 | Pallet tests | `pallet-game-solver -- stage_0` | Reuse | Already proves pallet logic |
-| Chain boot test | `myosu-chain --test stage0_local_loop` | Reuse | Already proves chain starts |
+| Chain boot test | `myosu-chain --test stage0_local_loop` | Reuse | Already proves the chain boot plus the consolidated local-loop contract |
 | Operator bundle scripts | `.github/scripts/prepare_operator_network_bundle.sh` | Reference | Contains devnet startup patterns |
-| CI pipeline | `.github/workflows/ci.yml` | Extend | Add integration test job |
-| Validator determinism code | `crates/myosu-validator/src/validation.rs` | Reuse | Scoring is already deterministic by design |
+| E2E proof scripts | `tests/e2e/local_loop.sh`, `tests/e2e/validator_determinism.sh`, `tests/e2e/emission_flow.sh` | Reuse and harden | The cross-binary proof paths already exist |
+| CI pipeline | `.github/workflows/ci.yml` | Reuse and harden | `integration-e2e` already gates the proof scripts after `chain-core` |
+| Validator determinism code | `crates/myosu-validator/src/validation.rs` | Reuse | Scoring is already deterministic by design and has a bounded in-crate proof |
 
 ## Non-goals
 

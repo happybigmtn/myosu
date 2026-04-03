@@ -497,7 +497,8 @@ where
         };
 
         let grandpa_config = sc_consensus_grandpa::Config {
-            // FIXME #1578 make this available through chainspec
+            // Chain specs do not expose this GRANDPA tuning knob yet, so keep
+            // the stage-0 default inline until that configuration surface exists.
             gossip_duration: Duration::from_millis(333),
             justification_generation_period: GRANDPA_JUSTIFICATION_PERIOD,
             name: Some(name),

@@ -46,7 +46,7 @@ mod events {
         NeuronRegistered(NetUid, u16, T::AccountId),
         /// multiple uids have been concurrently registered.
         BulkNeuronsRegistered(u16, u16),
-        /// FIXME: Not used yet
+        /// Reserved for the legacy bulk-balance path; stage-0 does not emit it.
         BulkBalancesSet(u16, u16),
         /// max allowed uids has been set for a subnetwork.
         MaxAllowedUidsSet(NetUid, u16),

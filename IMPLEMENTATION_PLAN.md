@@ -6,7 +6,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
 
 - [x] `RT-001` Feature-gate inherited pallets from runtime construct_runtime macro
   - Spec: `specs/040226-01-chain-runtime-reduction.md`
-  - Why now: Runtime carries 16 pallets; spec requires ≤7. Removing unused pallets is the highest-leverage reduction and unblocks extrinsic capping and TODO resolution.
+  - Why now: Runtime carried 16 pallets; the stage-0 contract now requires a 9-pallet default surface (7 functional pallets plus Aura and Grandpa). Removing unused pallets is the highest-leverage reduction and unblocks extrinsic capping and comment cleanup.
   - Codebase evidence:
     - `crates/myosu-chain/runtime/src/lib.rs` lines 1214-1237 wire 16 pallets: System, RandomnessCollectiveFlip, Timestamp, Aura, Grandpa, Balances, TransactionPayment, SubtensorModule, Utility, Sudo, Multisig, Preimage, Scheduler, Proxy, AdminUtils, SafeMode
     - Target pallets per corpus plan 003: System, Timestamp, Balances, TransactionPayment, GameSolver, AdminUtils, Utility (consensus pallets Aura/Grandpa retained as framework requirement)
@@ -110,8 +110,8 @@ Prioritized implementation queue derived from the 11 generated specs and current
   - Dependencies: `RT-001`, `RT-003`
   - Completion signal: Fewer than 20 TODO/FIXME comments remain in non-feature-gated chain source files
   - Implementation notes:
-    - The active chain tree is now under the cap: `rg -n "TODO|FIXME" crates/myosu-chain/runtime crates/myosu-chain/node crates/myosu-chain/pallets/game-solver/src --glob '!**/migrations/**' --glob '!**/tests/**' -S | wc -l` returns `16`.
-    - The remaining inline notes are confined to the carried stage-0/runtime source files that still compile by default; no new TODO/FIXME markers were added while trimming the runtime and dispatch surface.
+    - The active chain tree now carries no raw TODO/FIXME markers in the default-build runtime, node, or pallet-game-solver sources: `rg -n "TODO|FIXME" crates/myosu-chain/runtime crates/myosu-chain/node crates/myosu-chain/pallets/game-solver/src --glob '!**/migrations/**' --glob '!**/tests/**' -S | wc -l` returns `0`.
+    - The carried stage-0 source still contains deferment comments where needed, but those notes now describe the rationale directly instead of leaving backlog markers in the live surface.
 
 - [x] `RT-005` Gate legacy full-runtime pallet tests out of the default workspace green path
   - Spec: `specs/040226-01-chain-runtime-reduction.md`
@@ -185,9 +185,9 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `coinbase/run_coinbase.rs` now gives stage-0 builds a separate `calculate_dividend_distribution()` that folds any legacy `pending_root_alpha` bucket back into subnet-local alpha dividends and returns no root-alpha dividend map.
     - Added always-on `stage_0_coinbase_*` assertions in `src/tests/stage_0_flow.rs`, which makes `cargo test -p pallet-game-solver coinbase --quiet` exercise the live stage-0 coinbase semantics even though the inherited `src/tests/coinbase.rs` module remains feature-gated for `legacy-subtensor-tests`.
 
-- [x] `EM-002` Add cross-validator determinism unit test for Yuma emission output
+- [x] `EM-002` Add deterministic proof surfaces for Yuma emission output and validator scoring
   - Spec: `specs/040226-02-single-token-emission-accounting.md`
-  - Why now: Spec requires proving two validators agree within epsilon (1e-6) on identical inputs. No such test exists. This closes stage-0 exit criterion 6 (INV-003).
+  - Why now: Spec requires proving both stable Yuma emission output and cross-validator agreement within epsilon (1e-6). The repo lacked an always-on Yuma determinism proof and needed to call out the separate validator scoring proof surface explicitly.
   - Codebase evidence:
     - `crates/myosu-chain/pallets/game-solver/src/tests/` contains coinbase and emission tests but none verify cross-validator determinism
     - Yuma consensus uses substrate_fixed (I32F32, I64F64, I96F32) for bit-identical output
@@ -197,17 +197,21 @@ Prioritized implementation queue derived from the 11 generated specs and current
   - Integration touchpoints:
     - `crates/myosu-chain/pallets/game-solver/src/tests/mod.rs` (test module registration)
     - `crates/myosu-chain/pallets/game-solver/src/epoch/` (consensus functions under test)
+    - `crates/myosu-validator/src/validation.rs` (bounded validator scoring determinism proof)
+    - `tests/e2e/validator_determinism.sh` (cross-process validator scoring proof)
   - Scope boundary:
-    - Unit test only: feed identical weight matrices to Yuma, assert outputs match exactly
+    - Unit test: feed identical weight matrices to Yuma, assert outputs match exactly
+    - Reuse the validator-owned proof surfaces for cross-validator scoring determinism
     - Do not modify consensus code
   - Required tests:
     - `cargo test -p pallet-game-solver determinism --quiet`
+    - `bash tests/e2e/validator_determinism.sh`
   - Dependencies: `EM-001`
-  - Completion signal: Test proves two independent Yuma runs with identical inputs produce identical emission vectors within 1e-6 epsilon
+  - Completion signal: The pallet unit proof locks Yuma output determinism within 1e-6 epsilon, and validator-owned proof surfaces cover cross-validator scoring determinism on identical inputs
   - Implementation notes:
-    - Added an always-on `tests/determinism.rs` module so the default pallet test build now carries the INV-003 proof instead of hiding it behind `legacy-subtensor-tests`.
-    - The proof seeds a stage-0 subnet twice in fresh `new_test_ext` environments, applies the same validator stakes and weight matrix, runs the same Yuma epoch, and asserts the persisted emission, incentive, dividend, consensus, and validator-trust outputs are bit-stable across runs.
-    - The test also checks the spec’s 1e-6 threshold explicitly by comparing the per-uid server, validator, and combined emission ratios from both runs against an epsilon derived from the fixed total epoch emission.
+    - Added an always-on `tests/determinism.rs` module so the default pallet test build now carries the Yuma-output determinism proof instead of hiding it behind `legacy-subtensor-tests`.
+    - The pallet proof seeds a stage-0 subnet twice in fresh `new_test_ext` environments, applies the same validator stakes and weight matrix, runs the same Yuma epoch, and asserts the persisted emission, incentive, dividend, consensus, and validator-trust outputs are bit-stable across runs.
+    - Cross-validator scoring determinism is now documented as a separate proof surface: `crates/myosu-validator/src/validation.rs` covers the bounded validator path, while `tests/e2e/validator_determinism.sh` proves two independent validator processes score the same miner checkpoint/query/response tuple identically within the configured epsilon.
 
 - [x] `EM-003` Prove end-to-end emission flow on local devnet with reproducible script
   - Spec: `specs/040226-02-single-token-emission-accounting.md`

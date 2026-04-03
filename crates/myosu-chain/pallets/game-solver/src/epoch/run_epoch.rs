@@ -58,7 +58,7 @@ macro_rules! extract_from_sorted_terms {
 }
 
 impl<T: Config> Pallet<T> {
-    /// Legacy epoch function interface (TODO: Is only used for tests, remove)
+    /// Legacy epoch function interface retained for older tests.
     pub fn epoch(
         netuid: NetUid,
         rao_emission: AlphaCurrency,
@@ -77,7 +77,7 @@ impl<T: Config> Pallet<T> {
             .collect()
     }
 
-    /// Legacy epoch_dense function interface (TODO: Is only used for tests, remove)
+    /// Legacy epoch_dense function interface retained for older tests.
     pub fn epoch_dense(
         netuid: NetUid,
         rao_emission: AlphaCurrency,

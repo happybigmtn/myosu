@@ -19,16 +19,20 @@ integrity (criterion 12).
 
 Current state: Yuma Consensus logic exists in pallet-game-solver and computes
 dividend weights using `substrate_fixed` v0.6.0 fixed-point arithmetic. The
-coinbase function references root network and AMM paths that are disabled in
-stage-0, preventing actual token distribution. Validators submit weights via
-commit-reveal v2, but no test proves that two independent validators agree on
-scores or that emissions flow to miners.
+default stage-0 build now zeroes root weighting and root alpha distribution, but
+the coinbase path still carries swap- and price-shaped helpers from the
+inherited subtensor implementation. Validators submit weights via commit-reveal
+v2, and the repo now carries proof surfaces for both Yuma output determinism and
+validator scoring determinism, plus an end-to-end emission-flow script that
+needs ongoing reruns during review.
 
 This spec adds: A single-token coinbase path that distributes emissions
-proportional to Yuma Consensus dividends without requiring a root network or
-AMM. Verification that two validators produce identical scores on the same input
-within epsilon. An end-to-end proof that the full emission flow operates on a
-local devnet.
+proportional to Yuma Consensus dividends without requiring live root-network
+state or AMM liquidity. Stage-0 may retain the carried identity/no-op
+`Stage0SwapInterface` seam as an accounting adapter, but it must not depend on
+real swap execution or market pricing. Verification that two validators produce
+identical scores on the same input within epsilon. An end-to-end proof that the
+full emission flow operates on a local devnet.
 
 If all ACs land: Miners receive token emissions proportional to their measured
 solver quality, two validators agree within epsilon on identical inputs, and the
@@ -40,7 +44,7 @@ cross-subnet emission routing, and live devnet persistence.
 ## Scope
 
 In scope:
-- Rewriting the coinbase function for single-token emission without root
+- Rewriting the coinbase function for single-token emission without live root
   network or AMM dependencies
 - Proving cross-validator determinism (INV-003) with identical inputs
 - Proving end-to-end emission flow on a local devnet
@@ -60,15 +64,19 @@ matrix from validator submissions. The `substrate_fixed` crate (encointer fork
 v0.6.0) provides deterministic fixed-point arithmetic for dividend calculation.
 Commit-reveal v2 (hash-based) is the active weight submission mechanism.
 
-The coinbase function in pallet-game-solver contains paths that reference root
-network lookup and AMM-based token conversion, both of which are disabled or
-stubbed in stage-0. No integration test currently proves that emissions are
-distributed or that validators agree on scores.
+The coinbase function in pallet-game-solver still contains swap- and
+price-shaped helpers inherited from subtensor, but the default stage-0 runtime
+routes those helpers through the identity/no-op `SwapInterface`: price is fixed
+at `1`, swaps are identity conversions, and no liquidity pool state is
+required. End-to-end proof scripts now exist for emission distribution and
+validator scoring determinism, but those proofs do not erase the remaining
+coinbase complexity.
 
 The validator binary at `crates/myosu-validator/` computes exploitability scores
 deterministically using the game traits from `crates/myosu-games/src/traits.rs`.
-INV-003 (Game Verification Determinism) is supported by the code design but has
-not been proven by test.
+The repo now includes both a bounded validator scoring determinism test in
+`crates/myosu-validator/src/validation.rs` and `tests/e2e/validator_determinism.sh`
+for cross-process scoring verification.
 
 ## What Already Exists
 
@@ -77,10 +85,11 @@ not been proven by test.
 | Yuma Consensus computation | pallet-game-solver weight processing | Reuse | Core algorithm is correct |
 | Fixed-point arithmetic | `substrate_fixed` v0.6.0 (encointer fork) | Reuse | Determinism depends on this exact pin |
 | Commit-reveal v2 | pallet-game-solver weight submission | Reuse | Hash-based submission works |
-| Validator scoring | `crates/myosu-validator/src/validation.rs` | Reuse | Deterministic exploitability measurement |
+| Validator scoring | `crates/myosu-validator/src/validation.rs` | Reuse | Deterministic exploitability measurement and bounded scoring proofs already exist |
 | SwapInterface stub | `crates/myosu-chain/pallets/swap/` | Reuse | No-op satisfies call sites |
 | Coinbase function | pallet-game-solver coinbase logic | Replace | Assumes root network + AMM |
 | Stage-0 flow tests | `pallet-game-solver -- stage_0` | Extend | Add emission distribution assertions |
+| End-to-end proof scripts | `tests/e2e/emission_flow.sh`, `tests/e2e/validator_determinism.sh` | Reuse and harden | The repo already carries live proof paths for emission and scoring determinism |
 
 ## Non-goals
 
@@ -94,8 +103,11 @@ not been proven by test.
 
 The coinbase function distributes a per-epoch emission amount to neurons on a
 subnet proportional to their Yuma Consensus dividend weights. The distribution
-uses only a single token type without requiring root network lookup or AMM
-conversion. Emission amounts are written to on-chain storage and are queryable.
+uses only a single token type without requiring live root-network lookup or
+AMM conversion. Stage-0 may keep the carried `Stage0SwapInterface` seam for
+accounting compatibility, but that seam must remain identity/no-op and must not
+introduce market-driven pricing or liquidity dependence. Emission amounts are
+written to on-chain storage and are queryable.
 
 When two validators independently score the same miner's strategy using
 identical game parameters, their computed exploitability scores agree within
@@ -115,7 +127,7 @@ each epoch. No tokens are created or destroyed outside the coinbase path.
 ## Acceptance Criteria
 
 - The coinbase distributes single-token emissions proportional to Yuma Consensus
-  dividends in pallet tests, without referencing root network or AMM logic.
+  dividends in pallet tests, without relying on live root-network or AMM logic.
 - Two validators produce identical scores (within 1e-6 epsilon) when given
   identical miner strategy inputs, verified in an isolated test.
 - An end-to-end script boots a local devnet, registers a miner and validator,

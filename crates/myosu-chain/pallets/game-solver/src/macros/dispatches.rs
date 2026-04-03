@@ -1233,7 +1233,8 @@ mod dispatches {
         /// 6. **Child-Hotkey Distinction**: Ensures that the child is not the same as the hotkey.
         /// 7. **Old Children Cleanup**: Removes the hotkey from the parent list of its old children.
         /// 8. **New Children Assignment**: Assigns the new child to the hotkey and updates the parent list for the new child.
-        // TODO: Benchmark this call
+        // The carried weight is still a static placeholder until this call has
+        // stage-0 benchmark coverage.
         #[cfg(feature = "full-runtime")]
         #[pallet::call_index(67)]
         #[pallet::weight((Weight::from_parts(119_000_000, 0)

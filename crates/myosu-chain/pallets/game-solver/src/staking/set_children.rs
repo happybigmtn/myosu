@@ -770,7 +770,8 @@ impl<T: Config> Pallet<T> {
 
     ////////////////////////////////////////////////////////////
     // State cleaners (for use in migration)
-    // TODO: Deprecate when the state is clean for a while
+    // Migration-only cleaner kept while carried state may still contain empty
+    // childkey vectors from older layouts.
 
     pub fn clean_zero_childkey_vectors(weight: &mut Weight) {
         // Collect keys to delete first to avoid mutating while iterating.

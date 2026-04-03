@@ -12,3 +12,5 @@
 - Trimming pallet calls out of metadata is a different contract from returning an explicit unavailable dispatch error. Review the call surface that clients see, not just the surviving dispatch count.
 - A devnet proof that injects `--bootnodes` at runtime does not prove the chain spec itself carries bootnode addresses. Build-spec output and node startup arguments are separate evidence surfaces.
 - Zeroing root-weight terms is not the same as removing AMM or swap-shaped logic from the stage-0 coinbase path. Review single-token emission claims against the whole execution path, not just the final weighting variables.
+- A TODO/FIXME cap is weaker than a truthful live-surface cleanup. If the default-build code still ships raw backlog markers, review should land a replacement cleanup increment that rewrites them as explicit rationale comments or removes them entirely.
+- Yuma-output determinism and cross-validator scoring determinism are different claims. Keep the pallet unit proof and the validator/e2e proof named separately so review does not clear one with evidence for the other.

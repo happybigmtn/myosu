@@ -2,7 +2,8 @@ use super::*;
 use sp_std::collections::btree_set::BTreeSet;
 use subtensor_runtime_common::NetUid;
 
-// TODO: default symbol should be different from the root symbol?
+// Stage-0 keeps the carried TAO symbol as the default until subnet-specific
+// branding becomes part of the operator surface.
 pub static DEFAULT_SYMBOL: &[u8] = b"\xCE\xA4"; // TAO uppercase symbol
 
 pub static SYMBOLS: [&[u8]; 439] = [
