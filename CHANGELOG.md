@@ -20,7 +20,11 @@ tracks supported operator-facing releases starting at `0.1.0`.
 
 ## [Unreleased]
 
-- No unreleased operator-facing changes are queued yet.
+### Added
+
+- `ops/release.sh` now provides a single release wrapper for validating a
+  `vX.Y.Z` tag, generating changelog-derived release notes, and materializing a
+  versioned operator bundle before a real tag is created.
 
 ## [0.1.0] - 2026-04-02
 

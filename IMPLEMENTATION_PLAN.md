@@ -663,7 +663,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Cross-linked the changelog from `README.md` so the repo's top-level entrypoints now expose release history alongside doctrine, invariants, and security guidance.
     - The queued evidence was partially stale: the repo already carried internal `0.0.x` checkpoint tags through `0.0.24`, so the changelog now explicitly distinguishes those trunk task markers from the first supported operator-facing release baseline at `0.1.0`.
 
-- [ ] `RG-002` Create release script for tagging, bundling, and release notes
+- [x] `RG-002` Create release script for tagging, bundling, and release notes
   - Spec: `specs/040226-08-release-governance.md`
   - Why now: No release automation exists. Manual releases are error-prone and inconsistent.
   - Codebase evidence:
@@ -683,6 +683,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `bash ops/release.sh --dry-run v0.1.0`
   - Dependencies: `RG-001`
   - Completion signal: Release script creates a tagged release with operator bundle and changelog-derived release notes in dry-run mode
+  - Implementation notes:
+    - Added `ops/release.sh`, a release wrapper that validates `vX.Y.Z` tags, derives release notes from `CHANGELOG.md`, reuses `.github/scripts/prepare_operator_network_bundle.sh`, and injects `release_tag`, `workspace_version`, and `release_commit` metadata into the generated `bundle-manifest.toml`.
+    - The queued versioning evidence was partly stale: the active release surfaces already share the root workspace version through `version.workspace = true`, so the release script only needs to update the root `Cargo.toml` `workspace.package.version` in real release mode.
+    - Dry-run intentionally stays truthful but non-destructive: it materializes the versioned bundle plus `release-notes.md` under `target/releases/<tag>/`, auto-seeds a temporary password env only when needed for the operator-bundle path, and never mutates git tags or tracked files.
 
 - [ ] `RG-003` Document breaking change communication and operator upgrade process
   - Spec: `specs/040226-08-release-governance.md`
