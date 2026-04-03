@@ -26,4 +26,4 @@
 - `OP-003` commit `4662046d3ab30c9d2e59c882de8d532aa7ba3d4e`; validation: `test -f docs/operator-guide/troubleshooting.md`; `test "$(grep -c '^## [0-9]' docs/operator-guide/troubleshooting.md)" -ge 10`; `grep -q 'troubleshooting.md' docs/operator-guide/quickstart.md`; `grep -q 'troubleshooting.md' docs/execution-playbooks/operator-network.md`
 - `RG-001` commit `2768b772fda35f11ff7066c2dadc8424423bd651`; validation: `test -f CHANGELOG.md`; `grep -q '0.1.0' CHANGELOG.md`; `grep -q 'CHANGELOG.md' README.md`
 - `RG-002` commit `3fef79fcbb6c928487e7b6c72567444d37d8d876`; validation: `shellcheck ops/release.sh`; `bash ops/release.sh --dry-run v0.1.0`
-- `RG-003` commit `51ef81ba87abc0260c1caf85991ab54c2c5ff812`; validation: `test -f docs/operator-guide/upgrading.md`; `grep -q 'upgrading.md' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/upgrading.md' README.md`
+- `RG-003` commit `85c0c46ce6bba0b1a0f5165209a110b693bd4c55`; validation: `test -f docs/operator-guide/upgrading.md`; `grep -q 'upgrading.md' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/upgrading.md' README.md`
