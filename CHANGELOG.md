@@ -25,6 +25,10 @@ tracks supported operator-facing releases starting at `0.1.0`.
 - `ops/release.sh` now provides a single release wrapper for validating a
   `vX.Y.Z` tag, generating changelog-derived release notes, and materializing a
   versioned operator bundle before a real tag is created.
+- `docs/operator-guide/upgrading.md` now documents the current `0.x`
+  release contract, the minimum operator notice windows for patch vs breaking
+  minor releases, the manual upgrade path, and the repo-owned rollback
+  procedure.
 
 ## [0.1.0] - 2026-04-02
 

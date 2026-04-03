@@ -23,6 +23,9 @@ Current top-level entrypoints:
 - [docs/operator-guide/architecture.md](docs/operator-guide/architecture.md) for
   the operator-facing mental model of how chain, miner, validator, gameplay,
   and keys fit together
+- [docs/operator-guide/upgrading.md](docs/operator-guide/upgrading.md) for the
+  current operator upgrade process, breaking-change communication contract, and
+  rollback posture
 - [genesis/plans/001-master-plan.md](genesis/plans/001-master-plan.md) for the
   active plan stack
 - [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml)

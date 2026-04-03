@@ -239,6 +239,8 @@ Use the deeper docs when you need more than the zero-to-running path:
 
 - [`architecture.md`](./architecture.md) for the operator-facing explanation of
   how chain, miner, validator, gameplay, and keys fit together
+- [`upgrading.md`](./upgrading.md) for release semantics, upgrade windows,
+  bundle regeneration, and rollback procedure across operator-facing versions
 - [`troubleshooting.md`](./troubleshooting.md) for the common operator failure
   modes across keys, bundle prep, chain connectivity, miner bootstrap, and
   validator scoring

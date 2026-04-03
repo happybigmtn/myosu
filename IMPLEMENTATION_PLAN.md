@@ -688,7 +688,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The queued versioning evidence was partly stale: the active release surfaces already share the root workspace version through `version.workspace = true`, so the release script only needs to update the root `Cargo.toml` `workspace.package.version` in real release mode.
     - Dry-run intentionally stays truthful but non-destructive: it materializes the versioned bundle plus `release-notes.md` under `target/releases/<tag>/`, auto-seeds a temporary password env only when needed for the operator-bundle path, and never mutates git tags or tracked files.
 
-- [ ] `RG-003` Document breaking change communication and operator upgrade process
+- [x] `RG-003` Document breaking change communication and operator upgrade process
   - Spec: `specs/040226-08-release-governance.md`
   - Why now: No process exists for communicating breaking changes to operators. Required before devnet goes multi-operator.
   - Codebase evidence:
@@ -706,6 +706,16 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `test -f docs/operator-guide/upgrading.md`
   - Dependencies: `RG-001`, `OP-001`
   - Completion signal: Upgrade guide exists documenting the breaking change communication process
+  - Implementation notes:
+    - Added `docs/operator-guide/upgrading.md` with the current `0.x`
+      operator release contract, the repo-owned announcement surfaces,
+      minimum notice windows for compatible vs breaking releases, a manual
+      upgrade checklist, and a rollback procedure.
+    - Wired the guide into existing operator entrypoints by linking it from
+      `docs/operator-guide/quickstart.md` and `README.md` so the policy is
+      discoverable from the same places operators already use for bring-up.
+    - Updated `CHANGELOG.md` `Unreleased` to record the new operator-facing
+      upgrade documentation alongside the existing release wrapper work.
 
 - [ ] `G3-001` Scaffold myosu-games-kuhn crate with Kuhn poker state machine
   - Spec: `specs/040226-09-third-game-extensibility-proof.md`
