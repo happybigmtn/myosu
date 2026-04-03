@@ -638,7 +638,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Cross-linked the troubleshooting guide from `docs/operator-guide/quickstart.md` and `docs/execution-playbooks/operator-network.md` so operators can move from the happy path to the debug path without leaving the current operator docs.
     - Captured one adjacent operational truth in `AGENTS.md`: miner and validator `--help` invocations currently print inherited compile warnings before the actual Clap usage text, so future validation should judge those checks by exit status plus the trailing usage block.
 
-- [ ] `RG-001` Add CHANGELOG.md with initial release entry and maintenance process
+- [x] `RG-001` Add CHANGELOG.md with initial release entry and maintenance process
   - Spec: `specs/040226-08-release-governance.md`
   - Why now: No changelog exists. Operators need a single place to review what changed between versions.
   - Codebase evidence:
@@ -658,6 +658,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `grep -q '0.1.0' CHANGELOG.md`
   - Dependencies: `none`
   - Completion signal: CHANGELOG.md exists with v0.1.0 entry and is referenced from README.md
+  - Implementation notes:
+    - Added a root `CHANGELOG.md` in Keep a Changelog format with an `Unreleased` bucket, a dated `0.1.0` stage-0 baseline entry, and a short maintenance process for future operator-facing releases.
+    - Cross-linked the changelog from `README.md` so the repo's top-level entrypoints now expose release history alongside doctrine, invariants, and security guidance.
+    - The queued evidence was partially stale: the repo already carried internal `0.0.x` checkpoint tags through `0.0.24`, so the changelog now explicitly distinguishes those trunk task markers from the first supported operator-facing release baseline at `0.1.0`.
 
 - [ ] `RG-002` Create release script for tagging, bundling, and release notes
   - Spec: `specs/040226-08-release-governance.md`
