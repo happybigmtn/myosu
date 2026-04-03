@@ -1,0 +1,43 @@
+
+===== 20260403-032559 =====
+2026-04-03T02:35:03.062877Z ERROR codex_core_skills::loader: failed to stat skills entry /home/r/.codex/skills/paperclip (symlink): No such file or directory (os error 2)
+2026-04-03T02:35:03.062905Z ERROR codex_core_skills::loader: failed to stat skills entry /home/r/.codex/skills/paperclip-create-agent (symlink): No such file or directory (os error 2)
+2026-04-03T02:35:03.062914Z ERROR codex_core_skills::loader: failed to stat skills entry /home/r/.codex/skills/paperclip-create-plugin (symlink): No such file or directory (os error 2)
+2026-04-03T02:35:03.062922Z ERROR codex_core_skills::loader: failed to stat skills entry /home/r/.codex/skills/para-memory-files (symlink): No such file or directory (os error 2)
+Reading prompt from stdin...
+2026-04-03T02:58:45.404316Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /home/r/Coding/myosu/crates/myosu-games-poker/src/solver.rs:
+    Encode {
+        context: &'static str,
+        #[source]
+        source: bincode::Error,
+    },
+    #[error("failed to decode {context}: {source}")]
+    Decode {
+        context: &'static str,
+        #[source]
+        source: bincode::Error,
+    },
+2026-04-03T03:02:25.397804Z ERROR codex_core::tools::router: error=write_stdin failed: stdin is closed for this session; rerun exec_command with tty=true to keep stdin open
+2026-04-03T03:08:14.096097Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /home/r/Coding/myosu/crates/myosu-games-poker/src/solver.rs:
+    fn checkpoint_decode_codec_carries_a_real_byte_limit() {
+        let profile = weighted_profile(sample_info());
+        let result = bincode::serde::encode_to_vec(
+            &profile,
+            bincode::config::legacy().with_limit::<0>(),
+        );
+
+        assert!(
+            result.is_err(),
+2026-04-03T03:24:12.590266Z ERROR codex_core::tools::router: error=write_stdin failed: stdin is closed for this session; rerun exec_command with tty=true to keep stdin open
+
+
+===== 20260403-114525 =====
+2026-04-03T11:10:57.223846Z ERROR codex_core_skills::loader: failed to stat skills entry /home/r/.codex/skills/paperclip (symlink): No such file or directory (os error 2)
+2026-04-03T11:10:57.223956Z ERROR codex_core_skills::loader: failed to stat skills entry /home/r/.codex/skills/paperclip-create-agent (symlink): No such file or directory (os error 2)
+2026-04-03T11:10:57.223998Z ERROR codex_core_skills::loader: failed to stat skills entry /home/r/.codex/skills/paperclip-create-plugin (symlink): No such file or directory (os error 2)
+2026-04-03T11:10:57.224032Z ERROR codex_core_skills::loader: failed to stat skills entry /home/r/.codex/skills/para-memory-files (symlink): No such file or directory (os error 2)
+Reading prompt from stdin...
+2026-04-03T11:18:16.760821Z ERROR codex_core::tools::router: error=write_stdin failed: Unknown process id 19178
+2026-04-03T11:18:49.659755Z ERROR codex_core::tools::router: error=resources/read failed: unknown MCP server 'nonexistent'
+2026-04-03T11:19:53.763033Z ERROR codex_core::tools::router: error=write_stdin failed: stdin is closed for this session; rerun exec_command with tty=true to keep stdin open
+

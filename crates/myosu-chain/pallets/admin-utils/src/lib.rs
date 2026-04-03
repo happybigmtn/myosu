@@ -13,7 +13,7 @@ use sp_runtime::{DispatchResult, RuntimeAppPublic, Vec, traits::Member};
 
 mod benchmarking;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full-runtime"))]
 pub(crate) mod tests;
 
 #[deny(missing_docs)]

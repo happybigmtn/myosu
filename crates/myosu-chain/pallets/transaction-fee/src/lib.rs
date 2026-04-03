@@ -35,7 +35,7 @@ use substrate_fixed::types::U96F32;
 use subtensor_runtime_common::{AuthorshipInfo, Balance, NetUid};
 
 // Tests
-#[cfg(test)]
+#[cfg(all(test, feature = "full-runtime"))]
 mod tests;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;

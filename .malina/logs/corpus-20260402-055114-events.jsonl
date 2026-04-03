@@ -1,2 +1,0 @@
-{"ts":"2026-04-02T05:51:14.962982481+00:00","event":"prompt_written","payload":{"prompt_path":"/home/r/Coding/myosu/.malina/logs/corpus-20260402-055114-prompt.md","planning_root":"/home/r/Coding/myosu/genesis","model":"claude-opus-4-6"}}
-{"ts":"2026-04-02T06:17:16.871802275+00:00","event":"verified","payload":{"assessment_path":"/home/r/Coding/myosu/genesis/ASSESSMENT.md","spec_path":"/home/r/Coding/myosu/genesis/SPEC.md","plans_index_path":"/home/r/Coding/myosu/genesis/PLANS.md","report_path":"/home/r/Coding/myosu/genesis/GENESIS-REPORT.md","plan_count":13}}

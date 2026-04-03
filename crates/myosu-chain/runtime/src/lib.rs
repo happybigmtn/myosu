@@ -24,13 +24,13 @@ use frame_support::traits::LinearStoragePrice;
 use frame_support::{
     dispatch::DispatchResult,
     genesis_builder_helper::{build_state, get_preset},
-    traits::{fungible::HoldConsideration, Contains},
+    traits::{Contains, fungible::HoldConsideration},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess};
-use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId};
+use pallet_grandpa::{AuthorityId as GrandpaId, fg_primitives};
+use pallet_subtensor::CommitmentsInterface;
 use pallet_subtensor::macros::config::GetCommitments;
 use pallet_subtensor::rpc_info::neuron_info::NeuronInfoLite;
-use pallet_subtensor::CommitmentsInterface;
 #[cfg(feature = "full-runtime")]
 use pallet_subtensor_proxy as pallet_proxy;
 use pallet_subtensor_utility as pallet_utility;
@@ -40,15 +40,14 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_babe::BabeConfiguration;
 use sp_consensus_babe::BabeEpochConfiguration;
 use sp_core::{
-    crypto::{ByteArray, KeyTypeId},
     OpaqueMetadata,
+    crypto::{ByteArray, KeyTypeId},
 };
 use sp_runtime::Cow;
 use sp_runtime::{
-    generic, impl_opaque_keys,
+    AccountId32, ApplyExtrinsicResult, Percent, generic, impl_opaque_keys,
     traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, One, Verify},
     transaction_validity::{TransactionSource, TransactionValidity},
-    AccountId32, ApplyExtrinsicResult, Percent,
 };
 #[cfg(feature = "full-runtime")]
 use sp_std::cmp::Ordering;
@@ -56,24 +55,23 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use subtensor_runtime_common::{time::*, AlphaCurrency, AuthorshipInfo, TaoCurrency, *};
+use subtensor_runtime_common::{AlphaCurrency, AuthorshipInfo, TaoCurrency, time::*, *};
 use subtensor_swap_interface::{Order, SwapEngine, SwapHandler, SwapResult};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-    construct_runtime, parameter_types,
+    StorageValue, construct_runtime, parameter_types,
     traits::{
-        ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, FindAuthor, InstanceFilter,
+        ConstBool, ConstU8, ConstU32, ConstU64, ConstU128, FindAuthor, InstanceFilter,
         KeyOwnerProofSystem, OnFinalize, OnTimestampSet, StorageInfo,
     },
     weights::{
+        IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+        WeightToFeePolynomial,
         constants::{
             BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
         },
-        IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
-        WeightToFeePolynomial,
     },
-    StorageValue,
 };
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;

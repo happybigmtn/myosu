@@ -1,9 +1,0 @@
-{
-  "planning_root": "/home/r/Coding/myosu/genesis",
-  "target_repo": "/home/r/Coding/myosu-gen",
-  "latest_output_dir": "/home/r/Coding/myosu/gen-20260402-120305",
-  "latest_run_root": null,
-  "provider": "minimax",
-  "model": "minimax-m2.7-highspeed",
-  "variant": "high"
-}

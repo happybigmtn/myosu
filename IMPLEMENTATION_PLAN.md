@@ -113,6 +113,49 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The active chain tree is now under the cap: `rg -n "TODO|FIXME" crates/myosu-chain/runtime crates/myosu-chain/node crates/myosu-chain/pallets/game-solver/src --glob '!**/migrations/**' --glob '!**/tests/**' -S | wc -l` returns `16`.
     - The remaining inline notes are confined to the carried stage-0/runtime source files that still compile by default; no new TODO/FIXME markers were added while trimming the runtime and dispatch surface.
 
+- [x] `RT-005` Gate legacy full-runtime pallet tests out of the default workspace green path
+  - Spec: `specs/040226-01-chain-runtime-reduction.md`
+  - Why now: A truthful `cargo test --workspace` still compiled inherited `pallet-admin-utils` and `subtensor-transaction-fee` unit suites against the removed full-runtime `pallet-game-solver` config and call surface, so the repo was not actually green even though the stage-0 task proofs passed.
+  - Codebase evidence:
+    - `crates/myosu-chain/pallets/transaction-fee/src/lib.rs` unconditionally included `src/tests/`, while those tests construct `remove_stake*`, `unstake_all*`, `move_stake`, `transfer_stake`, and `swap_stake*` calls that now exist only behind `pallet-game-solver/full-runtime`
+    - `crates/myosu-chain/pallets/admin-utils/src/lib.rs` unconditionally included `src/tests/`, while its mock runtime still implemented removed `pallet_game_solver::Config` associated types and used `register`/`root_register`
+  - Owns:
+    - `crates/myosu-chain/pallets/transaction-fee/src/lib.rs`
+    - `crates/myosu-chain/pallets/admin-utils/src/lib.rs`
+    - `crates/myosu-chain/pallets/admin-utils/Cargo.toml`
+  - Scope boundary:
+    - Keep the inherited legacy unit suites available behind an explicit `full-runtime` opt-in
+    - Do not rewrite those tests to stage-0 semantics in this slice
+  - Required tests:
+    - `SKIP_WASM_BUILD=1 cargo test -p subtensor-transaction-fee --quiet`
+    - `SKIP_WASM_BUILD=1 cargo test -p pallet-admin-utils --quiet`
+    - `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`
+  - Dependencies: `RT-003`
+  - Completion signal: Default workspace tests skip the full-runtime-only unit suites and the broad workspace test sweep no longer fails on the removed stage-0 pallet surface
+  - Implementation notes:
+    - Both pallets now compile their inherited unit suites only when `feature = "full-runtime"` is explicitly enabled, matching the stage-0 reduction posture already used in `pallet-game-solver`.
+    - `pallet-admin-utils` now exposes a matching `full-runtime` feature that forwards to `pallet-game-solver/full-runtime`, so operators can still run the legacy admin-utils tests intentionally instead of implicitly through the default workspace gate.
+
+- [x] `RT-006` Align chain-client default fallback tests with the live stage-0 runtime constants
+  - Spec: `specs/040226-01-chain-runtime-reduction.md`
+  - Why now: After RT-001 moved stage-0 bootstrap flows onto runtime defaults, the broad workspace green gate still failed because `myosu-chain-client` unit tests asserted stale inherited constants (`7200` network rate limit, `360` tempo) instead of the live runtime values.
+  - Codebase evidence:
+    - `crates/myosu-chain/runtime/src/lib.rs` defines `SubtensorInitialNetworkRateLimit = 0` and `INITIAL_SUBNET_TEMPO = 2`
+    - `crates/myosu-chain-client/src/lib.rs` still hard-coded `7200` and `360` in the tests that are supposed to mirror those runtime constants
+  - Owns:
+    - `crates/myosu-chain-client/src/lib.rs`
+  - Scope boundary:
+    - Update the stale unit-test expectations only
+    - Do not change the runtime constants or chain-client fallback logic
+  - Required tests:
+    - `cargo test -p myosu-chain-client --lib --quiet`
+    - `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`
+  - Dependencies: `RT-001`
+  - Completion signal: The chain-client fallback tests assert the current stage-0 runtime defaults and no longer break the broad workspace green gate
+  - Implementation notes:
+    - The fallback constants already referenced the runtime parameter types; only the extra “lock the expected value” assertions were stale.
+    - The current committed stage-0 defaults are intentional repo truth: network registration rate limit `0` and subnet tempo `2`.
+
 - [x] `EM-001` Remove root network stake weighting from coinbase emission distribution
   - Spec: `specs/040226-02-single-token-emission-accounting.md`
   - Why now: Coinbase still applies root-network dividend weighting (run_coinbase.rs lines 437-442) which couples emissions to a root network that is disabled in stage-0. This violates the single-token emission model.

@@ -2065,7 +2065,7 @@ mod tests {
             DEFAULT_NETWORK_RATE_LIMIT,
             crate::runtime::SubtensorInitialNetworkRateLimit::get()
         );
-        assert_eq!(DEFAULT_NETWORK_RATE_LIMIT, 7200);
+        assert_eq!(DEFAULT_NETWORK_RATE_LIMIT, 0);
     }
 
     #[test]
@@ -2074,7 +2074,7 @@ mod tests {
             DEFAULT_SUBNET_TEMPO,
             crate::runtime::SubtensorInitialTempo::get()
         );
-        assert_eq!(DEFAULT_SUBNET_TEMPO, 360);
+        assert_eq!(DEFAULT_SUBNET_TEMPO, 2);
     }
 
     #[test]

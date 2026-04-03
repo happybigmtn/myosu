@@ -1,2 +1,0 @@
-{"ts":"2026-04-02T06:24:10.665480403+00:00","event":"start","payload":{"planning_root":"/home/r/Coding/myosu/genesis","target_repo":"/home/r/Coding/myosu-gen","output_dir":"/home/r/Coding/myosu/gen-20260402-062410","plan_only":false,"model":"claude-opus-4-6"}}
-{"ts":"2026-04-02T06:39:55.546082869+00:00","event":"spec_phase_complete","payload":{"spec_count":15,"prompt_path":"/home/r/Coding/myosu/.malina/logs/gen-specs-20260402-062410-prompt.md","response_path":"/home/r/Coding/myosu/.malina/logs/gen-specs-20260402-062410-response.txt"}}

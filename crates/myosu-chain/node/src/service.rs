@@ -764,11 +764,13 @@ fn resolve_authority_suri(config: &Configuration) -> Option<String> {
         return None;
     }
 
-    Some(match config.network.node_name.as_str() {
-        "Alice" => "//Alice",
-        "Bob" => "//Bob",
-        "Charlie" => "//Charlie",
-        _ => "//Alice",
-    }
-    .to_owned())
+    Some(
+        match config.network.node_name.as_str() {
+            "Alice" => "//Alice",
+            "Bob" => "//Bob",
+            "Charlie" => "//Charlie",
+            _ => "//Alice",
+        }
+        .to_owned(),
+    )
 }

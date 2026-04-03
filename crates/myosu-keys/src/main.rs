@@ -461,8 +461,7 @@ fn build_bootstrap_plan(
     subnet: u16,
 ) -> BootstrapPlan {
     let config_dir = config_dir.to_string_lossy();
-    let miner_command =
-        bootstrap_command("myosu-miner", chain, subnet, &config_dir, password_env);
+    let miner_command = bootstrap_command("myosu-miner", chain, subnet, &config_dir, password_env);
     let validator_command =
         bootstrap_command("myosu-validator", chain, subnet, &config_dir, password_env);
 

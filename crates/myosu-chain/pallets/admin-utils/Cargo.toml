@@ -48,6 +48,7 @@ pallet-preimage.workspace = true
 
 [features]
 default = ["std"]
+full-runtime = ["pallet-game-solver/full-runtime"]
 std = [
 	"codec/std",
 	"frame-benchmarking?/std",
