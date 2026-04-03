@@ -1,5 +1,9 @@
 # ARCHIVED
 
+## 2026-04-03 review pass
+
+- `SEC-001` commit `08f00a486a25a4bb16a2ae1e17e973eeb9ca92f1`; review note: the original dependency-audit gate was false green because `cargo audit` exited 0 with warning-class advisories. This pass repaired the workflow to deny warnings, so the CI gate now fails truthfully on non-ignored advisories. Validated with `cargo audit -D warnings --ignore RUSTSEC-2025-0009 --ignore RUSTSEC-2025-0055 --ignore RUSTSEC-2023-0091 --ignore RUSTSEC-2024-0438 --ignore RUSTSEC-2025-0118 --ignore RUSTSEC-2026-0020 --ignore RUSTSEC-2026-0021`
+
 ## 2026-04-02 review pass
 
 - `ADR-001` commit `28801090f35a3ac056202acf7264c6f28efd5aa2`; validated with `test -d docs/adr`; `test -f docs/adr/000-template.md`; `test -f docs/adr/README.md`
