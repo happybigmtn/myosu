@@ -1,9 +1,9 @@
 """Execution harness for deterministic Myosu survey conditions."""
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
-import random
 from typing import Callable, Dict, List, Tuple
 
 import numpy as np

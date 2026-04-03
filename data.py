@@ -1,8 +1,8 @@
 """Deterministic survey corpus and proxy benchmarks for Myosu experiments."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from typing import Dict, List, Sequence, Tuple
 
 import numpy as np

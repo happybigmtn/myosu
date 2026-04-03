@@ -1,0 +1,6 @@
+[tool.ruff]
+target-version = "py313"
+include = ["main.py", "methods.py", "runner.py", "metrics.py", "data.py"]
+
+[tool.ruff.lint]
+select = ["F", "I"]

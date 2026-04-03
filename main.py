@@ -49,14 +49,13 @@ regimes and then over seeds.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import time
+from pathlib import Path
 from typing import Callable, Dict, List
 
 import numpy as np
 
 from data import build_feature_matrices, load_experiment_plan
-from metrics import paired_analysis
 from methods import (
     AdamWBaseline,
     AugMaxBaseline,
@@ -69,8 +68,8 @@ from methods import (
     SimplifiedVersionAblation,
     WithoutKeyComponentAblation,
 )
+from metrics import paired_analysis
 from runner import ExperimentRunner, set_global_seeds
-
 
 HYPERPARAMETERS = {
     "time_budget_seconds": 1800,
@@ -244,7 +243,6 @@ def _calibration_report(
     aggregator: object,
     pilot_conditions: List[str],
 ) -> None:
-    threshold = HYPERPARAMETERS["calibration_success_threshold"]
     for condition_name in pilot_conditions:
         summary = aggregator.summarize_by_metric(condition_name, "primary_metric")
         values = np.array(

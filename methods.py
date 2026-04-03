@@ -1,8 +1,8 @@
 """Condition implementations for the deterministic Myosu survey experiment."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -806,12 +806,10 @@ class EstablishedMethod1Baseline(BaseCondition):
         #   action_granularity, compute_pressure, abstraction_gain, citation/8]
         # Indices below are relative to the full feature vector.
         num_domain = len(set(r["domain"] for r in RAW_GAMES))
-        players = features[:, num_domain + 1:num_domain + 2]
         zero_sum = features[:, num_domain + 1:num_domain + 2]
         partnership = features[:, num_domain + 2:num_domain + 3]
         hidden = features[:, num_domain + 4:num_domain + 5]
         infoset = features[:, num_domain + 6:num_domain + 7]
-        action = features[:, num_domain + 8:num_domain + 9]
         compute = features[:, num_domain + 9:num_domain + 10]
         abstraction = features[:, num_domain + 10:num_domain + 11]
 
@@ -834,7 +832,6 @@ class EstablishedMethod1Baseline(BaseCondition):
 
         met_mask_exact = np.array((1, 1, 1, 0, 0, 0), dtype=np.float64)
         met_mask_dup = np.array((0, 0, 0, 0, 1, 0), dtype=np.float64)
-        met_mask_cross = np.array((0, 0, 0, 1, 1, 1), dtype=np.float64)
         outputs[:, alg_end:metric_end] = (
             rulebook["metric"][None, :]
             + 0.8 * zero_sum * met_mask_exact[None, :]
@@ -842,15 +839,12 @@ class EstablishedMethod1Baseline(BaseCondition):
         )
 
         abs_mask_eq = np.array((0, 1, 1, 1, 1, 1, 1), dtype=np.float64)
-        abs_mask_none = np.array((0, 0, 0, 0, 1, 1, 1), dtype=np.float64)
-        abs_mask_bucket = np.array((0, 1, 1, 1, 0, 0, 0), dtype=np.float64)
         outputs[:, metric_end:abstraction_end] = (
             rulebook["abstraction"][None, :]
             + 0.1 * abstraction * abs_mask_eq[None, :]
         )
 
         risk_mask_conv = np.array((0, 1, 0, 1, 0, 0), dtype=np.float64)
-        risk_mask_comp = np.array((1, 0, 1, 0, 0, 1), dtype=np.float64)
         outputs[:, abstraction_end:risk_end] = (
             rulebook["risk"][None, :]
             + 0.05 * compute * risk_mask_conv[None, :]

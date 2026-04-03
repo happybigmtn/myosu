@@ -6,7 +6,6 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-
 EXACT_SIGN_FLIP_THRESHOLD = 15
 MONTE_CARLO_SIGN_FLIP_SAMPLES = 10_000
 
@@ -175,7 +174,6 @@ class MetricSuite:
         timeline_scores = np.zeros(num_games, dtype=np.float64)
         per_game_primary = np.zeros(num_games, dtype=np.float64)
         per_game_secondary = np.zeros(num_games, dtype=np.float64)
-        per_game_fidelity = np.zeros(num_games, dtype=np.float64)
 
         for idx in range(num_games):
             algorithm_scores[idx] = (

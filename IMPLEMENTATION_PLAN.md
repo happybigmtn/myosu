@@ -802,7 +802,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Smoke dispatch is now explicit per game: poker keeps the live artifact/discovery path, while Kuhn and Liar's Dice use deterministic built-in demo proofs that do not pretend to support chain-visible miner discovery.
     - The active-crates CI job now treats Kuhn as a first-class crate by including it in `cargo check`, `cargo test`, `cargo clippy`, and `rustfmt`, and by running `cargo run -p myosu-play --quiet -- --game kuhn --smoke-test` alongside the existing default smoke proof.
 
-- [ ] `PY-003` Configure ruff linting for Python research stack and fix lint errors
+- [x] `PY-003` Configure ruff linting for Python research stack and fix lint errors
   - Spec: `specs/040226-10-python-research-quality-gates.md`
   - Why now: No Python linting exists. Ruff configuration gates future regressions.
   - Codebase evidence:
@@ -820,6 +820,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `ruff check main.py methods.py runner.py metrics.py data.py`
   - Dependencies: `PY-001`, `PY-002`
   - Completion signal: `ruff check` passes with zero errors on all 5 Python files
+  - Implementation notes:
+    - Added a repo-root `pyproject.toml` that scopes Ruff to the five root research files, pins the lint target to Python 3.13, and enables only `F` and `I` rules so the gate catches real defects without forcing a broad style rewrite.
+    - Removed the eight dead local bindings Ruff reported in `main.py`, `methods.py`, and `metrics.py`, preserving behavior while clearing the active Pyflakes surface.
+    - Normalized import ordering in `main.py`, `methods.py`, `runner.py`, `metrics.py`, and `data.py`; local proof still requires `ruff` to be installed in the active `python` environment because the repo does not yet manage Python tool dependencies.
 
 - [ ] `PY-004` Write basic test suite for Python metrics computation and data loading
   - Spec: `specs/040226-10-python-research-quality-gates.md`
