@@ -934,7 +934,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Each ADR records current repo truth from the existing narrative sources (`ops/decision_log.md`, `THEORY.MD`, `AGENTS.md`) plus the live code surfaces that now embody those decisions, rather than reopening or changing the decisions in this slice.
     - Updated `docs/adr/README.md` so numbered ADR discovery no longer depends on directory listing alone.
 
-- [ ] `ADR-003` Draft stage-2 architectural roadmap with decision points and prerequisites
+- [x] `ADR-003` Draft stage-2 architectural roadmap with decision points and prerequisites
   - Spec: `specs/040226-11-architecture-decision-records.md`
   - Why now: Stage-2 decisions (dual-token, EVM restoration, multi-subnet, governance model) need structured identification of prerequisites and reversibility before the project advances past stage-1.
   - Codebase evidence:
@@ -954,6 +954,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `grep -q 'reversib' docs/adr/stage-2-roadmap.md`
   - Dependencies: `ADR-002`
   - Completion signal: Stage-2 roadmap identifies ≥5 upcoming decision points with prerequisites and reversibility assessments
+  - Implementation notes:
+    - Added `docs/adr/stage-2-roadmap.md` as the non-numbered companion to the accepted ADR set, anchored to current repo truth rather than speculative product narrative.
+    - The roadmap now maps five concrete stage-2 decision points in recommended order: upgrade governance, admission model, multi-subnet emission routing, programmable contract surface, and dual-token economics.
+    - Each decision point records prerequisites, viable options, principal risks, and reversibility criteria, and `docs/adr/README.md` now indexes the roadmap explicitly.
 
 ## Completed / Already Satisfied
 
