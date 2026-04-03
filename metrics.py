@@ -93,6 +93,12 @@ def bootstrap_confidence_interval(
     seed: int = 42,
     samples: int = 1000,
 ) -> Tuple[float, float]:
+    values = np.asarray(values, dtype=np.float64).reshape(-1)
+    if len(values) == 0:
+        return float("nan"), float("nan")
+    if len(values) == 1:
+        value = float(values[0])
+        return value, value
     rng = np.random.default_rng(seed)
     draws = np.zeros(samples, dtype=np.float64)
     for idx in range(samples):

@@ -825,7 +825,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Removed the eight dead local bindings Ruff reported in `main.py`, `methods.py`, and `metrics.py`, preserving behavior while clearing the active Pyflakes surface.
     - Normalized import ordering in `main.py`, `methods.py`, `runner.py`, `metrics.py`, and `data.py`; local proof still requires `ruff` to be installed in the active `python` environment because the repo does not yet manage Python tool dependencies.
 
-- [ ] `PY-004` Write basic test suite for Python metrics computation and data loading
+- [x] `PY-004` Write basic test suite for Python metrics computation and data loading
   - Spec: `specs/040226-10-python-research-quality-gates.md`
   - Why now: No Python tests exist. Basic coverage for metrics and data loading prevents regressions in the research stack.
   - Codebase evidence:
@@ -847,6 +847,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `python -m pytest tests/test_metrics.py tests/test_data.py -v`
   - Dependencies: `PY-003`
   - Completion signal: pytest passes with ≥10 tests covering critical paths in metrics and data modules
+  - Implementation notes:
+    - Added `tests/test_metrics.py` and `tests/test_data.py` with 16 focused pytest cases covering the metrics edge cases, exact-vs-sampled sign-flip behavior, `MetricSuite` happy path and input validation, corpus schema/loading, proxy benchmark fallbacks, deterministic splits, feature packaging, and recommendation decoding.
+    - Tightened `metrics.bootstrap_confidence_interval()` for explicit empty and singleton inputs so the new edge-case coverage can assert stable behavior without NumPy runtime warnings.
+    - Local proof required installing `pytest` into the active interpreter because the repo still does not manage Python test dependencies.
 
 - [ ] `PY-005` Add Python linting and testing CI job to GitHub Actions
   - Spec: `specs/040226-10-python-research-quality-gates.md`
