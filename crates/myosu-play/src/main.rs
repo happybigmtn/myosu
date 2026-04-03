@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::time::Instant;
 
-use blueprint::{AdviceSelection, demo_renderer};
+use blueprint::{AdviceSelection, demo_renderer, smoke_demo_renderer};
 use clap::Parser;
 use discovery::DiscoveredMiner;
 use live::LiveMinerStrategy;
@@ -114,7 +114,7 @@ async fn run_smoke_test(
     require_discovery: bool,
     require_live_query: bool,
 ) -> io::Result<()> {
-    let context = resolve_context(game, args, discovery_request).await?;
+    let context = resolve_context_for_smoke_test(game, args, discovery_request).await?;
     log_render_context("smoke_test", &context);
     print!(
         "{}",
@@ -741,6 +741,22 @@ async fn resolve_context(
     discovery_request: DiscoveryRequest,
 ) -> io::Result<RenderContext> {
     let advice = demo_renderer(game, args)?;
+    resolve_context_from_advice(advice, discovery_request).await
+}
+
+async fn resolve_context_for_smoke_test(
+    game: GameSelection,
+    args: AdviceArgs,
+    discovery_request: DiscoveryRequest,
+) -> io::Result<RenderContext> {
+    let advice = smoke_demo_renderer(game, args)?;
+    resolve_context_from_advice(advice, discovery_request).await
+}
+
+async fn resolve_context_from_advice(
+    advice: AdviceSelection,
+    discovery_request: DiscoveryRequest,
+) -> io::Result<RenderContext> {
     let discovery = resolve_discovery(discovery_request).await?;
     let live_query = resolve_live_query(advice.surface.poker_renderer(), &discovery).await?;
     if let Some(renderer) = advice.surface.poker_renderer() {

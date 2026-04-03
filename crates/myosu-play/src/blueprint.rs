@@ -15,6 +15,12 @@ use crate::cli::{AdviceArgs, GameSelection};
 
 const LIARS_DICE_SOLVER_TREES: usize = 1 << 10;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AdviceMode {
+    Standard,
+    SmokeTest,
+}
+
 pub(crate) enum AdviceSurface {
     Poker { renderer: Arc<NlheRenderer> },
     Kuhn { renderer: Arc<KuhnRenderer> },
@@ -143,14 +149,29 @@ impl AdviceSelection {
 }
 
 pub(crate) fn demo_renderer(game: GameSelection, args: AdviceArgs) -> io::Result<AdviceSelection> {
+    demo_renderer_with_mode(game, args, AdviceMode::Standard)
+}
+
+pub(crate) fn smoke_demo_renderer(
+    game: GameSelection,
+    args: AdviceArgs,
+) -> io::Result<AdviceSelection> {
+    demo_renderer_with_mode(game, args, AdviceMode::SmokeTest)
+}
+
+fn demo_renderer_with_mode(
+    game: GameSelection,
+    args: AdviceArgs,
+    mode: AdviceMode,
+) -> io::Result<AdviceSelection> {
     match game {
-        GameSelection::Poker => poker_demo_renderer(args),
+        GameSelection::Poker => poker_demo_renderer(args, mode),
         GameSelection::Kuhn => kuhn_demo_renderer(args),
         GameSelection::LiarsDice => liars_dice_demo_renderer(args),
     }
 }
 
-fn poker_demo_renderer(args: AdviceArgs) -> io::Result<AdviceSelection> {
+fn poker_demo_renderer(args: AdviceArgs, mode: AdviceMode) -> io::Result<AdviceSelection> {
     match (args.checkpoint, args.encoder_dir) {
         (Some(checkpoint), Some(encoder_dir)) => {
             let renderer = load_blueprint_renderer(&checkpoint, &encoder_dir)?;
@@ -171,6 +192,20 @@ fn poker_demo_renderer(args: AdviceArgs) -> io::Result<AdviceSelection> {
             })
         }
         (None, None) => {
+            if mode == AdviceMode::SmokeTest {
+                return Ok(AdviceSelection {
+                    game: GameSelection::Poker,
+                    surface: AdviceSurface::Poker {
+                        renderer: Arc::new(NlheRenderer::demo()),
+                    },
+                    source: "demo",
+                    selection: "smoke",
+                    origin: "builtin",
+                    reason: "smoke_test",
+                    detail: "built-in poker demo surface for smoke proof".to_string(),
+                });
+            }
+
             if let Some(directory) = auto_codexpoker_blueprint_dir() {
                 match CodexpokerBlueprint::load(&directory) {
                     Ok(blueprint) => {
@@ -574,6 +609,32 @@ mod tests {
         assert_eq!(discovered, directory);
 
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn smoke_demo_renderer_uses_builtin_poker_surface() {
+        let selection = smoke_demo_renderer(
+            GameSelection::Poker,
+            AdviceArgs {
+                checkpoint: None,
+                encoder_dir: None,
+            },
+        )
+        .expect("smoke poker demo should build");
+
+        assert_eq!(selection.game, GameSelection::Poker);
+        assert_eq!(selection.source, "demo");
+        assert_eq!(selection.selection, "smoke");
+        assert_eq!(selection.origin, "builtin");
+        assert_eq!(selection.reason, "smoke_test");
+        assert_eq!(selection.startup_state(), AdviceStartupState::Success);
+        assert!(
+            selection
+                .surface
+                .renderer()
+                .pipe_output()
+                .contains("street=PREFLOP")
+        );
     }
 
     #[test]
