@@ -27,3 +27,4 @@
 - `RG-001` commit `2768b772fda35f11ff7066c2dadc8424423bd651`; validation: `test -f CHANGELOG.md`; `grep -q '0.1.0' CHANGELOG.md`; `grep -q 'CHANGELOG.md' README.md`
 - `RG-002` commit `3fef79fcbb6c928487e7b6c72567444d37d8d876`; validation: `shellcheck ops/release.sh`; `bash ops/release.sh --dry-run v0.1.0`
 - `RG-003` commit `85c0c46ce6bba0b1a0f5165209a110b693bd4c55`; validation: `test -f docs/operator-guide/upgrading.md`; `grep -q 'upgrading.md' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/upgrading.md' README.md`
+- `G3-001` commit `608f1786d9133cbf731e52eed3a069f343c65663`; validation: `cargo test -p myosu-games-kuhn --quiet`; `cargo test -p myosu-games --quiet`
