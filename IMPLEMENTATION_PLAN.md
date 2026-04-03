@@ -902,7 +902,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Added `docs/adr/000-template.md` with the required decision-record structure: context, decision, alternatives considered, consequences, reversibility, and validation/evidence.
     - Kept the slice scoped to the spec contract only: no retroactive ADRs were created yet, and the existing narrative decision sources in `THEORY.MD` and `ops/decision_log.md` remain the source material for `ADR-002`.
 
-- [ ] `ADR-002` Write retroactive ADRs for ≥7 existing major architectural decisions
+- [x] `ADR-002` Write retroactive ADRs for ≥7 existing major architectural decisions
   - Spec: `specs/040226-11-architecture-decision-records.md`
   - Why now: At least 10 significant decisions are documented only in narrative form across THEORY.MD and scattered comments. Structured records make them discoverable and reviewable.
   - Codebase evidence:
@@ -929,6 +929,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `grep -l 'Status:' docs/adr/001-*.md docs/adr/007-*.md`
   - Dependencies: `ADR-001`
   - Completion signal: ≥7 retroactive ADRs exist following the template, covering the major decisions documented in THEORY.MD
+  - Implementation notes:
+    - Added seven accepted retroactive ADRs under `docs/adr/001-007`, covering the stage-0 decisions already reflected in the live repo: single-token economics, the subtensor fork strategy, the robopoker fork, enum dispatch for games, the stage-0 swap seam, commit-reveal v2, and checkpoint versioning.
+    - Each ADR records current repo truth from the existing narrative sources (`ops/decision_log.md`, `THEORY.MD`, `AGENTS.md`) plus the live code surfaces that now embody those decisions, rather than reopening or changing the decisions in this slice.
+    - Updated `docs/adr/README.md` so numbered ADR discovery no longer depends on directory listing alone.
 
 - [ ] `ADR-003` Draft stage-2 architectural roadmap with decision points and prerequisites
   - Spec: `specs/040226-11-architecture-decision-records.md`

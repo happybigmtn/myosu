@@ -86,3 +86,10 @@ without cause.
 ## Index
 
 - `000-template.md`: canonical ADR template for new records
+- `001-single-token-emission.md`: single-token staking and emission model for stage-0
+- `002-substrate-fork-strategy.md`: fork subtensor into an owned Substrate chain rather than deploy as a native subnet
+- `003-robopoker-fork.md`: pin a narrow robopoker fork close to `v1.0.0` and wrap it locally
+- `004-enum-dispatch-games.md`: use enum dispatch and registry seams for multi-game support
+- `005-swap-interface-abstraction.md`: keep a stage-0 pallet-local swap seam with a noop runtime implementation
+- `006-commit-reveal-v2.md`: retain hash-based commit-reveal v2 as the only live weight-hiding path
+- `007-checkpoint-versioning.md`: frame solver checkpoints with explicit magic and version headers
