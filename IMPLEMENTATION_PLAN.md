@@ -874,7 +874,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The job uses `actions/setup-python` with Python `3.13`, enables pip caching, installs the minimal runtime needed by the owned quality gates (`numpy`, `pytest`, `ruff`), then runs the existing Ruff and pytest proof commands directly.
     - Local validation stayed aligned with the CI contract by rerunning `ruff check main.py methods.py runner.py metrics.py data.py`, `python -m pytest tests/test_metrics.py tests/test_data.py -v`, and `actionlint .github/workflows/ci.yml` after the workflow edit.
 
-- [ ] `ADR-001` Create ADR template and process documentation
+- [x] `ADR-001` Create ADR template and process documentation
   - Spec: `specs/040226-11-architecture-decision-records.md`
   - Why now: No structured decision record format exists. ADRs are prerequisite for recording existing decisions and governance of future ones.
   - Codebase evidence:
@@ -897,6 +897,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `test -f docs/adr/README.md`
   - Dependencies: `none`
   - Completion signal: ADR directory exists with template and process documentation
+  - Implementation notes:
+    - Added `docs/adr/README.md` as the repo's ADR process and index surface, covering when to write an ADR, numbering/location conventions, status vocabulary, and the supersede/update workflow.
+    - Added `docs/adr/000-template.md` with the required decision-record structure: context, decision, alternatives considered, consequences, reversibility, and validation/evidence.
+    - Kept the slice scoped to the spec contract only: no retroactive ADRs were created yet, and the existing narrative decision sources in `THEORY.MD` and `ops/decision_log.md` remain the source material for `ADR-002`.
 
 - [ ] `ADR-002` Write retroactive ADRs for ≥7 existing major architectural decisions
   - Spec: `specs/040226-11-architecture-decision-records.md`
