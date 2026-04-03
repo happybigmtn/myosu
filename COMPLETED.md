@@ -29,3 +29,4 @@
 - `RG-003` commit `85c0c46ce6bba0b1a0f5165209a110b693bd4c55`; validation: `test -f docs/operator-guide/upgrading.md`; `grep -q 'upgrading.md' docs/operator-guide/quickstart.md`; `grep -q 'docs/operator-guide/upgrading.md' README.md`
 - `G3-001` commit `608f1786d9133cbf731e52eed3a069f343c65663`; validation: `cargo test -p myosu-games-kuhn --quiet`; `cargo test -p myosu-games --quiet`
 - `G3-002` commit `1ffa3299e719faba5d4c24bcaf72e8624200e6a6`; validation: `cargo test -p myosu-games-kuhn --quiet`
+- `G3-003` commit `9aef01245ad7617e6bbf6243db86945dfe88a784`; validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-play --quiet`; `cargo test -p myosu-games-kuhn --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --game kuhn --smoke-test`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`
