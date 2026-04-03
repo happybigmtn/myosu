@@ -852,7 +852,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Tightened `metrics.bootstrap_confidence_interval()` for explicit empty and singleton inputs so the new edge-case coverage can assert stable behavior without NumPy runtime warnings.
     - Local proof required installing `pytest` into the active interpreter because the repo still does not manage Python test dependencies.
 
-- [ ] `PY-005` Add Python linting and testing CI job to GitHub Actions
+- [x] `PY-005` Add Python linting and testing CI job to GitHub Actions
   - Spec: `specs/040226-10-python-research-quality-gates.md`
   - Why now: Without a CI job, Python quality gates are enforced only locally. CI prevents regressions.
   - Codebase evidence:
@@ -869,6 +869,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `actionlint .github/workflows/ci.yml`
   - Dependencies: `PY-004`
   - Completion signal: CI pipeline includes Python job that runs ruff and pytest; job passes
+  - Implementation notes:
+    - Added a `python-research-qa` job to `.github/workflows/ci.yml` that runs after `repo-shape`, keeping the Python research gate independent from the heavier Rust build graph.
+    - The job uses `actions/setup-python` with Python `3.13`, enables pip caching, installs the minimal runtime needed by the owned quality gates (`numpy`, `pytest`, `ruff`), then runs the existing Ruff and pytest proof commands directly.
+    - Local validation stayed aligned with the CI contract by rerunning `ruff check main.py methods.py runner.py metrics.py data.py`, `python -m pytest tests/test_metrics.py tests/test_data.py -v`, and `actionlint .github/workflows/ci.yml` after the workflow edit.
 
 - [ ] `ADR-001` Create ADR template and process documentation
   - Spec: `specs/040226-11-architecture-decision-records.md`
