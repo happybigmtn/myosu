@@ -564,7 +564,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The bundled `devnet-spec.json` is now rewritten with the same `bootnode_multiaddr` recorded in `bundle-manifest.toml`, so operators can join the devnet without editing the chain spec by hand.
     - `docs/execution-playbooks/operator-network.md` now documents the bootnode env overrides and the follower-node join flow, while `.github/scripts/check_operator_network_bootstrap.sh` asserts that the manifest and bundled devnet spec carry the same bootnode entry.
 
-- [ ] `OP-001` Write operator quickstart guide from zero to running miner and validator
+- [x] `OP-001` Write operator quickstart guide from zero to running miner and validator
   - Spec: `specs/040226-07-operator-onboarding.md`
   - Why now: No quickstart exists. Existing playbook (operator-network.md) assumes familiarity with the system. External operators need a zero-to-running guide.
   - Codebase evidence:
@@ -586,6 +586,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `grep -q 'myosu-keys' docs/operator-guide/quickstart.md`
   - Dependencies: `DN-001`
   - Completion signal: Quickstart guide exists and every command in it is valid against the current codebase
+  - Implementation notes:
+    - Added `docs/operator-guide/quickstart.md` as the zero-to-running operator path and linked it from the root `README.md` so the operator surface is discoverable from the top-level entrypoints.
+    - The guide is built on the existing `myosu-keys print-bootstrap` output and the generated `operator-bundle/start-miner.sh` / `start-validator.sh` wrappers instead of inventing a parallel operator workflow.
+    - The quickstart now calls out two operational truths that were easy to miss in the older playbook: pass the second `config-dir` argument to `prepare_operator_network_bundle.sh` if you want the bundle to reuse an existing keystore, and treat the current validator binary as a bounded bootstrap/scoring command rather than a long-running daemon.
 
 - [ ] `OP-002` Write architecture overview document for non-developers
   - Spec: `specs/040226-07-operator-onboarding.md`
