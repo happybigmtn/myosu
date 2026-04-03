@@ -15,6 +15,8 @@ Current top-level entrypoints:
 - [SPEC.md](SPEC.md) for durable repo decisions
 - [INVARIANTS.md](INVARIANTS.md) for non-negotiable constraints
 - [SECURITY.md](SECURITY.md) for vulnerability disclosure and response guidance
+- [CHANGELOG.md](CHANGELOG.md) for operator-facing release history and the
+  current `0.1.0` baseline
 - [docs/operator-guide/quickstart.md](docs/operator-guide/quickstart.md) for
   the zero-to-running operator path using the current key, bundle, miner, and
   validator surfaces
