@@ -17,6 +17,8 @@ Use this playbook when you need to:
 
 Use [stage0-local-loop.md](stage0-local-loop.md) when the goal is still the
 smallest honest end-to-end proof. That remains the preferred full-loop surface.
+Use [../operator-guide/troubleshooting.md](../operator-guide/troubleshooting.md)
+when the happy-path commands below do not reach their expected success lines.
 
 ## Current Truth
 

@@ -614,7 +614,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - Added `docs/operator-guide/architecture.md` as a stage-0 operator mental model that explains the current chain, miner, validator, gameplay, and key surfaces in plain language rather than protocol-engineer terms.
     - Wired the new guide into `docs/operator-guide/quickstart.md` and `README.md` so operators can discover it from the existing zero-to-running path instead of hunting through doctrine files.
 
-- [ ] `OP-003` Write troubleshooting guide for top 10 operator failure modes
+- [x] `OP-003` Write troubleshooting guide for top 10 operator failure modes
   - Spec: `specs/040226-07-operator-onboarding.md`
   - Why now: No troubleshooting guide exists. Operators encountering failures have no self-service resolution path.
   - Codebase evidence:
@@ -633,6 +633,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `test -f docs/operator-guide/troubleshooting.md`
   - Dependencies: `OP-001`
   - Completion signal: Troubleshooting guide covers ≥10 failure modes with symptom/cause/resolution for each
+  - Implementation notes:
+    - Added `docs/operator-guide/troubleshooting.md` with 12 stage-0 operator failure modes grounded in the real `myosu-keys`, `myosu-miner`, `myosu-validator`, bundle, and local-devnet surfaces instead of generic setup advice.
+    - Cross-linked the troubleshooting guide from `docs/operator-guide/quickstart.md` and `docs/execution-playbooks/operator-network.md` so operators can move from the happy path to the debug path without leaving the current operator docs.
+    - Captured one adjacent operational truth in `AGENTS.md`: miner and validator `--help` invocations currently print inherited compile warnings before the actual Clap usage text, so future validation should judge those checks by exit status plus the trailing usage block.
 
 - [ ] `RG-001` Add CHANGELOG.md with initial release entry and maintenance process
   - Spec: `specs/040226-08-release-governance.md`
