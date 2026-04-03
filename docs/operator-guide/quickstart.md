@@ -237,6 +237,8 @@ That path should emit:
 
 Use the deeper docs when you need more than the zero-to-running path:
 
+- [`architecture.md`](./architecture.md) for the operator-facing explanation of
+  how chain, miner, validator, gameplay, and keys fit together
 - [`operator-network.md`](../execution-playbooks/operator-network.md) for named
   network packaging, bundle details, bootnode overrides, and extended key ops
 - [`stage0-local-loop.md`](../execution-playbooks/stage0-local-loop.md) for the

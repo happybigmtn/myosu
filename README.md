@@ -18,6 +18,9 @@ Current top-level entrypoints:
 - [docs/operator-guide/quickstart.md](docs/operator-guide/quickstart.md) for
   the zero-to-running operator path using the current key, bundle, miner, and
   validator surfaces
+- [docs/operator-guide/architecture.md](docs/operator-guide/architecture.md) for
+  the operator-facing mental model of how chain, miner, validator, gameplay,
+  and keys fit together
 - [genesis/plans/001-master-plan.md](genesis/plans/001-master-plan.md) for the
   active plan stack
 - [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml)

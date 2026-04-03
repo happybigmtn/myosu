@@ -591,7 +591,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - The guide is built on the existing `myosu-keys print-bootstrap` output and the generated `operator-bundle/start-miner.sh` / `start-validator.sh` wrappers instead of inventing a parallel operator workflow.
     - The quickstart now calls out two operational truths that were easy to miss in the older playbook: pass the second `config-dir` argument to `prepare_operator_network_bundle.sh` if you want the bundle to reuse an existing keystore, and treat the current validator binary as a bounded bootstrap/scoring command rather than a long-running daemon.
 
-- [ ] `OP-002` Write architecture overview document for non-developers
+- [x] `OP-002` Write architecture overview document for non-developers
   - Spec: `specs/040226-07-operator-onboarding.md`
   - Why now: No architecture overview accessible to non-developers exists. README.md is developer-oriented. Operators need to understand component interactions.
   - Codebase evidence:
@@ -610,6 +610,9 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `test -f docs/operator-guide/architecture.md`
   - Dependencies: `OP-001`
   - Completion signal: Architecture overview exists and is understandable by someone with no Rust or blockchain expertise
+  - Implementation notes:
+    - Added `docs/operator-guide/architecture.md` as a stage-0 operator mental model that explains the current chain, miner, validator, gameplay, and key surfaces in plain language rather than protocol-engineer terms.
+    - Wired the new guide into `docs/operator-guide/quickstart.md` and `README.md` so operators can discover it from the existing zero-to-running path instead of hunting through doctrine files.
 
 - [ ] `OP-003` Write troubleshooting guide for top 10 operator failure modes
   - Spec: `specs/040226-07-operator-onboarding.md`
