@@ -134,6 +134,8 @@ Out of scope:
 
 ## A. Solver Integration
 
+## Acceptance Criteria
+
 ### AC-PE-01: Poker Solver Wrapper
 
 - Where: `crates/myosu-games-poker/src/solver.rs (new)`, `Cargo.toml (new)`

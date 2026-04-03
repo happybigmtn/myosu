@@ -102,6 +102,8 @@ Error messages must:
 
 ## Scope
 
+## Acceptance Criteria
+
 ### AC-SDK-01: SDK Crate (`myosu-sdk`)
 
 - Where: `crates/myosu-sdk/ (new)`

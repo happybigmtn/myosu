@@ -63,6 +63,8 @@ Out of scope:
 
 ---
 
+## Acceptance Criteria
+
 ### AC-KM-01: Mnemonic Generation and Key Derivation
 
 - Where: `crates/myosu-keys/src/lib.rs (new crate)`

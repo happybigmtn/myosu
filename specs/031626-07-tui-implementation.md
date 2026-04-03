@@ -162,6 +162,8 @@ Primary loop:
 
 ## A. Core Trait
 
+## Acceptance Criteria
+
 ### AC-TU-01: GameRenderer Trait
 
 - Where: `crates/myosu-tui/src/renderer.rs (new)`

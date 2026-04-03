@@ -77,6 +77,8 @@ Out of scope:
 
 ---
 
+## Acceptance Criteria
+
 ### AC-PV-01: NLHE 6-max Engine
 
 - Where: `crates/myosu-games-poker/src/sixmax.rs (new)`

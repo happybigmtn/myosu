@@ -57,6 +57,8 @@ Out of scope:
 
 ---
 
+## Acceptance Criteria
+
 ### AC-LI-01: Devnet Orchestration
 
 - Where: future operator packaging surface (for example `ops/devnet/`), with

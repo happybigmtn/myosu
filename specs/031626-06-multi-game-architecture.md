@@ -117,6 +117,8 @@ Out of scope:
 
 ---
 
+## Acceptance Criteria
+
 ### AC-MG-01: Liar's Dice Game Engine
 
 - Where: `crates/myosu-games-liars-dice/`

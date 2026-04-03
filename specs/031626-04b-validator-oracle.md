@@ -116,6 +116,8 @@ Out of scope:
 
 ---
 
+## Acceptance Criteria
+
 ### AC-VO-01: CLI and Chain Registration
 
 - Where: `crates/myosu-validator/src/main.rs`, `crates/myosu-validator/src/chain.rs`

@@ -155,6 +155,8 @@ Out of scope:
 
 ## A. Core Traits
 
+## Acceptance Criteria
+
 ### AC-GT-01: Re-export and Extend Robopoker CFR Traits
 
 - Where: `crates/myosu-games/src/traits.rs (new)`, `crates/myosu-games/Cargo.toml (extend)`

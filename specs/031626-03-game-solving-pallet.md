@@ -195,6 +195,8 @@ Failure loop:
 
 ## A. Pallet Foundation
 
+## Acceptance Criteria
+
 ### AC-GS-01: Pallet Scaffold with Config and Storage
 
 - Where: `crates/myosu-chain/pallets/game-solver/src/lib.rs (new)`

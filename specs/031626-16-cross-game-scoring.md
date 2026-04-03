@@ -147,6 +147,8 @@ descriptor handles display formatting.
 
 ## Scope
 
+## Acceptance Criteria
+
 ### AC-CS-01: Metric Registration in GameRegistry
 
 - Where: `crates/myosu-games/src/registry.rs (extend)`

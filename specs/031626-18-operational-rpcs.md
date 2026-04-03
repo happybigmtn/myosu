@@ -46,6 +46,8 @@ operational screens described in `DESIGN.md`.
 
 ## Scope
 
+## Acceptance Criteria
+
 ### AC-OR-01: Subnet Field RPC
 
 - Where: `crates/myosu-chain/node/src/rpc.rs` plus

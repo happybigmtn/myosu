@@ -238,6 +238,14 @@ position-indexed abstraction, NOT the n-player trait. Each position's
 decision is modeled as a 2-player game (hero vs rest-of-table). This is
 standard in poker solvers and avoids the CCE convergence limitations.
 
+## Acceptance Criteria
+
+- The existing 2-player `CfrGame` path remains the default solver contract for current stage-0 work and for variants that can stay position-indexed or otherwise 2-player modeled.
+- Shared-utility partnership and landlord-style games are introduced through adapter layers that preserve hidden information rather than collapsing all teammate cards into a perfect-information team state.
+- True free-for-all n-player games use an additive `NPlayerGame` and External Sampling MCCFR path instead of a breaking rewrite of the 2-player trait system.
+- Validator scoring, miner training, and `GameRegistry` dispatch select the correct exploitability and solver path by game type and player count without changing TUI rendering contracts.
+- NLHE 6-max stays on the position-indexed 2-player modeling path unless a later spec explicitly replaces that recommendation.
+
 ## Implementation timeline
 
 | Phase | Games | Trait | Solver |

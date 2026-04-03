@@ -105,6 +105,8 @@ keys ([n] next, [q] quit, [r] reveal after showdown).
 
 ## Scope
 
+## Acceptance Criteria
+
 ### AC-SP-01: Local Spectator Relay
 
 - Where: future gameplay spectator module, likely adjacent to

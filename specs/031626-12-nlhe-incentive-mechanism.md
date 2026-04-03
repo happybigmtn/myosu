@@ -514,6 +514,14 @@ trust requirement on validators for provenance reporting.
 
 ---
 
+## Acceptance Criteria
+
+- Emission distribution remains GS-06-compatible while adding only the three bounded modifiers defined here: on-chain strategy provenance, logarithmic uptime bonus, and manual subnet compute weights.
+- Provenance records are written deterministically on-chain from prior and current exploitability scores rather than trusted validator-reported lineage metadata.
+- Uptime rewards sustained participation with a bounded logarithmic multiplier and resets cleanly when a miner goes offline, deregisters, or stops scoring.
+- Subnet compute weights scale redistributive emission by declared game complexity without changing total minted `BlockEmission`.
+- The milestone verification table and scenario matrix prove anti-sandbagging, uptime reset, compute-weight allocation, and INV-003 determinism for the combined formula.
+
 ## Decision Log
 
 - 2026-03-17: Strategy provenance as linear chain, not full DAG — miners

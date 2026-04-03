@@ -131,6 +131,8 @@ Out of scope:
 
 ---
 
+## Acceptance Criteria
+
 ### AC-AP-01: Clustering Binary
 
 - Where: `crates/myosu-cluster/src/main.rs (new)`

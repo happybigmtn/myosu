@@ -97,6 +97,8 @@ Out of scope:
 
 ---
 
+## Acceptance Criteria
+
 ### AC-GP-01: Best Miner Discovery
 
 - Where: `crates/myosu-play/src/discovery.rs`

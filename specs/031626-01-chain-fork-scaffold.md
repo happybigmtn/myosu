@@ -176,6 +176,8 @@ Failure loop:
 
 ## A. Runtime Stripping
 
+## Acceptance Criteria
+
 ### AC-CF-01: Strip AI/EVM Pallets from Runtime
 
 - Where: `crates/myosu-chain/runtime/src/lib.rs (new, from subtensor)`

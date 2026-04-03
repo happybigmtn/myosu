@@ -67,7 +67,7 @@ Out of scope:
 5. Which parts of coordination belong in gameplay transport versus external
    orchestration tooling?
 
-## Acceptance Condition
+## Acceptance Criteria
 
 This spec slot is considered normalized when:
 

@@ -117,6 +117,8 @@ Out of scope:
 
 ---
 
+## Acceptance Criteria
+
 ### AC-MN-01: CLI and Chain Registration
 
 - Where: `crates/myosu-miner/src/main.rs`, `crates/myosu-miner/src/chain.rs`
