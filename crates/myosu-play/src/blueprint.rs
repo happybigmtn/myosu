@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use myosu_games::{CfrGame, CfrInfo};
+use myosu_games_kuhn::{KuhnRenderer, KuhnSnapshot};
 use myosu_games_liars_dice::{
     LiarsDiceClaim, LiarsDiceGame, LiarsDiceRenderer, LiarsDiceSnapshot, LiarsDiceSolver,
     recommended_edge as recommended_liars_dice_edge,
@@ -16,6 +17,7 @@ const LIARS_DICE_SOLVER_TREES: usize = 1 << 10;
 
 pub(crate) enum AdviceSurface {
     Poker { renderer: Arc<NlheRenderer> },
+    Kuhn { renderer: Arc<KuhnRenderer> },
     LiarsDice { renderer: Arc<LiarsDiceRenderer> },
 }
 
@@ -23,6 +25,7 @@ impl AdviceSurface {
     pub(crate) fn renderer(&self) -> &dyn GameRenderer {
         match self {
             Self::Poker { renderer } => renderer.as_ref(),
+            Self::Kuhn { renderer } => renderer.as_ref(),
             Self::LiarsDice { renderer } => renderer.as_ref(),
         }
     }
@@ -30,6 +33,7 @@ impl AdviceSurface {
     pub(crate) fn poker_renderer(&self) -> Option<&NlheRenderer> {
         match self {
             Self::Poker { renderer } => Some(renderer.as_ref()),
+            Self::Kuhn { .. } => None,
             Self::LiarsDice { .. } => None,
         }
     }
@@ -37,6 +41,7 @@ impl AdviceSurface {
     pub(crate) fn poker_renderer_arc(&self) -> Option<Arc<NlheRenderer>> {
         match self {
             Self::Poker { renderer } => Some(renderer.clone()),
+            Self::Kuhn { .. } => None,
             Self::LiarsDice { .. } => None,
         }
     }
@@ -106,7 +111,7 @@ impl AdviceSelection {
     pub(crate) fn startup_messages(&self) -> Vec<String> {
         match self.startup_state() {
             AdviceStartupState::Success => match self.source {
-                "demo" => vec!["Loaded the built-in Liar's Dice demo surface.".to_string()],
+                "demo" => vec![format!("Loaded {}.", self.detail)],
                 _ => vec![format!("Loaded local advice artifacts from {}.", self.origin)],
             },
             AdviceStartupState::Empty => vec![
@@ -140,6 +145,7 @@ impl AdviceSelection {
 pub(crate) fn demo_renderer(game: GameSelection, args: AdviceArgs) -> io::Result<AdviceSelection> {
     match game {
         GameSelection::Poker => poker_demo_renderer(args),
+        GameSelection::Kuhn => kuhn_demo_renderer(args),
         GameSelection::LiarsDice => liars_dice_demo_renderer(args),
     }
 }
@@ -305,6 +311,26 @@ fn liars_dice_demo_renderer(args: AdviceArgs) -> io::Result<AdviceSelection> {
         (None, Some(_)) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "--game liars-dice does not use --encoder-dir",
+        )),
+    }
+}
+
+fn kuhn_demo_renderer(args: AdviceArgs) -> io::Result<AdviceSelection> {
+    match (args.checkpoint, args.encoder_dir) {
+        (None, None) => Ok(AdviceSelection {
+            game: GameSelection::Kuhn,
+            surface: AdviceSurface::Kuhn {
+                renderer: Arc::new(KuhnRenderer::new(Some(KuhnSnapshot::demo()))),
+            },
+            source: "demo",
+            selection: "builtin",
+            origin: "builtin",
+            reason: "builtin",
+            detail: "built-in kuhn poker demo surface".to_string(),
+        }),
+        (Some(_), Some(_)) | (Some(_), None) | (None, Some(_)) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "--game kuhn does not use --checkpoint/--encoder-dir",
         )),
     }
 }
@@ -636,5 +662,53 @@ mod tests {
 
         assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
         assert!(error.to_string().contains("does not use --encoder-dir"));
+    }
+
+    #[test]
+    fn kuhn_demo_renderer_uses_builtin_surface_without_checkpoint() {
+        let selection = demo_renderer(
+            GameSelection::Kuhn,
+            AdviceArgs {
+                checkpoint: None,
+                encoder_dir: None,
+            },
+        )
+        .expect("kuhn demo should build");
+
+        assert_eq!(selection.game, GameSelection::Kuhn);
+        assert_eq!(selection.source, "demo");
+        assert_eq!(selection.startup_state(), AdviceStartupState::Success);
+        assert_eq!(
+            selection.startup_messages(),
+            vec!["Loaded built-in kuhn poker demo surface.".to_string()]
+        );
+        assert!(
+            selection
+                .surface
+                .renderer()
+                .pipe_output()
+                .contains("game=kuhn_poker")
+        );
+    }
+
+    #[test]
+    fn kuhn_demo_renderer_rejects_checkpoint_flags() {
+        let error = match demo_renderer(
+            GameSelection::Kuhn,
+            AdviceArgs {
+                checkpoint: Some(PathBuf::from("/tmp/checkpoint.bin")),
+                encoder_dir: None,
+            },
+        ) {
+            Ok(_) => panic!("kuhn should reject checkpoint flags"),
+            Err(error) => error,
+        };
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert!(
+            error
+                .to_string()
+                .contains("does not use --checkpoint/--encoder-dir")
+        );
     }
 }

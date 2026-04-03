@@ -51,6 +51,7 @@ jobs:
         run: |
           cargo check \
             -p myosu-games \
+            -p myosu-games-kuhn \
             -p myosu-games-poker \
             -p myosu-games-liars-dice \
             -p myosu-tui \
@@ -62,14 +63,17 @@ jobs:
       - name: Focused property, shell-state, and smoke proofs
         run: |
           cargo test -p myosu-games --quiet serialization_roundtrip
+          cargo test -p myosu-games-kuhn --quiet
           cargo test -p myosu-tui shell_state
           cargo test -p myosu-play smoke_report_proves_preflop_to_flop_progression --quiet
           cargo run -p myosu-play --quiet -- --smoke-test
+          cargo run -p myosu-play --quiet -- --game kuhn --smoke-test
 
       - name: Full active-crate test suite
         run: |
           cargo test --quiet \
             -p myosu-games \
+            -p myosu-games-kuhn \
             -p myosu-games-poker \
             -p myosu-games-liars-dice \
             -p myosu-tui \
@@ -82,6 +86,7 @@ jobs:
         run: |
           cargo clippy -- -D warnings \
             -p myosu-games \
+            -p myosu-games-kuhn \
             -p myosu-games-poker \
             -p myosu-games-liars-dice \
             -p myosu-tui \
@@ -95,6 +100,7 @@ jobs:
           git ls-files \
             'crates/myosu-tui/**/*.rs' \
             'crates/myosu-games/**/*.rs' \
+            'crates/myosu-games-kuhn/**/*.rs' \
             'crates/myosu-games-poker/**/*.rs' \
             'crates/myosu-games-liars-dice/**/*.rs' \
             'crates/myosu-play/**/*.rs' \

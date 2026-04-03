@@ -7,7 +7,22 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub(crate) enum GameSelection {
     Poker,
+    Kuhn,
     LiarsDice,
+}
+
+impl GameSelection {
+    const fn supports_miner_discovery(self) -> bool {
+        matches!(self, Self::Poker)
+    }
+
+    const fn cli_label(self) -> &'static str {
+        match self {
+            Self::Poker => "poker",
+            Self::Kuhn => "kuhn",
+            Self::LiarsDice => "liars-dice",
+        }
+    }
 }
 
 /// CLI entrypoint for the Myosu play surface.
@@ -83,10 +98,13 @@ pub(crate) struct DiscoveryRequest {
 
 impl DiscoveryRequest {
     pub(crate) fn from_cli(cli: &Cli) -> io::Result<Self> {
-        if cli.game == GameSelection::LiarsDice && cli.chain.is_some() {
+        if !cli.game.supports_miner_discovery() && cli.chain.is_some() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "--game liars-dice does not support --chain/--subnet miner discovery yet",
+                format!(
+                    "--game {} does not support --chain/--subnet miner discovery yet",
+                    cli.game.cli_label()
+                ),
             ));
         }
         if cli.chain.is_some() != cli.subnet.is_some() {
@@ -132,6 +150,13 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_kuhn_selection() {
+        let cli = Cli::parse_from(["myosu-play", "--game", "kuhn", "pipe"]);
+
+        assert_eq!(cli.game, GameSelection::Kuhn);
+    }
+
+    #[test]
     fn discovery_rejects_chain_flags_for_liars_dice() {
         let cli = Cli::parse_from([
             "myosu-play",
@@ -150,6 +175,28 @@ mod tests {
             error
                 .to_string()
                 .contains("does not support --chain/--subnet")
+        );
+    }
+
+    #[test]
+    fn discovery_rejects_chain_flags_for_kuhn() {
+        let cli = Cli::parse_from([
+            "myosu-play",
+            "--game",
+            "kuhn",
+            "--chain",
+            "ws://127.0.0.1:9944",
+            "--subnet",
+            "7",
+            "pipe",
+        ]);
+
+        let error = crate::cli::DiscoveryRequest::from_cli(&cli)
+            .expect_err("kuhn should reject discovery flags");
+        assert!(
+            error
+                .to_string()
+                .contains("--game kuhn does not support --chain/--subnet")
         );
     }
 }

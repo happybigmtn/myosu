@@ -8,6 +8,7 @@ use blueprint::{AdviceSelection, demo_renderer};
 use clap::Parser;
 use discovery::DiscoveredMiner;
 use live::LiveMinerStrategy;
+use myosu_games_kuhn::{KuhnRenderer, KuhnSnapshot};
 use myosu_games_liars_dice::{LiarsDiceRenderer, LiarsDiceSnapshot};
 use myosu_games_poker::NlheRenderer;
 use myosu_tui::events::UpdateEvent;
@@ -133,15 +134,34 @@ fn smoke_report(
     require_discovery: bool,
     require_live_query: bool,
 ) -> io::Result<String> {
-    if context.advice.game == GameSelection::LiarsDice {
-        return liars_dice_smoke_report(
+    match context.advice.game {
+        GameSelection::Poker => poker_smoke_report(
             context,
             require_artifact,
             require_discovery,
             require_live_query,
-        );
+        ),
+        GameSelection::Kuhn => kuhn_smoke_report(
+            context,
+            require_artifact,
+            require_discovery,
+            require_live_query,
+        ),
+        GameSelection::LiarsDice => liars_dice_smoke_report(
+            context,
+            require_artifact,
+            require_discovery,
+            require_live_query,
+        ),
     }
+}
 
+fn poker_smoke_report(
+    context: &RenderContext,
+    require_artifact: bool,
+    require_discovery: bool,
+    require_live_query: bool,
+) -> io::Result<String> {
     ensure_artifact_selection(&context.advice, require_artifact)?;
     ensure_discovery_selection(&context.discovery, require_discovery)?;
     ensure_live_query_selection(&context.live_query, require_live_query)?;
@@ -197,6 +217,37 @@ fn smoke_report(
     report.push_str(&context.discovery.smoke_lines());
     report.push_str(&context.live_query.smoke_lines());
     Ok(report)
+}
+
+fn kuhn_smoke_report(
+    context: &RenderContext,
+    require_artifact: bool,
+    require_discovery: bool,
+    require_live_query: bool,
+) -> io::Result<String> {
+    ensure_artifact_selection(&context.advice, require_artifact)?;
+    ensure_discovery_selection(&context.discovery, require_discovery)?;
+    ensure_live_query_selection(&context.live_query, require_live_query)?;
+
+    let initial = context.advice.surface.renderer().pipe_output();
+    if !initial.contains("game=kuhn_poker") {
+        return Err(io::Error::other(format!(
+            "smoke expected kuhn poker state, got `{initial}`"
+        )));
+    }
+
+    let action = pipe_response(context.advice.surface.renderer(), "bet");
+    if action.line() != "ACTION bet" || !action.advances_state() {
+        return Err(io::Error::other(format!(
+            "smoke expected kuhn action after bet, got `{}`",
+            action.line()
+        )));
+    }
+
+    Ok(format!(
+        "SMOKE myosu-play ok\ngame=kuhn_poker\nadvice_source={}\nactions=ACTION bet\nfinal_state=static_demo\n",
+        context.advice.source,
+    ))
 }
 
 fn liars_dice_smoke_report(
@@ -305,7 +356,7 @@ async fn run_train(
         }
     };
     shell = Shell::with_screen(startup_screen(&context.advice));
-    shell.log("Type 1 to enter the NLHE demo hand.".to_string());
+    shell.log("Type 1 to enter the demo session.".to_string());
     shell.log("Use /quit to leave the table.".to_string());
     shell.set_status(context.startup_state(), Some(context.startup_detail()));
     for message in context.startup_messages() {
@@ -336,6 +387,7 @@ async fn run_train(
 fn loading_renderer(game: GameSelection) -> Box<dyn GameRenderer> {
     match game {
         GameSelection::Poker => Box::new(NlheRenderer::demo()),
+        GameSelection::Kuhn => Box::new(KuhnRenderer::new(Some(KuhnSnapshot::demo()))),
         GameSelection::LiarsDice => {
             Box::new(LiarsDiceRenderer::new(Some(LiarsDiceSnapshot::demo())))
         }
@@ -1140,6 +1192,21 @@ mod tests {
         }
     }
 
+    fn not_requested_kuhn_context() -> RenderContext {
+        RenderContext {
+            advice: demo_renderer(
+                GameSelection::Kuhn,
+                AdviceArgs {
+                    checkpoint: None,
+                    encoder_dir: None,
+                },
+            )
+            .expect("kuhn demo should build"),
+            discovery: DiscoverySelection::not_requested(),
+            live_query: LiveQuerySelection::not_requested(),
+        }
+    }
+
     #[test]
     fn pipe_response_accepts_known_actions() {
         let fold_renderer =
@@ -1242,6 +1309,18 @@ mod tests {
         assert!(report.contains("SMOKE myosu-play ok"));
         assert!(report.contains("game=liars_dice"));
         assert!(report.contains("actions=ACTION bid 1x4"));
+        assert!(report.contains("final_state=static_demo"));
+    }
+
+    #[test]
+    fn kuhn_smoke_report_proves_local_surface_progression() {
+        let context = not_requested_kuhn_context();
+        let report =
+            smoke_report(&context, false, false, false).expect("smoke report should succeed");
+
+        assert!(report.contains("SMOKE myosu-play ok"));
+        assert!(report.contains("game=kuhn_poker"));
+        assert!(report.contains("actions=ACTION bet"));
         assert!(report.contains("final_state=static_demo"));
     }
 
@@ -1661,6 +1740,11 @@ mod tests {
             loading_renderer(GameSelection::LiarsDice)
                 .pipe_output()
                 .contains("game=liars_dice")
+        );
+        assert!(
+            loading_renderer(GameSelection::Kuhn)
+                .pipe_output()
+                .contains("game=kuhn_poker")
         );
     }
 

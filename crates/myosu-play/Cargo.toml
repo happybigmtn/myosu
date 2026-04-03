@@ -13,6 +13,7 @@ path = "src/main.rs"
 clap = { workspace = true, features = ["derive"] }
 myosu-chain-client.workspace = true
 myosu-games = { path = "../myosu-games" }
+myosu-games-kuhn = { path = "../myosu-games-kuhn" }
 myosu-games-liars-dice = { path = "../myosu-games-liars-dice" }
 myosu-games-poker = { path = "../myosu-games-poker" }
 myosu-tui = { path = "../myosu-tui" }

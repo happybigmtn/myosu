@@ -774,7 +774,7 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `KuhnRenderer` follows the live `GameRenderer` contract already used by poker and Liar's Dice: it renders a four-line state panel, exposes shell completions and shorthand input parsing, and emits plain-text `STATE ...` pipe output for active and terminal snapshots.
     - The spec prose mentions versioned magic bytes, but the live additive game pattern is bounded bincode without an outer magic/version envelope; Kuhn now matches the existing poker and Liar's Dice wire transport shape with round-trip, truncation, and trailing-byte tests.
 
-- [ ] `G3-003` Register Kuhn poker in play binary and add CI smoke test gate
+- [x] `G3-003` Register Kuhn poker in play binary and add CI smoke test gate
   - Spec: `specs/040226-09-third-game-extensibility-proof.md`
   - Why now: Third game must be selectable from myosu-play and gated by CI to complete the extensibility proof.
   - Codebase evidence:
@@ -797,6 +797,10 @@ Prioritized implementation queue derived from the 11 generated specs and current
     - `cargo test -p myosu-games-kuhn --quiet`
   - Dependencies: `G3-002`
   - Completion signal: `myosu-play --game kuhn --smoke-test` passes and CI gates the new crate
+  - Implementation notes:
+    - `myosu-play` now depends on `myosu-games-kuhn`, exposes `--game kuhn` through the shared `GameSelection` CLI enum, and resolves that selection to a built-in `KuhnRenderer` demo surface through `blueprint.rs`.
+    - Smoke dispatch is now explicit per game: poker keeps the live artifact/discovery path, while Kuhn and Liar's Dice use deterministic built-in demo proofs that do not pretend to support chain-visible miner discovery.
+    - The active-crates CI job now treats Kuhn as a first-class crate by including it in `cargo check`, `cargo test`, `cargo clippy`, and `rustfmt`, and by running `cargo run -p myosu-play --quiet -- --game kuhn --smoke-test` alongside the existing default smoke proof.
 
 - [ ] `PY-003` Configure ruff linting for Python research stack and fix lint errors
   - Spec: `specs/040226-10-python-research-quality-gates.md`
