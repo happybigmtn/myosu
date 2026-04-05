@@ -15,21 +15,6 @@ Specs: gen-20260405-145446/specs/050426-*.md
 
 ### Cluster 4: Dead Code and Storage Reduction (dependency: P-001)
 
-- [ ] `P-006` Research: Audit stage-0 extrinsic surface and storage items
-
-  Spec: `specs/050426-chain-runtime-pallet.md`
-  Why now: The spec documents 25 stage-0 extrinsics and 193 storage items, noting both may be reducible. The spec also flags that target storage is ~80 items (per Plan 005) but no formal audit exists. Before removing anything, the reduction candidates must be identified and their removal safety confirmed.
-  Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/macros/dispatches.rs` (extrinsic definitions), `crates/myosu-chain/pallets/game-solver/src/macros/config.rs` (storage items), runtime `lib.rs` (`construct_runtime!` at line 1233).
-  Owns: A decision document (can be a code comment block or markdown file in `gen-20260405-145446/`) listing each extrinsic and storage item with keep/remove/defer verdict.
-  Integration touchpoints: Runtime `lib.rs`, game-solver pallet dispatch surface, any RPC that reads storage.
-  Scope boundary: Research and document only. Do NOT remove any extrinsics or storage items in this task.
-  Acceptance criteria: (1) Every stage-0 extrinsic has a keep/remove/defer verdict with rationale. (2) Storage items are categorized as active/dead/deferred with counts. (3) A concrete removal plan is proposed for items marked "remove."
-  Verification: Review-based. The document is verifiable by checking each verdict against `cargo test` and `grep` for callsites.
-  Required tests: None (research task).
-  Dependencies: P-001 (clean trunk).
-  Estimated scope: M
-  Completion signal: Decision document exists with verdicts for all 25 extrinsics and a storage item census.
-
 - [ ] `P-007` Remove dense epoch path or add parity test
 
   Spec: `specs/050426-chain-runtime-pallet.md`
@@ -244,6 +229,7 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Spec: `specs/050426-chain-runtime-pallet.md`
   Why now: Follows the audit in P-006. Each unnecessary extrinsic is attack surface.
   Codebase evidence: Determined by P-006 audit.
+  Audit note: `gen-20260405-145446/p-006-stage0-surface-audit.md` found that the live default-build `SubtensorModule` surface is already the 8-call set enforced by `stage_0_flow.rs`, and it did not mark any live default-build game-solver extrinsic as `remove`. Re-scope or delete this task before execution unless a later slice re-expands the default-build call surface.
   Owns: Game-solver pallet dispatch surface, runtime integration.
   Integration touchpoints: RPC clients, operator tooling (if any tool calls removed extrinsics), CI tests.
   Scope boundary: Remove only extrinsics marked "remove" in P-006 audit. Feature-gate if removal is risky.
