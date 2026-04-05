@@ -16,7 +16,7 @@ finality and emission agreement proofs required for stage-0 exit.
   period is 512 blocks.
 - **Chain specs**: Four variants exist --
   `localnet` (single or multi-authority dev seeds Alice/Bob/Charlie),
-  `devnet` (three named authorities derived from `//myosu//devnet//authority-{1,2,3}`),
+  `devnet` (four named authorities derived from `//myosu//devnet//authority-{1,2,3,4}`),
   `testnet` (three-authority Alice/Bob/Charlie with separate chain type),
   `finney` (production placeholder).
   Source: `crates/myosu-chain/node/src/chain_spec/`.
@@ -38,7 +38,7 @@ finality and emission agreement proofs required for stage-0 exit.
 
 - **GRANDPA finality across multiple nodes**: The two-node sync test checks
   best block agreement but does not verify finalized block advancement.
-  GRANDPA finality has not been tested with 3+ authorities.
+  GRANDPA finality has not been tested with 4 authorities.
 - **Node restart resilience**: No test stops a node and verifies it catches up
   without forking the chain.
 - **Cross-node emission agreement**: Emission distribution has been tested in
@@ -46,8 +46,9 @@ finality and emission agreement proofs required for stage-0 exit.
   state across independent node processes.
 - **Network partition tolerance**: No test simulates network splits or delayed
   message delivery between validators.
-- **Three-node automated devnet**: The devnet chain spec defines three authority
-  keys, but no test script starts all three as separate processes.
+- **Four-authority automated devnet**: The devnet chain spec should define four
+  authority keys so the proof can survive one authority loss, but no test
+  script currently starts all four as separate processes.
 
 ## Architecture
 
@@ -58,10 +59,13 @@ finality and emission agreement proofs required for stage-0 exit.
    duration is configured in the runtime. Block production continues as long
    as at least one authority is online.
 
-2. **Finality (GRANDPA)**: Byzantine fault tolerant finality gadget. Requires
-   agreement from > 2/3 of weighted authorities to finalize a block. With
-   three equal-weight authorities, 2 of 3 must agree. Finalized blocks are
-   irreversible.
+2. **Finality (GRANDPA)**: Byzantine fault tolerant finality gadget. The
+   pinned `finality-grandpa` implementation computes the vote threshold as
+   `total_weight - floor((total_weight - 1) / 3)`. With three equal-weight
+   authorities the threshold is 3 of 3, so one-node-down tolerance is
+   impossible. With four equal-weight authorities the threshold is 3 of 4,
+   which is the minimum stage-0 configuration that can truthfully prove
+   one-node-down resilience. Finalized blocks are irreversible.
 
 3. **Chain selection (LongestChain)**: Fork choice rule selects the longest
    valid chain. GRANDPA finality prevents permanent forks by anchoring the
@@ -76,6 +80,7 @@ The devnet chain spec defines authorities as Aura + GRANDPA key pairs:
 | authority-1 | `//myosu//devnet//authority-1` (sr25519) | same URI (ed25519) |
 | authority-2 | `//myosu//devnet//authority-2` (sr25519) | same URI (ed25519) |
 | authority-3 | `//myosu//devnet//authority-3` (sr25519) | same URI (ed25519) |
+| authority-4 | `//myosu//devnet//authority-4` (sr25519) | same URI (ed25519) |
 
 Authority keys are injected at node startup via the `MYOSU_NODE_AUTHORITY_SURI`
 environment variable, which the node reads to populate its local keystore.
@@ -90,21 +95,21 @@ public bootstrap node list.
 
 ### Phase 1: Multi-node finality (Plans 006, 007)
 
-- Three authority nodes start on isolated ports, each with a distinct
-   authority key, all using `--chain devnet`.
-- All three nodes produce blocks and the finalized block number advances
-   on each node.
+- Four authority nodes start on isolated ports, each with a distinct
+  authority key, all using `--chain devnet`.
+- All four nodes produce blocks and the finalized block number advances
+  on each node.
 - Stopping one authority does not halt block production or finality
-   (2/3 threshold is met).
+  because the surviving 3 of 4 still meet GRANDPA threshold.
 - A restarted authority syncs to the current chain tip and resumes
-   participation in finality.
-- All three nodes agree on the finalized block hash at any given
-   finalized block number.
+  participation in finality.
+- All live nodes agree on the finalized block hash at any given
+  finalized block number.
 
 ### Phase 2: Cross-node emission agreement (Plan 008)
 
-- After multiple epoch transitions on the three-node devnet, all nodes
-   report identical emission distributions when queried via RPC.
+- After multiple epoch transitions on the four-authority devnet, all live
+  nodes report identical emission distributions when queried via RPC.
 - The accounting invariant (total emission equals sum of individual
    distributions) holds independently on each node.
 - Comparison tolerance for fixed-point values is zero (bit-identical).
@@ -127,8 +132,8 @@ bash tests/e2e/two_node_sync.sh
 ### Planned verification scripts
 
 ```bash
-# Three-node devnet finality (Plan 006)
-bash tests/e2e/three_node_devnet.sh
+# Four-authority devnet finality
+bash tests/e2e/four_node_finality.sh
 
 # Consensus resilience under node restart (Plan 007)
 bash tests/e2e/consensus_resilience.sh
@@ -144,8 +149,9 @@ established by `two_node_sync.sh`.
 ## Open Questions
 
 1. **GRANDPA with the opentensor fork**: The polkadot-sdk fork used by myosu
-   may carry patches that affect GRANDPA behavior. Does finality work correctly
-   with this fork, or are there known divergences from upstream?
+   may carry patches that affect GRANDPA behavior. After the threshold math
+   correction, the remaining question is whether a four-authority proof behaves
+   exactly as upstream GRANDPA would.
 
 2. **Fixed-point determinism across architectures**: `substrate_fixed` produces
    bit-identical results on the same architecture. If devnet nodes run on
@@ -153,8 +159,9 @@ established by `two_node_sync.sh`.
    Stage-0 is single-architecture, but this matters for future operator
    deployments.
 
-3. **Minimum authority count for meaningful proof**: Three authorities is the
-   minimum for a non-trivial GRANDPA threshold (2/3). Is three sufficient for
+3. **Minimum authority count for meaningful proof**: Four equal-weight
+   authorities is the minimum configuration that preserves one-node-down
+   tolerance under the pinned GRANDPA threshold math. Is four sufficient for
    the stage-0 exit gate, or should the proof target a higher count to surface
    timing-dependent bugs?
 

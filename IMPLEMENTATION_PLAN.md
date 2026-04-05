@@ -35,34 +35,18 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
 
 ### Cluster 7: Multi-Node Devnet Foundation (dependency: P-003, P-005)
 
-- [ ] `P-011` Three-node GRANDPA finality proof
-
-  Spec: `specs/050426-network-consensus.md`
-  Why now: Two-node sync is proven (and wired into CI via P-005). Three-node GRANDPA finality is the next consensus milestone. The spec explicitly lists this as "not proven (design-phase)" and gates Phase 1 completion on it.
-  Codebase evidence: `tests/e2e/two_node_sync.sh` (2-node). Chain specs in `crates/myosu-chain/node/` define `devnet` with 3 authorities. No 3-node E2E test exists.
-  Owns: New E2E script `tests/e2e/three_node_finality.sh` and CI wiring.
-  Integration touchpoints: Node binary, devnet chain spec (3 authorities), GRANDPA finality gadget, CI `integration-e2e` job.
-  Scope boundary: Prove finality with 3 nodes. Test one-node-down tolerance (2/3 still finalizes). Do not test network partitions or restart recovery (those are follow-on).
-  Acceptance criteria: (1) 3 nodes start, produce blocks, and reach GRANDPA finality. (2) Stopping 1 node does not halt finality (2/3 quorum). (3) Script runs in CI.
-  Verification: `bash tests/e2e/three_node_finality.sh`
-  Required tests: The E2E script is the test. Should assert finalized block height increases after epoch transitions.
-  Dependencies: P-005 (two_node_sync in CI — proves the infrastructure works).
-  Blocker (2026-04-05): Live repros confirm this is a chain/runtime issue, not just a missing harness. Two ad hoc full-mesh 3-authority devnets with unique RPC/P2P/Prometheus ports and distinct `--node-key-file` identities for every authority reproduced the same stall on both the default `litep2p` backend and explicit `--network-backend libp2p`: all three authorities reached finalized block `#2`, then after terminating `authority-3` the surviving authorities kept importing blocks through `#9` while finalized height stayed frozen at `#2` on both nodes. The explicit `libp2p` repro also logged a GRANDPA prevote equivocation for `authority-2`. There is still no tracked `tests/e2e/three_node_finality.sh`; do not treat that missing script as absence of a repro.
-  Estimated scope: M
-  Completion signal: 3-node finality script passes in CI.
-
 - [ ] `P-012` Cross-node emission agreement test
 
   Spec: `specs/050426-emission-epoch-mechanism.md`
   Why now: The spec explicitly states cross-node emission agreement is "tested single-node only." Fixed-point determinism is assumed but not proven across nodes. This is the highest-risk multi-node property — if nodes disagree on emission, the chain forks.
   Codebase evidence: All epoch/coinbase tests run in single-node mock runtime. `substrate_fixed` types (I32F32, I64F64, U96F32) are deterministic per the spec but unverified across separate process instances.
-  Owns: New E2E test or extension of `three_node_finality.sh` that compares emission storage across nodes after epoch transitions.
+  Owns: New E2E test or extension of `four_node_finality.sh` that compares emission storage across nodes after epoch transitions.
   Integration touchpoints: RPC endpoints for reading storage, epoch mechanism, coinbase pipeline, node binary.
-  Scope boundary: Compare emission-related storage values across 3 nodes after N epochs. Assert bit-identical. Do not test under adversarial conditions.
-  Acceptance criteria: (1) After 3+ epoch transitions on a 3-node devnet, emission storage values (total issuance, per-subnet pending, stake maps) are identical across all nodes. (2) Test runs in CI.
-  Verification: E2E script that queries storage via RPC on all 3 nodes and diffs.
+  Scope boundary: Compare emission-related storage values across a 4-authority devnet after N epochs. Assert bit-identical. Do not test under adversarial conditions.
+  Acceptance criteria: (1) After 3+ epoch transitions on a 4-authority devnet, emission storage values (total issuance, per-subnet pending, stake maps) are identical across all live nodes. (2) Test runs in CI.
+  Verification: E2E script that queries storage via RPC on all live nodes and diffs.
   Required tests: The E2E script.
-  Dependencies: P-011 (3-node devnet running), P-002 (truncation drift quantified).
+  Dependencies: P-002 (truncation drift quantified).
   Estimated scope: M
   Completion signal: Cross-node emission agreement test passes in CI.
 
@@ -70,43 +54,7 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
 
 ### Checkpoint: Multi-node confidence
 
-After P-011 and P-012: 3-node finality is proven, cross-node emission agreement is verified. This satisfies the Phase 1 gate from the network-consensus spec. Re-evaluate whether Phase 2 (operator packaging) work should begin or whether restart resilience testing is needed first.
-
----
-
-- [ ] `NEM-001` Fix GRANDPA finality stalling on 3-node devnet after authority stop
-
-  Status (2026-04-05): Blocked. Live repro plus `finality-grandpa` threshold
-  math show a 3-authority equal-weight voter set needs 3 votes to finalize, so
-  two surviving authorities can keep importing best blocks but cannot satisfy
-  the requested 2-of-3 finality tolerance without changing authority count or
-  voting weights.
-
-  Spec: `WORKLIST.md:NET-FINALITY-001`  
-  Why now: 3-node GRANDPA finality is a stage-0 exit gate. The stalling behavior blocks multi-node production readiness. Operators cannot run production networks.  
-  Codebase evidence: `WORKLIST.md:NET-FINALITY-001` documents stall with repro steps. Node logs show `Backing off claiming new slot for block authorship: finality is lagging`.  
-  Owns: Chain spec, node service GRANDPA configuration, GRANDPA voter setup.  
-  Integration touchpoints: `myosu-chain` node binary, devnet chain spec, GRANDPA finality gadget.  
-  Scope boundary: Diagnose root cause (authority scheduling? voter set configuration?). Implement fix. Verify 3-node finality + 1-node-down tolerance.  
-  Required tests: E2E test proving 2/3 quorum continues finalizing after one authority stops.  
-  Dependencies: None (independent of other NEMs).  
-  Completion signal: `tests/e2e/three_node_finality.sh` passes in CI with finalized height increasing after authority stop and restart.
-
-- [ ] `NEM-002` Verify cross-node emission agreement across 3-node devnet
-
-  Status (2026-04-05): Blocked on `NEM-001`. This pass did not add a new
-  cross-node emission proof while the stage-0 multi-node finality contract is
-  still scoped around an unattainable 2-of-3 expectation.
-
-  Spec: `pallet-game-solver` emission mechanism  
-  Why now: INV-003 and INV-005 require that emission accounting is deterministic across nodes. Currently only proven single-node. If nodes disagree on emission, Yuma Consensus breaks.  
-  Codebase evidence: All epoch/coinbase tests run in single-node mock runtime. `pallet-game-solver/src/coinbase/run_coinbase.rs` uses U96F32 throughout.  
-  Owns: E2E test extension comparing TotalIssuance and emission storage values across 3 nodes.  
-  Integration touchpoints: RPC endpoints for reading storage, epoch mechanism, coinbase pipeline.  
-  Scope boundary: Query storage via RPC on all 3 nodes after N epoch transitions. Assert bit-identical values for TotalIssuance, PendingServerEmission, PendingValidatorEmission.  
-  Required tests: E2E script that queries storage on all 3 nodes and diffs.  
-  Dependencies: NEM-001 (3-node devnet must work reliably).  
-  Completion signal: Cross-node emission agreement test passes in CI with identical storage values across all nodes.
+After P-012: 4-authority finality is proven, cross-node emission agreement is verified. This satisfies the Phase 1 gate from the network-consensus spec. Re-evaluate whether Phase 2 (operator packaging) work should begin or whether restart resilience testing is needed first.
 
 
 ## Follow-On Work
@@ -124,7 +72,7 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Acceptance criteria: (1) Bundle produces a running miner+validator pair on a clean Ubuntu 22.04 (or equivalent) with no pre-existing Rust toolchain (or documents exact prerequisites). (2) Failures are filed as concrete fix tasks.
   Verification: Run bundle on fresh Docker image, verify miner and validator produce expected report output.
   Required tests: The bundle test procedure itself.
-  Dependencies: P-011 (multi-node devnet for realistic test).
+  Dependencies: the landed 4-authority devnet proof from `P-011`.
   Estimated scope: M
   Completion signal: Bundle test passes or failures are documented as fix tasks.
 
@@ -135,11 +83,11 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Codebase evidence: No restart test exists in `tests/e2e/`.
   Owns: New E2E script testing node restart and catch-up.
   Integration touchpoints: Node binary, GRANDPA, block import.
-  Scope boundary: Single node restart in a 3-node network. Verify it catches up to finalized head. Do not test simultaneous restart of all nodes.
+  Scope boundary: Single node restart in a 4-authority network. Verify it catches up to finalized head. Do not test simultaneous restart of all nodes.
   Acceptance criteria: (1) A restarted node catches up to the finalized head within a bounded time. (2) No fork occurs.
   Verification: E2E script.
   Required tests: The E2E script.
-  Dependencies: P-011 (3-node devnet).
+  Dependencies: the landed 4-authority devnet proof from `P-011`.
   Estimated scope: M
   Completion signal: Restart test passes in CI.
 

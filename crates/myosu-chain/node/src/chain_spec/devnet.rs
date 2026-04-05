@@ -16,10 +16,11 @@ use substrate_fixed::types::U64F64;
 use subtensor_runtime_common::{AlphaCurrency, NetUid, NetUidStorageIndex, TaoCurrency};
 
 const DEVNET_SUBNET_UID: u16 = 7;
-const DEVNET_AUTHORITY_URIS: [&str; 3] = [
+const DEVNET_AUTHORITY_URIS: [&str; 4] = [
     "//myosu//devnet//authority-1",
     "//myosu//devnet//authority-2",
     "//myosu//devnet//authority-3",
+    "//myosu//devnet//authority-4",
 ];
 const DEVNET_OPERATOR_URIS: [&str; 4] = [
     "//myosu//devnet//subnet-owner",

@@ -85,12 +85,13 @@ isolated subtensor glue:
 - `fix transaction pool tx replacement by banning them`
 - `sc-cli: support creating Runner more than once`
 
-This matters because the repo already has a live unresolved multi-node
-consensus problem. `P-011` and `WORKLIST.md` `NET-FINALITY-001` record that a
-3-authority `devnet` stalls GRANDPA finality at `#2` after one authority is
-stopped, even though best blocks keep importing on the remaining authorities.
-The fork-only patch set overlaps the exact consensus path currently under
-investigation.
+This matters because the repo recently had a misleading multi-node consensus
+story. The old `P-011` contract assumed a 3-authority equal-weight GRANDPA set
+could keep finalizing after one authority stopped, but the pinned
+`finality-grandpa` threshold math requires all 3 votes in that configuration.
+The fork-only patch set still overlaps the exact consensus path used by the
+now-landed 4-authority proof, so migration work should keep relying on real
+proofs instead of intuition about quorum sizes.
 
 ## Decision
 
@@ -140,8 +141,8 @@ fork-only behavior.
 - The repo now has a truthful answer to `F-008`: immediate migration is not the
   next stage-0 move.
 - Chain work can separate two questions that would otherwise get conflated:
-  "why is 3-node finality stalling?" and "what would break on an upstream
-  re-pin?"
+  "what authority count is needed for one-node-down GRANDPA tolerance?" and
+  "what would break on an upstream re-pin?"
 - Future migration work has a concrete starting point: classify the 21
   fork-only commits instead of re-auditing the whole SDK from scratch.
 
@@ -151,17 +152,19 @@ fork-only behavior.
   now.
 - The 43 upstream-only `stable2506` commits remain unapplied until a later
   migration spike.
-- This ADR does not solve the live GRANDPA stall; it only prevents a risky and
-  poorly scoped migration from being treated as obvious cleanup.
+- This ADR does not ship the multi-authority proof; it only prevents a risky
+  and poorly scoped migration from being treated as obvious cleanup.
 
 ### Follow-up
 
 - Classify each of the 21 fork-only commits as `required`, `replaceable`, or
   `drop` against `stable2506` or the next candidate upstream line.
-- Resolve or at least root-cause the `P-011` / `NET-FINALITY-001` 3-node
-  finality stall before using migration as a remedy.
+- Keep the authority-count lesson from `P-011` straight: the old 3-authority
+  one-node-down expectation was a contract bug, so future migration work should
+  rerun the 4-authority proof instead of treating the retired 3-node stall as a
+  chain defect.
 - If a future migration spike begins, rerun the stage-0 proof set at minimum:
-  `local_loop`, `two_node_sync`, the eventual 3-node finality proof, and the
+  `local_loop`, `two_node_sync`, the 4-authority finality proof, and the
   emission agreement proof.
 
 ## Reversibility
@@ -176,7 +179,7 @@ features start depending on fork-specific behavior in consensus or node startup.
 The trigger to reopen this ADR is not "upstream has moved again." It is:
 
 - the 21 fork-only commits have been triaged against upstream
-- the current finality stall has a root cause or a bounded reproduction story
+- the multi-authority finality contract is still satisfied on the pinned fork
 - a migration spike can run the chain proof suite without mixing dependency
   surgery into unresolved consensus debugging
 

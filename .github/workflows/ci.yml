@@ -259,6 +259,9 @@ jobs:
       - name: Two-node sync proof
         run: bash tests/e2e/two_node_sync.sh
 
+      - name: Four-authority finality proof
+        run: bash tests/e2e/four_node_finality.sh
+
       - name: Cross-validator determinism proof
         run: bash tests/e2e/validator_determinism.sh
 
