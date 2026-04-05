@@ -47,6 +47,7 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
   Verification: `bash tests/e2e/three_node_finality.sh`
   Required tests: The E2E script is the test. Should assert finalized block height increases after epoch transitions.
   Dependencies: P-005 (two_node_sync in CI — proves the infrastructure works).
+  Blocker (2026-04-05): A draft 3-node harness proved common finalized heads while all three authorities were online, but stopping `authority-3` consistently stalled GRANDPA finality on the remaining two authorities even though best blocks kept importing. Repros: `bash tests/e2e/three_node_finality.sh` (stalls at finalized `#1` after stop) and `MYOSU_E2E_FINALITY_TARGET_BLOCK=2 bash tests/e2e/three_node_finality.sh` (stalls at finalized `#2` after stop). Bootnode / authority logs show `Backing off claiming new slot for block authorship: finality is lagging`, so this is currently a chain/runtime behavior issue rather than a missing-harness issue.
   Estimated scope: M
   Completion signal: 3-node finality script passes in CI.
 
