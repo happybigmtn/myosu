@@ -74,6 +74,41 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
 
 ---
 
+- [ ] `NEM-001` Fix GRANDPA finality stalling on 3-node devnet after authority stop
+
+  Status (2026-04-05): Blocked. Live repro plus `finality-grandpa` threshold
+  math show a 3-authority equal-weight voter set needs 3 votes to finalize, so
+  two surviving authorities can keep importing best blocks but cannot satisfy
+  the requested 2-of-3 finality tolerance without changing authority count or
+  voting weights.
+
+  Spec: `WORKLIST.md:NET-FINALITY-001`  
+  Why now: 3-node GRANDPA finality is a stage-0 exit gate. The stalling behavior blocks multi-node production readiness. Operators cannot run production networks.  
+  Codebase evidence: `WORKLIST.md:NET-FINALITY-001` documents stall with repro steps. Node logs show `Backing off claiming new slot for block authorship: finality is lagging`.  
+  Owns: Chain spec, node service GRANDPA configuration, GRANDPA voter setup.  
+  Integration touchpoints: `myosu-chain` node binary, devnet chain spec, GRANDPA finality gadget.  
+  Scope boundary: Diagnose root cause (authority scheduling? voter set configuration?). Implement fix. Verify 3-node finality + 1-node-down tolerance.  
+  Required tests: E2E test proving 2/3 quorum continues finalizing after one authority stops.  
+  Dependencies: None (independent of other NEMs).  
+  Completion signal: `tests/e2e/three_node_finality.sh` passes in CI with finalized height increasing after authority stop and restart.
+
+- [ ] `NEM-002` Verify cross-node emission agreement across 3-node devnet
+
+  Status (2026-04-05): Blocked on `NEM-001`. This pass did not add a new
+  cross-node emission proof while the stage-0 multi-node finality contract is
+  still scoped around an unattainable 2-of-3 expectation.
+
+  Spec: `pallet-game-solver` emission mechanism  
+  Why now: INV-003 and INV-005 require that emission accounting is deterministic across nodes. Currently only proven single-node. If nodes disagree on emission, Yuma Consensus breaks.  
+  Codebase evidence: All epoch/coinbase tests run in single-node mock runtime. `pallet-game-solver/src/coinbase/run_coinbase.rs` uses U96F32 throughout.  
+  Owns: E2E test extension comparing TotalIssuance and emission storage values across 3 nodes.  
+  Integration touchpoints: RPC endpoints for reading storage, epoch mechanism, coinbase pipeline.  
+  Scope boundary: Query storage via RPC on all 3 nodes after N epoch transitions. Assert bit-identical values for TotalIssuance, PendingServerEmission, PendingValidatorEmission.  
+  Required tests: E2E script that queries storage on all 3 nodes and diffs.  
+  Dependencies: NEM-001 (3-node devnet must work reliably).  
+  Completion signal: Cross-node emission agreement test passes in CI with identical storage values across all nodes.
+
+
 ## Follow-On Work
 
 ### Operator Tooling and Onboarding
@@ -145,6 +180,23 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Completion signal: Minimum iterations documented per game type.
 
 ---
+
+- [ ] `NEM-008` Document minimum training iteration recommendations
+
+  Status (2026-04-05): Deferred. This pass prioritized executable correctness
+  fixes and did not run the iteration-to-score measurements needed to publish a
+  truthful operator recommendation.
+
+  Spec: `crates/myosu-miner/src/training.rs`  
+  Why now: A miner can train for 0 iterations and serve garbage. No guidance exists for minimum viable training.  
+  Codebase evidence: `crates/myosu-miner/src/cli.rs` — `train_iterations` defaults to 0 with no minimum enforced.  
+  Owns: Research document, CLI help text.  
+  Integration touchpoints: Miner CLI documentation, operator guide.  
+  Scope boundary: Measure validator scores at varying iteration counts. Document recommended minimums.  
+  Required tests: None (research/documentation task).  
+  Dependencies: None.  
+  Completion signal: `docs/operator-guide/` documents recommended minimum iterations per game type.
+
 
 ## Completed / Already Satisfied
 
