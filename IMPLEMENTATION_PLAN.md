@@ -47,7 +47,7 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
   Verification: `bash tests/e2e/three_node_finality.sh`
   Required tests: The E2E script is the test. Should assert finalized block height increases after epoch transitions.
   Dependencies: P-005 (two_node_sync in CI — proves the infrastructure works).
-  Blocker (2026-04-05): Live repros now confirm this is a chain/runtime issue, not just a draft-harness topology bug. Two ad hoc full-mesh 3-authority devnets with unique Prometheus ports reproduced the same stall on both the default `litep2p` backend and explicit `--network-backend libp2p`: all three authorities reached finalized block `#2`, then after terminating `authority-3` the surviving authorities kept importing blocks past `#10` while finalized height stayed frozen at `#2` on both nodes. There is still no tracked `tests/e2e/three_node_finality.sh`; do not treat that missing script as absence of a repro.
+  Blocker (2026-04-05): Live repros confirm this is a chain/runtime issue, not just a missing harness. Two ad hoc full-mesh 3-authority devnets with unique RPC/P2P/Prometheus ports and distinct `--node-key-file` identities for every authority reproduced the same stall on both the default `litep2p` backend and explicit `--network-backend libp2p`: all three authorities reached finalized block `#2`, then after terminating `authority-3` the surviving authorities kept importing blocks through `#9` while finalized height stayed frozen at `#2` on both nodes. The explicit `libp2p` repro also logged a GRANDPA prevote equivocation for `authority-2`. There is still no tracked `tests/e2e/three_node_finality.sh`; do not treat that missing script as absence of a repro.
   Estimated scope: M
   Completion signal: 3-node finality script passes in CI.
 
@@ -140,25 +140,9 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Verification: Run miner with varying iteration counts, measure validator score.
   Required tests: None (research task).
   Dependencies: P-009 (determinism verified across games).
+  Blocker (2026-04-05): The poker half is not currently measurable with repo-owned stage-0 artifacts. The only checked-in bootstrap artifact path (`crates/myosu-games-poker/examples/bootstrap_artifacts.rs`) emits the same sparse single-lookup encoder that `crates/myosu-miner/src/training.rs` already tests as non-trainable: `run_training_batch_reports_sparse_encoder_failure_cleanly` proves `--train-iterations 1` fails with upstream `isomorphism not found`. Until richer poker encoder artifacts exist (or the abstraction pipeline work is pulled forward), this task cannot truthfully document a poker score-vs-iterations threshold.
   Estimated scope: S
   Completion signal: Minimum iterations documented per game type.
-
-### Polkadot SDK Migration Research
-
-- [ ] `F-008` Research: Upstream polkadot-sdk migration feasibility
-
-  Spec: `specs/050426-chain-runtime-pallet.md`
-  Why now: The workspace uses an opentensor fork of polkadot-sdk at a specific rev. The spec notes migration to upstream may be feasible if fork divergence is limited. The Cargo.toml de-workspacing (P-001) makes dependency tracking clearer.
-  Codebase evidence: Runtime `Cargo.toml` references `opentensor/polkadot-sdk.git` at rev `71629fd`. 7 suppressed RUSTSECs from inherited Substrate stack.
-  Owns: Research document assessing fork divergence and migration path.
-  Integration touchpoints: All chain crates, FRAME pallets, consensus.
-  Scope boundary: Research only. Count divergent commits, identify blocking changes, estimate effort.
-  Acceptance criteria: (1) Fork divergence is quantified (commit count, file count). (2) Blocking changes are identified. (3) Go/no-go recommendation with rationale.
-  Verification: Review-based.
-  Required tests: None (research task).
-  Dependencies: None (independent research).
-  Estimated scope: M
-  Completion signal: Research document exists with go/no-go recommendation.
 
 ---
 
