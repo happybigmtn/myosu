@@ -25,21 +25,6 @@ After P-001 through P-007: emission is measured, E2E tests are wired, CI is hard
 
 ### Cluster 6: Miner HTTP Axon Gaps (dependency: P-001)
 
-- [ ] `P-010` Decision: Liar's Dice HTTP axon — implement or formally defer
-
-  Spec: `specs/050426-mining-surface.md`
-  Why now: `axon.rs:51-52` explicitly errors with `UnsupportedGame` for Liar's Dice and Kuhn HTTP serving. The spec flags this as an open question. Validators querying Liar's Dice miners over HTTP will fail. This needs a deliberate decision before operator tooling work.
-  Codebase evidence: `crates/myosu-miner/src/axon.rs` lines 51-52 (`UnsupportedGame` error), line 601+ (test confirming the gate). Liar's Dice training works (`LiarsDiceSolver<1024>`), file-based strategy serving works, but HTTP path is gated off.
-  Owns: Decision document or code change in `axon.rs`.
-  Integration touchpoints: Validator scoring (if validators query over HTTP), operator bundle scripts, miner CLI documentation.
-  Scope boundary: Either (a) implement HTTP serving for Liar's Dice (reuse poker axon pattern with Liar's Dice wire codec), or (b) document the limitation in operator guide and ensure validators use file-based scoring for Liar's Dice. Decision task — implementation is follow-on if chosen.
-  Acceptance criteria: (1) Decision is made and documented. (2) If implementing: HTTP axon serves Liar's Dice strategies, test added. (3) If deferring: operator guide documents the limitation, validator determinism test uses file-based path for Liar's Dice.
-  Verification: If implementing: `cargo test -p myosu-miner -- liars_dice_http`. If deferring: grep operator guide for limitation note.
-  Required tests: Depends on decision.
-  Dependencies: P-001 (clean trunk).
-  Estimated scope: XS (decision) or S (implementation)
-  Completion signal: Decision documented. If implementing, HTTP axon test passes.
-
 ---
 
 ### Checkpoint: Scoring and serving confidence

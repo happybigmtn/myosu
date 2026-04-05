@@ -59,6 +59,7 @@ All claims below are grounded in source at `crates/myosu-miner/src/`.
 ### HTTP Axon (axon.rs)
 
 - Activated by `--serve-http`. Requires `--encoder-dir` and a checkpoint (from `--checkpoint` or training output). Poker only; Liar's Dice returns `AxonServeError::UnsupportedGame`.
+- Stage-0 decision: keep `--serve-http` poker-only for now. Liar's Dice validators use the file-based query/response flow instead of a live HTTP axon.
 - Custom HTTP/1.1 server over raw `TcpListener`/`TcpStream` (no framework).
 - Request size limit: 64 KiB (`REQUEST_LIMIT_BYTES`).
 - Routes: `GET /health` returns JSON `{"status":"ok","epochs":<n>}`; `POST /strategy` accepts wire-encoded body, returns wire-encoded response as `application/octet-stream`.
@@ -96,5 +97,4 @@ All claims below are grounded in source at `crates/myosu-miner/src/`.
 - What is the minimum `--train-iterations` count that produces a strategy meaningfully better than uniform random? No convergence quality gate exists today.
 - The HTTP axon has no authentication and no rate limiting. Is this acceptable for multi-node devnet, or should a shared secret or connection limit be added before operators expose axons to untrusted validators?
 - HTTP axon handles one connection at a time (sequential accept loop). Under concurrent validator queries, this becomes a bottleneck. Should it spawn per-connection tasks?
-- Liar's Dice has no HTTP axon path (`AxonServeError::UnsupportedGame`). Is this planned, or will validators only query Liar's Dice miners via file-based strategy?
 - `ensure_serving` hardcodes IP to `0` and version to `1`. Should these be configurable or derived from the operator's network environment?

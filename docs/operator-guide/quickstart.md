@@ -197,6 +197,11 @@ curl -fsS http://127.0.0.1:8080/health
 
 The health endpoint should include `"status":"ok"`.
 
+Stage-0 decision: `--serve-http` is intentionally poker-only. For
+`--game liars-dice`, keep using the bounded file workflow
+(`--query-file`/`--response-file`) instead of the live HTTP axon. The
+cross-validator determinism proof follows that file-based path today.
+
 ## 7. Start a Validator
 
 The current validator surface is a bounded bootstrap/scoring command, not a

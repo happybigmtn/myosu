@@ -262,8 +262,9 @@ cannot bind the port, or `curl http://127.0.0.1:8080/health` does not return an
 `ok` payload.
 
 Cause: live HTTP serving only works for poker right now, and it still requires
-both a checkpoint and an encoder dir. A port conflict can also prevent the
-listener from binding.
+both a checkpoint and an encoder dir. Liar's Dice remains on the bounded
+file-based scoring path (`--query-file` + `--response-file`) instead of the
+live axon. A port conflict can also prevent the listener from binding.
 
 Resolution:
 
@@ -277,6 +278,10 @@ Resolution:
 
 If port `8080` is already in use, pick another port and update the health probe
 to match.
+
+If you are operating a Liar's Dice miner, do not pass `--serve-http`. Bootstrap
+the checkpoint with the bounded query/response flow instead and let validators
+score the emitted files directly.
 
 Healthy result: the miner prints `HTTP myosu-miner axon ok`, and `curl /health`
 returns JSON containing `"status":"ok"`.
