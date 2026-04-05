@@ -17,7 +17,7 @@ use thiserror::Error;
 
 const LIARS_DICE_BATCH_SIZE: usize = 16;
 const DIE_FACES: usize = 6;
-const MAX_DECODE_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_DECODE_BYTES: u64 = 1_048_576;
 const CHECKPOINT_MAGIC: [u8; 4] = *b"MYOS";
 const CHECKPOINT_VERSION: u32 = 1;
 const CHECKPOINT_HEADER_LEN: usize = 8;
@@ -612,6 +612,7 @@ mod tests {
     use crate::game::{LiarsDiceClaim, LiarsDiceEdge, LiarsDiceGame, LiarsDiceTurn};
     use crate::protocol::LiarsDiceStrategyQuery;
     use crate::solver::{LiarsDiceSolver, LiarsDiceSolverError};
+    use bincode::Options;
     use myosu_games::{CfrGame, CfrInfo, Profile, StrategyResponse};
     use rbp_mccfr::{CfrPublic, Solver};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -739,6 +740,17 @@ mod tests {
             error,
             LiarsDiceSolverError::CheckpointMagic { .. }
         ));
+    }
+
+    #[test]
+    fn checkpoint_decode_rejects_oversized_payload() {
+        let oversized = vec![0_u8; super::MAX_DECODE_BYTES as usize + 1];
+        let result = super::decode_codec(super::MAX_DECODE_BYTES - 1).serialized_size(&oversized);
+
+        assert!(
+            result.is_err(),
+            "oversized payload should exceed decode budget"
+        );
     }
 
     fn unique_checkpoint_path() -> std::path::PathBuf {

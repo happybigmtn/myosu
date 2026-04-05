@@ -445,7 +445,9 @@ impl<T: Config> Pallet<T> {
                 "stage-0 dividend distribution fell back to stake weighting because total dividends were zero"
             );
             for (hotkey, weighted_stake) in weighted_stakes {
-                let share = weighted_stake.checked_div(total_weighted_stake).unwrap_or(zero);
+                let share = weighted_stake
+                    .checked_div(total_weighted_stake)
+                    .unwrap_or(zero);
                 alpha_dividends.insert(hotkey, total_pending_alpha.saturating_mul(share));
             }
 

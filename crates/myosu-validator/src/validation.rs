@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -346,24 +347,7 @@ fn l1_distance(
     expected: &StrategyResponse<RbpNlheEdge>,
     observed: &StrategyResponse<RbpNlheEdge>,
 ) -> f64 {
-    let mut distance = 0.0_f64;
-
-    for (action, _) in &expected.actions {
-        let expected_probability = expected.probability_for(action);
-        let observed_probability = observed.probability_for(action);
-        distance += f64::from((expected_probability - observed_probability).abs());
-    }
-    for (action, _) in &observed.actions {
-        let expected_probability = expected.probability_for(action);
-        if expected_probability > 0.0 {
-            continue;
-        }
-
-        let observed_probability = observed.probability_for(action);
-        distance += f64::from(observed_probability.abs());
-    }
-
-    distance
+    l1_distance_union(&expected.actions, &observed.actions)
 }
 
 fn score_from_l1_distance(l1_distance: f64) -> f64 {
@@ -380,24 +364,38 @@ fn l1_distance_liars_dice(
     expected: &StrategyResponse<LiarsDiceEdge>,
     observed: &StrategyResponse<LiarsDiceEdge>,
 ) -> f64 {
-    let mut distance = 0.0_f64;
+    l1_distance_union(&expected.actions, &observed.actions)
+}
 
-    for (action, _) in &expected.actions {
-        let expected_probability = expected.probability_for(action);
-        let observed_probability = observed.probability_for(action);
-        distance += f64::from((expected_probability - observed_probability).abs());
-    }
-    for (action, _) in &observed.actions {
-        let expected_probability = expected.probability_for(action);
-        if expected_probability > 0.0 {
-            continue;
-        }
+// Compute symmetric L1 over the union of actions so explicit zero-weight
+// entries do not get counted twice.
+fn l1_distance_union<E>(expected: &[(E, f32)], observed: &[(E, f32)]) -> f64
+where
+    E: Clone + Ord + PartialEq,
+{
+    expected
+        .iter()
+        .map(|(action, _)| action.clone())
+        .chain(observed.iter().map(|(action, _)| action.clone()))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(|action| {
+            let expected_probability = probability_for(expected, &action);
+            let observed_probability = probability_for(observed, &action);
+            f64::from((expected_probability - observed_probability).abs())
+        })
+        .sum()
+}
 
-        let observed_probability = observed.probability_for(action);
-        distance += f64::from(observed_probability.abs());
-    }
-
-    distance
+fn probability_for<E>(actions: &[(E, f32)], needle: &E) -> f32
+where
+    E: PartialEq,
+{
+    actions
+        .iter()
+        .find(|(action, _)| action == needle)
+        .map(|(_, probability)| *probability)
+        .unwrap_or(0.0)
 }
 
 fn describe_liars_dice_recommendation(response: &StrategyResponse<LiarsDiceEdge>) -> String {
@@ -413,6 +411,7 @@ mod tests {
     use std::time::UNIX_EPOCH;
 
     use myosu_games::CfrGame;
+    use myosu_games_liars_dice::LiarsDiceClaim;
     use myosu_games_poker::encode_strategy_query;
     use myosu_games_poker::encode_strategy_response;
     use myosu_games_poker::encoder_from_lookup;
@@ -504,6 +503,20 @@ mod tests {
         assert!(expected_l1_distance > 0.0);
         assert!((report.l1_distance - expected_l1_distance).abs() < 1e-12);
         assert!((report.score - score_from_l1_distance(expected_l1_distance)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn poker_l1_distance_does_not_double_count_explicit_zero_weight_actions() {
+        let expected = StrategyResponse::new(vec![
+            (RbpNlheEdge::from(Edge::Call), 1.0),
+            (RbpNlheEdge::from(Edge::Fold), 0.0),
+        ]);
+        let observed = StrategyResponse::new(vec![
+            (RbpNlheEdge::from(Edge::Call), 0.0),
+            (RbpNlheEdge::from(Edge::Fold), 1.0),
+        ]);
+
+        assert!((l1_distance(&expected, &observed) - 2.0).abs() < 1e-12);
     }
 
     #[test]
@@ -605,6 +618,26 @@ mod tests {
         assert!(report.exact_match);
         assert_eq!(report.score, 1.0);
         assert_eq!(report.l1_distance, 0.0);
+    }
+
+    #[test]
+    fn liars_dice_l1_distance_does_not_double_count_explicit_zero_weight_actions() {
+        let expected = StrategyResponse::new(vec![
+            (
+                LiarsDiceEdge::Bid(LiarsDiceClaim::new(1, 2).expect("claim should build")),
+                1.0,
+            ),
+            (LiarsDiceEdge::Challenge, 0.0),
+        ]);
+        let observed = StrategyResponse::new(vec![
+            (
+                LiarsDiceEdge::Bid(LiarsDiceClaim::new(1, 2).expect("claim should build")),
+                0.0,
+            ),
+            (LiarsDiceEdge::Challenge, 1.0),
+        ]);
+
+        assert!((l1_distance_liars_dice(&expected, &observed) - 2.0).abs() < 1e-12);
     }
 
     #[test]

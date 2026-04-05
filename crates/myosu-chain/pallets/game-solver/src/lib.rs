@@ -9,7 +9,7 @@
 use frame_system::{self as system, ensure_signed};
 pub use pallet::*;
 
-use codec::{Decode, Encode};
+use codec::{Decode, DecodeWithMemTracking, Encode};
 use frame_support::sp_runtime::transaction_validity::InvalidTransaction;
 use frame_support::{
     dispatch::{self, DispatchResult, DispatchResultWithPostInfo},
@@ -68,6 +68,19 @@ pub const MAX_SUBNET_CLAIMS: usize = 5;
 pub const MAX_ROOT_CLAIM_THRESHOLD: u64 = 10_000_000;
 
 pub const MAX_CRV3_COMMIT_SIZE_BYTES: u32 = 5000;
+
+// Stage-0 intentionally floors coinbase writes instead of carrying dust
+// forward. `try_state` uses this as an alert threshold until EM-DUST-001 lands
+// a real dust-accounting policy.
+#[cfg_attr(not(any(test, feature = "try-runtime")), allow(dead_code))]
+pub(crate) const TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA: u64 = 1_000;
+
+/// Operator-visible reasons an epoch pass was skipped instead of mutating state.
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Copy, PartialEq, Eq, Debug, TypeInfo)]
+pub enum EpochSkipReason {
+    /// The netuid storage contained duplicate hotkeys or another key/UID mismatch.
+    InconsistentInputState,
+}
 
 /// Narrow stage-0 swap seam used by the game-solver pallet.
 ///

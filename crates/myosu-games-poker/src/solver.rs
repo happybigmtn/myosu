@@ -403,7 +403,10 @@ mod tests {
         let oversized = vec![0_u8; MAX_DECODE_BYTES as usize + 1];
         let result = decode_codec(MAX_DECODE_BYTES - 1).serialized_size(&oversized);
 
-        assert!(result.is_err(), "oversized payload should exceed decode budget");
+        assert!(
+            result.is_err(),
+            "oversized payload should exceed decode budget"
+        );
     }
 
     #[test]

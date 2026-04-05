@@ -58,6 +58,13 @@ macro_rules! extract_from_sorted_terms {
 }
 
 impl<T: Config> Pallet<T> {
+    fn deposit_epoch_skipped_event(netuid: NetUid) {
+        Self::deposit_event(Event::EpochSkipped {
+            netuid,
+            reason: EpochSkipReason::InconsistentInputState,
+        });
+    }
+
     /// Legacy epoch function interface retained for older tests.
     pub fn epoch(
         netuid: NetUid,
@@ -65,6 +72,7 @@ impl<T: Config> Pallet<T> {
     ) -> Vec<(T::AccountId, AlphaCurrency, AlphaCurrency)> {
         if !Self::is_epoch_input_state_consistent(netuid) {
             log::error!("Skipping legacy epoch for inconsistent netuid {netuid}");
+            Self::deposit_epoch_skipped_event(netuid);
             return Vec::new();
         }
 
@@ -89,6 +97,7 @@ impl<T: Config> Pallet<T> {
     ) -> Vec<(T::AccountId, AlphaCurrency, AlphaCurrency)> {
         if !Self::is_epoch_input_state_consistent(netuid) {
             log::error!("Skipping legacy epoch_dense for inconsistent netuid {netuid}");
+            Self::deposit_epoch_skipped_event(netuid);
             return Vec::new();
         }
 

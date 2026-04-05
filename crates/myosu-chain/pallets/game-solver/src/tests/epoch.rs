@@ -3940,7 +3940,10 @@ fn legacy_epoch_skips_persistence_when_state_is_inconsistent() {
         let output = SubtensorModule::epoch(netuid, 1_000.into());
 
         assert!(output.is_empty());
-        assert_eq!(Incentive::<Test>::get(NetUidStorageIndex::from(netuid)), sentinel);
+        assert_eq!(
+            Incentive::<Test>::get(NetUidStorageIndex::from(netuid)),
+            sentinel
+        );
     });
 }
 

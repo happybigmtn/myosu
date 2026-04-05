@@ -14,11 +14,15 @@ impl<T: Config> Pallet<T> {
         let expected_total_issuance =
             currency_issuance.saturating_add(TotalStake::<T>::get().into());
 
-        // Verify the diff between calculated TI and actual TI is less than delta
+        // Verify the diff between calculated TI and actual TI is less than the
+        // current stage-0 alert threshold.
         //
-        // These values can be off slightly due to float rounding errors.
-        // They are corrected every runtime upgrade.
-        let delta = 1000;
+        // This is intentionally not a proof bound. Stage-0 still floors
+        // coinbase writes instead of carrying dust forward, so the drift can
+        // accumulate until EM-DUST-001 lands a real policy. The 1_000-rao
+        // threshold keeps try-runtime noisy enough to catch unexpected jumps
+        // while tolerating the measured dust envelope documented in WORKLIST.md.
+        let delta = TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA;
         let total_issuance = TotalIssuance::<T>::get().to_u64();
 
         let diff = if total_issuance > expected_total_issuance {

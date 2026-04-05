@@ -225,7 +225,8 @@ mod tests {
     fn decode_rejects_oversized_strategy_response() {
         let oversized = vec![0_u8; MAX_DECODE_BYTES as usize + 1];
 
-        let error = decode_strategy_response(&oversized).expect_err("oversized response should fail");
+        let error =
+            decode_strategy_response(&oversized).expect_err("oversized response should fail");
 
         assert!(matches!(
             error,
@@ -261,13 +262,12 @@ mod tests {
         prop_oneof![
             Just(crate::RbpNlheEdge::from(Edge::Fold)),
             Just(crate::RbpNlheEdge::from(Edge::Call)),
-            (1u8..=3, 1u8..=3)
-                .prop_map(|(numerator, denominator)| {
-                    crate::RbpNlheEdge::from(Edge::Raise(Odds::new(
-                        i16::from(numerator),
-                        i16::from(denominator),
-                    )))
-                }),
+            (1u8..=3, 1u8..=3).prop_map(|(numerator, denominator)| {
+                crate::RbpNlheEdge::from(Edge::Raise(Odds::new(
+                    i16::from(numerator),
+                    i16::from(denominator),
+                )))
+            }),
         ]
     }
 

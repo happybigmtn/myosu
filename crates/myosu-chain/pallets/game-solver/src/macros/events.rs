@@ -4,6 +4,7 @@ use frame_support::pallet_macros::pallet_section;
 /// This can later be imported into the pallet using [`import_section`].
 #[pallet_section]
 mod events {
+    use crate::EpochSkipReason;
     use codec::Compact;
 
     #[pallet::event]
@@ -386,6 +387,14 @@ mod events {
             netuid: NetUidStorageIndex,
             /// UID-indexed array of miner incentive alpha; index equals UID.
             emissions: Vec<AlphaCurrency>,
+        },
+
+        /// An epoch pass was skipped instead of mutating inconsistent subnet state.
+        EpochSkipped {
+            /// Subnet identifier.
+            netuid: NetUid,
+            /// Structured reason the epoch pass was skipped.
+            reason: EpochSkipReason,
         },
 
         /// The minimum allowed UIDs for a subnet have been set.

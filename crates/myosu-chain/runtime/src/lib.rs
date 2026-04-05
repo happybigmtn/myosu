@@ -90,6 +90,12 @@ impl frame_system::offchain::SigningTypes for Runtime {
 // public network launch. All subnet pricing, emission, and staking math
 // flows through this swap surface. See genesis/plans/005 for the pallet
 // simplification roadmap that will eventually replace this stub.
+//
+// `max_price()` intentionally returns the currency max value instead of a
+// realistic ceiling. The stage-0 pallet still threads a swap price-limit API
+// through staking and emission code, but this stub has no market and should not
+// trip price guards. Any future runtime that wires a real swap engine must
+// replace this unbounded limit before relying on price-limit semantics.
 pub struct Stage0NoopSwap;
 
 impl<PaidIn: Currency, PaidOut: Currency>
@@ -159,6 +165,8 @@ impl SwapHandler for Stage0NoopSwap {
         TaoCurrency::ZERO
     }
 
+    /// Return an intentionally unbounded limit because the stage-0 identity
+    /// swap has no market price to constrain.
     fn max_price<C: Currency>() -> C {
         C::MAX
     }

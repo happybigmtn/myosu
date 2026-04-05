@@ -276,9 +276,13 @@ fn stage_0_pending_distribution_loss(block_emission: u64, blocks: u64) -> u64 {
         let validator_amount = remaining.saturating_sub(server_amount);
 
         distributed = distributed
-            .saturating_add(U96F32::from_num(owner_cut_amount.saturating_to_num::<u64>()))
+            .saturating_add(U96F32::from_num(
+                owner_cut_amount.saturating_to_num::<u64>(),
+            ))
             .saturating_add(U96F32::from_num(server_amount.saturating_to_num::<u64>()))
-            .saturating_add(U96F32::from_num(validator_amount.saturating_to_num::<u64>()));
+            .saturating_add(U96F32::from_num(
+                validator_amount.saturating_to_num::<u64>(),
+            ));
     }
 
     block_emission
@@ -554,22 +558,23 @@ fn stage_0_coinbase_zero_dividend_distribution_falls_back_to_weighted_stake() {
         let pending_alpha = AlphaCurrency::from(600u64);
         let pending_root_alpha = AlphaCurrency::from(400u64);
 
-        let (alpha_dividends, root_alpha_dividends) = SubtensorModule::calculate_dividend_distribution(
-            pending_alpha,
-            pending_root_alpha,
-            U96F32::from_num(0.0),
-            BTreeMap::from([
-                (
-                    first_hotkey,
-                    (AlphaCurrency::from(300u64), AlphaCurrency::ZERO),
-                ),
-                (
-                    second_hotkey,
-                    (AlphaCurrency::from(100u64), AlphaCurrency::ZERO),
-                ),
-            ]),
-            BTreeMap::new(),
-        );
+        let (alpha_dividends, root_alpha_dividends) =
+            SubtensorModule::calculate_dividend_distribution(
+                pending_alpha,
+                pending_root_alpha,
+                U96F32::from_num(0.0),
+                BTreeMap::from([
+                    (
+                        first_hotkey,
+                        (AlphaCurrency::from(300u64), AlphaCurrency::ZERO),
+                    ),
+                    (
+                        second_hotkey,
+                        (AlphaCurrency::from(100u64), AlphaCurrency::ZERO),
+                    ),
+                ]),
+                BTreeMap::new(),
+            );
 
         assert!(root_alpha_dividends.is_empty());
         assert_eq!(
@@ -589,7 +594,11 @@ fn stage_0_coinbase_zero_dividend_distribution_falls_back_to_weighted_stake() {
             250
         );
         assert_eq!(
-            alpha_dividends.values().copied().sum::<U96F32>().saturating_to_num::<u64>(),
+            alpha_dividends
+                .values()
+                .copied()
+                .sum::<U96F32>()
+                .saturating_to_num::<u64>(),
             u64::from(pending_alpha.saturating_add(pending_root_alpha))
         );
     });
@@ -597,7 +606,7 @@ fn stage_0_coinbase_zero_dividend_distribution_falls_back_to_weighted_stake() {
 
 #[test]
 fn stage_0_coinbase_truncation_drift_stays_below_two_rao_per_block_sweep() {
-    let block_counts = [1_u64, 100, 1_000, 10_000];
+    let block_counts = [1_u64, 3, 100, 1_000, 10_000];
 
     for block_count in block_counts {
         let mut observed_max_drift = 0_u64;
@@ -621,6 +630,50 @@ fn stage_0_coinbase_truncation_drift_stays_below_two_rao_per_block_sweep() {
             "sweep should keep measuring the live worst-case drift envelope"
         );
     }
+}
+
+#[test]
+fn stage_0_try_state_delta_stays_well_above_default_epoch_drift() {
+    let default_epoch_blocks = 3_u64;
+    let measured_worst_case = (1_u64..=128)
+        .chain([1_000_003_u64, 100_000_001])
+        .map(|block_emission| {
+            stage_0_pending_distribution_loss(block_emission, default_epoch_blocks)
+        })
+        .max()
+        .expect("sweep should produce a measured drift");
+
+    assert_eq!(
+        measured_worst_case, 6,
+        "default tempo-2 epochs should keep measuring the live 6-rao dust envelope"
+    );
+    assert!(
+        crate::TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA >= measured_worst_case.saturating_mul(5),
+        "try-state alert threshold should stay comfortably above the measured default-epoch drift"
+    );
+}
+
+#[test]
+fn legacy_epoch_skip_emits_event_when_state_is_inconsistent() {
+    new_test_ext(1).execute_with(|| {
+        let netuid: NetUid = 155.into();
+        let hotkey = U256::from(42u64);
+
+        Keys::<Test>::insert(netuid, 0u16, hotkey);
+        Keys::<Test>::insert(netuid, 1u16, hotkey);
+        System::reset_events();
+
+        let output = SubtensorModule::epoch(netuid, 1_000.into());
+
+        assert!(output.is_empty());
+        assert_last_event::<Test>(
+            Event::EpochSkipped {
+                netuid,
+                reason: EpochSkipReason::InconsistentInputState,
+            }
+            .into(),
+        );
+    });
 }
 
 #[test]
@@ -733,8 +786,8 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
             .sum::<u64>();
         let expected_emission_sum = u64::from(summary.server_alpha_distributed)
             .saturating_add(u64::from(summary.validator_alpha_distributed));
-        let actual_total_distribution = expected_emission_sum
-            .saturating_add(u64::from(summary.owner_cut_distributed));
+        let actual_total_distribution =
+            expected_emission_sum.saturating_add(u64::from(summary.owner_cut_distributed));
         let expected_epoch_distribution = block_emission.saturating_mul(accrual_blocks);
         let rounding_tolerance = accrual_blocks.saturating_mul(2);
 
@@ -748,7 +801,8 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
             expected_epoch_distribution
         );
         assert!(
-            expected_epoch_distribution.saturating_sub(actual_total_distribution) <= rounding_tolerance,
+            expected_epoch_distribution.saturating_sub(actual_total_distribution)
+                <= rounding_tolerance,
             "distribution drift exceeded tolerance: actual={} expected={} tolerance={}",
             actual_total_distribution,
             expected_epoch_distribution,
