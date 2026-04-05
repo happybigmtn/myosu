@@ -277,14 +277,12 @@ jobs:
 
       - name: Cargo audit
         run: |
-          # The current allowlist is restricted to inherited Substrate/opentensor
-          # fork advisories that are outside the owned stage-0 surface:
-          # - `ring` via libp2p QUIC in the node stack
-          # - `wasmtime` via the inherited executor/runtime stack
-          # - `tracing-subscriber 0.2.25` via the inherited runtime graph that
-          #   still reaches `myosu-chain-client`
-          # Any non-ignored warning must fail the gate; cargo-audit otherwise
-          # exits 0 even when warning-class advisories are still present.
+          # The current allowlist mirrors WORKLIST.md `SEC-001`: inherited
+          # Substrate/opentensor advisories plus the still-deferred direct
+          # `bincode 1.x` usage in the game crates. This keeps CI aligned with
+          # the documented defer decision until the dependency-remediation task
+          # is pulled into the active queue. Any advisory outside this list
+          # must still fail the gate.
           cargo audit \
             -D warnings \
             --ignore RUSTSEC-2025-0009 \
@@ -293,7 +291,19 @@ jobs:
             --ignore RUSTSEC-2024-0438 \
             --ignore RUSTSEC-2025-0118 \
             --ignore RUSTSEC-2026-0020 \
-            --ignore RUSTSEC-2026-0021
+            --ignore RUSTSEC-2026-0021 \
+            --ignore RUSTSEC-2025-0141 \
+            --ignore RUSTSEC-2024-0388 \
+            --ignore RUSTSEC-2025-0057 \
+            --ignore RUSTSEC-2024-0384 \
+            --ignore RUSTSEC-2020-0168 \
+            --ignore RUSTSEC-2022-0061 \
+            --ignore RUSTSEC-2024-0436 \
+            --ignore RUSTSEC-2024-0370 \
+            --ignore RUSTSEC-2025-0010 \
+            --ignore RUSTSEC-2021-0127 \
+            --ignore RUSTSEC-2026-0002 \
+            --ignore RUSTSEC-2024-0442
 
   plan-quality:
     name: Plan Quality

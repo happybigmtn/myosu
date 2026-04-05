@@ -44,7 +44,7 @@ where
         {
             let _ = who;
             let _ = call;
-            return Ok(().into());
+            Ok(().into())
         }
 
         #[cfg(feature = "full-runtime")]

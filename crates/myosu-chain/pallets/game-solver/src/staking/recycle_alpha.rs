@@ -1,8 +1,13 @@
+#[cfg(feature = "full-runtime")]
 use super::*;
+#[cfg(feature = "full-runtime")]
 use crate::{Error, system::ensure_signed};
+#[cfg(feature = "full-runtime")]
 use sp_runtime::traits::Zero;
+#[cfg(feature = "full-runtime")]
 use subtensor_runtime_common::{AlphaCurrency, NetUid};
 
+#[cfg(feature = "full-runtime")]
 impl<T: Config> Pallet<T> {
     /// Recycles alpha from a cold/hot key pair, reducing AlphaOut on a subnet
     ///

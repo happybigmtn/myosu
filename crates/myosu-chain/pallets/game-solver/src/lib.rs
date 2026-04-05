@@ -192,11 +192,13 @@ pub mod pallet {
     use frame_support::Twox64Concat;
     use frame_support::{
         BoundedVec,
-        dispatch::GetDispatchInfo,
         pallet_prelude::{DispatchResult, StorageMap, ValueQuery, *},
-        traits::{
-            OriginTrait, QueryPreimage, StorePreimage, UnfilteredDispatchable, tokens::fungible,
-        },
+        traits::{OriginTrait, tokens::fungible},
+    };
+    #[cfg(feature = "full-runtime")]
+    use frame_support::{
+        dispatch::GetDispatchInfo,
+        traits::{QueryPreimage, StorePreimage, UnfilteredDispatchable},
     };
     use frame_system::pallet_prelude::*;
     use runtime_common::prod_or_fast;

@@ -242,7 +242,7 @@ impl<F, OU> SubtensorTxFeeHandler<F, OU> {
         {
             let _ = who;
             let _ = call;
-            return Vec::new();
+            Vec::new()
         }
 
         #[cfg(feature = "full-runtime")]

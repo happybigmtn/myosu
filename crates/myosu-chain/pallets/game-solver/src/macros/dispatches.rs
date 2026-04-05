@@ -5,12 +5,7 @@ use frame_support::pallet_macros::pallet_section;
 /// This can later be imported into the pallet using [`import_section`].
 #[pallet_section]
 mod dispatches {
-    use frame_support::traits::schedule::v3::Anon as ScheduleAnon;
     use frame_system::pallet_prelude::BlockNumberFor;
-    use sp_core::ecdsa::Signature;
-    use sp_runtime::{Saturating, traits::Hash};
-
-    use crate::{MAX_NUM_ROOT_CLAIMS, MAX_ROOT_CLAIM_THRESHOLD, MAX_SUBNET_CLAIMS};
 
     /// Dispatchable functions allow users to interact with the pallet and invoke state changes.
     /// These functions materialize as "extrinsics", which are often compared to transactions.
@@ -1835,7 +1830,7 @@ mod dispatches {
             netuid: NetUid,
             evm_key: H160,
             block_number: u64,
-            signature: Signature,
+            signature: sp_core::ecdsa::Signature,
         ) -> DispatchResult {
             Self::do_associate_evm_key(origin, netuid, evm_key, block_number, signature)
         }
@@ -2059,7 +2054,7 @@ mod dispatches {
 
             ensure!(!subnets.is_empty(), Error::<T>::InvalidSubnetNumber);
             ensure!(
-                subnets.len() <= MAX_SUBNET_CLAIMS,
+                subnets.len() <= crate::MAX_SUBNET_CLAIMS,
                 Error::<T>::InvalidSubnetNumber
             );
 
@@ -2113,7 +2108,7 @@ mod dispatches {
             ensure_root(origin)?;
 
             ensure!(
-                new_value <= MAX_NUM_ROOT_CLAIMS,
+                new_value <= crate::MAX_NUM_ROOT_CLAIMS,
                 Error::<T>::InvalidNumRootClaim
             );
 
@@ -2140,7 +2135,7 @@ mod dispatches {
             Self::ensure_subnet_owner_or_root(origin, netuid)?;
 
             ensure!(
-                new_value <= I96F32::from(MAX_ROOT_CLAIM_THRESHOLD),
+                new_value <= I96F32::from(crate::MAX_ROOT_CLAIM_THRESHOLD),
                 Error::<T>::InvalidRootClaimThreshold
             );
 
