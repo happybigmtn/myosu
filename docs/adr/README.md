@@ -95,4 +95,5 @@ without cause.
 - `007-checkpoint-versioning.md`: frame solver checkpoints with explicit magic and version headers
 - `008-future-token-economics-direction.md`: proposed post-stage-0 token-economics direction and migration away from the noop swap
 - `009-polkadot-sdk-migration-feasibility.md`: hold the opentensor polkadot-sdk fork through stage-0 until the fork-only patch set and 3-node finality behavior are understood
+- `010-inv-004-stage0-ci-enforcement.md`: keep the solver-gameplay boundary enforced by CI and invariant tests for stage-0
 - `stage-2-roadmap.md`: supporting roadmap for the next major architecture decisions after stage 1

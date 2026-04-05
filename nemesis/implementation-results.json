@@ -1,0 +1,158 @@
+[
+  {
+    "task_id": "NEM-001",
+    "status": "blocked",
+    "summary": "Reproduced the 3-authority devnet stall and cross-checked it against `finality-grandpa` threshold math. The root issue is not a small node-service bug: a 3-authority equal-weight voter set requires 3 votes to finalize, so 2 surviving authorities can keep importing best blocks but cannot satisfy the plan's requested 2-of-3 finality tolerance. This pass documented that contract mismatch in `WORKLIST.md` and marked the Nemesis plan blocked.",
+    "validation_commands": [
+      "/tmp/nemesis_finality_repro.sh",
+      "sed -n '1,120p' /home/r/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/finality-grandpa-0.16.3/src/voter_set.rs"
+    ],
+    "touched_files": [
+      "WORKLIST.md",
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "Stage-0 docs and expectations still need a broader re-scope from `2-of-3 keeps finalizing` to a truthful authority/voting model.",
+      "No automated `three_node_finality` proof was added because the current acceptance condition is unattainable for a 3x1-weight voter set."
+    ]
+  },
+  {
+    "task_id": "NEM-002",
+    "status": "blocked",
+    "summary": "Left blocked behind `NEM-001`. The repo has chain-client and E2E surfaces that could support a future cross-node emission comparison, but this pass did not claim a new determinism proof while the stage-0 multi-node contract is still anchored to the impossible 2-of-3 finality expectation.",
+    "validation_commands": [
+      "sed -n '1,260p' tests/e2e/emission_flow.sh",
+      "sed -n '320,760p' crates/myosu-chain-client/src/lib.rs"
+    ],
+    "touched_files": [
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "Cross-node agreement for `TotalIssuance`, `PendingServerEmission`, and `PendingValidatorEmission` is still not proven on a live multi-node devnet.",
+      "Any future proof should read the same storage at the same block hash across multiple nodes, not just compare best-head state loosely."
+    ]
+  },
+  {
+    "task_id": "NEM-003",
+    "status": "fixed",
+    "summary": "Closed via documentation plus executable proof. `WORKLIST.md` now states that the live 1_000-rao `try_state` delta is an alert threshold, not a correctness bound, while the dust policy remains open. The live default-build pallet tests already prove the measured drift and keep the threshold well above it.",
+    "validation_commands": [
+      "cargo test -p pallet-game-solver --quiet stage_0_try_state_delta_stays_well_above_default_epoch_drift",
+      "git show HEAD:crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs | rg -n 'stage_0_try_state_delta_stays_well_above_default_epoch_drift'"
+    ],
+    "touched_files": [
+      "WORKLIST.md",
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "The actual dust policy remains undecided; the threshold is intentionally loose until `EM-DUST-001` lands a real accounting decision."
+    ]
+  },
+  {
+    "task_id": "NEM-004",
+    "status": "fixed",
+    "summary": "Re-verified as already fixed in live `HEAD`. The pallet now emits `EpochSkipped { netuid, reason }` when the epoch input-state guard rejects inconsistent state, and the default-build regression test proves the event surface. This pass updated the Nemesis plan to match repo truth.",
+    "validation_commands": [
+      "cargo test -p pallet-game-solver --quiet legacy_epoch_skip_emits_event_when_state_is_inconsistent",
+      "git show HEAD:crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs | rg -n 'EpochSkipped|deposit_epoch_skipped_event'"
+    ],
+    "touched_files": [
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "Coverage is unit-level; there is still no RPC/event-subscription integration proof for operator monitoring."
+    ]
+  },
+  {
+    "task_id": "NEM-005",
+    "status": "fixed",
+    "summary": "Re-verified as already fixed in live `HEAD`. Validator scoring now computes symmetric L1 over the union of expected and observed actions, which removes the explicit-zero-action asymmetry the audit flagged. This pass reran the regressions and marked the plan satisfied.",
+    "validation_commands": [
+      "cargo test -p myosu-validator --quiet three_action_mismatch_uses_game_agnostic_normalization",
+      "cargo test -p myosu-validator --quiet double_count",
+      "git show HEAD:crates/myosu-validator/src/validation.rs | rg -n 'l1_distance_union|double_count'"
+    ],
+    "touched_files": [
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "The proof surface is unit-level; no new end-to-end miner/validator scoring fixture was added in this pass."
+    ]
+  },
+  {
+    "task_id": "NEM-006",
+    "status": "fixed",
+    "summary": "Re-verified as already fixed in live `HEAD`. `Stage0NoopSwap` rustdoc now states that `max_price()` intentionally returns an unbounded value in the stage-0 identity-swap runtime, and the runtime tests still pin the surrounding noop-swap behavior.",
+    "validation_commands": [
+      "cargo test -p myosu-chain-runtime --quiet stage0_noop_swap",
+      "git show HEAD:crates/myosu-chain/runtime/src/lib.rs | rg -n 'max_price\\(\\)|unbounded|stage0_noop_swap'"
+    ],
+    "touched_files": [
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "The runtime still fails open on price limits by design until a real swap implementation replaces the stage-0 noop."
+    ]
+  },
+  {
+    "task_id": "NEM-007",
+    "status": "fixed",
+    "summary": "Re-verified as already fixed in live `HEAD`. Liar's Dice now uses the same 1 MiB decode budget as poker, and the crate has oversized-payload regressions for wire responses and checkpoint decoding. This pass reran the tests and updated the Nemesis plan.",
+    "validation_commands": [
+      "cargo test -p myosu-games-liars-dice --quiet oversized",
+      "git show HEAD:crates/myosu-games-liars-dice/src/wire.rs | rg -n 'MAX_DECODE_BYTES|decode_rejects_oversized_strategy_response'"
+    ],
+    "touched_files": [
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "The 1 MiB cap may need revisiting if future wire formats or larger game artifacts intentionally grow beyond the current stage-0 shapes."
+    ]
+  },
+  {
+    "task_id": "NEM-008",
+    "status": "deferred",
+    "summary": "Deferred truthfully. The miner CLI still defaults `--train-iterations` to 0 and the repo still lacks measured iteration-to-score guidance. This pass did not run the required benchmarking sweep, so it would have been dishonest to publish a minimum recommendation.",
+    "validation_commands": [
+      "rg -n 'train_iterations|--train-iterations|default_value_t *= *0' crates/myosu-miner/src/cli.rs crates/myosu-miner/src/training.rs"
+    ],
+    "touched_files": [
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "Operators can still train for 0 iterations and serve a useless profile without any documented minimum recommendation."
+    ]
+  },
+  {
+    "task_id": "NEM-009",
+    "status": "fixed",
+    "summary": "Closed by recording the stage-0 architecture decision explicitly. ADR 010 now states that INV-004 is a compile-time/workspace-boundary property and that CI plus invariant tests are the truthful enforcement surface for stage-0. The local invariant proof was rerun in this pass.",
+    "validation_commands": [
+      "cargo test -p myosu-play --quiet inv_004_solver_and_gameplay_bins_do_not_depend_on_each_other",
+      "git show HEAD:crates/myosu-play/tests/invariants.rs | rg -n 'inv_004_solver_and_gameplay_bins_do_not_depend_on_each_other'"
+    ],
+    "touched_files": [
+      "docs/adr/010-inv-004-stage0-ci-enforcement.md",
+      "docs/adr/README.md",
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "Local workflows that skip CI and invariant tests can still miss a dependency violation temporarily."
+    ]
+  },
+  {
+    "task_id": "NEM-010",
+    "status": "fixed",
+    "summary": "Closed the stale documentation follow-up. The live repo `AGENTS.md` has no `@RTK.md` reference, so `DOC-OPS-001` was removed from `WORKLIST.md` and the Nemesis plan now marks the task satisfied.",
+    "validation_commands": [
+      "rg -n '@RTK.md' AGENTS.md"
+    ],
+    "touched_files": [
+      "WORKLIST.md",
+      "nemesis/IMPLEMENTATION_PLAN.md"
+    ],
+    "residual_risks": [
+      "External execution wrappers can still inject `@RTK.md` outside repo state; the repo worklist now reflects only the checked-in `AGENTS.md` truth."
+    ]
+  }
+]
