@@ -33,30 +33,6 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
 
 ---
 
-### Cluster 7: Multi-Node Devnet Foundation (dependency: P-003, P-005)
-
-- [ ] `P-012` Cross-node emission agreement test
-
-  Spec: `specs/050426-emission-epoch-mechanism.md`
-  Why now: The spec explicitly states cross-node emission agreement is "tested single-node only." Fixed-point determinism is assumed but not proven across nodes. This is the highest-risk multi-node property — if nodes disagree on emission, the chain forks.
-  Codebase evidence: All epoch/coinbase tests run in single-node mock runtime. `substrate_fixed` types (I32F32, I64F64, U96F32) are deterministic per the spec but unverified across separate process instances.
-  Owns: New E2E test or extension of `four_node_finality.sh` that compares emission storage across nodes after epoch transitions.
-  Integration touchpoints: RPC endpoints for reading storage, epoch mechanism, coinbase pipeline, node binary.
-  Scope boundary: Compare emission-related storage values across a 4-authority devnet after N epochs. Assert bit-identical. Do not test under adversarial conditions.
-  Acceptance criteria: (1) After 3+ epoch transitions on a 4-authority devnet, emission storage values (total issuance, per-subnet pending, stake maps) are identical across all live nodes. (2) Test runs in CI.
-  Verification: E2E script that queries storage via RPC on all live nodes and diffs.
-  Required tests: The E2E script.
-  Dependencies: P-002 (truncation drift quantified).
-  Estimated scope: M
-  Completion signal: Cross-node emission agreement test passes in CI.
-
----
-
-### Checkpoint: Multi-node confidence
-
-After P-012: 4-authority finality is proven, cross-node emission agreement is verified. This satisfies the Phase 1 gate from the network-consensus spec. Re-evaluate whether Phase 2 (operator packaging) work should begin or whether restart resilience testing is needed first.
-
-
 ## Follow-On Work
 
 ### Operator Tooling and Onboarding

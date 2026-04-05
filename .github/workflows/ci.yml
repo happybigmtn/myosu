@@ -262,6 +262,9 @@ jobs:
       - name: Four-authority finality proof
         run: bash tests/e2e/four_node_finality.sh
 
+      - name: Cross-node emission agreement proof
+        run: bash tests/e2e/cross_node_emission.sh
+
       - name: Cross-validator determinism proof
         run: bash tests/e2e/validator_determinism.sh
 
