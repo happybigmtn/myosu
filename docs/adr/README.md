@@ -93,4 +93,5 @@ without cause.
 - `005-swap-interface-abstraction.md`: keep a stage-0 pallet-local swap seam with a noop runtime implementation
 - `006-commit-reveal-v2.md`: retain hash-based commit-reveal v2 as the only live weight-hiding path
 - `007-checkpoint-versioning.md`: frame solver checkpoints with explicit magic and version headers
+- `008-future-token-economics-direction.md`: proposed post-stage-0 token-economics direction and migration away from the noop swap
 - `stage-2-roadmap.md`: supporting roadmap for the next major architecture decisions after stage 1

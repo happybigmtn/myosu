@@ -118,12 +118,13 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Owns: Decision document evaluating all design axes with recommendations.
   Integration touchpoints: Swap interface trait, swap pallet, runtime swap config, emission pipeline.
   Scope boundary: Research and document only. Do NOT change swap implementation. Do NOT wire V3 AMM into runtime.
-  Acceptance criteria: (1) Each design axis from the spec has a concrete recommendation with rationale. (2) Migration path from NoOpSwap to chosen model is sketched. (3) Document is reviewed by at least one other contributor.
+  Acceptance criteria: (1) Each design axis from the spec has a concrete recommendation with rationale. (2) Migration path from NoOpSwap to chosen model is sketched. (3) The review requirement matches `specs/050426-token-economics.md`: the document must be reviewed by at least two contributors with token-economics context before this task closes.
   Verification: Review-based.
   Required tests: None (research task).
   Dependencies: P-002 (emission understanding informs economic model).
+  Blocker (2026-04-05): `docs/adr/008-future-token-economics-direction.md` now records the repo-local recommendation, but the spec requires review by at least two contributors with context before `F-003` can be removed from the queue. That review is external to the current coding loop and is not yet recorded in-repo.
   Estimated scope: L
-  Completion signal: Decision document exists and is reviewed.
+  Completion signal: Decision document exists, the multi-contributor review is recorded, and only then is `NoOpSwap` replacement work allowed to start.
 
 ### Robopoker Fork Coherence
 
