@@ -227,7 +227,7 @@ if [[ ! -f "$runtime_wasm" || ! -x "$node_bin" ]]; then
 
   if [[ ! -f "$runtime_wasm" ]]; then
     echo "building myosu-chain runtime wasm cache"
-    run_logged "build_runtime" cargo build -p myosu-chain-runtime --quiet
+    run_logged "build_runtime" env -u SKIP_WASM_BUILD cargo build -p myosu-chain-runtime --quiet
   else
     echo "reusing existing myosu-chain runtime wasm cache"
   fi

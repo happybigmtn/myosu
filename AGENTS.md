@@ -1,7 +1,7 @@
 ---
 os_kind: autonomous_kernel
 os_version: "3.0"
-last_updated: "2026-04-02"
+last_updated: "2026-04-05"
 system: myosu
 state: stage_0
 domain: game_solving_chain
@@ -308,6 +308,7 @@ Runtime wasm cache for node smoke proofs:
 - `tests/e2e/local_loop.sh` overlaps the `myosu-miner` / `myosu-validator` / `myosu-play` binary build with that RPC warm-up window; the poker zero-iteration bootstrap can still print an upstream robopoker panic about a missing abstraction lookup to stderr while exiting 0, so treat the script’s stdout contract plus produced checkpoint/response files as the truthful proof surface for that step
 - Any ad hoc `cargo run -p myosu-chain-client --example ...` proof that sets a custom `CARGO_TARGET_DIR` should also set `SKIP_WASM_BUILD=1`, otherwise the runtime build script will try to rebuild the wasm in that fresh target tree instead of reusing the cached artifact from `cargo build -p myosu-chain-runtime`
 - `SKIP_WASM_BUILD=1 cargo run -p myosu-chain -- build-spec --chain devnet --raw` can still cold-build `frame-storage-access-test-runtime` from the inherited polkadot-sdk toolchain before it emits the JSON; let that compile finish once instead of treating the quiet build phase as a hang
+- The `integration-e2e` workflow exports `SKIP_WASM_BUILD=1` at the job level, so any helper that needs to refresh `target/debug/wbuild/myosu-chain-runtime/myosu_chain_runtime.wasm` must explicitly clear that env for the runtime build step (for example `env -u SKIP_WASM_BUILD cargo build -p myosu-chain-runtime --quiet`); otherwise devnet startup can still fail with `development wasm is not available` even after the node binary rebuilds successfully
 - `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --game kuhn --smoke-test` is the truthful third-game play proof; only `--game poker` currently accepts `--chain/--subnet` miner discovery flags
 - `bash ops/deploy-bootnode.sh --dry-run` now prepares `target/bootnode/devnet/` with a stable node key, launcher script, systemd unit, and metadata file, then prints the truthful bootnode multiaddr without starting the process
 - `env MYOSU_KEY_PASSWORD=... bash .github/scripts/prepare_operator_network_bundle.sh` now defaults to `target/operator-network-bundle/`, reads bootnode metadata from that `ops/deploy-bootnode.sh --dry-run` surface, and rewrites the bundled `devnet-spec.json` with the same `bootnode_multiaddr`; `bash .github/scripts/check_operator_network_bootstrap.sh` is the truthful proof for that operator bundle contract

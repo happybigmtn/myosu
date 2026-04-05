@@ -34,7 +34,7 @@ mkdir -p "$tmp_root"
 : >"$log_file"
 
 echo "building myosu-chain runtime wasm cache"
-cargo build -p myosu-chain-runtime --quiet
+env -u SKIP_WASM_BUILD cargo build -p myosu-chain-runtime --quiet
 echo "building myosu-chain node (fast-runtime)"
 SKIP_WASM_BUILD=1 cargo build -p myosu-chain --features fast-runtime --quiet
 
