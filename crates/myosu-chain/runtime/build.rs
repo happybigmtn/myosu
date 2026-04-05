@@ -1,6 +1,10 @@
 use std::path::{Path, PathBuf};
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=SKIP_WASM_BUILD");
+    println!("cargo:rerun-if-env-changed=CARGO_TARGET_DIR");
+    println!("cargo:rerun-if-env-changed=PROFILE");
+
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(3)
