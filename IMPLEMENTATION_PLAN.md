@@ -1,1018 +1,459 @@
 # IMPLEMENTATION_PLAN
 
-Prioritized implementation queue derived from the 11 generated specs and current codebase review. The myosu repo is a working stage-0 prototype (265K lines Rust, 3.2K lines Python) with a proven local loop. The priority queue focuses on foundation work (chain reduction, emission completion) and hardening (observability, security, integration tests) that unblock the later network and product phases. Five independent starting points exist for maximum parallelism: chain pallet removal, EVM stripping, observability, security auditing, and Python bug fixes.
+Generated: 2026-04-05
+Codebase snapshot: trunk @ b1be135
+Specs: gen-20260405-145446/specs/050426-*.md
+
+---
 
 ## Priority Work
 
-- [x] `RT-001` Feature-gate inherited pallets from runtime construct_runtime macro
-  - Spec: `specs/040226-01-chain-runtime-reduction.md`
-  - Why now: Runtime carried 16 pallets; the stage-0 contract now requires a 9-pallet default surface (7 functional pallets plus Aura and Grandpa). Removing unused pallets is the highest-leverage reduction and unblocks extrinsic capping and comment cleanup.
-  - Codebase evidence:
-    - `crates/myosu-chain/runtime/src/lib.rs` lines 1214-1237 wire 16 pallets: System, RandomnessCollectiveFlip, Timestamp, Aura, Grandpa, Balances, TransactionPayment, SubtensorModule, Utility, Sudo, Multisig, Preimage, Scheduler, Proxy, AdminUtils, SafeMode
-    - Target pallets per corpus plan 003: System, Timestamp, Balances, TransactionPayment, GameSolver, AdminUtils, Utility (consensus pallets Aura/Grandpa retained as framework requirement)
-    - Pallets to feature-gate: RandomnessCollectiveFlip, Sudo, Multisig, Preimage, Scheduler, Proxy, SafeMode, and inherited pallets drand, crowdloan, registry, swap, swap-interface, transaction-fee
-  - Owns:
-    - `crates/myosu-chain/runtime/src/lib.rs`
-    - `crates/myosu-chain/runtime/Cargo.toml`
-  - Integration touchpoints:
-    - `crates/myosu-chain/node/src/chain_spec/localnet.rs` (genesis config references removed pallets)
-    - `crates/myosu-chain/node/src/chain_spec/devnet.rs`
-    - `crates/myosu-chain/pallets/game-solver/src/lib.rs` (SwapInterface trait bound)
-  - Scope boundary:
-    - Feature-gate only; do not delete pallet source directories (they may be needed for stage-1 restoration)
-    - Preserve Aura and Grandpa as consensus framework pallets
-    - Preserve existing SwapInterface no-op stub in game-solver
-  - Required tests:
-    - `SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime`
-    - `cargo test -p pallet-game-solver stage_0_flow --quiet`
-    - `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
-  - Dependencies: `none`
-  - Completion signal: construct_runtime! macro contains ≤9 pallets (7 target + Aura + Grandpa) and all three test commands pass
-  - Implementation notes:
-    - Default runtime now uses a minimal `construct_runtime!` variant while `full-runtime` preserves the inherited pallet set behind an explicit feature.
-    - Stage-0 bootstrap defaults were moved off `Sudo` mutation helpers; validator and chain-client bootstrap flows now rely on runtime defaults for tempo/network limits.
-    - The node proof path requires a cached runtime wasm under `target/debug/wbuild/myosu-chain-runtime/`; this increment refreshed that cache with a native `cargo build -p myosu-chain-runtime` after installing the `wasm32v1-none` target.
+### Cluster 1: Land Uncommitted Hardening (dependency: none)
 
-- [x] `RT-002` Strip EVM and Frontier service dependencies from node binary
-  - Spec: `specs/040226-01-chain-runtime-reduction.md`
-  - Why now: Node binary compiles Frontier/EVM service layer that stage-0 does not use. Removing it reduces build time and attack surface.
-  - Codebase evidence:
-    - Workspace Cargo.toml references Frontier git deps: fc-*, fp-*, pallet-evm
-    - `crates/myosu-chain/node/Cargo.toml` pulls in Frontier service crates
-    - `crates/myosu-chain/node/src/lib.rs` wires EVM RPC handlers
-  - Owns:
-    - `crates/myosu-chain/node/src/lib.rs`
-    - `crates/myosu-chain/node/Cargo.toml`
-    - `Cargo.toml` (workspace dependency declarations)
-  - Integration touchpoints:
-    - `crates/myosu-chain/node/src/main.rs` (service startup)
-    - `crates/myosu-chain/runtime/Cargo.toml` (runtime-side EVM deps)
-  - Scope boundary:
-    - Remove Frontier crate references from node service wiring and workspace deps
-    - Do not modify pallet source that merely references EVM types behind feature gates
-  - Required tests:
-    - `SKIP_WASM_BUILD=1 cargo check -p myosu-chain`
-    - `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`
-  - Dependencies: `none`
-  - Completion signal: Node binary builds without any fc-*, fp-*, or pallet-evm crate in its dependency tree
-  - Implementation notes:
-    - The queued evidence was stale: `crates/myosu-chain/node/src/lib.rs`, `rpc.rs`, and `service.rs` were already Frontier-free, so RT-002 reduced to manifest pruning rather than service rewiring.
-    - Removed unused Frontier workspace declarations (`fc-*`, `fp-*`, `pallet-evm*`, `pallet-ethereum`, `pallet-base-fee`) from the root `Cargo.toml`.
-    - Cut the unused `pallet-admin-utils` dependency from `myosu-chain-client` and demoted `pallet-evm-chain-id` in `pallet-admin-utils` and `subtensor-transaction-fee` to test-only direct dev-dependencies so stage-0 node builds stop inheriting Frontier crates.
-    - Verified the post-change dependency tree with `cargo tree -p myosu-chain --prefix none | rg '^(fc-|fp-|pallet-evm|pallet-ethereum)'`, which now returns no matches.
+The working tree contains +465/-4709 lines of coherent hardening work: zero-dividend fallback, epoch consistency guard, scoring formula change, decode budget tightening, CI INV-004, Cargo.toml de-workspacing, and genesis docs cleanup. All changes have tests. This must land before any downstream work proceeds.
 
-- [x] `RT-003` Feature-gate unused pallet-game-solver extrinsics to ≤20
-  - Spec: `specs/040226-01-chain-runtime-reduction.md`
-  - Why now: Pallet exposes 63 extrinsics; spec requires ≤20. Reduces audit surface and aligns the pallet with stage-0 actual usage.
-  - Codebase evidence:
-    - `crates/myosu-chain/pallets/game-solver/src/macros/dispatches.rs` contains 63 `#[pallet::call_index]` entries
-    - Many extrinsics serve root-network, AMM, or multi-subnet features not used in stage-0
-  - Owns:
-    - `crates/myosu-chain/pallets/game-solver/src/macros/dispatches.rs`
-    - `crates/myosu-chain/pallets/game-solver/src/lib.rs`
-  - Integration touchpoints:
-    - `crates/myosu-chain/runtime/src/lib.rs` (runtime wiring)
-    - `crates/myosu-chain-client/src/lib.rs` (RPC calls referencing extrinsics)
-    - `crates/myosu-miner/src/chain.rs` (miner chain interactions)
-    - `crates/myosu-validator/src/chain.rs` (validator chain interactions)
-  - Scope boundary:
-    - Feature-gate behind a cfg flag; do not delete extrinsic implementations
-    - Identify the ≤20 extrinsics actively called by miner, validator, and chain-client
-  - Required tests:
-    - `cargo test -p pallet-game-solver stage_0_flow --quiet`
-    - `SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet`
-  - Dependencies: `RT-001`
-  - Completion signal: Pallet exposes ≤20 extrinsics when built without the stage-1 feature flag; miner and validator tests pass
-  - Implementation notes:
-    - Default stage-0 builds now expose only the live chain-client surface: `set_weights`, `commit_weights`, `reveal_weights`, `add_stake`, `serve_axon`, `burned_register`, `register_network`, and `start_call`.
-    - `full-runtime` restores the inherited call surface for legacy tests and future stage-1 work; `stage_0_flow` now asserts the compiled default call list via `scale-info` and enforces the `<= 20` cap.
-    - Adjacent default-build helpers were aligned with the reduced surface: coldkey-swap guard/tests are disabled unless `full-runtime` is enabled, shared test registration falls back to `burned_register`, and `subtensor-transaction-fee` only matches alpha-fee calls when the full runtime surface is compiled.
+- [ ] `P-001` Commit and verify uncommitted hardening batch
 
-- [x] `RT-004` Resolve TODO/FIXME backlog in myosu-chain to fewer than 20 remaining
-  - Spec: `specs/040226-01-chain-runtime-reduction.md`
-  - Why now: Chain crate carries 121 TODO/FIXME comments across 61 files. Many will be eliminated by pallet and extrinsic removal; the remainder need case-by-case resolution or conversion to tracked issues.
-  - Codebase evidence:
-    - 121 TODO/FIXME comments across `crates/myosu-chain/` in 61 files
-    - Many are in pallets being feature-gated by RT-001
-  - Owns:
-    - `crates/myosu-chain/pallets/game-solver/src/`
-    - `crates/myosu-chain/runtime/src/`
-    - `crates/myosu-chain/node/src/`
-  - Integration touchpoints:
-    - All active chain source files remaining after RT-001 and RT-003
-  - Scope boundary:
-    - Resolve or remove TODOs in active code paths only
-    - Convert deferred items to tracked issues rather than leaving inline TODOs
-    - Do not refactor surrounding code; address only the TODO itself
-  - Required tests:
-    - `SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime`
-    - `cargo test -p pallet-game-solver stage_0_flow --quiet`
-  - Dependencies: `RT-001`, `RT-003`
-  - Completion signal: Fewer than 20 TODO/FIXME comments remain in non-feature-gated chain source files
-  - Implementation notes:
-    - The active chain tree now carries no raw TODO/FIXME markers in the default-build runtime, node, or pallet-game-solver sources: `rg -n "TODO|FIXME" crates/myosu-chain/runtime crates/myosu-chain/node crates/myosu-chain/pallets/game-solver/src --glob '!**/migrations/**' --glob '!**/tests/**' -S | wc -l` returns `0`.
-    - The carried stage-0 source still contains deferment comments where needed, but those notes now describe the rationale directly instead of leaving backlog markers in the live surface.
+  Spec: `specs/050426-ci-invariant-enforcement.md`
+  Why now: 465 lines of tested code sitting in the working tree blocks all downstream tasks; CI cannot validate anything until this lands.
+  Codebase evidence: `git diff --stat` shows 59 modified files across game-solver (coinbase fallback, epoch guard, swap_stub docs), myosu-games-poker (decode limit 256M→1M), myosu-validator (hyperbolic scoring), ci.yml (INV-004), and 11 Cargo.toml de-workspacing changes.
+  Owns: All currently modified files in the working tree.
+  Integration touchpoints: CI pipeline (new INV-004 job), epoch tests (new consistency guard tests), validator scoring (formula change), poker decode limits.
+  Scope boundary: Commit what exists. No new code. Fix any lint/test failures the commit surfaces.
+  Acceptance criteria: (1) `cargo test -p pallet-game-solver -- stage_0` passes with new epoch guard and coinbase fallback tests. (2) `cargo test -p myosu-validator` passes with hyperbolic scoring tests. (3) `cargo test -p myosu-games-poker` passes with decode limit tests. (4) CI pipeline runs green on the commit including new INV-004 boundary check. (5) Genesis docs deletion does not break any CI doctrine job.
+  Verification: `cargo test -p pallet-game-solver -- stage_0 && cargo test -p myosu-validator && cargo test -p myosu-games-poker && cargo clippy --workspace -- -D warnings`
+  Required tests: Already written in working tree — `stage_0_flow.rs` (2 tests), `epoch.rs` (2 tests), `solver.rs` (2 tests), `wire.rs` (1 test), `validation.rs` (1 test).
+  Dependencies: None.
+  Estimated scope: S
+  Completion signal: Green CI on trunk with all new tests passing.
 
-- [x] `RT-005` Gate legacy full-runtime pallet tests out of the default workspace green path
-  - Spec: `specs/040226-01-chain-runtime-reduction.md`
-  - Why now: A truthful `cargo test --workspace` still compiled inherited `pallet-admin-utils` and `subtensor-transaction-fee` unit suites against the removed full-runtime `pallet-game-solver` config and call surface, so the repo was not actually green even though the stage-0 task proofs passed.
-  - Codebase evidence:
-    - `crates/myosu-chain/pallets/transaction-fee/src/lib.rs` unconditionally included `src/tests/`, while those tests construct `remove_stake*`, `unstake_all*`, `move_stake`, `transfer_stake`, and `swap_stake*` calls that now exist only behind `pallet-game-solver/full-runtime`
-    - `crates/myosu-chain/pallets/admin-utils/src/lib.rs` unconditionally included `src/tests/`, while its mock runtime still implemented removed `pallet_game_solver::Config` associated types and used `register`/`root_register`
-  - Owns:
-    - `crates/myosu-chain/pallets/transaction-fee/src/lib.rs`
-    - `crates/myosu-chain/pallets/admin-utils/src/lib.rs`
-    - `crates/myosu-chain/pallets/admin-utils/Cargo.toml`
-  - Scope boundary:
-    - Keep the inherited legacy unit suites available behind an explicit `full-runtime` opt-in
-    - Do not rewrite those tests to stage-0 semantics in this slice
-  - Required tests:
-    - `SKIP_WASM_BUILD=1 cargo test -p subtensor-transaction-fee --quiet`
-    - `SKIP_WASM_BUILD=1 cargo test -p pallet-admin-utils --quiet`
-    - `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`
-  - Dependencies: `RT-003`
-  - Completion signal: Default workspace tests skip the full-runtime-only unit suites and the broad workspace test sweep no longer fails on the removed stage-0 pallet surface
-  - Implementation notes:
-    - Both pallets now compile their inherited unit suites only when `feature = "full-runtime"` is explicitly enabled, matching the stage-0 reduction posture already used in `pallet-game-solver`.
-    - `pallet-admin-utils` now exposes a matching `full-runtime` feature that forwards to `pallet-game-solver/full-runtime`, so operators can still run the legacy admin-utils tests intentionally instead of implicitly through the default workspace gate.
+---
 
-- [x] `RT-006` Align chain-client default fallback tests with the live stage-0 runtime constants
-  - Spec: `specs/040226-01-chain-runtime-reduction.md`
-  - Why now: After RT-001 moved stage-0 bootstrap flows onto runtime defaults, the broad workspace green gate still failed because `myosu-chain-client` unit tests asserted stale inherited constants (`7200` network rate limit, `360` tempo) instead of the live runtime values.
-  - Codebase evidence:
-    - `crates/myosu-chain/runtime/src/lib.rs` defines `SubtensorInitialNetworkRateLimit = 0` and `INITIAL_SUBNET_TEMPO = 2`
-    - `crates/myosu-chain-client/src/lib.rs` still hard-coded `7200` and `360` in the tests that are supposed to mirror those runtime constants
-  - Owns:
-    - `crates/myosu-chain-client/src/lib.rs`
-  - Scope boundary:
-    - Update the stale unit-test expectations only
-    - Do not change the runtime constants or chain-client fallback logic
-  - Required tests:
-    - `cargo test -p myosu-chain-client --lib --quiet`
-    - `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`
-  - Dependencies: `RT-001`
-  - Completion signal: The chain-client fallback tests assert the current stage-0 runtime defaults and no longer break the broad workspace green gate
-  - Implementation notes:
-    - The fallback constants already referenced the runtime parameter types; only the extra “lock the expected value” assertions were stale.
-    - The current committed stage-0 defaults are intentional repo truth: network registration rate limit `0` and subnet tempo `2`.
+### Checkpoint: Verify clean trunk
 
-- [x] `EM-001` Remove root network stake weighting from coinbase emission distribution
-  - Spec: `specs/040226-02-single-token-emission-accounting.md`
-  - Why now: Coinbase still applies root-network dividend weighting (run_coinbase.rs lines 437-442) which couples emissions to a root network that is disabled in stage-0. This violates the single-token emission model.
-  - Codebase evidence:
-    - `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs` lines 249-252 and 437-442 compute root_prop from root_stake and tao_weight
-    - `crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs` lines 315-325 calculate root proportion
-    - `crates/myosu-chain/pallets/game-solver/src/coinbase/root.rs` contains root network operations
-    - SwapInterface no-op stub exists in `swap_stub.rs` (identity: amount_in == amount_out, price == 1)
-  - Owns:
-    - `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs`
-    - `crates/myosu-chain/pallets/game-solver/src/coinbase/block_step.rs`
-    - `crates/myosu-chain/pallets/game-solver/src/coinbase/root.rs`
-  - Integration touchpoints:
-    - `crates/myosu-chain/pallets/game-solver/src/tests/coinbase.rs` (existing coinbase tests)
-    - `crates/myosu-chain/pallets/game-solver/src/epoch/` (Yuma consensus output feeds coinbase)
-  - Scope boundary:
-    - Remove or zero-out root network proportion in dividend calculation
-    - Preserve the SwapInterface trait and no-op stub
-    - Do not modify Yuma consensus math in epoch/
-  - Required tests:
-    - `cargo test -p pallet-game-solver stage_0_flow --quiet`
-    - `cargo test -p pallet-game-solver coinbase --quiet`
-  - Dependencies: `RT-001`
-  - Completion signal: Coinbase distributes emissions proportional to subnet-local stake only, with no root-network weighting; all coinbase tests pass
-  - Implementation notes:
-    - `coinbase/block_step.rs` now gates `root_proportion()` by runtime surface: stage-0 builds always return zero, while `full-runtime` preserves the inherited root-network weighting path.
-    - `coinbase/run_coinbase.rs` now gives stage-0 builds a separate `calculate_dividend_distribution()` that folds any legacy `pending_root_alpha` bucket back into subnet-local alpha dividends and returns no root-alpha dividend map.
-    - Added always-on `stage_0_coinbase_*` assertions in `src/tests/stage_0_flow.rs`, which makes `cargo test -p pallet-game-solver coinbase --quiet` exercise the live stage-0 coinbase semantics even though the inherited `src/tests/coinbase.rs` module remains feature-gated for `legacy-subtensor-tests`.
+Before proceeding, confirm trunk CI is green, `cargo test` passes for all active crates, and no regressions from the hardening batch. If CI fails, fix before widening scope.
 
-- [x] `EM-002` Add deterministic proof surfaces for Yuma emission output and validator scoring
-  - Spec: `specs/040226-02-single-token-emission-accounting.md`
-  - Why now: Spec requires proving both stable Yuma emission output and cross-validator agreement within epsilon (1e-6). The repo lacked an always-on Yuma determinism proof and needed to call out the separate validator scoring proof surface explicitly.
-  - Codebase evidence:
-    - `crates/myosu-chain/pallets/game-solver/src/tests/` contains coinbase and emission tests but none verify cross-validator determinism
-    - Yuma consensus uses substrate_fixed (I32F32, I64F64, I96F32) for bit-identical output
-    - `crates/myosu-chain/pallets/game-solver/src/epoch/math.rs` contains consensus calculation
-  - Owns:
-    - `crates/myosu-chain/pallets/game-solver/src/tests/determinism.rs` (new test module)
-  - Integration touchpoints:
-    - `crates/myosu-chain/pallets/game-solver/src/tests/mod.rs` (test module registration)
-    - `crates/myosu-chain/pallets/game-solver/src/epoch/` (consensus functions under test)
-    - `crates/myosu-validator/src/validation.rs` (bounded validator scoring determinism proof)
-    - `tests/e2e/validator_determinism.sh` (cross-process validator scoring proof)
-  - Scope boundary:
-    - Unit test: feed identical weight matrices to Yuma, assert outputs match exactly
-    - Reuse the validator-owned proof surfaces for cross-validator scoring determinism
-    - Do not modify consensus code
-  - Required tests:
-    - `cargo test -p pallet-game-solver determinism --quiet`
-    - `bash tests/e2e/validator_determinism.sh`
-  - Dependencies: `EM-001`
-  - Completion signal: The pallet unit proof locks Yuma output determinism within 1e-6 epsilon, and validator-owned proof surfaces cover cross-validator scoring determinism on identical inputs
-  - Implementation notes:
-    - Added an always-on `tests/determinism.rs` module so the default pallet test build now carries the Yuma-output determinism proof instead of hiding it behind `legacy-subtensor-tests`.
-    - The pallet proof seeds a stage-0 subnet twice in fresh `new_test_ext` environments, applies the same validator stakes and weight matrix, runs the same Yuma epoch, and asserts the persisted emission, incentive, dividend, consensus, and validator-trust outputs are bit-stable across runs.
-    - Cross-validator scoring determinism is now documented as a separate proof surface: `crates/myosu-validator/src/validation.rs` covers the bounded validator path, while `tests/e2e/validator_determinism.sh` proves two independent validator processes score the same miner checkpoint/query/response tuple identically within the configured epsilon.
+---
 
-- [x] `EM-003` Prove end-to-end emission flow on local devnet with reproducible script
-  - Spec: `specs/040226-02-single-token-emission-accounting.md`
-  - Why now: Spec requires proving emission accounting integrity (stage-0 exit criterion 12) on a running chain, not just in unit tests.
-  - Codebase evidence:
-    - `crates/myosu-chain/node/tests/stage0_local_loop.rs` tests the local loop but does not verify emission accounting invariants
-    - No shell script exercises the emission flow end-to-end
-  - Owns:
-    - `tests/e2e/emission_flow.sh` (new script)
-  - Integration touchpoints:
-    - `crates/myosu-chain/node/src/main.rs` (chain binary invoked by script)
-    - `crates/myosu-chain-client/src/lib.rs` (RPC queries for emission state)
-    - `tests/e2e/helpers/` (shared devnet lifecycle helpers from IT-001)
-  - Scope boundary:
-    - Shell script that boots devnet, registers subnet, runs epoch, queries emission state, asserts sum(distributions) == block_emission * epochs
-    - Do not modify chain or pallet code
-  - Required tests:
-    - `bash tests/e2e/emission_flow.sh`
-  - Dependencies: `EM-001`, `IT-001`
-  - Completion signal: Script exits 0 after proving emission invariant holds on a live local devnet
-  - Implementation notes:
-    - Added `tests/e2e/emission_flow.sh`, which boots the IT-001 helper devnet, generates a temporary `myosu-chain-client` example inside the workspace so Cargo reuses the repo lockfile, and runs the full owner/miner/validator registration plus commit-reveal weight flow against `ws://127.0.0.1:9955`.
-    - The proof queries live chain state for subnet emission vectors and owner stake deltas, then cross-checks them against the pallet’s `block_step_summary` log for the exact drained epoch block.
-    - Live stage-0 accounting drains pending emissions once per subnet epoch, so the invariant is `sum(distributions) ~= block_emission * (tempo + 1)` for the drained subnet window; the script enforces exact bucket agreement (`emission_sum == server + validator`, `owner_delta == owner_cut`) and allows only the observed fixed-point truncation loss budget on the final epoch total (6 rao on the proof run).
+### Cluster 2: Emission Conservation Proof (dependency: P-001)
 
-- [x] `OBS-001` Add tracing subscriber initialization to myosu-play binary
-  - Spec: `specs/040226-03-unified-observability.md`
-  - Why now: myosu-play is the only binary without tracing subscriber setup. It uses raw println! for output, making it invisible to RUST_LOG filtering.
-  - Codebase evidence:
-    - `crates/myosu-play/src/main.rs` has no init_tracing() function and no tracing_subscriber setup
-    - `crates/myosu-miner/src/main.rs` lines 84-92 and `crates/myosu-validator/src/main.rs` lines 119-127 both initialize tracing with EnvFilter
-    - myosu-play/src/main.rs lines 105, 339-352 use println! for output
-  - Owns:
-    - `crates/myosu-play/src/main.rs`
-    - `crates/myosu-play/Cargo.toml`
-  - Integration touchpoints:
-    - `crates/myosu-tui/src/lib.rs` (TUI shell must coexist with tracing output)
-    - `crates/myosu-play/tests/` (smoke test must still pass)
-  - Scope boundary:
-    - Add tracing subscriber init matching the miner/validator pattern
-    - Do not change pipe-mode protocol output format (stdout protocol lines must remain println! for protocol correctness)
-    - Replace only diagnostic/status println! calls with tracing macros
-  - Required tests:
-    - `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`
-    - `RUST_LOG=myosu_play=debug SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test 2>&1 | grep -q myosu_play`
-  - Dependencies: `none`
-  - Completion signal: myosu-play respects RUST_LOG filtering and produces structured tracing output for diagnostic messages while preserving pipe-mode protocol on stdout
-  - Implementation notes:
-    - `crates/myosu-play` now carries direct `tracing` and `tracing-subscriber` workspace dependencies and initializes a subscriber before CLI parsing with an `EnvFilter` default of `myosu_play=info`.
-    - Added debug-only launch/context events for smoke-test and pipe paths, plus pre-TUI launch logging, so operators get `RUST_LOG`-filterable stderr diagnostics without introducing raw log lines during the interactive shell.
-    - Pipe-mode and smoke-test stdout protocol lines remain `print!`/`println!` driven, preserving the existing text protocol while making `RUST_LOG=myosu_play=debug` surface the `myosu_play` target on stderr.
+The emission-epoch spec identifies a critical gap: fixed-point truncation (`U96F32 → u64`) loses fractional rao each block, and the cumulative drift is unquantified. The zero-dividend fallback (P-001) ensures emission isn't lost when dividends are zero, but the truncation gap remains open.
 
-- [x] `SEC-001` Add cargo-audit dependency scanning to CI pipeline
-  - Spec: `specs/040226-04-security-audit-process.md`
-  - Why now: No automated dependency vulnerability scanning exists. CI must fail on known vulnerabilities in active crates.
-  - Codebase evidence:
-    - `.github/workflows/ci.yml` has 7 jobs (repo-shape, active-crates, chain-core, doctrine, plan-quality, operator-network, chain-clippy) but none run cargo-audit
-    - Workspace Cargo.toml pulls from opentensor forks of polkadot-sdk and frontier with pinned revisions
-  - Owns:
-    - `.github/workflows/ci.yml`
-  - Integration touchpoints:
-    - `Cargo.lock` (audit target)
-    - `.github/scripts/` (existing CI script directory)
-  - Scope boundary:
-    - Add one CI job running cargo-audit on workspace
-    - Use advisory-db ignore list for known false positives from Substrate fork deps if needed
-    - Do not modify any Rust code
-  - Required tests:
-    - `cargo audit` (must exit 0 or have only ignored advisories)
-  - Dependencies: `none`
-  - Completion signal: CI pipeline includes cargo-audit job that fails on new unignored advisories
-  - Implementation notes:
-    - Added a `dependency-audit` CI job that installs `cargo-audit` and runs the workspace lockfile check on every push and pull request.
-    - The current ignore set is limited to seven inherited chain-stack advisories already present in `Cargo.lock`: `RUSTSEC-2025-0009` (`ring` through node/libp2p QUIC), `RUSTSEC-2025-0055` (`tracing-subscriber 0.2.25` through the inherited runtime graph that still reaches `myosu-chain-client`), and the five `wasmtime 8.0.1` advisories (`RUSTSEC-2023-0091`, `RUSTSEC-2024-0438`, `RUSTSEC-2025-0118`, `RUSTSEC-2026-0020`, `RUSTSEC-2026-0021`) from the inherited Substrate executor stack.
-    - Local proof stays aligned with CI by running `cargo audit` with the same seven `--ignore` flags until the upstream opentensor/Substrate fork drift is reduced.
+- [ ] `P-002` Quantify emission truncation drift with property-based test
 
-- [x] `SEC-002` Create SECURITY.md with vulnerability disclosure guidance
-  - Spec: `specs/040226-04-security-audit-process.md`
-  - Why now: No vulnerability disclosure process exists. Required before external operators join devnet.
-  - Codebase evidence:
-    - No SECURITY.md at repository root
-    - `ops/security-audit-stage0.md` documents 6 security risks (SR-01 through SR-06) but provides no disclosure process
-  - Owns:
-    - `SECURITY.md`
-  - Integration touchpoints:
-    - `README.md` (should reference SECURITY.md)
-    - `ops/security-audit-stage0.md` (existing security context)
-  - Scope boundary:
-    - Standard vulnerability disclosure template: reporting channel, response timeline, scope, safe harbor
-    - Do not create a bug bounty program or external reporting infrastructure
-  - Required tests:
-    - `test -f SECURITY.md`
-    - `grep -q SECURITY.md README.md`
-  - Dependencies: `none`
-  - Completion signal: SECURITY.md exists at repo root with disclosure process and README.md links to it
-  - Implementation notes:
-    - Added a repo-root `SECURITY.md` covering the stage-0 support window (`trunk` plus the latest tag), private reporting expectations, response SLAs, scope, and safe-harbor terms.
-    - The reporting channel avoids inventing new infrastructure: it prefers GitHub private vulnerability reporting for `happybigmtn/myosu` and falls back to private contact with `@happybigmtn` on GitHub if the repository UI does not expose that flow.
-    - `README.md` now links the security policy from the top-level orientation list so operators have a stable disclosure entrypoint.
+  Spec: `specs/050426-emission-epoch-mechanism.md`
+  Why now: Emission conservation is the highest-risk unknown in the chain. If truncation drift accumulates faster than expected, total issuance diverges from the intended supply schedule. This must be measured before multi-node work (where cross-node divergence would compound it).
+  Codebase evidence: `run_coinbase.rs` converts `U96F32` emission to `u64` via truncation. `math.rs` uses `I96F32`/`I32F32` throughout epoch calculations. No existing test measures cumulative truncation over N blocks.
+  Owns: New test file or test functions in `crates/myosu-chain/pallets/game-solver/src/tests/` measuring truncation.
+  Integration touchpoints: `run_coinbase.rs` (emission conversion), `math.rs` (fixed-point arithmetic), `block_emission.rs` (per-block calculation).
+  Scope boundary: Measurement and test only. Do NOT change the emission arithmetic — just quantify the drift. If drift exceeds 1 rao per epoch, open a follow-on task to decide on a correction strategy.
+  Acceptance criteria: (1) A property-based test (proptest or manual sweep) runs 1000+ simulated blocks and asserts cumulative truncation loss is < N rao (where N is documented). (2) The actual measured drift per epoch is documented in a code comment at the truncation site.
+  Verification: `cargo test -p pallet-game-solver -- truncation`
+  Required tests: Property-based test sweeping block counts [1, 100, 1000, 10000] with varying emission rates.
+  Dependencies: P-001 (clean trunk).
+  Estimated scope: S
+  Completion signal: Test passes and drift magnitude is documented.
 
-- [x] `SEC-003` Document upstream CVE tracking process for Substrate and robopoker forks
-  - Spec: `specs/040226-04-security-audit-process.md`
-  - Why now: Project depends on pinned forks of polkadot-sdk and robopoker with no process for tracking upstream security patches.
-  - Codebase evidence:
-    - Workspace Cargo.toml pins opentensor/polkadot-sdk at rev 71629fd and robopoker at rev 0471631
-    - `ops/security-audit-stage0.md` identifies SR-01 (inherited chain vulnerabilities) and SR-02 (robopoker fork drift) but no tracking process
-    - `docs/robopoker-fork-changelog.md` tracks fork divergence but not CVEs
-  - Owns:
-    - `ops/cve-tracking-process.md` (new file)
-  - Integration touchpoints:
-    - `SECURITY.md` (should reference CVE process)
-    - `ops/security-audit-stage0.md` (existing risk register)
-    - `docs/robopoker-fork-changelog.md` (fork tracking)
-  - Scope boundary:
-    - Document: which upstreams to monitor, how often, who is responsible, how to triage
-    - Do not implement automated CVE monitoring tooling
-  - Required tests:
-    - `test -f ops/cve-tracking-process.md`
-    - `grep -q cve-tracking SECURITY.md`
-  - Dependencies: `SEC-002`
-  - Completion signal: CVE tracking process documented and referenced from SECURITY.md
-  - Implementation notes:
-    - Added `ops/cve-tracking-process.md` with the live pinned upstreams (`opentensor/polkadot-sdk`, in-tree `subtensor`, `happybigmtn/robopoker`, and `substrate-fixed`), a weekly-plus-release review cadence, triage rules, and the exact `cargo audit` ignore set currently carried in CI.
-    - Linked the process from `SECURITY.md` and the stage-0 security audit snapshot so upstream advisory review is now part of the repo's operator-facing security evidence instead of an implicit maintainer chore.
-    - Extended `docs/robopoker-fork-changelog.md` so any future robopoker security-driven pin change must update both the fork changelog and the CVE tracking evidence in the same slice.
+- [ ] `P-003` Wire `emission_flow.sh` E2E test into CI
 
-- [x] `SEC-004` Verify unsafe code documentation covers invariant, failure mode, and boundary conditions
-  - Spec: `specs/040226-04-security-audit-process.md`
-  - Why now: Spec requires every unsafe block to have a SAFETY comment documenting invariant, failure mode, and boundary conditions.
-  - Codebase evidence:
-    - `crates/myosu-games-poker/src/codexpoker.rs` lines 203 and 309 have `unsafe { Mmap::map(&file) }` with existing SAFETY comments noting files are read-only solver artifacts
-    - Comments may not fully document failure modes (e.g., truncated file, concurrent modification) or boundary conditions
-  - Owns:
-    - `crates/myosu-games-poker/src/codexpoker.rs`
-  - Integration touchpoints:
-    - `crates/myosu-games-poker/src/lib.rs` (public API consuming mmap'd data)
-  - Scope boundary:
-    - Expand existing SAFETY comments to include invariant, failure mode, and boundary conditions per spec
-    - Do not change the unsafe code itself or add safe wrappers
-  - Required tests:
-    - `grep -c 'SAFETY' crates/myosu-games-poker/src/codexpoker.rs | grep -q '[2-9]'`
-    - `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet`
-  - Dependencies: `none`
-  - Completion signal: Every unsafe block in the active codebase has a SAFETY comment documenting invariant, failure mode, and boundary conditions
-  - Implementation notes:
-    - Expanded both `Mmap::map` SAFETY comments in `crates/myosu-games-poker/src/codexpoker.rs` so they now explicitly name the immutability invariant, the concurrent truncation/replacement failure mode, and the bounds-checked read boundary conditions.
-    - Verified the owned crate proof path with the task’s exact checks: the file still carries both SAFETY markers and `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet` stays green.
+  Spec: `specs/050426-emission-epoch-mechanism.md`
+  Why now: `emission_flow.sh` exists (14.2K lines) but is not in CI. It tests emission accounting end-to-end on a live devnet. Without it, the truncation measurement (P-002) is only a unit-level assertion — E2E validation of emission conservation is missing.
+  Codebase evidence: `tests/e2e/emission_flow.sh` exists. `.github/workflows/ci.yml` wires `local_loop.sh` and `validator_determinism.sh` but not `emission_flow.sh`.
+  Owns: `.github/workflows/ci.yml` (new job or step in `integration-e2e`).
+  Integration touchpoints: `integration-e2e` CI job (depends on `chain-core`), `emission_flow.sh` script, devnet chain spec.
+  Scope boundary: Wire the existing script. If the script needs fixes to pass, fix minimally. Do not rewrite.
+  Acceptance criteria: (1) `emission_flow.sh` runs in CI under `integration-e2e`. (2) It passes on current trunk. (3) CI failure in this script blocks merge.
+  Verification: Push branch, confirm `integration-e2e` job includes emission_flow step and passes.
+  Required tests: The script itself is the test.
+  Dependencies: P-001 (clean trunk), P-002 (drift is quantified, so the E2E has context).
+  Estimated scope: S
+  Completion signal: CI runs `emission_flow.sh` and passes.
 
-- [x] `IT-001` Create devnet lifecycle helper scripts for e2e test orchestration
-  - Spec: `specs/040226-05-integration-test-harness.md`
-  - Why now: No shell-based e2e test infrastructure exists. Helper scripts (start_devnet, stop_devnet, wait_for_block) are prerequisites for all integration tests.
-  - Codebase evidence:
-    - No `tests/e2e/` directory exists
-    - `.github/scripts/` contains CI validation scripts but no devnet lifecycle helpers
-    - `crates/myosu-chain/node/tests/stage0_local_loop.rs` is a Rust integration test, not a shell-orchestrated e2e test
-  - Owns:
-    - `tests/e2e/helpers/start_devnet.sh`
-    - `tests/e2e/helpers/stop_devnet.sh`
-    - `tests/e2e/helpers/wait_for_block.sh`
-  - Integration touchpoints:
-    - `crates/myosu-chain/node/src/main.rs` (chain binary started by helpers)
-    - `crates/myosu-chain/node/src/chain_spec/localnet.rs` (chain spec used by devnet)
-  - Scope boundary:
-    - Shell scripts using set -euo pipefail
-    - start_devnet builds and launches node in background, writes PID file
-    - wait_for_block polls RPC until target block height
-    - stop_devnet kills node by PID and cleans temp data
-  - Required tests:
-    - `bash tests/e2e/helpers/start_devnet.sh && bash tests/e2e/helpers/wait_for_block.sh 1 && bash tests/e2e/helpers/stop_devnet.sh`
-  - Dependencies: `none`
-  - Completion signal: Helper scripts can start a local devnet, wait for block production, and cleanly shut down
-  - Implementation notes:
-    - Added `tests/e2e/helpers/{start_devnet,wait_for_block,stop_devnet}.sh` with `set -euo pipefail`, helper-owned state under `target/e2e/devnet/`, and RPC defaults aligned with the existing node-owned smoke flows (`9955` RPC, `30444` p2p, `9616` Prometheus).
-    - `start_devnet.sh` now refreshes the runtime wasm cache with `cargo build -p myosu-chain-runtime`, builds `myosu-chain` with `fast-runtime`, and detaches the node through Python `subprocess.Popen(..., start_new_session=True)` so the devnet survives across separate `bash ...` invocations in the e2e harness.
-    - The helper keeps the truthful local single-authority path by launching the node with `--dev` (which resolves to the repo’s `localnet` single-authority spec), while directing the node’s `--tmp` data under `target/e2e/devnet/tmp` via `TMPDIR` so `stop_devnet.sh` can clean the temp tree deterministically after killing the recorded PID.
+---
 
-- [x] `IT-002` Write full local loop integration test script
-  - Spec: `specs/040226-05-integration-test-harness.md`
-  - Why now: Spec requires a single script proving the complete stage-0 local loop (chain → miner → validator → play) in under 5 minutes on a clean checkout.
-  - Codebase evidence:
-    - `crates/myosu-chain/node/tests/stage0_local_loop.rs` tests the loop in Rust but is not a standalone reproducible shell script
-    - `docs/execution-playbooks/stage0-local-loop.md` documents the manual procedure
-  - Owns:
-    - `tests/e2e/local_loop.sh`
-  - Integration touchpoints:
-    - `tests/e2e/helpers/` (devnet lifecycle from IT-001)
-    - `crates/myosu-miner/src/main.rs` (miner binary)
-    - `crates/myosu-validator/src/main.rs` (validator binary)
-    - `crates/myosu-play/src/main.rs` (play binary with --smoke-test)
-  - Scope boundary:
-    - Shell script: boot devnet, start miner, start validator, run play smoke test, verify outputs, tear down
-    - Must complete in <5 minutes
-    - Assert on observable outcomes (block production, miner registration, validator weight submission, play smoke pass)
-  - Required tests:
-    - `bash tests/e2e/local_loop.sh`
-  - Dependencies: `IT-001`
-  - Completion signal: Script exits 0 after proving full stage-0 loop end-to-end
-  - Implementation notes:
-    - Added `tests/e2e/local_loop.sh`, which boots the helper-owned devnet, overlaps `myosu-miner`/`myosu-validator`/`myosu-play` binary builds with the RPC warm-up window, and then drives the poker stage-0 path end-to-end.
-    - The shell proof mirrors the existing node-owned smoke contract instead of inventing new behavior: it writes poker bootstrap artifacts, bootstraps the miner checkpoint and response, enables subnet staking, runs validator scoring plus weight submission, starts the live miner HTTP axon, and finishes with `myosu-play --smoke-test --require-discovery --require-live-query --require-artifact`.
-    - The script generates a temporary `myosu-chain-client` example inside the workspace so it can use the real typed RPC surface for subnet registration plus post-action verification (`validator permit`, `[(miner_uid, 65535)]` weights, chain-visible endpoint, and positive epoch outputs) without adding a permanent repo helper crate.
-    - Poker bootstrap still prints an upstream robopoker panic on stderr when zero-iteration exploitability falls back to `unavailable: solver exploitability failed upstream: isomorphism not found in abstraction lookup`; the binary exits 0, emits the expected stdout contract, and produces a valid checkpoint/response pair, so the e2e proof treats stderr silence as non-authoritative for that step.
+### Checkpoint: Emission confidence
 
-- [x] `IT-003` Write cross-validator determinism integration test script
-  - Spec: `specs/040226-05-integration-test-harness.md`
-  - Why now: Spec requires automated proof of INV-003 (two validators scoring identically within epsilon). No shell-level test exercises this.
-  - Codebase evidence:
-    - No existing test runs two validator instances and compares their scoring output
-    - `crates/myosu-validator/src/validation.rs` contains exploitability scoring logic
-    - INV-003 tolerance is 1e-6 per INVARIANTS.md
-  - Owns:
-    - `tests/e2e/validator_determinism.sh`
-  - Integration touchpoints:
-    - `tests/e2e/helpers/` (devnet lifecycle from IT-001)
-    - `crates/myosu-validator/src/main.rs` (two validator instances)
-    - `crates/myosu-miner/src/main.rs` (miner providing strategy to score)
-  - Scope boundary:
-    - Boot devnet, start miner, start two validators, capture their scoring outputs, assert outputs match within 1e-6
-    - Do not modify validator code
-  - Required tests:
-    - `bash tests/e2e/validator_determinism.sh`
-  - Dependencies: `IT-001`
-  - Completion signal: Script proves two independent validators produce identical scores for the same miner strategy
-  - Implementation notes:
-    - Added `tests/e2e/validator_determinism.sh`, which reuses the IT-001 helper-owned devnet lifecycle and the same poker bootstrap artifact flow already exercised by `local_loop.sh`.
-    - The script bootstraps one miner strategy snapshot, then runs two independent validator bootstrap+scoring passes with distinct validator hotkeys (`//Bob` and `//Charlie`) against the same checkpoint/query/response tuple.
-    - INV-003 is enforced through the validator stdout contract rather than ad hoc log scraping: the harness compares `action_count`, `exact_match`, `expected_action`, and `observed_action` exactly, and asserts both `l1_distance` and `score` agree within the configured `1e-6` epsilon.
+After P-002 and P-003, the emission path has: (a) unit-level truncation bounds, (b) E2E accounting validation, (c) zero-dividend fallback. If truncation drift is unexpectedly large, stop and create a correction task before proceeding.
 
-- [x] `IT-004` Add e2e integration test job to GitHub Actions CI
-  - Spec: `specs/040226-05-integration-test-harness.md`
-  - Why now: Integration tests must run in CI to prevent regressions. Without a CI job, e2e tests are manual-only.
-  - Codebase evidence:
-    - `.github/workflows/ci.yml` has no e2e test job
-    - Chain binary compile time is 2-3 minutes; miner training ~30 seconds; total loop <5 minutes
-  - Owns:
-    - `.github/workflows/ci.yml` (new job entry)
-  - Integration touchpoints:
-    - `tests/e2e/local_loop.sh` (from IT-002)
-    - `tests/e2e/validator_determinism.sh` (from IT-003)
-  - Scope boundary:
-    - Add one CI job that runs local_loop.sh and validator_determinism.sh
-    - Use appropriate timeout (10 minutes) to accommodate compilation
-  - Required tests:
-    - `actionlint .github/workflows/ci.yml`
-  - Dependencies: `IT-002`, `IT-003`
-  - Completion signal: CI pipeline includes e2e job that runs integration test scripts and gates merges
-  - Implementation notes:
-    - Added an `E2E Integration` job to `.github/workflows/ci.yml` that runs only after `chain-core` succeeds, keeping the slower cross-binary proof off the repo-shape and active-crate critical path.
-    - The job installs `wasm32v1-none` and `protobuf-compiler`, matching the actual requirements baked into `tests/e2e/helpers/start_devnet.sh` and the chain node build.
-    - Shared the Rust cache key between `chain-core` and `integration-e2e` so the devnet job can reuse prior chain artifacts instead of always cold-building the runtime and node on a fresh runner.
+---
 
-- [x] `PY-001` Fix __import__() anti-pattern in methods.py
-  - Spec: `specs/040226-10-python-research-quality-gates.md`
-  - Why now: methods.py line 807 uses `__import__("data")` instead of the standard import already present at line 10. This is a code quality defect that breaks static analysis.
-  - Codebase evidence:
-    - `methods.py` line 807: `num_domain = len(set(r["domain"] for r in __import__("data").RAW_GAMES))`
-    - `methods.py` line 10 already imports from data: `from data import (ABSTRACTION_FAMILIES, ...)`
-  - Owns:
-    - `methods.py`
-  - Integration touchpoints:
-    - `main.py` (imports from methods)
-    - `data.py` (module being imported)
-  - Scope boundary:
-    - Replace `__import__("data").RAW_GAMES` with the existing `data` module import
-    - Add RAW_GAMES to the existing import statement if not already present
-  - Required tests:
-    - `python -c "import methods; print('OK')"`
-    - `grep -c '__import__' methods.py | grep -q '^0$'`
-  - Dependencies: `none`
-  - Completion signal: Zero __import__() calls remain in methods.py; module imports cleanly
-  - Implementation notes:
-    - Imported `RAW_GAMES` through the existing top-level `from data import (...)` statement and replaced the runtime `__import__("data").RAW_GAMES` lookup with the direct symbol reference.
-    - Verified there is no circular import from `data.py` back into `methods.py`, so the anti-pattern was unnecessary in the current tree.
-    - The task's import proof currently depends on `numpy` being installed in the default `python` interpreter because the repo does not yet carry a managed Python environment or dependency manifest.
+### Cluster 3: CI Hardening (dependency: P-001)
 
-- [x] `PY-002` Fix exponential complexity in metrics.py paired_sign_flip_test
-  - Spec: `specs/040226-10-python-research-quality-gates.md`
-  - Why now: metrics.py lines 74-84 enumerate all 2^n sign permutations via itertools.product, causing O(2^n) runtime. For n>20 this is unusable.
-  - Codebase evidence:
-    - `metrics.py` lines 74-84: `for signs in itertools.product(*((-1.0, 1.0),) * n)` generates 2^n iterations
-    - Called from `main.py` line 379 during paired comparisons between conditions
-  - Owns:
-    - `metrics.py`
-  - Integration touchpoints:
-    - `main.py` (calls paired_analysis which calls paired_sign_flip_test)
-  - Scope boundary:
-    - Replace exact enumeration with Monte Carlo approximation (e.g., 10000 random sign flips) for n > threshold
-    - Preserve exact computation for small n (≤15) where 2^n is tractable
-  - Required tests:
-    - `python -c "from metrics import paired_sign_flip_test; import numpy as np; print(paired_sign_flip_test(np.array([0.1, -0.2, 0.3])))"`
-    - `python -c "from metrics import paired_sign_flip_test; import numpy as np; paired_sign_flip_test(np.random.randn(50)); print('OK')"`
-  - Dependencies: `none`
-  - Completion signal: paired_sign_flip_test completes in <1 second for n=50; results are statistically equivalent to exact computation for small n
-  - Implementation notes:
-    - `paired_sign_flip_test()` now keeps the exact permutation path for `n <= 15`, but it computes that exact distribution with a vectorized bit-pattern expansion instead of Python-level `itertools.product(...)`.
-    - For `n > 15`, the function switches to a deterministic Monte Carlo estimate over `10_000` sign vectors seeded through the existing analysis seed, which keeps repeated runs reproducible.
-    - The Monte Carlo path always includes the identity sign vector in the sampled set so the estimated p-value cannot fall to a spurious zero that the exact permutation test would never produce.
-    - `paired_analysis()` now forwards its `seed` into `paired_sign_flip_test()`, so the p-value path and bootstrap confidence interval share the same reproducibility control.
+- [ ] `P-004` SHA-pin all GitHub Actions
+
+  Spec: `specs/050426-ci-invariant-enforcement.md`
+  Why now: `actions/checkout@v6` appears 10 times without SHA pin. This is a supply-chain risk: a tag can be moved to point at malicious code. Low-effort fix with high security payoff.
+  Codebase evidence: `ci.yml` lines 25, 37, 65, 163, 205, 235, 247, 282, 296, 323 all use `actions/checkout@v6`.
+  Owns: `.github/workflows/ci.yml`
+  Integration touchpoints: All CI jobs (every job checks out code).
+  Scope boundary: Pin to current SHA for each action. Add version comment. Do not change job logic or sequencing.
+  Acceptance criteria: (1) Every `uses:` line in ci.yml references a full SHA with a `# vX.Y.Z` comment. (2) CI passes with pinned SHAs.
+  Verification: `actionlint .github/workflows/ci.yml && zizmor .github/workflows/ci.yml`
+  Required tests: CI green on the pinned workflow.
+  Dependencies: P-001 (clean trunk).
+  Estimated scope: XS
+  Completion signal: `zizmor` reports no unpinned action findings.
+
+- [ ] `P-005` Wire `two_node_sync.sh` E2E test into CI
+
+  Spec: `specs/050426-network-consensus.md`
+  Why now: Two-node block sync is the only proven multi-node property (spec says the script exists and passes). Wiring it into CI prevents regressions before multi-node work begins.
+  Codebase evidence: `tests/e2e/two_node_sync.sh` exists (8.7K). Not referenced in `ci.yml`.
+  Owns: `.github/workflows/ci.yml` (new step in `integration-e2e` or new job).
+  Integration touchpoints: `integration-e2e` CI job, devnet chain spec, node binary build.
+  Scope boundary: Wire the existing script. Fix minimally if needed. Do not add new multi-node tests.
+  Acceptance criteria: (1) `two_node_sync.sh` runs in CI. (2) It passes. (3) Failure blocks merge.
+  Verification: Push branch, confirm CI job includes two_node_sync step and passes.
+  Required tests: The script itself is the test.
+  Dependencies: P-001 (clean trunk).
+  Estimated scope: S
+  Completion signal: CI runs `two_node_sync.sh` and passes.
+
+---
+
+### Cluster 4: Dead Code and Storage Reduction (dependency: P-001)
+
+- [ ] `P-006` Research: Audit stage-0 extrinsic surface and storage items
+
+  Spec: `specs/050426-chain-runtime-pallet.md`
+  Why now: The spec documents 25 stage-0 extrinsics and 193 storage items, noting both may be reducible. The spec also flags that target storage is ~80 items (per Plan 005) but no formal audit exists. Before removing anything, the reduction candidates must be identified and their removal safety confirmed.
+  Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/macros/dispatches.rs` (extrinsic definitions), `crates/myosu-chain/pallets/game-solver/src/macros/config.rs` (storage items), runtime `lib.rs` (`construct_runtime!` at line 1233).
+  Owns: A decision document (can be a code comment block or markdown file in `gen-20260405-145446/`) listing each extrinsic and storage item with keep/remove/defer verdict.
+  Integration touchpoints: Runtime `lib.rs`, game-solver pallet dispatch surface, any RPC that reads storage.
+  Scope boundary: Research and document only. Do NOT remove any extrinsics or storage items in this task.
+  Acceptance criteria: (1) Every stage-0 extrinsic has a keep/remove/defer verdict with rationale. (2) Storage items are categorized as active/dead/deferred with counts. (3) A concrete removal plan is proposed for items marked "remove."
+  Verification: Review-based. The document is verifiable by checking each verdict against `cargo test` and `grep` for callsites.
+  Required tests: None (research task).
+  Dependencies: P-001 (clean trunk).
+  Estimated scope: M
+  Completion signal: Decision document exists with verdicts for all 25 extrinsics and a storage item census.
+
+- [ ] `P-007` Remove dense epoch path or add parity test
+
+  Spec: `specs/050426-chain-runtime-pallet.md`
+  Why now: Dense epoch (`epoch_dense()`) is retained "for test parity" but no CI job verifies that dense and sparse produce identical results. This is dead weight that either needs a parity assertion or removal.
+  Codebase evidence: `epoch/run_epoch.rs` contains both `epoch()` (sparse, production) and `epoch_dense()`. `tests/epoch.rs` and `tests/consensus.rs` reference dense epoch. No parity test exists.
+  Owns: `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs`, `tests/epoch.rs`.
+  Integration touchpoints: Epoch tests that call dense path. Coinbase flow (only calls sparse).
+  Scope boundary: Either (a) add a parity test asserting `epoch() == epoch_dense()` for a representative scenario, OR (b) remove `epoch_dense()` and update tests to use sparse only. Decision should be made based on whether any test uniquely depends on dense semantics.
+  Acceptance criteria: (1) If parity test: test passes and is in CI. (2) If removal: `epoch_dense` is gone, all tests pass, no dead code remains.
+  Verification: `cargo test -p pallet-game-solver -- epoch`
+  Required tests: Either a parity test or updated existing tests (depending on chosen path).
+  Dependencies: P-001, P-002 (emission understanding informs whether dense path has value).
+  Estimated scope: S
+  Completion signal: Dense epoch path is either tested for parity or removed.
+
+---
+
+### Checkpoint: Chain core confidence
+
+After P-001 through P-007: emission is measured, E2E tests are wired, CI is hardened, dead code is audited. Pause and verify trunk CI is green, all E2E scripts pass, and no new regressions. Re-evaluate scope before proceeding to multi-node and operator work.
+
+---
+
+### Cluster 5: Validation and Scoring Hardening (dependency: P-001)
+
+- [ ] `P-008` Add wire codec fuzz tests for poker and Liar's Dice
+
+  Spec: `specs/050426-ci-invariant-enforcement.md`
+  Why now: The CI spec notes "no fuzzing or adversarial input testing exists for wire codecs." Wire codecs are the trust boundary between miner and validator — malformed payloads could crash validators or produce incorrect scores. The decode budget was tightened (P-001) but no fuzz coverage exists.
+  Codebase evidence: `crates/myosu-games-poker/src/wire.rs` (poker codec with 1MB limit), `crates/myosu-games-liars-dice/src/` (Liar's Dice codec). No `fuzz/` directory exists.
+  Owns: New fuzz targets (likely `fuzz/` directories in relevant crates) or proptest-based roundtrip tests.
+  Integration touchpoints: `wire.rs` in poker, codec paths in Liar's Dice, `StrategyQuery`/`StrategyResponse` types from `myosu-games`.
+  Scope boundary: Fuzz decode paths only (the trust boundary). Do not fuzz solver internals. Proptest roundtrip (encode→decode→re-encode == original) is sufficient if `cargo-fuzz` setup is too heavy.
+  Acceptance criteria: (1) Roundtrip property tests exist for `StrategyQuery` and `StrategyResponse` for poker and Liar's Dice. (2) Decode of random bytes does not panic (returns error). (3) Tests run in CI under `active-crates` job.
+  Verification: `cargo test -p myosu-games-poker -- fuzz && cargo test -p myosu-games-liars-dice -- fuzz`
+  Required tests: Proptest roundtrip tests, random-bytes-decode-doesn't-panic tests.
+  Dependencies: P-001 (clean trunk, decode limits landed).
+  Estimated scope: S
+  Completion signal: Fuzz/property tests pass in CI.
+
+- [ ] `P-009` Validate INV-003 determinism across game types
+
+  Spec: `specs/050426-ci-invariant-enforcement.md`
+  Why now: INV-003 (validator determinism, epsilon < 1e-6) is enforced by `validator_determinism.sh` in CI, but the spec notes this may only cover poker. Liar's Dice and Kuhn validation paths should also be covered.
+  Codebase evidence: `tests/e2e/validator_determinism.sh` (11.2K). `crates/myosu-validator/src/validation.rs` handles `GameSelection::Poker`, `GameSelection::LiarsDice`, `GameSelection::Kuhn`. Unclear if E2E script exercises all three.
+  Owns: `tests/e2e/validator_determinism.sh` (extend or parametrize), or new unit tests in `validation.rs`.
+  Integration touchpoints: Validator binary, game-specific solver paths, CI `integration-e2e` job.
+  Scope boundary: Verify existing determinism test covers all implemented games. If not, extend it. Do not add new games.
+  Acceptance criteria: (1) Determinism is verified for Poker, Liar's Dice, and Kuhn. (2) Epsilon < 1e-6 for all three. (3) CI enforces this.
+  Verification: `bash tests/e2e/validator_determinism.sh` (with all game types)
+  Required tests: Extended determinism script or new unit tests per game type.
+  Dependencies: P-001 (clean trunk, scoring formula landed).
+  Estimated scope: S
+  Completion signal: Determinism assertion passes for all three game types in CI.
+
+---
+
+### Cluster 6: Miner HTTP Axon Gaps (dependency: P-001)
+
+- [ ] `P-010` Decision: Liar's Dice HTTP axon — implement or formally defer
+
+  Spec: `specs/050426-mining-surface.md`
+  Why now: `axon.rs:51-52` explicitly errors with `UnsupportedGame` for Liar's Dice and Kuhn HTTP serving. The spec flags this as an open question. Validators querying Liar's Dice miners over HTTP will fail. This needs a deliberate decision before operator tooling work.
+  Codebase evidence: `crates/myosu-miner/src/axon.rs` lines 51-52 (`UnsupportedGame` error), line 601+ (test confirming the gate). Liar's Dice training works (`LiarsDiceSolver<1024>`), file-based strategy serving works, but HTTP path is gated off.
+  Owns: Decision document or code change in `axon.rs`.
+  Integration touchpoints: Validator scoring (if validators query over HTTP), operator bundle scripts, miner CLI documentation.
+  Scope boundary: Either (a) implement HTTP serving for Liar's Dice (reuse poker axon pattern with Liar's Dice wire codec), or (b) document the limitation in operator guide and ensure validators use file-based scoring for Liar's Dice. Decision task — implementation is follow-on if chosen.
+  Acceptance criteria: (1) Decision is made and documented. (2) If implementing: HTTP axon serves Liar's Dice strategies, test added. (3) If deferring: operator guide documents the limitation, validator determinism test uses file-based path for Liar's Dice.
+  Verification: If implementing: `cargo test -p myosu-miner -- liars_dice_http`. If deferring: grep operator guide for limitation note.
+  Required tests: Depends on decision.
+  Dependencies: P-001 (clean trunk).
+  Estimated scope: XS (decision) or S (implementation)
+  Completion signal: Decision documented. If implementing, HTTP axon test passes.
+
+---
+
+### Checkpoint: Scoring and serving confidence
+
+After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified across all games, and the Liar's Dice HTTP gap is resolved. Verify CI green before proceeding to multi-node work.
+
+---
+
+### Cluster 7: Multi-Node Devnet Foundation (dependency: P-003, P-005)
+
+- [ ] `P-011` Three-node GRANDPA finality proof
+
+  Spec: `specs/050426-network-consensus.md`
+  Why now: Two-node sync is proven (and wired into CI via P-005). Three-node GRANDPA finality is the next consensus milestone. The spec explicitly lists this as "not proven (design-phase)" and gates Phase 1 completion on it.
+  Codebase evidence: `tests/e2e/two_node_sync.sh` (2-node). Chain specs in `crates/myosu-chain/node/` define `devnet` with 3 authorities. No 3-node E2E test exists.
+  Owns: New E2E script `tests/e2e/three_node_finality.sh` and CI wiring.
+  Integration touchpoints: Node binary, devnet chain spec (3 authorities), GRANDPA finality gadget, CI `integration-e2e` job.
+  Scope boundary: Prove finality with 3 nodes. Test one-node-down tolerance (2/3 still finalizes). Do not test network partitions or restart recovery (those are follow-on).
+  Acceptance criteria: (1) 3 nodes start, produce blocks, and reach GRANDPA finality. (2) Stopping 1 node does not halt finality (2/3 quorum). (3) Script runs in CI.
+  Verification: `bash tests/e2e/three_node_finality.sh`
+  Required tests: The E2E script is the test. Should assert finalized block height increases after epoch transitions.
+  Dependencies: P-005 (two_node_sync in CI — proves the infrastructure works).
+  Estimated scope: M
+  Completion signal: 3-node finality script passes in CI.
+
+- [ ] `P-012` Cross-node emission agreement test
+
+  Spec: `specs/050426-emission-epoch-mechanism.md`
+  Why now: The spec explicitly states cross-node emission agreement is "tested single-node only." Fixed-point determinism is assumed but not proven across nodes. This is the highest-risk multi-node property — if nodes disagree on emission, the chain forks.
+  Codebase evidence: All epoch/coinbase tests run in single-node mock runtime. `substrate_fixed` types (I32F32, I64F64, U96F32) are deterministic per the spec but unverified across separate process instances.
+  Owns: New E2E test or extension of `three_node_finality.sh` that compares emission storage across nodes after epoch transitions.
+  Integration touchpoints: RPC endpoints for reading storage, epoch mechanism, coinbase pipeline, node binary.
+  Scope boundary: Compare emission-related storage values across 3 nodes after N epochs. Assert bit-identical. Do not test under adversarial conditions.
+  Acceptance criteria: (1) After 3+ epoch transitions on a 3-node devnet, emission storage values (total issuance, per-subnet pending, stake maps) are identical across all nodes. (2) Test runs in CI.
+  Verification: E2E script that queries storage via RPC on all 3 nodes and diffs.
+  Required tests: The E2E script.
+  Dependencies: P-011 (3-node devnet running), P-002 (truncation drift quantified).
+  Estimated scope: M
+  Completion signal: Cross-node emission agreement test passes in CI.
+
+---
+
+### Checkpoint: Multi-node confidence
+
+After P-011 and P-012: 3-node finality is proven, cross-node emission agreement is verified. This satisfies the Phase 1 gate from the network-consensus spec. Re-evaluate whether Phase 2 (operator packaging) work should begin or whether restart resilience testing is needed first.
+
+---
 
 ## Follow-On Work
 
-- [x] `DN-001` Create production-quality devnet chain spec with proper genesis configuration
-  - Spec: `specs/040226-06-multi-node-devnet.md`
-  - Why now: Existing devnet.rs uses development seeds (Alice/Bob/Charlie) and ChainType::Local. A production devnet needs real initial authorities and pre-configured subnets.
-  - Codebase evidence:
-    - `crates/myosu-chain/node/src/chain_spec/devnet.rs` is 1.0K with development account seeds
-    - `crates/myosu-chain/node/src/chain_spec/localnet.rs` (3.1K) has the most complete genesis config but still uses dev accounts
-  - Owns:
-    - `crates/myosu-chain/node/src/chain_spec/devnet.rs`
-  - Integration touchpoints:
-    - `crates/myosu-chain/node/src/chain_spec/mod.rs` (chain spec registry)
-    - `crates/myosu-chain/node/src/main.rs` (--chain flag dispatch)
-  - Scope boundary:
-    - Replace dev seeds with generated authority keys
-    - Set ChainType::Live or ChainType::Custom("devnet")
-    - Pre-configure at least one game-solver subnet in genesis
-  - Required tests:
-    - `SKIP_WASM_BUILD=1 cargo run -p myosu-chain -- build-spec --chain devnet --raw > /dev/null`
-  - Dependencies: `RT-001`
-  - Completion signal: devnet chain spec generates a raw spec with non-development authority keys and a pre-configured subnet
-  - Implementation notes:
-    - `crates/myosu-chain/node/src/chain_spec/devnet.rs` now derives three authorities and the initial operator set from dedicated `//myosu//devnet//...` secret URIs instead of the inherited Alice/Bob/Charlie development seeds, and it advertises `ChainType::Custom("devnet")`.
-    - The runtime genesis patch surface only accepts supported `subtensorModule` fields such as `balancesIssuance`, so the subnet-7 bootstrap now happens by building the normal genesis storage and then post-processing it through `BasicExternalities` before returning the chain spec. This keeps pallet genesis unchanged while still producing a raw spec with subnet `7` pre-registered.
-    - Added focused node-chain-spec proofs for both the non-development authority patch and the subnet-7 storage bootstrap before validating the task contract with `build-spec --chain devnet --raw`.
+### Operator Tooling and Onboarding
 
-- [x] `DN-002` Create bootnode deployment script with persistent storage
-  - Spec: `specs/040226-06-multi-node-devnet.md`
-  - Why now: No bootnode deployment infrastructure exists. A persistent bootnode is required for peer discovery on the devnet.
-  - Codebase evidence:
-    - No deployment scripts exist in ops/ or .github/scripts/ for running a persistent node
-    - `crates/myosu-chain/node/src/main.rs` accepts standard Substrate CLI flags for bootnode operation
-  - Owns:
-    - `ops/deploy-bootnode.sh`
-  - Integration touchpoints:
-    - `crates/myosu-chain/node/src/chain_spec/devnet.rs` (chain spec from DN-001)
-    - `crates/myosu-chain/node/src/main.rs` (node binary)
-  - Scope boundary:
-    - Shell script that starts node in bootnode mode with persistent data directory
-    - Single bootnode (not HA) per corpus plan 008 decision
-    - Include systemd unit file or equivalent for persistence
-  - Required tests:
-    - `shellcheck ops/deploy-bootnode.sh`
-    - `bash ops/deploy-bootnode.sh --dry-run`
-  - Dependencies: `DN-001`
-  - Completion signal: Script can deploy a persistent bootnode that advertises its multiaddr for peer discovery
-  - Implementation notes:
-    - Added `ops/deploy-bootnode.sh`, which prepares a durable bootnode root under `target/bootnode/devnet/` by default, persists a libp2p node key, derives the peer ID with `myosu-chain key inspect-node-key`, and prints the resulting bootnode multiaddr plus RPC/Prometheus endpoints.
-    - The script now renders both a reusable launcher script and a systemd unit file into the bootnode base path, satisfying the persistence contract without assuming root access or a pre-installed service manager during the dry-run proof.
-    - `--dry-run` is intentionally truthful rather than side-effect-free: it prepares the durable assets so future loops can reuse the same stable node identity and advertised multiaddr without having to start the node first.
+- [ ] `F-001` Fresh-machine operator bundle test
 
-- [x] `DN-003` Verify two-node peer discovery and block synchronization
-  - Spec: `specs/040226-06-multi-node-devnet.md`
-  - Why now: Spec requires two independent nodes to discover each other and synchronize blocks. This is the core proof of multi-node readiness.
-  - Codebase evidence:
-    - No existing test exercises multi-node peer discovery
-    - Substrate libp2p networking is inherited but untested in myosu context
-  - Owns:
-    - `tests/e2e/two_node_sync.sh`
-  - Integration touchpoints:
-    - `tests/e2e/helpers/` (devnet lifecycle helpers)
-    - `crates/myosu-chain/node/src/main.rs` (node binary with bootnode flags)
-  - Scope boundary:
-    - Start two nodes locally, one as bootnode; verify second node discovers first and syncs to same block height
-    - Do not test cross-machine networking
-  - Required tests:
-    - `bash tests/e2e/two_node_sync.sh`
-  - Dependencies: `DN-001`, `IT-001`
-  - Completion signal: Script proves two local nodes achieve block sync within 60 seconds
-  - Implementation notes:
-    - Added `tests/e2e/two_node_sync.sh`, which reuses the repo’s cached runtime wasm and node binary when present, but still builds them on a cold checkout before launching the proof.
-    - The proof launches a real `devnet` authority bootnode and a second full node on loopback, then asserts both nodes report one peer and the same best block height before tearing the pair down.
-    - The owned multi-node path needed one adjacent node-service fix: `MYOSU_NODE_AUTHORITY_SURI` now lets authority nodes seed Aura and GRANDPA keys at startup for non-`Local` chains, because the inherited `myosu-chain key insert --chain devnet ...` path was not usable in this repo’s proof loop.
+  Spec: `specs/050426-operator-tooling.md`
+  Why now: The spec explicitly states "bundle has not been tested on a fresh machine outside CI." Operator onboarding cannot be trusted until this is verified.
+  Codebase evidence: `.github/scripts/prepare_operator_network_bundle.sh`, `docs/operator-guide/quickstart.md`, CI `operator-network` job.
+  Owns: Test procedure (Docker or VM) that runs the bundle from scratch and verifies miner+validator pair starts.
+  Integration touchpoints: Bundle scripts, node binary, miner binary, validator binary, key management.
+  Scope boundary: Test the existing bundle. Document failures. Do not rewrite the bundle.
+  Acceptance criteria: (1) Bundle produces a running miner+validator pair on a clean Ubuntu 22.04 (or equivalent) with no pre-existing Rust toolchain (or documents exact prerequisites). (2) Failures are filed as concrete fix tasks.
+  Verification: Run bundle on fresh Docker image, verify miner and validator produce expected report output.
+  Required tests: The bundle test procedure itself.
+  Dependencies: P-011 (multi-node devnet for realistic test).
+  Estimated scope: M
+  Completion signal: Bundle test passes or failures are documented as fix tasks.
 
-- [x] `DN-004` Update operator bundle for devnet connection with bootnode addresses
-  - Spec: `specs/040226-06-multi-node-devnet.md`
-  - Why now: Operator bundle currently assumes local-only operation. Operators must be able to join the devnet without manual chain spec editing.
-  - Codebase evidence:
-    - `.github/scripts/prepare_operator_network_bundle.sh` builds operator bundle
-    - `docs/execution-playbooks/operator-network.md` documents operator flow but for local network only
-  - Owns:
-    - `.github/scripts/prepare_operator_network_bundle.sh`
-    - `docs/execution-playbooks/operator-network.md`
-  - Integration touchpoints:
-    - `crates/myosu-chain/node/src/chain_spec/devnet.rs` (devnet spec from DN-001)
-    - `.github/workflows/ci.yml` (operator-network CI job)
-  - Scope boundary:
-    - Add bootnode multiaddr to operator bundle
-    - Update operator-network playbook with devnet connection instructions
-    - Do not change the bundle format or CI job structure
-  - Required tests:
-    - `bash .github/scripts/prepare_operator_network_bundle.sh`
-    - `grep -q bootnode docs/execution-playbooks/operator-network.md`
-  - Dependencies: `DN-001`, `DN-002`
-  - Completion signal: Operator bundle includes devnet chain spec and bootnode address; playbook documents devnet connection
-  - Implementation notes:
-    - `prepare_operator_network_bundle.sh` now accepts a bare invocation, defaults the output to `target/operator-network-bundle/`, and derives truthful bootnode metadata from `ops/deploy-bootnode.sh --dry-run` before printing bootstrap commands.
-    - The bundled `devnet-spec.json` is now rewritten with the same `bootnode_multiaddr` recorded in `bundle-manifest.toml`, so operators can join the devnet without editing the chain spec by hand.
-    - `docs/execution-playbooks/operator-network.md` now documents the bootnode env overrides and the follower-node join flow, while `.github/scripts/check_operator_network_bootstrap.sh` asserts that the manifest and bundled devnet spec carry the same bootnode entry.
+- [ ] `F-002` Node restart resilience test
 
-- [x] `OP-001` Write operator quickstart guide from zero to running miner and validator
-  - Spec: `specs/040226-07-operator-onboarding.md`
-  - Why now: No quickstart exists. Existing playbook (operator-network.md) assumes familiarity with the system. External operators need a zero-to-running guide.
-  - Codebase evidence:
-    - `docs/execution-playbooks/operator-network.md` (9.9K) covers key setup and bootstrap but is not a quickstart
-    - `crates/myosu-keys/src/main.rs` provides print-bootstrap command that generates formatted instructions
-    - No `docs/operator-guide/` directory exists
-  - Owns:
-    - `docs/operator-guide/quickstart.md`
-  - Integration touchpoints:
-    - `README.md` (should link to quickstart)
-    - `docs/execution-playbooks/operator-network.md` (reference for detailed operations)
-    - `crates/myosu-keys/src/main.rs` (print-bootstrap output to build on)
-  - Scope boundary:
-    - Prerequisites → key creation → chain sync → miner start → validator start → verification
-    - Every command must be copy-pasteable and work on current codebase
-    - Target audience: Rust toolchain experience, no myosu familiarity
-  - Required tests:
-    - `test -f docs/operator-guide/quickstart.md`
-    - `grep -q 'myosu-keys' docs/operator-guide/quickstart.md`
-  - Dependencies: `DN-001`
-  - Completion signal: Quickstart guide exists and every command in it is valid against the current codebase
-  - Implementation notes:
-    - Added `docs/operator-guide/quickstart.md` as the zero-to-running operator path and linked it from the root `README.md` so the operator surface is discoverable from the top-level entrypoints.
-    - The guide is built on the existing `myosu-keys print-bootstrap` output and the generated `operator-bundle/start-miner.sh` / `start-validator.sh` wrappers instead of inventing a parallel operator workflow.
-    - The quickstart now calls out two operational truths that were easy to miss in the older playbook: pass the second `config-dir` argument to `prepare_operator_network_bundle.sh` if you want the bundle to reuse an existing keystore, and treat the current validator binary as a bounded bootstrap/scoring command rather than a long-running daemon.
+  Spec: `specs/050426-network-consensus.md`
+  Why now: The spec lists "node restart resilience (catch-up without fork)" as unproven. Operators will restart nodes; this must work.
+  Codebase evidence: No restart test exists in `tests/e2e/`.
+  Owns: New E2E script testing node restart and catch-up.
+  Integration touchpoints: Node binary, GRANDPA, block import.
+  Scope boundary: Single node restart in a 3-node network. Verify it catches up to finalized head. Do not test simultaneous restart of all nodes.
+  Acceptance criteria: (1) A restarted node catches up to the finalized head within a bounded time. (2) No fork occurs.
+  Verification: E2E script.
+  Required tests: The E2E script.
+  Dependencies: P-011 (3-node devnet).
+  Estimated scope: M
+  Completion signal: Restart test passes in CI.
 
-- [x] `OP-002` Write architecture overview document for non-developers
-  - Spec: `specs/040226-07-operator-onboarding.md`
-  - Why now: No architecture overview accessible to non-developers exists. README.md is developer-oriented. Operators need to understand component interactions.
-  - Codebase evidence:
-    - `README.md` (5.2K) has architecture section but targets developers
-    - No `docs/operator-guide/architecture.md` exists
-  - Owns:
-    - `docs/operator-guide/architecture.md`
-  - Integration touchpoints:
-    - `docs/operator-guide/quickstart.md` (from OP-001, should cross-reference)
-    - `README.md` (existing architecture description)
-  - Scope boundary:
-    - Component diagram: chain, miner, validator, play, keys
-    - Data flow: how strategies are trained, scored, and consumed
-    - No implementation details; operator-level mental model only
-  - Required tests:
-    - `test -f docs/operator-guide/architecture.md`
-  - Dependencies: `OP-001`
-  - Completion signal: Architecture overview exists and is understandable by someone with no Rust or blockchain expertise
-  - Implementation notes:
-    - Added `docs/operator-guide/architecture.md` as a stage-0 operator mental model that explains the current chain, miner, validator, gameplay, and key surfaces in plain language rather than protocol-engineer terms.
-    - Wired the new guide into `docs/operator-guide/quickstart.md` and `README.md` so operators can discover it from the existing zero-to-running path instead of hunting through doctrine files.
+### Token Economics Research Gate
 
-- [x] `OP-003` Write troubleshooting guide for top 10 operator failure modes
-  - Spec: `specs/040226-07-operator-onboarding.md`
-  - Why now: No troubleshooting guide exists. Operators encountering failures have no self-service resolution path.
-  - Codebase evidence:
-    - No troubleshooting documentation in docs/ or docs/execution-playbooks/
-    - `ops/incidents/` directory exists for incident tracking but contains no operator-facing content
-  - Owns:
-    - `docs/operator-guide/troubleshooting.md`
-  - Integration touchpoints:
-    - `docs/operator-guide/quickstart.md` (cross-reference from common setup failures)
-    - `docs/execution-playbooks/operator-network.md` (detailed operational procedures)
-  - Scope boundary:
-    - Top 10 failure modes: build failures, key errors, connection refused, sync stalled, registration failed, etc.
-    - Each entry: symptom, cause, resolution
-    - Do not create automated diagnostic tooling
-  - Required tests:
-    - `test -f docs/operator-guide/troubleshooting.md`
-  - Dependencies: `OP-001`
-  - Completion signal: Troubleshooting guide covers ≥10 failure modes with symptom/cause/resolution for each
-  - Implementation notes:
-    - Added `docs/operator-guide/troubleshooting.md` with 12 stage-0 operator failure modes grounded in the real `myosu-keys`, `myosu-miner`, `myosu-validator`, bundle, and local-devnet surfaces instead of generic setup advice.
-    - Cross-linked the troubleshooting guide from `docs/operator-guide/quickstart.md` and `docs/execution-playbooks/operator-network.md` so operators can move from the happy path to the debug path without leaving the current operator docs.
-    - Captured one adjacent operational truth in `AGENTS.md`: miner and validator `--help` invocations currently print inherited compile warnings before the actual Clap usage text, so future validation should judge those checks by exit status plus the trailing usage block.
+- [ ] `F-003` Token economics decision document
 
-- [x] `RG-001` Add CHANGELOG.md with initial release entry and maintenance process
-  - Spec: `specs/040226-08-release-governance.md`
-  - Why now: No changelog exists. Operators need a single place to review what changed between versions.
-  - Codebase evidence:
-    - No CHANGELOG.md at repository root
-    - Workspace version is 0.1.0 in Cargo.toml
-    - 50 trunk commits exist but no release tags
-  - Owns:
-    - `CHANGELOG.md`
-  - Integration touchpoints:
-    - `README.md` (should reference changelog)
-    - `Cargo.toml` (version number alignment)
-  - Scope boundary:
-    - Keep-a-Changelog format with initial v0.1.0 entry summarizing stage-0 state
-    - Document the process for maintaining entries going forward
-  - Required tests:
-    - `test -f CHANGELOG.md`
-    - `grep -q '0.1.0' CHANGELOG.md`
-  - Dependencies: `none`
-  - Completion signal: CHANGELOG.md exists with v0.1.0 entry and is referenced from README.md
-  - Implementation notes:
-    - Added a root `CHANGELOG.md` in Keep a Changelog format with an `Unreleased` bucket, a dated `0.1.0` stage-0 baseline entry, and a short maintenance process for future operator-facing releases.
-    - Cross-linked the changelog from `README.md` so the repo's top-level entrypoints now expose release history alongside doctrine, invariants, and security guidance.
-    - The queued evidence was partially stale: the repo already carried internal `0.0.x` checkpoint tags through `0.0.24`, so the changelog now explicitly distinguishes those trunk task markers from the first supported operator-facing release baseline at `0.1.0`.
+  Spec: `specs/050426-token-economics.md`
+  Why now: The token-economics spec is explicitly a research spec, not an implementation spec. It identifies 8+ design axes (single vs dual token, AMM type, fee model, registration cost, emission schedule) that must be decided before `NoOpSwap` can be replaced. No implementation work should begin until this decision document exists.
+  Codebase evidence: `crates/myosu-chain/pallets/swap-interface/src/lib.rs` (SwapEngine trait), `crates/myosu-chain/pallets/swap/` (V3 AMM implementation exists but is not wired into stage-0 runtime), `runtime/src/lib.rs` (Stage0NoopSwap).
+  Owns: Decision document evaluating all design axes with recommendations.
+  Integration touchpoints: Swap interface trait, swap pallet, runtime swap config, emission pipeline.
+  Scope boundary: Research and document only. Do NOT change swap implementation. Do NOT wire V3 AMM into runtime.
+  Acceptance criteria: (1) Each design axis from the spec has a concrete recommendation with rationale. (2) Migration path from NoOpSwap to chosen model is sketched. (3) Document is reviewed by at least one other contributor.
+  Verification: Review-based.
+  Required tests: None (research task).
+  Dependencies: P-002 (emission understanding informs economic model).
+  Estimated scope: L
+  Completion signal: Decision document exists and is reviewed.
 
-- [x] `RG-002` Create release script for tagging, bundling, and release notes
-  - Spec: `specs/040226-08-release-governance.md`
-  - Why now: No release automation exists. Manual releases are error-prone and inconsistent.
-  - Codebase evidence:
-    - No release script in ops/ or .github/scripts/
-    - `.github/scripts/prepare_operator_network_bundle.sh` exists but handles only operator bundles, not releases
-  - Owns:
-    - `ops/release.sh`
-  - Integration touchpoints:
-    - `CHANGELOG.md` (from RG-001, release notes source)
-    - `Cargo.toml` (version bumping)
-    - `.github/scripts/prepare_operator_network_bundle.sh` (bundle built during release)
-  - Scope boundary:
-    - Shell script: validate version arg, update Cargo.toml versions, create git tag, build operator bundle, generate release notes from changelog
-    - Do not implement CI-triggered releases or GitHub release publishing
-  - Required tests:
-    - `shellcheck ops/release.sh`
-    - `bash ops/release.sh --dry-run v0.1.0`
-  - Dependencies: `RG-001`
-  - Completion signal: Release script creates a tagged release with operator bundle and changelog-derived release notes in dry-run mode
-  - Implementation notes:
-    - Added `ops/release.sh`, a release wrapper that validates `vX.Y.Z` tags, derives release notes from `CHANGELOG.md`, reuses `.github/scripts/prepare_operator_network_bundle.sh`, and injects `release_tag`, `workspace_version`, and `release_commit` metadata into the generated `bundle-manifest.toml`.
-    - The queued versioning evidence was partly stale: the active release surfaces already share the root workspace version through `version.workspace = true`, so the release script only needs to update the root `Cargo.toml` `workspace.package.version` in real release mode.
-    - Dry-run intentionally stays truthful but non-destructive: it materializes the versioned bundle plus `release-notes.md` under `target/releases/<tag>/`, auto-seeds a temporary password env only when needed for the operator-bundle path, and never mutates git tags or tracked files.
+### Robopoker Fork Coherence
 
-- [x] `RG-003` Document breaking change communication and operator upgrade process
-  - Spec: `specs/040226-08-release-governance.md`
-  - Why now: No process exists for communicating breaking changes to operators. Required before devnet goes multi-operator.
-  - Codebase evidence:
-    - No upgrade guide or breaking change policy in docs/ or ops/
-    - Corpus plan 010 specifies semver 0.x.y where minor=breaking, patch=compatible
-  - Owns:
-    - `docs/operator-guide/upgrading.md`
-  - Integration touchpoints:
-    - `CHANGELOG.md` (breaking changes documented here)
-    - `docs/operator-guide/quickstart.md` (reference for operators)
-  - Scope boundary:
-    - Document: how breaking changes are announced, upgrade windows, rollback procedures
-    - Do not implement automated upgrade tooling
-  - Required tests:
-    - `test -f docs/operator-guide/upgrading.md`
-  - Dependencies: `RG-001`, `OP-001`
-  - Completion signal: Upgrade guide exists documenting the breaking change communication process
-  - Implementation notes:
-    - Added `docs/operator-guide/upgrading.md` with the current `0.x`
-      operator release contract, the repo-owned announcement surfaces,
-      minimum notice windows for compatible vs breaking releases, a manual
-      upgrade checklist, and a rollback procedure.
-    - Wired the guide into existing operator entrypoints by linking it from
-      `docs/operator-guide/quickstart.md` and `README.md` so the policy is
-      discoverable from the same places operators already use for bring-up.
-    - Updated `CHANGELOG.md` `Unreleased` to record the new operator-facing
-      upgrade documentation alongside the existing release wrapper work.
+- [ ] `F-004` INV-006 automated gate for robopoker fork
 
-- [x] `G3-001` Scaffold myosu-games-kuhn crate with Kuhn poker state machine
-  - Spec: `specs/040226-09-third-game-extensibility-proof.md`
-  - Why now: Third game validates that the game trait abstraction genuinely generalizes. Kuhn Poker has 12 information sets and solves exactly, maximizing architecture signal with minimal implementation.
-  - Codebase evidence:
-    - No `crates/myosu-games-kuhn/` directory exists
-    - `crates/myosu-games/src/lib.rs` exports GameRegistry with GameType enum containing Poker and LiarsDice variants
-    - `crates/myosu-games/src/traits.rs` defines CfrGame, CfrInfo, CfrEdge, CfrTurn, Encoder, Profile traits
-    - `crates/myosu-games-liars-dice/` provides the template for additive game integration
-  - Owns:
-    - `crates/myosu-games-kuhn/src/lib.rs`
-    - `crates/myosu-games-kuhn/src/game.rs`
-    - `crates/myosu-games-kuhn/src/solver.rs`
-    - `crates/myosu-games-kuhn/Cargo.toml`
-  - Integration touchpoints:
-    - `Cargo.toml` (workspace members list)
-    - `crates/myosu-games/src/lib.rs` (GameType enum, GameRegistry)
-  - Scope boundary:
-    - Implement CfrGame trait for Kuhn Poker (3-card, 2-player)
-    - Exact solver (not MCCFR) since game tree is small enough
-    - Add KuhnPoker variant to GameType enum
-    - Do not modify poker or Liar's Dice crates
-  - Required tests:
-    - `cargo test -p myosu-games-kuhn --quiet`
-    - `cargo test -p myosu-games --quiet`
-  - Dependencies: `none`
-  - Completion signal: Kuhn Poker crate implements CfrGame trait, is registered in GameType enum, and passes unit tests with zero modifications to existing game crates
-  - Implementation notes:
-    - The shared built-in game wiring lives in `crates/myosu-games/src/traits.rs` and `crates/myosu-games/src/registry.rs`, not `crates/myosu-games/src/lib.rs`; this increment added `GameType::KuhnPoker`, `GameParams::KuhnPoker`, and `GameConfig::kuhn_poker()` there.
-    - Added a new workspace member `crates/myosu-games-kuhn/` with a full Kuhn poker state machine: 6 ordered chance deals, 12 reachable information sets, and terminal payoffs matching the standard 1-chip and 2-chip Kuhn outcomes.
-    - `KuhnSolver` is exact rather than MCCFR-driven: it exposes the closed-form equilibrium profile, and the crate proves the canonical player-one equilibrium value of `-1/18` in unit tests.
+  Spec: `specs/050426-game-trait-interface.md`
+  Why now: INV-006 (robopoker fork coherence) has no automated CI gate. The game-trait-interface spec notes "process for upstreaming changes is undefined." Drift between the fork and upstream could introduce subtle solver bugs.
+  Codebase evidence: `Cargo.toml` references `happybigmtn/robopoker` (or similar). No CI job compares fork to upstream.
+  Owns: CI job or script that checks fork divergence.
+  Integration touchpoints: Workspace `Cargo.toml`, `myosu-games-poker` dependency on robopoker.
+  Scope boundary: Detect divergence, not resolve it. Alert on new upstream commits not in fork.
+  Acceptance criteria: (1) CI job reports fork divergence count. (2) Does not block merge (advisory only).
+  Verification: CI job runs and reports.
+  Required tests: CI job itself.
+  Dependencies: None (independent).
+  Estimated scope: S
+  Completion signal: CI reports fork status on each run.
 
-- [x] `G3-002` Implement Kuhn poker TUI renderer and wire protocol
-  - Spec: `specs/040226-09-third-game-extensibility-proof.md`
-  - Why now: Third game must integrate into the full stack including TUI rendering and wire encoding.
-  - Codebase evidence:
-    - `crates/myosu-games-liars-dice/src/renderer.rs` and `wire.rs` provide the pattern for additive game rendering
-    - `crates/myosu-tui/src/renderer.rs` defines the GameRenderer trait
-  - Owns:
-    - `crates/myosu-games-kuhn/src/renderer.rs`
-    - `crates/myosu-games-kuhn/src/wire.rs`
-    - `crates/myosu-games-kuhn/src/protocol.rs`
-  - Integration touchpoints:
-    - `crates/myosu-tui/src/renderer.rs` (GameRenderer trait implementation)
-    - `crates/myosu-games-kuhn/src/lib.rs` (module exports)
-  - Scope boundary:
-    - Implement GameRenderer for Kuhn Poker
-    - Binary wire encoding/decoding matching existing patterns
-    - Strategy query/response protocol
-  - Required tests:
-    - `cargo test -p myosu-games-kuhn --quiet`
-  - Dependencies: `G3-001`
-  - Completion signal: Kuhn Poker has TUI renderer and wire protocol with passing round-trip tests
-  - Implementation notes:
-    - Added additive `protocol.rs`, `renderer.rs`, and `wire.rs` modules to `crates/myosu-games-kuhn/`, then exported their public types from [`crates/myosu-games-kuhn/src/lib.rs`](crates/myosu-games-kuhn/src/lib.rs) so the new surfaces are reachable from the crate root.
-    - `KuhnRenderer` follows the live `GameRenderer` contract already used by poker and Liar's Dice: it renders a four-line state panel, exposes shell completions and shorthand input parsing, and emits plain-text `STATE ...` pipe output for active and terminal snapshots.
-    - The spec prose mentions versioned magic bytes, but the live additive game pattern is bounded bincode without an outer magic/version envelope; Kuhn now matches the existing poker and Liar's Dice wire transport shape with round-trip, truncation, and trailing-byte tests.
+### Runtime Migration Testing
 
-- [x] `G3-003` Register Kuhn poker in play binary and add CI smoke test gate
-  - Spec: `specs/040226-09-third-game-extensibility-proof.md`
-  - Why now: Third game must be selectable from myosu-play and gated by CI to complete the extensibility proof.
-  - Codebase evidence:
-    - `crates/myosu-play/src/main.rs` dispatches game mode based on CLI flag
-    - `.github/workflows/ci.yml` active-crates job tests game crates
-  - Owns:
-    - `crates/myosu-play/src/main.rs` (game dispatch)
-    - `crates/myosu-play/Cargo.toml` (kuhn dependency)
-    - `.github/workflows/ci.yml` (CI gate)
-  - Integration touchpoints:
-    - `crates/myosu-play/src/cli.rs` (--game flag options)
-    - `.github/workflows/ci.yml` (active-crates test job)
-  - Scope boundary:
-    - Add --game kuhn to play CLI
-    - Add myosu-games-kuhn to CI test job
-    - Add smoke test: `myosu-play --game kuhn --smoke-test`
-    - Zero modifications to poker or Liar's Dice code paths
-  - Required tests:
-    - `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --game kuhn --smoke-test`
-    - `cargo test -p myosu-games-kuhn --quiet`
-  - Dependencies: `G3-002`
-  - Completion signal: `myosu-play --game kuhn --smoke-test` passes and CI gates the new crate
-  - Implementation notes:
-    - `myosu-play` now depends on `myosu-games-kuhn`, exposes `--game kuhn` through the shared `GameSelection` CLI enum, and resolves that selection to a built-in `KuhnRenderer` demo surface through `blueprint.rs`.
-    - Smoke dispatch is now explicit per game: poker keeps the live artifact/discovery path, while Kuhn and Liar's Dice use deterministic built-in demo proofs that do not pretend to support chain-visible miner discovery.
-    - The active-crates CI job now treats Kuhn as a first-class crate by including it in `cargo check`, `cargo test`, `cargo clippy`, and `rustfmt`, and by running `cargo run -p myosu-play --quiet -- --game kuhn --smoke-test` alongside the existing default smoke proof.
+- [ ] `F-005` Runtime upgrade and migration smoke test
 
-- [x] `PY-003` Configure ruff linting for Python research stack and fix lint errors
-  - Spec: `specs/040226-10-python-research-quality-gates.md`
-  - Why now: No Python linting exists. Ruff configuration gates future regressions.
-  - Codebase evidence:
-    - No pyproject.toml, ruff.toml, or .ruff.toml in repository
-    - 5 Python files at root: main.py, methods.py, runner.py, metrics.py, data.py
-  - Owns:
-    - `pyproject.toml`
-  - Integration touchpoints:
-    - `main.py`, `methods.py`, `runner.py`, `metrics.py`, `data.py` (files being linted)
-  - Scope boundary:
-    - Create pyproject.toml with ruff config targeting the 5 root Python files
-    - Fix all lint errors that ruff reports
-    - Do not restructure the Python code into a package
-  - Required tests:
-    - `ruff check main.py methods.py runner.py metrics.py data.py`
-  - Dependencies: `PY-001`, `PY-002`
-  - Completion signal: `ruff check` passes with zero errors on all 5 Python files
-  - Implementation notes:
-    - Added a repo-root `pyproject.toml` that scopes Ruff to the five root research files, pins the lint target to Python 3.13, and enables only `F` and `I` rules so the gate catches real defects without forcing a broad style rewrite.
-    - Removed the eight dead local bindings Ruff reported in `main.py`, `methods.py`, and `metrics.py`, preserving behavior while clearing the active Pyflakes surface.
-    - Normalized import ordering in `main.py`, `methods.py`, `runner.py`, `metrics.py`, and `data.py`; local proof still requires `ruff` to be installed in the active `python` environment because the repo does not yet manage Python tool dependencies.
+  Spec: `specs/050426-chain-runtime-pallet.md`
+  Why now: The CI spec notes "no runtime upgrade/migration tests exist." The game-solver pallet has 29 migration files. Any runtime upgrade in production could corrupt state if migrations are untested.
+  Codebase evidence: 29 migration files in `crates/myosu-chain/pallets/game-solver/src/migrations/`. `tests/migration.rs` exists but only tests individual migrations, not the full upgrade path.
+  Owns: E2E test or try-runtime test that applies all migrations to a snapshot.
+  Integration touchpoints: Runtime `lib.rs`, migration sequence, FRAME migration hooks.
+  Scope boundary: Test that `try-runtime` (or equivalent) applies all pending migrations without error on a devnet snapshot. Do not test production state.
+  Acceptance criteria: (1) A migration smoke test exists. (2) It passes on a fresh devnet genesis snapshot. (3) It runs in CI.
+  Verification: `try-runtime` or equivalent command.
+  Required tests: The migration smoke test.
+  Dependencies: P-001 (clean trunk).
+  Estimated scope: M
+  Completion signal: Migration smoke test passes in CI.
 
-- [x] `PY-004` Write basic test suite for Python metrics computation and data loading
-  - Spec: `specs/040226-10-python-research-quality-gates.md`
-  - Why now: No Python tests exist. Basic coverage for metrics and data loading prevents regressions in the research stack.
-  - Codebase evidence:
-    - No tests/ directory for Python
-    - `metrics.py` contains MetricSuite, bootstrap confidence intervals, paired analysis
-    - `data.py` contains RAW_GAMES corpus and proxy benchmarks
-  - Owns:
-    - `tests/test_metrics.py`
-    - `tests/test_data.py`
-  - Integration touchpoints:
-    - `metrics.py` (functions under test)
-    - `data.py` (data structures under test)
-    - `pyproject.toml` (from PY-003, test configuration)
-  - Scope boundary:
-    - Test metrics computation: bootstrap CI, paired_sign_flip_test correctness, edge cases (empty input, single element)
-    - Test data loading: RAW_GAMES structure, proxy benchmark validity
-    - Do not test experimental conditions in methods.py
-  - Required tests:
-    - `python -m pytest tests/test_metrics.py tests/test_data.py -v`
-  - Dependencies: `PY-003`
-  - Completion signal: pytest passes with ≥10 tests covering critical paths in metrics and data modules
-  - Implementation notes:
-    - Added `tests/test_metrics.py` and `tests/test_data.py` with 16 focused pytest cases covering the metrics edge cases, exact-vs-sampled sign-flip behavior, `MetricSuite` happy path and input validation, corpus schema/loading, proxy benchmark fallbacks, deterministic splits, feature packaging, and recommendation decoding.
-    - Tightened `metrics.bootstrap_confidence_interval()` for explicit empty and singleton inputs so the new edge-case coverage can assert stable behavior without NumPy runtime warnings.
-    - Local proof required installing `pytest` into the active interpreter because the repo still does not manage Python test dependencies.
+### Stage-0 Extrinsic Reduction (follows P-006)
 
-- [x] `PY-005` Add Python linting and testing CI job to GitHub Actions
-  - Spec: `specs/040226-10-python-research-quality-gates.md`
-  - Why now: Without a CI job, Python quality gates are enforced only locally. CI prevents regressions.
-  - Codebase evidence:
-    - `.github/workflows/ci.yml` has 7 Rust-focused jobs and zero Python jobs
-  - Owns:
-    - `.github/workflows/ci.yml` (new job entry)
-  - Integration touchpoints:
-    - `pyproject.toml` (from PY-003)
-    - `tests/test_metrics.py`, `tests/test_data.py` (from PY-004)
-  - Scope boundary:
-    - Add one CI job: install Python 3.13, install ruff and pytest, run ruff check, run pytest
-    - Do not add type checking (ty) in this task
-  - Required tests:
-    - `actionlint .github/workflows/ci.yml`
-  - Dependencies: `PY-004`
-  - Completion signal: CI pipeline includes Python job that runs ruff and pytest; job passes
-  - Implementation notes:
-    - Added a `python-research-qa` job to `.github/workflows/ci.yml` that runs after `repo-shape`, keeping the Python research gate independent from the heavier Rust build graph.
-    - The job uses `actions/setup-python` with Python `3.13`, enables pip caching, installs the minimal runtime needed by the owned quality gates (`numpy`, `pytest`, `ruff`), then runs the existing Ruff and pytest proof commands directly.
-    - Local validation stayed aligned with the CI contract by rerunning `ruff check main.py methods.py runner.py metrics.py data.py`, `python -m pytest tests/test_metrics.py tests/test_data.py -v`, and `actionlint .github/workflows/ci.yml` after the workflow edit.
+- [ ] `F-006` Remove identified dead extrinsics from stage-0 surface
 
-- [x] `ADR-001` Create ADR template and process documentation
-  - Spec: `specs/040226-11-architecture-decision-records.md`
-  - Why now: No structured decision record format exists. ADRs are prerequisite for recording existing decisions and governance of future ones.
-  - Codebase evidence:
-    - No `docs/adr/` directory exists
-    - `ops/decision_log.md` (11.8K) contains decisions in narrative form but not structured ADR format
-    - `THEORY.MD` (96.8K) contains architectural rationale in prose
-  - Owns:
-    - `docs/adr/README.md`
-    - `docs/adr/000-template.md`
-  - Integration touchpoints:
-    - `ops/decision_log.md` (existing decision context)
-    - `THEORY.MD` (source of architectural rationale)
-  - Scope boundary:
-    - Standard ADR template: title, status, context, decision, consequences
-    - Process doc: when to write an ADR, how to propose, how to supersede
-    - Do not write any retroactive ADRs in this task
-  - Required tests:
-    - `test -d docs/adr`
-    - `test -f docs/adr/000-template.md`
-    - `test -f docs/adr/README.md`
-  - Dependencies: `none`
-  - Completion signal: ADR directory exists with template and process documentation
-  - Implementation notes:
-    - Added `docs/adr/README.md` as the repo's ADR process and index surface, covering when to write an ADR, numbering/location conventions, status vocabulary, and the supersede/update workflow.
-    - Added `docs/adr/000-template.md` with the required decision-record structure: context, decision, alternatives considered, consequences, reversibility, and validation/evidence.
-    - Kept the slice scoped to the spec contract only: no retroactive ADRs were created yet, and the existing narrative decision sources in `THEORY.MD` and `ops/decision_log.md` remain the source material for `ADR-002`.
+  Spec: `specs/050426-chain-runtime-pallet.md`
+  Why now: Follows the audit in P-006. Each unnecessary extrinsic is attack surface.
+  Codebase evidence: Determined by P-006 audit.
+  Owns: Game-solver pallet dispatch surface, runtime integration.
+  Integration touchpoints: RPC clients, operator tooling (if any tool calls removed extrinsics), CI tests.
+  Scope boundary: Remove only extrinsics marked "remove" in P-006 audit. Feature-gate if removal is risky.
+  Acceptance criteria: (1) Stage-0 extrinsic count decreases. (2) All tests pass. (3) No operator-facing tool breaks.
+  Verification: `cargo test -p pallet-game-solver && cargo test -p myosu-chain-runtime`
+  Required tests: Existing tests must still pass. Add negative tests for removed extrinsics (call returns error).
+  Dependencies: P-006 (audit complete).
+  Estimated scope: M
+  Completion signal: Extrinsic count reduced per P-006 recommendations, CI green.
 
-- [x] `ADR-002` Write retroactive ADRs for ≥7 existing major architectural decisions
-  - Spec: `specs/040226-11-architecture-decision-records.md`
-  - Why now: At least 10 significant decisions are documented only in narrative form across THEORY.MD and scattered comments. Structured records make them discoverable and reviewable.
-  - Codebase evidence:
-    - Decisions documented in THEORY.MD include: single-token model, Substrate fork choice, robopoker fork, enum dispatch over trait objects, SwapInterface abstraction, commit-reveal v2, checkpoint versioning
-    - `ops/decision_log.md` contains additional decision records
-  - Owns:
-    - `docs/adr/001-single-token-emission.md`
-    - `docs/adr/002-substrate-fork-strategy.md`
-    - `docs/adr/003-robopoker-fork.md`
-    - `docs/adr/004-enum-dispatch-games.md`
-    - `docs/adr/005-swap-interface-abstraction.md`
-    - `docs/adr/006-commit-reveal-v2.md`
-    - `docs/adr/007-checkpoint-versioning.md`
-  - Integration touchpoints:
-    - `docs/adr/README.md` (from ADR-001, index of all ADRs)
-    - `THEORY.MD` (source material)
-    - `ops/decision_log.md` (source material)
-  - Scope boundary:
-    - Each ADR uses the template from ADR-001
-    - Extract context, decision, and consequences from existing prose
-    - Do not create new decisions; record what already exists
-  - Required tests:
-    - `test $(ls docs/adr/0*.md | wc -l) -ge 8`
-    - `grep -l 'Status:' docs/adr/001-*.md docs/adr/007-*.md`
-  - Dependencies: `ADR-001`
-  - Completion signal: ≥7 retroactive ADRs exist following the template, covering the major decisions documented in THEORY.MD
-  - Implementation notes:
-    - Added seven accepted retroactive ADRs under `docs/adr/001-007`, covering the stage-0 decisions already reflected in the live repo: single-token economics, the subtensor fork strategy, the robopoker fork, enum dispatch for games, the stage-0 swap seam, commit-reveal v2, and checkpoint versioning.
-    - Each ADR records current repo truth from the existing narrative sources (`ops/decision_log.md`, `THEORY.MD`, `AGENTS.md`) plus the live code surfaces that now embody those decisions, rather than reopening or changing the decisions in this slice.
-    - Updated `docs/adr/README.md` so numbered ADR discovery no longer depends on directory listing alone.
+### Miner Convergence Gate
 
-- [x] `ADR-003` Draft stage-2 architectural roadmap with decision points and prerequisites
-  - Spec: `specs/040226-11-architecture-decision-records.md`
-  - Why now: Stage-2 decisions (dual-token, EVM restoration, multi-subnet, governance model) need structured identification of prerequisites and reversibility before the project advances past stage-1.
-  - Codebase evidence:
-    - `THEORY.MD` discusses future possibilities (dual-token, smart contracts, governance) but without structured assessment
-    - Corpus plan 013 identifies key questions: dual-token, EVM/smart contracts, chain upgrades, multi-subnet, governance model
-  - Owns:
-    - `docs/adr/stage-2-roadmap.md`
-  - Integration touchpoints:
-    - `docs/adr/README.md` (index reference)
-    - `THEORY.MD` (source of future architecture discussion)
-    - `OS.md` (stage definitions)
-  - Scope boundary:
-    - Identify upcoming decision points with prerequisites, risks, and reversibility assessment
-    - Do not make any stage-2 decisions; only map the decision space
-  - Required tests:
-    - `test -f docs/adr/stage-2-roadmap.md`
-    - `grep -q 'reversib' docs/adr/stage-2-roadmap.md`
-  - Dependencies: `ADR-002`
-  - Completion signal: Stage-2 roadmap identifies ≥5 upcoming decision points with prerequisites and reversibility assessments
-  - Implementation notes:
-    - Added `docs/adr/stage-2-roadmap.md` as the non-numbered companion to the accepted ADR set, anchored to current repo truth rather than speculative product narrative.
-    - The roadmap now maps five concrete stage-2 decision points in recommended order: upgrade governance, admission model, multi-subnet emission routing, programmable contract surface, and dual-token economics.
-    - Each decision point records prerequisites, viable options, principal risks, and reversibility criteria, and `docs/adr/README.md` now indexes the roadmap explicitly.
+- [ ] `F-007` Research: Minimum training iterations for meaningful strategy quality
+
+  Spec: `specs/050426-mining-surface.md`
+  Why now: The spec notes "no convergence gate exists" — a miner can train for 1 iteration and serve garbage. Validators score it low, but operators have no guidance on minimum training.
+  Codebase evidence: `crates/myosu-miner/src/` training loop, `--train-iterations` flag. No convergence check or quality gate.
+  Owns: Research document or code comment with recommended minimums per game type.
+  Integration touchpoints: Miner CLI documentation, operator guide.
+  Scope boundary: Measure and document. Do not enforce in code (that's follow-on).
+  Acceptance criteria: (1) Minimum iterations for score > 0.5 documented for Poker and Liar's Dice. (2) Operator guide updated with recommendation.
+  Verification: Run miner with varying iteration counts, measure validator score.
+  Required tests: None (research task).
+  Dependencies: P-009 (determinism verified across games).
+  Estimated scope: S
+  Completion signal: Minimum iterations documented per game type.
+
+### Polkadot SDK Migration Research
+
+- [ ] `F-008` Research: Upstream polkadot-sdk migration feasibility
+
+  Spec: `specs/050426-chain-runtime-pallet.md`
+  Why now: The workspace uses an opentensor fork of polkadot-sdk at a specific rev. The spec notes migration to upstream may be feasible if fork divergence is limited. The Cargo.toml de-workspacing (P-001) makes dependency tracking clearer.
+  Codebase evidence: Runtime `Cargo.toml` references `opentensor/polkadot-sdk.git` at rev `71629fd`. 7 suppressed RUSTSECs from inherited Substrate stack.
+  Owns: Research document assessing fork divergence and migration path.
+  Integration touchpoints: All chain crates, FRAME pallets, consensus.
+  Scope boundary: Research only. Count divergent commits, identify blocking changes, estimate effort.
+  Acceptance criteria: (1) Fork divergence is quantified (commit count, file count). (2) Blocking changes are identified. (3) Go/no-go recommendation with rationale.
+  Verification: Review-based.
+  Required tests: None (research task).
+  Dependencies: None (independent research).
+  Estimated scope: M
+  Completion signal: Research document exists with go/no-go recommendation.
+
+---
 
 ## Completed / Already Satisfied
 
-- **Miner and validator tracing initialization** (spec 003 partial): `crates/myosu-miner/src/main.rs` lines 84-92 and `crates/myosu-validator/src/main.rs` lines 119-127 both initialize tracing subscriber with EnvFilter. Game library crates (myosu-games, myosu-games-poker, myosu-games-liars-dice) do not use print-based logging.
-- **SwapInterface no-op stub** (spec 002 partial): `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs` implements Stage0SwapInterface with identity swaps (price=1, amount_in=amount_out, fee=0), correctly abstracting away AMM dependencies.
-- **Multi-game architecture proof** (spec 009 partial): Liar's Dice crate at `crates/myosu-games-liars-dice/` proves additive game integration with zero cross-game dependencies. GameType enum and GameRegistry in `crates/myosu-games/src/lib.rs` support multiple games.
-- **Workspace semver version** (spec 008 partial): `Cargo.toml` workspace.package.version is set to `"0.1.0"` with edition `"2024"`.
-- **Operator bootstrap command** (spec 007 partial): `crates/myosu-keys/src/main.rs` provides print-bootstrap command and `docs/execution-playbooks/operator-network.md` (9.9K) documents operator key setup and miner/validator bootstrap.
-- **Chain spec files exist** (spec 006 partial): `crates/myosu-chain/node/src/chain_spec/` contains devnet.rs, testnet.rs, localnet.rs, and finney.rs with chain spec definitions.
-- **Unsafe code SAFETY comments** (spec 004 partial): Both unsafe blocks in `crates/myosu-games-poker/src/codexpoker.rs` (lines 203 and 309) have SAFETY comments noting files are read-only solver artifacts.
-- **Smoke test and CI infrastructure** (spec 005 partial): `crates/myosu-chain/node/tests/stage0_local_loop.rs` provides a Rust integration test; `.github/workflows/ci.yml` runs 7 CI jobs covering repo shape, crate tests, chain core, doctrine, plan quality, operator network, and clippy.
+- [x] `C-001` NoOpSwap identity stub implements all 37 swap callsites
+  Spec: `specs/050426-token-economics.md`
+  Codebase evidence: `runtime/src/lib.rs` lines 89-150 define `Stage0NoopSwap` with 1:1 conversion, zero fees. `swap_stub.rs` documents `max_price()` returning `Balance::max_value()` (with new documentation from working tree).
+
+- [x] `C-002` INV-004 solver-gameplay dependency boundary enforced in CI
+  Spec: `specs/050426-game-trait-interface.md`
+  Codebase evidence: Working tree adds `cargo tree` check to ci.yml verifying `myosu-play` does not depend on `myosu-miner` and vice versa. Confirmed via `cargo tree -p myosu-play` (no myosu-miner in tree).
+
+- [x] `C-003` Multi-game architecture with zero-change extensibility
+  Spec: `specs/050426-game-trait-interface.md`
+  Codebase evidence: `GameRegistry::supported()` returns 4 games. Poker, Kuhn, Liar's Dice all implement `CfrGame`/`GameRenderer` traits. Adding Liar's Dice required zero changes to poker code.
+
+- [x] `C-004` Workspace clippy lints enforced (arithmetic_side_effects, expect_used, indexing_slicing, unwrap_used)
+  Spec: `specs/050426-ci-invariant-enforcement.md`
+  Codebase evidence: Workspace `Cargo.toml` `[lints.clippy]` section. CI `chain-clippy` job runs with `-D warnings`.
+
+- [x] `C-005` Validator scoring with hyperbolic formula and determinism test
+  Spec: `specs/050426-validation-surface.md`
+  Codebase evidence: Working tree changes `validation.rs` to `score = 1.0 / (1.0 + l1_distance)` with `score_from_l1_distance()` function. 14 unit tests. `validator_determinism.sh` in CI.
+
+- [x] `C-006` Miner 7-step lifecycle (probe, register, serve, train, checkpoint, file-serve, HTTP-serve)
+  Spec: `specs/050426-mining-surface.md`
+  Codebase evidence: `crates/myosu-miner/src/lib.rs` (~2.2K lines) implements full lifecycle. `axon.rs` handles HTTP serving for poker. Training, checkpointing, and file-based serving work for all games.
+
+- [x] `C-007` Gameplay surface with three modes (smoke-test, TUI, pipe)
+  Spec: `specs/050426-gameplay-surface.md`
+  Codebase evidence: `crates/myosu-play/src/entrypoint.rs` (~3.1K lines). `--smoke-test` flag, `train` subcommand (TUI), pipe protocol. CI runs smoke tests.
+
+- [x] `C-008` Key management (`myosu-keys` crate with create, import, export, switch)
+  Spec: `specs/050426-operator-tooling.md`
+  Codebase evidence: `crates/myosu-keys/src/lib.rs` implements all documented commands. Network-namespaced storage.
+
+- [x] `C-009` Two-node block sync proven
+  Spec: `specs/050426-network-consensus.md`
+  Codebase evidence: `tests/e2e/two_node_sync.sh` (8.7K) exists and is referenced in spec as proven.
+
+- [x] `C-010` Aura + GRANDPA consensus configured with 4 chain spec variants
+  Spec: `specs/050426-chain-runtime-pallet.md`
+  Codebase evidence: Runtime `construct_runtime!` includes `pallet_aura` (3) and `pallet_grandpa` (4). Chain specs: `localnet`, `devnet`, `testnet`, `finney`.
+
+- [x] `C-011` Epoch consistency guard (skip epoch on inconsistent state)
+  Spec: `specs/050426-emission-epoch-mechanism.md`
+  Codebase evidence: Working tree adds `is_epoch_input_state_consistent(netuid)` check at entry of both `epoch()` and `epoch_dense()` in `run_epoch.rs`. Two tests in `epoch.rs` verify the guard.
+
+- [x] `C-012` Zero-dividend fallback distributes by stake weight
+  Spec: `specs/050426-emission-epoch-mechanism.md`
+  Codebase evidence: Working tree adds stake-weighted fallback in `run_coinbase.rs` `calculate_dividend_distribution` when `total_dividends == 0`. Test verifies 750/250 distribution for 3:1 stake ratio.
+
+- [x] `C-013` Decode budget hardened to 1 MiB for poker wire codec
+  Spec: `specs/050426-game-trait-interface.md`
+  Codebase evidence: Working tree changes `MAX_DECODE_BYTES` from 256 MiB to 1 MiB in both `solver.rs` and `wire.rs`. Tests verify oversized payloads are rejected.
+
+- [x] `C-014` Operator guide documentation exists
+  Spec: `specs/050426-operator-tooling.md`
+  Codebase evidence: `docs/operator-guide/quickstart.md`, `docs/operator-guide/upgrading.md`, `docs/operator-guide/troubleshooting.md`, `docs/operator-guide/architecture.md` all exist.
+
+- [x] `C-015` Six environment variable contracts documented
+  Spec: `specs/050426-operator-tooling.md`
+  Codebase evidence: `MYOSU_KEY_PASSWORD`, `MYOSU_CONFIG_DIR`, `MYOSU_SUBNET`, `MYOSU_WORKDIR`, `MYOSU_CHAIN`, `MYOSU_OPERATOR_CHAIN` referenced in operator tooling spec and code.
+
+- [x] `C-016` GameType on-chain encoding with proptest roundtrip
+  Spec: `specs/050426-game-trait-interface.md`
+  Codebase evidence: `GameType::from_bytes` / `to_bytes` in `myosu-games` crate with `#[non_exhaustive]` enum.
+
+- [x] `C-017` Structured report types for miner, validator, and key management
+  Spec: `specs/050426-validation-surface.md`
+  Codebase evidence: 6 report types each in miner and validator (MINER, REGISTRATION, AXON, HTTP, TRAINING, STRATEGY / VALIDATOR, REGISTRATION, SUBTOKEN, PERMIT, VALIDATION, WEIGHTS).

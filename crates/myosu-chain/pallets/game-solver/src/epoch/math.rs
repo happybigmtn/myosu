@@ -1043,6 +1043,17 @@ pub fn weighted_median(
         // Safety limit: We should never need more than iteration_limit iterations.
         iteration_counter = iteration_counter.saturating_add(1);
         if iteration_counter > iteration_limit {
+            log::warn!(
+                "weighted_median hit iteration limit: partition_size={} iteration_count={} iteration_limit={} stake_len={} score_len={} minority={:?} partition_lo={:?} partition_hi={:?}",
+                current_partition_index.len(),
+                iteration_counter,
+                iteration_limit,
+                stake.len(),
+                score.len(),
+                minority,
+                partition_lo,
+                partition_hi,
+            );
             break;
         }
     }

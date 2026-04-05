@@ -60,6 +60,12 @@ pub trait SwapHandler {
     fn approx_fee_amount(netuid: u16, amount: Self::Balance) -> Self::Balance;
     fn current_alpha_price(netuid: u16) -> Self::Balance;
     fn get_protocol_tao(netuid: u16) -> Self::Balance;
+    /// Returns the maximum acceptable execution price for swap callers.
+    ///
+    /// The stage-0 identity stub intentionally returns `Balance::max_value()`,
+    /// which disables slippage protection. That is acceptable only while swaps
+    /// are a no-op compatibility seam and must be revisited before any
+    /// mainnet-style token economics ship.
     fn max_price(netuid: u16) -> Self::Balance;
     fn min_price(netuid: u16) -> Self::Balance;
     fn adjust_protocol_liquidity(netuid: u16) -> Result<(), ()>;
@@ -92,7 +98,11 @@ impl<B: SwapBalance> SwapHandler for NoOpSwap<B> {
     fn approx_fee_amount(_netuid: u16, _amount: B) -> B { B::zero() }
     fn current_alpha_price(_netuid: u16) -> B { B::one() }
     fn get_protocol_tao(_netuid: u16) -> B { B::zero() }
-    fn max_price(_netuid: u16) -> B { B::max_value() }
+    fn max_price(_netuid: u16) -> B {
+        // Stage-0 keeps an effectively infinite ceiling because the no-op swap
+        // is a 1:1 identity conversion. This must not survive a real AMM path.
+        B::max_value()
+    }
     fn min_price(_netuid: u16) -> B { B::zero() }
     fn adjust_protocol_liquidity(_netuid: u16) -> Result<(), ()> { Ok(()) }
     fn is_user_liquidity_enabled(_netuid: u16) -> bool { false }

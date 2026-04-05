@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-codec = { workspace = true, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false, features = ["derive"] }
 frame-support.workspace = true
 scale-info = { workspace = true, features = ["derive"] }
 substrate-fixed.workspace = true

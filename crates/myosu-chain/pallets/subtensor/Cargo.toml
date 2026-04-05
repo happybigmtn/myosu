@@ -17,7 +17,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 subtensor-macros.workspace = true
-codec = { workspace = true, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false, features = ["derive"] }
 sp-core.workspace = true
 pallet-balances.workspace = true
 scale-info = { workspace = true, features = ["derive"] }

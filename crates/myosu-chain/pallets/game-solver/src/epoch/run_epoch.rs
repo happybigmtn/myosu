@@ -63,6 +63,11 @@ impl<T: Config> Pallet<T> {
         netuid: NetUid,
         rao_emission: AlphaCurrency,
     ) -> Vec<(T::AccountId, AlphaCurrency, AlphaCurrency)> {
+        if !Self::is_epoch_input_state_consistent(netuid) {
+            log::error!("Skipping legacy epoch for inconsistent netuid {netuid}");
+            return Vec::new();
+        }
+
         // Run mechanism-style epoch
         let output = Self::epoch_mechanism(netuid, MechId::MAIN, rao_emission);
 
@@ -82,6 +87,11 @@ impl<T: Config> Pallet<T> {
         netuid: NetUid,
         rao_emission: AlphaCurrency,
     ) -> Vec<(T::AccountId, AlphaCurrency, AlphaCurrency)> {
+        if !Self::is_epoch_input_state_consistent(netuid) {
+            log::error!("Skipping legacy epoch_dense for inconsistent netuid {netuid}");
+            return Vec::new();
+        }
+
         Self::epoch_dense_mechanism(netuid, MechId::MAIN, rao_emission)
     }
 

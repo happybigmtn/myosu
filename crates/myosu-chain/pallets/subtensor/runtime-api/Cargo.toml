@@ -14,7 +14,7 @@ workspace = true
 [dependencies]
 sp-api.workspace = true
 sp-runtime.workspace = true
-codec = { workspace = true, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false, features = ["derive"] }
 subtensor-runtime-common.workspace = true
 # local
 pallet-game-solver.workspace = true

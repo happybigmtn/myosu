@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::fs;
+use std::io;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
 
@@ -15,7 +16,7 @@ use crate::robopoker::{
     recommended_edge,
 };
 
-const MAX_DECODE_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_DECODE_BYTES: u64 = 1_048_576;
 const CHECKPOINT_MAGIC: [u8; 4] = *b"MYOS";
 const CHECKPOINT_VERSION: u32 = 1;
 const CHECKPOINT_HEADER_LEN: usize = 8;
@@ -298,8 +299,17 @@ fn panic_message(payload: &(dyn Any + Send)) -> String {
     if let Some(message) = payload.downcast_ref::<String>() {
         return message.clone();
     }
+    if let Some(error) = payload.downcast_ref::<io::Error>() {
+        return error.to_string();
+    }
+    if let Some(error) = payload.downcast_ref::<Box<dyn std::error::Error + Send + Sync>>() {
+        return error.to_string();
+    }
+    if let Some(error) = payload.downcast_ref::<Box<dyn std::error::Error + Send>>() {
+        return error.to_string();
+    }
 
-    "non-string panic payload".to_string()
+    format!("non-string panic payload ({:?})", payload.type_id())
 }
 
 #[cfg(test)]
@@ -386,6 +396,24 @@ mod tests {
             result.is_err(),
             "bounded codec should reject over-budget values"
         );
+    }
+
+    #[test]
+    fn checkpoint_decode_rejects_oversized_payload() {
+        let oversized = vec![0_u8; MAX_DECODE_BYTES as usize + 1];
+        let result = decode_codec(MAX_DECODE_BYTES - 1).serialized_size(&oversized);
+
+        assert!(result.is_err(), "oversized payload should exceed decode budget");
+    }
+
+    #[test]
+    fn panic_message_extracts_io_error_payload() {
+        let payload = catch_unwind(AssertUnwindSafe(|| {
+            std::panic::panic_any(io::Error::new(io::ErrorKind::Other, "io boom"));
+        }))
+        .expect_err("panic payload should be captured");
+
+        assert_eq!(panic_message(payload.as_ref()), "io boom");
     }
 
     proptest! {

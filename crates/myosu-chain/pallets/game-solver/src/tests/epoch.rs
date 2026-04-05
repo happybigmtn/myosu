@@ -3925,3 +3925,36 @@ fn same_hotkey_across_different_netuids_is_ok() {
         assert!(Pallet::<Test>::is_epoch_input_state_consistent(net_b));
     });
 }
+
+#[test]
+fn legacy_epoch_skips_persistence_when_state_is_inconsistent() {
+    new_test_ext(1).execute_with(|| {
+        let netuid: NetUid = 155.into();
+        let hotkey = U256::from(42u64);
+        let sentinel = vec![7_u16, 11_u16];
+
+        Keys::<Test>::insert(netuid, 0u16, hotkey);
+        Keys::<Test>::insert(netuid, 1u16, hotkey);
+        Incentive::<Test>::insert(NetUidStorageIndex::from(netuid), sentinel.clone());
+
+        let output = SubtensorModule::epoch(netuid, 1_000.into());
+
+        assert!(output.is_empty());
+        assert_eq!(Incentive::<Test>::get(NetUidStorageIndex::from(netuid)), sentinel);
+    });
+}
+
+#[test]
+fn legacy_epoch_dense_returns_empty_when_state_is_inconsistent() {
+    new_test_ext(1).execute_with(|| {
+        let netuid: NetUid = 155.into();
+        let hotkey = U256::from(42u64);
+
+        Keys::<Test>::insert(netuid, 0u16, hotkey);
+        Keys::<Test>::insert(netuid, 1u16, hotkey);
+
+        let output = SubtensorModule::epoch_dense(netuid, 1_000.into());
+
+        assert!(output.is_empty());
+    });
+}

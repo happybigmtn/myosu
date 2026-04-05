@@ -3,7 +3,7 @@ use thiserror::Error;
 
 use crate::robopoker::{NlheInfoKey, NlheStrategyQuery, NlheStrategyResponse};
 
-const MAX_DECODE_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_DECODE_BYTES: u64 = 1_048_576;
 
 /// Error returned when binary wire encoding or decoding fails.
 #[derive(Debug, Error)]
@@ -208,6 +208,21 @@ mod tests {
         encoded.pop().expect("encoded response should not be empty");
 
         let error = decode_strategy_response(&encoded).expect_err("truncated response should fail");
+
+        assert!(matches!(
+            error,
+            WireCodecError::Decode {
+                context: "nlhe strategy response",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn decode_rejects_oversized_strategy_response() {
+        let oversized = vec![0_u8; MAX_DECODE_BYTES as usize + 1];
+
+        let error = decode_strategy_response(&oversized).expect_err("oversized response should fail");
 
         assert!(matches!(
             error,

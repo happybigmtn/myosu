@@ -523,6 +523,203 @@ fn stage_0_coinbase_dividend_distribution_folds_root_bucket_into_alpha_dividends
 }
 
 #[test]
+fn stage_0_coinbase_zero_dividend_distribution_falls_back_to_weighted_stake() {
+    new_test_ext(1).execute_with(|| {
+        let first_hotkey = U256::from(47);
+        let second_hotkey = U256::from(48);
+        let pending_alpha = AlphaCurrency::from(600u64);
+        let pending_root_alpha = AlphaCurrency::from(400u64);
+
+        let (alpha_dividends, root_alpha_dividends) = SubtensorModule::calculate_dividend_distribution(
+            pending_alpha,
+            pending_root_alpha,
+            U96F32::from_num(0.0),
+            BTreeMap::from([
+                (
+                    first_hotkey,
+                    (AlphaCurrency::from(300u64), AlphaCurrency::ZERO),
+                ),
+                (
+                    second_hotkey,
+                    (AlphaCurrency::from(100u64), AlphaCurrency::ZERO),
+                ),
+            ]),
+            BTreeMap::new(),
+        );
+
+        assert!(root_alpha_dividends.is_empty());
+        assert_eq!(
+            alpha_dividends
+                .get(&first_hotkey)
+                .copied()
+                .expect("first hotkey should receive fallback dividends")
+                .saturating_to_num::<u64>(),
+            750
+        );
+        assert_eq!(
+            alpha_dividends
+                .get(&second_hotkey)
+                .copied()
+                .expect("second hotkey should receive fallback dividends")
+                .saturating_to_num::<u64>(),
+            250
+        );
+        assert_eq!(
+            alpha_dividends.values().copied().sum::<U96F32>().saturating_to_num::<u64>(),
+            u64::from(pending_alpha.saturating_add(pending_root_alpha))
+        );
+    });
+}
+
+#[test]
+fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
+    new_test_ext(1).execute_with(|| {
+        let owner_hotkey = U256::from(110);
+        let owner_coldkey = U256::from(111);
+        let validator_hotkey = U256::from(120);
+        let validator_coldkey = U256::from(121);
+        let miner_hotkey = U256::from(130);
+        let miner_coldkey = U256::from(131);
+        let netuid = add_dynamic_network_disable_commit_reveal(&owner_hotkey, &owner_coldkey);
+        let stake_amount: u64 = 100_000_000_000;
+        let reserve_amount: u64 = stake_amount * 1_000;
+        let tempo = 2_u16;
+
+        setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
+        SubtensorModule::set_tempo(netuid, tempo);
+        SubtensorModule::set_tao_weight(0);
+        SubtensorModule::set_subnet_owner_cut(u16::MAX / 10);
+        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        SubtensorModule::set_max_allowed_uids(netuid, 3);
+        SubtensorModule::set_max_allowed_validators(netuid, 1);
+
+        SubtensorModule::add_balance_to_coldkey_account(
+            &validator_coldkey,
+            stake_amount + ExistentialDeposit::get(),
+        );
+        SubtensorModule::add_balance_to_coldkey_account(
+            &miner_coldkey,
+            stake_amount + ExistentialDeposit::get(),
+        );
+
+        register_ok_neuron(netuid, validator_hotkey, validator_coldkey, 0);
+        register_ok_neuron(netuid, miner_hotkey, miner_coldkey, 0);
+
+        assert_ok!(SubtensorModule::add_stake(
+            RuntimeOrigin::signed(validator_coldkey),
+            validator_hotkey,
+            netuid,
+            TaoCurrency::from(stake_amount),
+        ));
+        assert_ok!(SubtensorModule::add_stake(
+            RuntimeOrigin::signed(miner_coldkey),
+            miner_hotkey,
+            netuid,
+            TaoCurrency::from(stake_amount),
+        ));
+        assert_ok!(SubtensorModule::serve_axon(
+            RuntimeOrigin::signed(miner_hotkey),
+            netuid,
+            1,
+            1_676_056_785,
+            128,
+            4,
+            0,
+            0,
+            0,
+        ));
+
+        let validator_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &validator_hotkey)
+            .expect("validator uid should exist");
+        let miner_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &miner_hotkey)
+            .expect("miner uid should exist");
+
+        run_to_block_no_epoch(netuid, 30);
+        SubtensorModule::epoch(netuid, AlphaCurrency::ZERO);
+        next_block_no_epoch(netuid);
+        assert_ok!(SubtensorModule::set_weights(
+            RuntimeOrigin::signed(validator_hotkey),
+            netuid,
+            vec![miner_uid],
+            vec![u16::MAX],
+            0,
+        ));
+
+        let block_emission = SubtensorModule::get_block_emission_for_issuance(
+            SubtensorModule::get_alpha_issuance(netuid).into(),
+        )
+        .expect("block emission should derive from subnet issuance");
+        assert!(block_emission > 0);
+
+        let accrual_blocks = u64::from(tempo) + 1;
+        let mut cycle_start_block = SubtensorModule::get_current_block_as_u64();
+        while SubtensorModule::blocks_until_next_epoch(netuid, tempo, cycle_start_block)
+            != u64::from(tempo)
+        {
+            cycle_start_block = cycle_start_block.saturating_add(1);
+        }
+        System::set_block_number(cycle_start_block);
+        BlocksSinceLastStep::<Test>::insert(netuid, 0);
+        PendingServerEmission::<Test>::insert(netuid, AlphaCurrency::ZERO);
+        PendingValidatorEmission::<Test>::insert(netuid, AlphaCurrency::ZERO);
+        PendingRootAlphaDivs::<Test>::insert(netuid, AlphaCurrency::ZERO);
+        PendingOwnerCut::<Test>::insert(netuid, AlphaCurrency::ZERO);
+
+        let mut final_summary = None;
+        for offset in 0..accrual_blocks {
+            System::set_block_number(cycle_start_block.saturating_add(offset));
+            let summary = SubtensorModule::run_coinbase(U96F32::from_num(block_emission));
+            if summary.drained_epoch_count > 0 {
+                final_summary = Some(summary);
+            }
+        }
+
+        let summary = final_summary.expect("coinbase should drain one epoch");
+        let emission_sum = Emission::<Test>::get(netuid)
+            .into_iter()
+            .map(u64::from)
+            .sum::<u64>();
+        let expected_emission_sum = u64::from(summary.server_alpha_distributed)
+            .saturating_add(u64::from(summary.validator_alpha_distributed));
+        let actual_total_distribution = expected_emission_sum
+            .saturating_add(u64::from(summary.owner_cut_distributed));
+        let expected_epoch_distribution = block_emission.saturating_mul(accrual_blocks);
+        let rounding_tolerance = accrual_blocks.saturating_mul(8);
+
+        assert_eq!(summary.drained_epoch_count, 1);
+        assert_eq!(u64::from(summary.root_alpha_distributed), 0);
+        assert_eq!(emission_sum, expected_emission_sum);
+        assert!(
+            actual_total_distribution <= expected_epoch_distribution,
+            "distribution exceeded accrued budget: actual={} expected={}",
+            actual_total_distribution,
+            expected_epoch_distribution
+        );
+        assert!(
+            expected_epoch_distribution.saturating_sub(actual_total_distribution) <= rounding_tolerance,
+            "distribution drift exceeded tolerance: actual={} expected={} tolerance={}",
+            actual_total_distribution,
+            expected_epoch_distribution,
+            rounding_tolerance
+        );
+        assert!(
+            Incentive::<Test>::get(NetUidStorageIndex::from(netuid))
+                .get(miner_uid as usize)
+                .copied()
+                .unwrap_or_default()
+                > 0
+        );
+        assert!(
+            Dividends::<Test>::get(netuid)
+                .get(validator_uid as usize)
+                .copied()
+                .unwrap_or_default()
+                > 0
+        );
+    });
+}
+
+#[test]
 fn stage_0_commit_reveal_v2_is_the_only_live_weight_hiding_path() {
     new_test_ext(1).execute_with(|| {
         let owner_hotkey = U256::from(40);

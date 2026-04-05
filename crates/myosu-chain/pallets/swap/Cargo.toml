@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 alloy-primitives.workspace = true
 approx.workspace = true
-codec = { workspace = true, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false, features = ["derive"] }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support.workspace = true
 frame-system.workspace = true

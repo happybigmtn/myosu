@@ -95,6 +95,21 @@ jobs:
           cargo run -p myosu-play --quiet -- --smoke-test
           cargo run -p myosu-play --quiet -- --game kuhn --smoke-test
 
+      - name: INV-004 solver-gameplay dependency boundary
+        run: |
+          play_tree="$(cargo tree -p myosu-play --edges normal)"
+          if grep -q 'myosu-miner' <<<"$play_tree"; then
+            echo "INV-004 violated: myosu-play depends on myosu-miner"
+            printf '%s\n' "$play_tree"
+            exit 1
+          fi
+          miner_tree="$(cargo tree -p myosu-miner --edges normal)"
+          if grep -q 'myosu-play' <<<"$miner_tree"; then
+            echo "INV-004 violated: myosu-miner depends on myosu-play"
+            printf '%s\n' "$miner_tree"
+            exit 1
+          fi
+
       - name: Full active-crate test suite
         run: |
           cargo test --quiet \

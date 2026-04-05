@@ -7736,6 +7736,7 @@ dependencies = [
  "subtensor-runtime-common",
  "subtensor-swap-interface",
  "subtensor-transaction-fee",
+ "w3f-bls 0.1.3",
 ]
 
 [[package]]

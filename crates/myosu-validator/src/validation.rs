@@ -261,7 +261,7 @@ fn score_poker_response_with_solver(
 
     let expected = solver.answer(query);
     let l1_distance = l1_distance(&expected, &observed);
-    let score = (1.0 - (l1_distance / 2.0)).clamp(0.0, 1.0);
+    let score = score_from_l1_distance(l1_distance);
     let exact_match = l1_distance < f64::EPSILON;
 
     Ok(ValidationReport {
@@ -328,7 +328,7 @@ fn score_liars_dice_response_with_solver(
 
     let expected = solver.answer(query);
     let l1_distance = l1_distance_liars_dice(&expected, &observed);
-    let score = (1.0 - (l1_distance / 2.0)).clamp(0.0, 1.0);
+    let score = score_from_l1_distance(l1_distance);
     let exact_match = l1_distance < f64::EPSILON;
 
     Ok(ValidationReport {
@@ -364,6 +364,10 @@ fn l1_distance(
     }
 
     distance
+}
+
+fn score_from_l1_distance(l1_distance: f64) -> f64 {
+    1.0 / (1.0 + l1_distance.max(0.0))
 }
 
 fn describe_recommendation(response: &StrategyResponse<RbpNlheEdge>) -> String {
@@ -470,6 +474,38 @@ mod tests {
         assert!(report.exact_match);
         assert_eq!(report.score, 1.0);
         assert_eq!(report.l1_distance, 0.0);
+    }
+
+    #[test]
+    fn three_action_mismatch_uses_game_agnostic_normalization() {
+        let solver = weighted_solver();
+        let query = myosu_games_poker::NlheBlueprint::query_for_info(&sample_info());
+        let expected = solver.answer(query.clone());
+        let query_bytes = encode_strategy_query(&query).expect("query should encode");
+        let observed = StrategyResponse::new(vec![
+            (RbpNlheEdge::from(Edge::Fold), 0.0),
+            (RbpNlheEdge::from(Edge::Call), 0.0),
+            (RbpNlheEdge::from(Edge::Raise(Odds::new(1, 1))), 1.0),
+        ]);
+        let response_bytes = encode_strategy_response(&observed).expect("response should encode");
+
+        let report = score_poker_response_with_solver(
+            &solver,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("validation should succeed");
+
+        let expected_l1_distance = l1_distance(&expected, &observed);
+
+        assert!(!report.exact_match);
+        assert!(expected_l1_distance > 0.0);
+        assert!((report.l1_distance - expected_l1_distance).abs() < 1e-12);
+        assert!(
+            (report.score - score_from_l1_distance(expected_l1_distance)).abs() < 1e-12
+        );
     }
 
     #[test]

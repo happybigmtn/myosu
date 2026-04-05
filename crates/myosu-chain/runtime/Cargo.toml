@@ -1,9 +1,9 @@
 [package]
 name = "myosu-chain-runtime"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/happybigmtn/myosu"
 build = "build.rs"
 description = "Runtime package scaffold for the myosu chain restart"
 
@@ -91,55 +91,56 @@ std = [
 try-runtime = []
 
 [dependencies]
-codec = { workspace = true, features = ["derive"] }
-frame-benchmarking = { workspace = true, optional = true }
-frame-system-benchmarking = { workspace = true, optional = true }
-frame-executive.workspace = true
-frame-metadata-hash-extension.workspace = true
-frame-support.workspace = true
-frame-system.workspace = true
-frame-system-rpc-runtime-api.workspace = true
-log.workspace = true
-pallet-admin-utils.workspace = true
-pallet-aura.workspace = true
-pallet-balances.workspace = true
+codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false, features = ["derive"] }
+frame-benchmarking = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
+frame-system-benchmarking = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
+frame-executive = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+frame-metadata-hash-extension = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+frame-support = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+frame-system = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+frame-system-rpc-runtime-api = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+log = { version = "0.4.21", default-features = false }
+pallet-admin-utils = { path = "../pallets/admin-utils", default-features = false }
+pallet-aura = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+pallet-balances = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 pallet_subtensor = { package = "pallet-game-solver", path = "../pallets/game-solver", default-features = false }
-pallet-grandpa.workspace = true
-pallet-insecure-randomness-collective-flip = { workspace = true, optional = true }
-pallet-multisig = { workspace = true, optional = true }
-pallet-preimage = { workspace = true, optional = true }
-pallet-safe-mode = { workspace = true, optional = true }
-pallet-scheduler = { workspace = true, optional = true }
-pallet-subtensor-proxy = { workspace = true, optional = true }
-pallet-subtensor-utility.workspace = true
-pallet-sudo = { workspace = true, optional = true }
-pallet-timestamp.workspace = true
-pallet-transaction-payment.workspace = true
-pallet-transaction-payment-rpc-runtime-api.workspace = true
-runtime-common.workspace = true
-serde_json = { workspace = true, features = ["alloc"] }
-scale-info = { workspace = true, features = ["derive"] }
-sp-api.workspace = true
-sp-block-builder.workspace = true
-sp-consensus-aura.workspace = true
-sp-consensus-babe.workspace = true
-sp-core.workspace = true
-sp-genesis-builder.workspace = true
-sp-inherents.workspace = true
-sp-io.workspace = true
-sp-offchain.workspace = true
-sp-runtime.workspace = true
-sp-session.workspace = true
-sp-std.workspace = true
-sp-storage.workspace = true
-sp-transaction-pool.workspace = true
-sp-version.workspace = true
-substrate-fixed.workspace = true
-subtensor-custom-rpc-runtime-api.workspace = true
-subtensor-macros.workspace = true
-subtensor-runtime-common.workspace = true
-subtensor-swap-interface.workspace = true
-subtensor-transaction-fee.workspace = true
+pallet-grandpa = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+pallet-insecure-randomness-collective-flip = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
+pallet-multisig = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
+pallet-preimage = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
+pallet-safe-mode = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
+pallet-scheduler = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
+pallet-subtensor-proxy = { path = "../pallets/proxy", default-features = false, optional = true }
+pallet-subtensor-utility = { path = "../pallets/utility", default-features = false }
+pallet-sudo = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
+pallet-timestamp = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+runtime-common = { path = "../runtime-common", default-features = false }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+scale-info = { version = "2.11.2", default-features = false }
+sp-api = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-block-builder = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-consensus-aura = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-consensus-babe = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-core = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-genesis-builder = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-inherents = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-io = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-offchain = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-runtime = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-session = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-std = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-storage = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-transaction-pool = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+sp-version = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+substrate-fixed = { git = "https://github.com/encointer/substrate-fixed.git", tag = "v0.6.0", default-features = false }
+subtensor-custom-rpc-runtime-api = { path = "../pallets/subtensor/runtime-api", default-features = false }
+subtensor-macros = { path = "../support/macros", default-features = false }
+subtensor-runtime-common = { path = "../common", default-features = false }
+subtensor-swap-interface = { path = "../pallets/swap-interface", default-features = false }
+subtensor-transaction-fee = { path = "../pallets/transaction-fee", default-features = false }
+w3f-bls = { git = "https://github.com/opentensor/bls", branch = "fix-no-std", default-features = false }
 
 [build-dependencies]
-substrate-wasm-builder = { workspace = true, default-features = true }
+substrate-wasm-builder = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = true }

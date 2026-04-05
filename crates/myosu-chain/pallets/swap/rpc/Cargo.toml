@@ -5,7 +5,7 @@ description = "RPC interface for the Swap pallet"
 edition.workspace = true
 
 [dependencies]
-codec = { workspace = true, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false, features = ["derive"] }
 jsonrpsee.workspace = true
 sp-api.workspace = true
 sp-blockchain.workspace = true

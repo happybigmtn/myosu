@@ -413,11 +413,40 @@ impl<T: Config> Pallet<T> {
         BTreeMap<T::AccountId, U96F32>,
         BTreeMap<T::AccountId, U96F32>,
     ) {
-        let _ = tao_weight;
         let zero: U96F32 = asfloat!(0.0);
         let total_pending_alpha = asfloat!(pending_alpha.saturating_add(pending_root_alpha));
         let total_dividends = dividends.values().copied().sum::<U96F32>();
         let mut alpha_dividends: BTreeMap<T::AccountId, U96F32> = BTreeMap::new();
+
+        if total_dividends <= zero {
+            let mut weighted_stakes: BTreeMap<T::AccountId, U96F32> = BTreeMap::new();
+            let mut total_weighted_stake = zero;
+
+            for (hotkey, (alpha_stake, root_stake)) in stake_map {
+                let weighted_stake = asfloat!(alpha_stake.to_u64())
+                    .saturating_add(asfloat!(root_stake.to_u64()).saturating_mul(tao_weight));
+                if weighted_stake <= zero {
+                    continue;
+                }
+
+                total_weighted_stake = total_weighted_stake.saturating_add(weighted_stake);
+                weighted_stakes.insert(hotkey, weighted_stake);
+            }
+
+            if total_weighted_stake <= zero {
+                return (alpha_dividends, BTreeMap::new());
+            }
+
+            log::warn!(
+                "stage-0 dividend distribution fell back to stake weighting because total dividends were zero"
+            );
+            for (hotkey, weighted_stake) in weighted_stakes {
+                let share = weighted_stake.checked_div(total_weighted_stake).unwrap_or(zero);
+                alpha_dividends.insert(hotkey, total_pending_alpha.saturating_mul(share));
+            }
+
+            return (alpha_dividends, BTreeMap::new());
+        }
 
         for (hotkey, dividend) in dividends {
             if !stake_map.contains_key(&hotkey) {
@@ -725,10 +754,18 @@ impl<T: Config> Pallet<T> {
         hotkey_emission: Vec<(T::AccountId, AlphaCurrency, AlphaCurrency)>,
         tao_weight: U96F32,
     ) -> DividendDistribution<T::AccountId> {
+        let all_hotkeys: Vec<T::AccountId> = hotkey_emission
+            .iter()
+            .map(|(hotkey, _, _)| hotkey.clone())
+            .collect();
         let (incentives, dividends) =
             Self::calculate_dividends_and_incentives(netuid, hotkey_emission);
 
-        let stake_map = Self::get_stake_map(netuid, dividends.keys().collect::<Vec<_>>());
+        let stake_map = if dividends.is_empty() {
+            Self::get_stake_map(netuid, all_hotkeys.iter().collect())
+        } else {
+            Self::get_stake_map(netuid, dividends.keys().collect::<Vec<_>>())
+        };
 
         let (alpha_dividends, root_alpha_dividends) = Self::calculate_dividend_distribution(
             pending_validator_alpha,
