@@ -196,7 +196,7 @@ jobs:
     name: E2E Integration
     runs-on: ubuntu-latest
     needs: chain-core
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       SKIP_WASM_BUILD: "1"
 
@@ -224,6 +224,9 @@ jobs:
 
       - name: Cross-validator determinism proof
         run: bash tests/e2e/validator_determinism.sh
+
+      - name: Emission accounting proof
+        run: bash tests/e2e/emission_flow.sh
 
   doctrine:
     name: Doctrine Integrity

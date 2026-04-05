@@ -13,35 +13,6 @@ Specs: gen-20260405-145446/specs/050426-*.md
 - `P-001` is already satisfied by commit `ba63a7d` (`myosu: auto loop checkpoint`), which landed the zero-dividend fallback, epoch consistency guard, validator scoring change, decode budget tightening, INV-004 CI gate, and Cargo.toml de-workspacing that the older queue still described as uncommitted.
 - `P-002` is satisfied in the current local slice: `cargo test -p pallet-game-solver -- truncation` now sweeps 1 / 100 / 1_000 / 10_000 accrued blocks across representative emission rates and measures a worst-case stage-0 drift of 2 rao per accrued block (6 rao over the default tempo-2 epoch). The correction decision is intentionally deferred to `WORKLIST.md`.
 
----
-
-### Cluster 2: Emission Conservation Proof (dependency: P-001)
-
-The truncation gap is now quantified; the remaining emission-conservation work is wiring the live devnet proof into CI so the unit-level bound has an end-to-end guardrail.
-
-- [ ] `P-003` Wire `emission_flow.sh` E2E test into CI
-
-  Spec: `specs/050426-emission-epoch-mechanism.md`
-  Why now: `emission_flow.sh` exists (14.2K lines) but is not in CI. It tests emission accounting end-to-end on a live devnet. Without it, the truncation measurement (P-002) is only a unit-level assertion — E2E validation of emission conservation is missing.
-  Codebase evidence: `tests/e2e/emission_flow.sh` exists. `.github/workflows/ci.yml` wires `local_loop.sh` and `validator_determinism.sh` but not `emission_flow.sh`.
-  Owns: `.github/workflows/ci.yml` (new job or step in `integration-e2e`).
-  Integration touchpoints: `integration-e2e` CI job (depends on `chain-core`), `emission_flow.sh` script, devnet chain spec.
-  Scope boundary: Wire the existing script. If the script needs fixes to pass, fix minimally. Do not rewrite.
-  Acceptance criteria: (1) `emission_flow.sh` runs in CI under `integration-e2e`. (2) It passes on current trunk. (3) CI failure in this script blocks merge.
-  Verification: Push branch, confirm `integration-e2e` job includes emission_flow step and passes.
-  Required tests: The script itself is the test.
-  Dependencies: P-001 (clean trunk), P-002 (drift is quantified, so the E2E has context).
-  Estimated scope: S
-  Completion signal: CI runs `emission_flow.sh` and passes.
-
----
-
-### Checkpoint: Emission confidence
-
-After P-002 and P-003, the emission path has: (a) unit-level truncation bounds, (b) E2E accounting validation, (c) zero-dividend fallback. If truncation drift is unexpectedly large, stop and create a correction task before proceeding.
-
----
-
 ### Cluster 3: CI Hardening (dependency: P-001)
 
 - [ ] `P-004` SHA-pin all GitHub Actions
