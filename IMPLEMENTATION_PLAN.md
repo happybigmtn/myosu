@@ -126,23 +126,6 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Estimated scope: L
   Completion signal: Decision document exists, the multi-contributor review is recorded, and only then is `NoOpSwap` replacement work allowed to start.
 
-### Robopoker Fork Coherence
-
-- [ ] `F-004` INV-006 automated gate for robopoker fork
-
-  Spec: `specs/050426-game-trait-interface.md`
-  Why now: INV-006 (robopoker fork coherence) has no automated CI gate. The game-trait-interface spec notes "process for upstreaming changes is undefined." Drift between the fork and upstream could introduce subtle solver bugs.
-  Codebase evidence: `Cargo.toml` references `happybigmtn/robopoker` (or similar). No CI job compares fork to upstream.
-  Owns: CI job or script that checks fork divergence.
-  Integration touchpoints: Workspace `Cargo.toml`, `myosu-games-poker` dependency on robopoker.
-  Scope boundary: Detect divergence, not resolve it. Alert on new upstream commits not in fork.
-  Acceptance criteria: (1) CI job reports fork divergence count. (2) Does not block merge (advisory only).
-  Verification: CI job runs and reports.
-  Required tests: CI job itself.
-  Dependencies: None (independent).
-  Estimated scope: S
-  Completion signal: CI reports fork status on each run.
-
 ### Runtime Migration Testing
 
 - [ ] `F-005` Runtime upgrade and migration smoke test
