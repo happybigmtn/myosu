@@ -187,6 +187,8 @@ fn bootstrap_devnet_subnet(
 mod tests {
     use super::*;
     use crate::chain_spec::authority_keys_from_seed;
+    #[cfg(feature = "try-runtime")]
+    use frame_try_runtime::{UpgradeCheckSelect, runtime_decl_for_try_runtime::TryRuntime};
     use serde_json::Value;
     use sp_io::TestExternalities;
 
@@ -260,6 +262,17 @@ mod tests {
                 0,
                 "devnet subnet should start without a minimum-weights gate"
             );
+        });
+    }
+
+    #[cfg(feature = "try-runtime")]
+    #[test]
+    fn devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis() {
+        let spec = devnet_config().expect("devnet spec should build");
+        let mut ext = TestExternalities::from(spec.build_storage().expect("storage"));
+
+        ext.execute_with(|| {
+            Runtime::on_runtime_upgrade(UpgradeCheckSelect::PreAndPost);
         });
     }
 }

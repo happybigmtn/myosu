@@ -126,23 +126,6 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Estimated scope: L
   Completion signal: Decision document exists, the multi-contributor review is recorded, and only then is `NoOpSwap` replacement work allowed to start.
 
-### Runtime Migration Testing
-
-- [ ] `F-005` Runtime upgrade and migration smoke test
-
-  Spec: `specs/050426-chain-runtime-pallet.md`
-  Why now: The CI spec notes "no runtime upgrade/migration tests exist." The game-solver pallet has 29 migration files. Any runtime upgrade in production could corrupt state if migrations are untested.
-  Codebase evidence: 29 migration files in `crates/myosu-chain/pallets/game-solver/src/migrations/`. `tests/migration.rs` exists but only tests individual migrations, not the full upgrade path.
-  Owns: E2E test or try-runtime test that applies all migrations to a snapshot.
-  Integration touchpoints: Runtime `lib.rs`, migration sequence, FRAME migration hooks.
-  Scope boundary: Test that `try-runtime` (or equivalent) applies all pending migrations without error on a devnet snapshot. Do not test production state.
-  Acceptance criteria: (1) A migration smoke test exists. (2) It passes on a fresh devnet genesis snapshot. (3) It runs in CI.
-  Verification: `try-runtime` or equivalent command.
-  Required tests: The migration smoke test.
-  Dependencies: P-001 (clean trunk).
-  Estimated scope: M
-  Completion signal: Migration smoke test passes in CI.
-
 ### Stage-0 Extrinsic Reduction (follows P-006)
 
 - [ ] `F-006` Remove identified dead extrinsics from stage-0 surface

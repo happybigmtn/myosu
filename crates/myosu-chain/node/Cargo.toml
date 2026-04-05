@@ -35,7 +35,7 @@ pallet-drand.workspace = true
 pallet-transaction-payment.workspace = true
 pallet-transaction-payment-rpc.workspace = true
 pallet-transaction-payment-rpc-runtime-api.workspace = true
-polkadot-sdk = { workspace = true, features = ["cumulus-primitives-proof-size-hostfunction"] }
+polkadot-sdk = { workspace = true, features = ["cumulus-primitives-proof-size-hostfunction", "std"] }
 sc-basic-authorship.workspace = true
 sc-chain-spec.workspace = true
 sc-chain-spec-derive.workspace = true
@@ -93,9 +93,10 @@ substrate-prometheus-endpoint.workspace = true
 tokio.workspace = true
 
 frame-benchmarking.workspace = true
-frame-benchmarking-cli.workspace = true
+frame-benchmarking-cli = { workspace = true, optional = true }
 frame-metadata-hash-extension.workspace = true
 frame-system.workspace = true
+frame-try-runtime = { workspace = true, optional = true, features = ["std"] }
 frame-system-rpc-runtime-api.workspace = true
 
 [build-dependencies]
@@ -124,10 +125,6 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [
-    "frame-system/try-runtime",
+    "frame-try-runtime/try-runtime",
     "myosu-chain-runtime/try-runtime",
-    "pallet-drand/try-runtime",
-    "pallet-transaction-payment/try-runtime",
-    "polkadot-sdk/try-runtime",
-    "sp-runtime/try-runtime",
 ]

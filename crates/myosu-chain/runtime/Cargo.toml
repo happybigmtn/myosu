@@ -47,6 +47,7 @@ std = [
     "frame-metadata-hash-extension/std",
     "frame-support/std",
     "frame-system/std",
+    "frame-try-runtime?/std",
     "frame-system-rpc-runtime-api/std",
     "log/std",
     "pallet-admin-utils/std",
@@ -88,7 +89,21 @@ std = [
     "subtensor-swap-interface/std",
     "subtensor-transaction-fee/std",
 ]
-try-runtime = []
+try-runtime = [
+    "frame-executive/try-runtime",
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "frame-try-runtime/try-runtime",
+    "pallet-admin-utils/try-runtime",
+    "pallet-aura/try-runtime",
+    "pallet-balances/try-runtime",
+    "pallet_subtensor/try-runtime",
+    "pallet-grandpa/try-runtime",
+    "pallet-subtensor-utility/try-runtime",
+    "pallet-timestamp/try-runtime",
+    "pallet-transaction-payment/try-runtime",
+    "sp-runtime/try-runtime",
+]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false, features = ["derive"] }
@@ -98,6 +113,7 @@ frame-executive = { git = "https://github.com/opentensor/polkadot-sdk.git", rev 
 frame-metadata-hash-extension = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 frame-support = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 frame-system = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
+frame-try-runtime = { workspace = true, optional = true }
 frame-system-rpc-runtime-api = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 log = { version = "0.4.21", default-features = false }
 pallet-admin-utils = { path = "../pallets/admin-utils", default-features = false }
