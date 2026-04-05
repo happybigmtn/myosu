@@ -8,3 +8,4 @@
 
 - `EM-DUST-001` Decide whether stage-0 coinbase should accumulate, recycle, or explicitly track truncation dust. The `cargo test -p pallet-game-solver -- truncation` sweep now measures a worst-case loss of 2 rao per accrued block, which is 6 rao over the default tempo-2 epoch and exceeds the `P-002` investigation threshold for a correction decision.
 - `CI-SEC-001` Decide whether to replace `dtolnay/rust-toolchain` with `rustup` script steps or carry an explicit `zizmor` allowance. Raw `zizmor .github/workflows/ci.yml` is now clean on pinning/permissions/artifact risks but still emits six low-severity `superfluous-actions` advisories against the current helper action.
+- `DOC-OPS-001` Resolve the dangling `@RTK.md` reference at the top of `AGENTS.md` or restore the missing file. The repo currently has no `RTK.md`, so future loops cannot faithfully consume that referenced contract.

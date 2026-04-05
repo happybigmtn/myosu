@@ -13,25 +13,6 @@ Specs: gen-20260405-145446/specs/050426-*.md
 - `P-001` is already satisfied by commit `ba63a7d` (`myosu: auto loop checkpoint`), which landed the zero-dividend fallback, epoch consistency guard, validator scoring change, decode budget tightening, INV-004 CI gate, and Cargo.toml de-workspacing that the older queue still described as uncommitted.
 - `P-002` is satisfied in the current local slice: `cargo test -p pallet-game-solver -- truncation` now sweeps 1 / 100 / 1_000 / 10_000 accrued blocks across representative emission rates and measures a worst-case stage-0 drift of 2 rao per accrued block (6 rao over the default tempo-2 epoch). The correction decision is intentionally deferred to `WORKLIST.md`.
 
-### Cluster 3: CI Hardening (dependency: P-001)
-
-- [ ] `P-005` Wire `two_node_sync.sh` E2E test into CI
-
-  Spec: `specs/050426-network-consensus.md`
-  Why now: Two-node block sync is the only proven multi-node property (spec says the script exists and passes). Wiring it into CI prevents regressions before multi-node work begins.
-  Codebase evidence: `tests/e2e/two_node_sync.sh` exists (8.7K). Not referenced in `ci.yml`.
-  Owns: `.github/workflows/ci.yml` (new step in `integration-e2e` or new job).
-  Integration touchpoints: `integration-e2e` CI job, devnet chain spec, node binary build.
-  Scope boundary: Wire the existing script. Fix minimally if needed. Do not add new multi-node tests.
-  Acceptance criteria: (1) `two_node_sync.sh` runs in CI. (2) It passes. (3) Failure blocks merge.
-  Verification: Push branch, confirm CI job includes two_node_sync step and passes.
-  Required tests: The script itself is the test.
-  Dependencies: P-001 (clean trunk).
-  Estimated scope: S
-  Completion signal: CI runs `two_node_sync.sh` and passes.
-
----
-
 ### Cluster 4: Dead Code and Storage Reduction (dependency: P-001)
 
 - [ ] `P-006` Research: Audit stage-0 extrinsic surface and storage items

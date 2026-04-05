@@ -235,6 +235,9 @@ jobs:
       - name: Local loop integration proof
         run: bash tests/e2e/local_loop.sh
 
+      - name: Two-node sync proof
+        run: bash tests/e2e/two_node_sync.sh
+
       - name: Cross-validator determinism proof
         run: bash tests/e2e/validator_determinism.sh
 
