@@ -1,2 +1,4 @@
 # COMPLETED
 
+- 2026-04-05 `P-001` Reconciled the stale queue entry against the live repo and confirmed the former "uncommitted hardening batch" had already landed in `ba63a7d662aaee9877c94857f92d62c329875093` (`myosu: auto loop checkpoint`). Validation: repo evidence review across `.github/workflows/ci.yml`, `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs`, `crates/myosu-validator/src/validation.rs`, `crates/myosu-games-poker/src/solver.rs`, and `git diff --stat`.
+- 2026-04-05 `P-002` Quantified stage-0 coinbase truncation drift at <=2 rao per accrued block / 6 rao per default tempo-2 epoch, documented the bound at the `tou64!` conversion site, and tightened the stage-0 emission-accounting tolerance. Validation: `cargo test -p pallet-game-solver -- truncation`; `cargo test -p pallet-game-solver -- stage_0`. Commit: `9675dd9428bede39ad0065794d090a564421dd75`.
