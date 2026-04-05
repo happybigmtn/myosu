@@ -263,6 +263,30 @@ fn decode_dynamic_infos(info: &impl Encode) -> Vec<DecodedDynamicInfo> {
     decoded
 }
 
+fn stage_0_pending_distribution_loss(block_emission: u64, blocks: u64) -> u64 {
+    let block_emission = U96F32::from_num(block_emission);
+    let owner_cut = U96F32::from_num(0.1);
+    let miner_split = U96F32::from_num(0.5);
+    let mut distributed = U96F32::from_num(0);
+
+    for _ in 0..blocks {
+        let owner_cut_amount = block_emission.saturating_mul(owner_cut);
+        let remaining = block_emission.saturating_sub(owner_cut_amount);
+        let server_amount = remaining.saturating_mul(miner_split);
+        let validator_amount = remaining.saturating_sub(server_amount);
+
+        distributed = distributed
+            .saturating_add(U96F32::from_num(owner_cut_amount.saturating_to_num::<u64>()))
+            .saturating_add(U96F32::from_num(server_amount.saturating_to_num::<u64>()))
+            .saturating_add(U96F32::from_num(validator_amount.saturating_to_num::<u64>()));
+    }
+
+    block_emission
+        .saturating_mul(U96F32::from_num(blocks))
+        .saturating_sub(distributed)
+        .saturating_to_num::<u64>()
+}
+
 #[test]
 fn stage_0_flow_dispatch_surface_matches_live_chain_loop() {
     let mut registry = Registry::new();
@@ -572,6 +596,34 @@ fn stage_0_coinbase_zero_dividend_distribution_falls_back_to_weighted_stake() {
 }
 
 #[test]
+fn stage_0_coinbase_truncation_drift_stays_below_two_rao_per_block_sweep() {
+    let block_counts = [1_u64, 100, 1_000, 10_000];
+
+    for block_count in block_counts {
+        let mut observed_max_drift = 0_u64;
+
+        for block_emission in (1_u64..=128).chain([1_000_003_u64, 100_000_001].into_iter()) {
+            let drift = stage_0_pending_distribution_loss(block_emission, block_count);
+            observed_max_drift = observed_max_drift.max(drift);
+
+            assert!(
+                drift <= block_count.saturating_mul(2),
+                "truncation drift exceeded sweep budget: emission={} blocks={} drift={}",
+                block_emission,
+                block_count,
+                drift
+            );
+        }
+
+        assert_eq!(
+            observed_max_drift,
+            block_count.saturating_mul(2),
+            "sweep should keep measuring the live worst-case drift envelope"
+        );
+    }
+}
+
+#[test]
 fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
     new_test_ext(1).execute_with(|| {
         let owner_hotkey = U256::from(110);
@@ -684,7 +736,7 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
         let actual_total_distribution = expected_emission_sum
             .saturating_add(u64::from(summary.owner_cut_distributed));
         let expected_epoch_distribution = block_emission.saturating_mul(accrual_blocks);
-        let rounding_tolerance = accrual_blocks.saturating_mul(8);
+        let rounding_tolerance = accrual_blocks.saturating_mul(2);
 
         assert_eq!(summary.drained_epoch_count, 1);
         assert_eq!(u64::from(summary.root_alpha_distributed), 0);

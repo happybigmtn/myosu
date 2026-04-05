@@ -34,6 +34,10 @@ macro_rules! asfloat {
     };
 }
 
+// Stage-0 floors every U96F32 -> u64 storage write here instead of carrying dust
+// forward. The truncation sweep in `stage_0_coinbase_truncation_drift_stays_below_two_rao_per_block_sweep`
+// currently measures a worst case of 2 rao lost per accrued block on the live
+// owner/server/validator split, which is 6 rao over the default tempo-2 epoch.
 macro_rules! tou64 {
     ($val:expr) => {
         $val.saturating_to_num::<u64>()

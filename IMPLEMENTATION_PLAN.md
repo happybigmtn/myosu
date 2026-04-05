@@ -1,58 +1,23 @@
 # IMPLEMENTATION_PLAN
 
 Generated: 2026-04-05
-Codebase snapshot: trunk @ b1be135
+Codebase snapshot: trunk @ ba63a7d + local
 Specs: gen-20260405-145446/specs/050426-*.md
 
 ---
 
 ## Priority Work
 
-### Cluster 1: Land Uncommitted Hardening (dependency: none)
+### Completed prerequisites
 
-The working tree contains +465/-4709 lines of coherent hardening work: zero-dividend fallback, epoch consistency guard, scoring formula change, decode budget tightening, CI INV-004, Cargo.toml de-workspacing, and genesis docs cleanup. All changes have tests. This must land before any downstream work proceeds.
-
-- [ ] `P-001` Commit and verify uncommitted hardening batch
-
-  Spec: `specs/050426-ci-invariant-enforcement.md`
-  Why now: 465 lines of tested code sitting in the working tree blocks all downstream tasks; CI cannot validate anything until this lands.
-  Codebase evidence: `git diff --stat` shows 59 modified files across game-solver (coinbase fallback, epoch guard, swap_stub docs), myosu-games-poker (decode limit 256M→1M), myosu-validator (hyperbolic scoring), ci.yml (INV-004), and 11 Cargo.toml de-workspacing changes.
-  Owns: All currently modified files in the working tree.
-  Integration touchpoints: CI pipeline (new INV-004 job), epoch tests (new consistency guard tests), validator scoring (formula change), poker decode limits.
-  Scope boundary: Commit what exists. No new code. Fix any lint/test failures the commit surfaces.
-  Acceptance criteria: (1) `cargo test -p pallet-game-solver -- stage_0` passes with new epoch guard and coinbase fallback tests. (2) `cargo test -p myosu-validator` passes with hyperbolic scoring tests. (3) `cargo test -p myosu-games-poker` passes with decode limit tests. (4) CI pipeline runs green on the commit including new INV-004 boundary check. (5) Genesis docs deletion does not break any CI doctrine job.
-  Verification: `cargo test -p pallet-game-solver -- stage_0 && cargo test -p myosu-validator && cargo test -p myosu-games-poker && cargo clippy --workspace -- -D warnings`
-  Required tests: Already written in working tree — `stage_0_flow.rs` (2 tests), `epoch.rs` (2 tests), `solver.rs` (2 tests), `wire.rs` (1 test), `validation.rs` (1 test).
-  Dependencies: None.
-  Estimated scope: S
-  Completion signal: Green CI on trunk with all new tests passing.
-
----
-
-### Checkpoint: Verify clean trunk
-
-Before proceeding, confirm trunk CI is green, `cargo test` passes for all active crates, and no regressions from the hardening batch. If CI fails, fix before widening scope.
+- `P-001` is already satisfied by commit `ba63a7d` (`myosu: auto loop checkpoint`), which landed the zero-dividend fallback, epoch consistency guard, validator scoring change, decode budget tightening, INV-004 CI gate, and Cargo.toml de-workspacing that the older queue still described as uncommitted.
+- `P-002` is satisfied in the current local slice: `cargo test -p pallet-game-solver -- truncation` now sweeps 1 / 100 / 1_000 / 10_000 accrued blocks across representative emission rates and measures a worst-case stage-0 drift of 2 rao per accrued block (6 rao over the default tempo-2 epoch). The correction decision is intentionally deferred to `WORKLIST.md`.
 
 ---
 
 ### Cluster 2: Emission Conservation Proof (dependency: P-001)
 
-The emission-epoch spec identifies a critical gap: fixed-point truncation (`U96F32 → u64`) loses fractional rao each block, and the cumulative drift is unquantified. The zero-dividend fallback (P-001) ensures emission isn't lost when dividends are zero, but the truncation gap remains open.
-
-- [ ] `P-002` Quantify emission truncation drift with property-based test
-
-  Spec: `specs/050426-emission-epoch-mechanism.md`
-  Why now: Emission conservation is the highest-risk unknown in the chain. If truncation drift accumulates faster than expected, total issuance diverges from the intended supply schedule. This must be measured before multi-node work (where cross-node divergence would compound it).
-  Codebase evidence: `run_coinbase.rs` converts `U96F32` emission to `u64` via truncation. `math.rs` uses `I96F32`/`I32F32` throughout epoch calculations. No existing test measures cumulative truncation over N blocks.
-  Owns: New test file or test functions in `crates/myosu-chain/pallets/game-solver/src/tests/` measuring truncation.
-  Integration touchpoints: `run_coinbase.rs` (emission conversion), `math.rs` (fixed-point arithmetic), `block_emission.rs` (per-block calculation).
-  Scope boundary: Measurement and test only. Do NOT change the emission arithmetic — just quantify the drift. If drift exceeds 1 rao per epoch, open a follow-on task to decide on a correction strategy.
-  Acceptance criteria: (1) A property-based test (proptest or manual sweep) runs 1000+ simulated blocks and asserts cumulative truncation loss is < N rao (where N is documented). (2) The actual measured drift per epoch is documented in a code comment at the truncation site.
-  Verification: `cargo test -p pallet-game-solver -- truncation`
-  Required tests: Property-based test sweeping block counts [1, 100, 1000, 10000] with varying emission rates.
-  Dependencies: P-001 (clean trunk).
-  Estimated scope: S
-  Completion signal: Test passes and drift magnitude is documented.
+The truncation gap is now quantified; the remaining emission-conservation work is wiring the live devnet proof into CI so the unit-level bound has an end-to-end guardrail.
 
 - [ ] `P-003` Wire `emission_flow.sh` E2E test into CI
 
