@@ -24,9 +24,8 @@ use frame_support::traits::LinearStoragePrice;
 use frame_support::{
     dispatch::DispatchResult,
     genesis_builder_helper::{build_state, get_preset},
-    traits::{Contains, fungible::HoldConsideration},
+    traits::Contains,
 };
-use frame_system::{EnsureRoot, EnsureRootWithSuccess};
 use pallet_grandpa::{AuthorityId as GrandpaId, fg_primitives};
 use pallet_subtensor::CommitmentsInterface;
 use pallet_subtensor::macros::config::GetCommitments;
