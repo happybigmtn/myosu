@@ -7,20 +7,20 @@ cd "$repo_root"
 shopt -s nullglob
 
 if command -v rg >/dev/null 2>&1; then
-  has_milestone() {
-    rg -q '^### Milestone ' "$1"
+  has_plan_contract() {
+    rg -q '^(## Acceptance Criteria|## Gate Criteria)$' "$1"
   }
 
-  has_proof_command() {
-    rg -q '^Proof commands?:' "$1"
+  has_verification() {
+    rg -q '^## Verification$' "$1"
   }
 else
-  has_milestone() {
-    grep -qE '^### Milestone ' "$1"
+  has_plan_contract() {
+    grep -qE '^(## Acceptance Criteria|## Gate Criteria)$' "$1"
   }
 
-  has_proof_command() {
-    grep -qE '^Proof commands?:' "$1"
+  has_verification() {
+    grep -qE '^## Verification$' "$1"
   }
 fi
 
@@ -36,13 +36,13 @@ if [[ "${#plan_files[@]}" -eq 0 ]]; then
 fi
 
 for plan in "${plan_files[@]}"; do
-  if ! has_milestone "$plan"; then
-    echo "missing milestone heading: $plan"
+  if ! has_plan_contract "$plan"; then
+    echo "missing acceptance or gate criteria heading: $plan"
     exit 1
   fi
 
-  if ! has_proof_command "$plan"; then
-    echo "missing proof command: $plan"
+  if ! has_verification "$plan"; then
+    echo "missing verification section: $plan"
     exit 1
   fi
 done
