@@ -15,21 +15,6 @@ Specs: gen-20260405-145446/specs/050426-*.md
 
 ### Cluster 3: CI Hardening (dependency: P-001)
 
-- [ ] `P-004` SHA-pin all GitHub Actions
-
-  Spec: `specs/050426-ci-invariant-enforcement.md`
-  Why now: `actions/checkout@v6` appears 10 times without SHA pin. This is a supply-chain risk: a tag can be moved to point at malicious code. Low-effort fix with high security payoff.
-  Codebase evidence: `ci.yml` lines 25, 37, 65, 163, 205, 235, 247, 282, 296, 323 all use `actions/checkout@v6`.
-  Owns: `.github/workflows/ci.yml`
-  Integration touchpoints: All CI jobs (every job checks out code).
-  Scope boundary: Pin to current SHA for each action. Add version comment. Do not change job logic or sequencing.
-  Acceptance criteria: (1) Every `uses:` line in ci.yml references a full SHA with a `# vX.Y.Z` comment. (2) CI passes with pinned SHAs.
-  Verification: `actionlint .github/workflows/ci.yml && zizmor .github/workflows/ci.yml`
-  Required tests: CI green on the pinned workflow.
-  Dependencies: P-001 (clean trunk).
-  Estimated scope: XS
-  Completion signal: `zizmor` reports no unpinned action findings.
-
 - [ ] `P-005` Wire `two_node_sync.sh` E2E test into CI
 
   Spec: `specs/050426-network-consensus.md`

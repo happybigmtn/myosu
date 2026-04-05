@@ -322,6 +322,7 @@ Runtime wasm cache for node smoke proofs:
 - Local security-audit proof currently needs the CI ignore set: run `cargo audit` with ignores for `RUSTSEC-2025-0009`, `RUSTSEC-2025-0055`, `RUSTSEC-2023-0091`, `RUSTSEC-2024-0438`, `RUSTSEC-2025-0118`, `RUSTSEC-2026-0020`, and `RUSTSEC-2026-0021` until the inherited chain stack is rebased
 - Root-level `PY-*` proof commands currently assume the default `python` interpreter already has `numpy`, `ruff`, and `pytest`; the repo still does not manage Python tool dependencies, so install them once with `python -m pip install numpy ruff pytest` before running the Python quality-gate checks
 - The `PY-005` workflow-lint proof currently assumes `actionlint` is installed locally; if it is missing, bootstrap it with `GOBIN=/tmp/actionlint-bin go install github.com/rhysd/actionlint/cmd/actionlint@latest` and run `/tmp/actionlint-bin/actionlint .github/workflows/ci.yml`
+- CI workflow security linting now also uses `zizmor`; install it with `cargo install zizmor --locked`. With the current pinned workflow, use `zizmor --min-severity medium .github/workflows/ci.yml` as the blocking gate because raw `zizmor .github/workflows/ci.yml` still reports six low-severity `superfluous-actions` advisories on `dtolnay/rust-toolchain`
 
 ## Bootstrap Lanes
 
