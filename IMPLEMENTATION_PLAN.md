@@ -13,25 +13,6 @@ Specs: gen-20260405-145446/specs/050426-*.md
 - `P-001` is already satisfied by commit `ba63a7d` (`myosu: auto loop checkpoint`), which landed the zero-dividend fallback, epoch consistency guard, validator scoring change, decode budget tightening, INV-004 CI gate, and Cargo.toml de-workspacing that the older queue still described as uncommitted.
 - `P-002` is satisfied in the current local slice: `cargo test -p pallet-game-solver -- truncation` now sweeps 1 / 100 / 1_000 / 10_000 accrued blocks across representative emission rates and measures a worst-case stage-0 drift of 2 rao per accrued block (6 rao over the default tempo-2 epoch). The correction decision is intentionally deferred to `WORKLIST.md`.
 
-### Cluster 4: Dead Code and Storage Reduction (dependency: P-001)
-
-- [ ] `P-007` Remove dense epoch path or add parity test
-
-  Spec: `specs/050426-chain-runtime-pallet.md`
-  Why now: Dense epoch (`epoch_dense()`) is retained "for test parity" but no CI job verifies that dense and sparse produce identical results. This is dead weight that either needs a parity assertion or removal.
-  Codebase evidence: `epoch/run_epoch.rs` contains both `epoch()` (sparse, production) and `epoch_dense()`. `tests/epoch.rs` and `tests/consensus.rs` reference dense epoch. No parity test exists.
-  Owns: `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs`, `tests/epoch.rs`.
-  Integration touchpoints: Epoch tests that call dense path. Coinbase flow (only calls sparse).
-  Scope boundary: Either (a) add a parity test asserting `epoch() == epoch_dense()` for a representative scenario, OR (b) remove `epoch_dense()` and update tests to use sparse only. Decision should be made based on whether any test uniquely depends on dense semantics.
-  Acceptance criteria: (1) If parity test: test passes and is in CI. (2) If removal: `epoch_dense` is gone, all tests pass, no dead code remains.
-  Verification: `cargo test -p pallet-game-solver -- epoch`
-  Required tests: Either a parity test or updated existing tests (depending on chosen path).
-  Dependencies: P-001, P-002 (emission understanding informs whether dense path has value).
-  Estimated scope: S
-  Completion signal: Dense epoch path is either tested for parity or removed.
-
----
-
 ### Checkpoint: Chain core confidence
 
 After P-001 through P-007: emission is measured, E2E tests are wired, CI is hardened, dead code is audited. Pause and verify trunk CI is green, all E2E scripts pass, and no new regressions. Re-evaluate scope before proceeding to multi-node and operator work.

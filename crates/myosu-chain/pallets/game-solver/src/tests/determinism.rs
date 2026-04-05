@@ -11,12 +11,21 @@ use subtensor_runtime_common::{AlphaCurrency, NetUid, NetUidStorageIndex};
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct EpochSnapshot {
     epoch_output: Vec<(u64, u64, u64)>,
+    active: Vec<bool>,
+    stake_weight: Vec<u16>,
     combined_emission: Vec<u64>,
     consensus: Vec<u16>,
     incentive: Vec<u16>,
     dividends: Vec<u16>,
     validator_trust: Vec<u16>,
     validator_permit: Vec<bool>,
+    bonds: Vec<Vec<(u16, u16)>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum EpochPath {
+    Sparse,
+    Dense,
 }
 
 fn assert_ratios_within_epsilon(left: &[u64], right: &[u64], total: u64, label: &str) {
@@ -41,7 +50,54 @@ fn assert_ratios_within_epsilon(left: &[u64], right: &[u64], total: u64, label: 
     }
 }
 
-fn run_yuma_epoch_snapshot() -> EpochSnapshot {
+fn collect_epoch_output(
+    epoch_output: Vec<(U256, AlphaCurrency, AlphaCurrency)>,
+) -> Vec<(u64, u64, u64)> {
+    let mut epoch_output: Vec<(u64, u64, u64)> = epoch_output
+        .into_iter()
+        .map(|(hotkey, server_emission, validator_emission)| {
+            (
+                hotkey.low_u64(),
+                u64::from(server_emission),
+                u64::from(validator_emission),
+            )
+        })
+        .collect();
+    epoch_output.sort_unstable_by_key(|(hotkey, _, _)| *hotkey);
+    epoch_output
+}
+
+fn snapshot_epoch_state(
+    netuid: NetUid,
+    epoch_output: Vec<(U256, AlphaCurrency, AlphaCurrency)>,
+) -> EpochSnapshot {
+    let netuid_index = NetUidStorageIndex::from(netuid);
+    let subnet_n = SubtensorModule::get_subnetwork_n(netuid);
+
+    EpochSnapshot {
+        epoch_output: collect_epoch_output(epoch_output),
+        active: SubtensorModule::get_active(netuid),
+        stake_weight: StakeWeight::<Test>::get(netuid),
+        combined_emission: SubtensorModule::get_emission(netuid)
+            .into_iter()
+            .map(u64::from)
+            .collect(),
+        consensus: SubtensorModule::get_consensus(netuid),
+        incentive: SubtensorModule::get_incentive(netuid_index),
+        dividends: SubtensorModule::get_dividends(netuid),
+        validator_trust: SubtensorModule::get_validator_trust(netuid),
+        validator_permit: SubtensorModule::get_validator_permit(netuid),
+        bonds: (0..subnet_n)
+            .map(|uid| {
+                let mut row = Bonds::<Test>::get(netuid_index, uid);
+                row.retain(|(_, bond)| *bond != 0);
+                row
+            })
+            .collect(),
+    }
+}
+
+fn run_yuma_epoch_snapshot(epoch_path: EpochPath) -> EpochSnapshot {
     new_test_ext(1).execute_with(|| {
         let netuid: NetUid = 19_u16.into();
         let rao_emission: AlphaCurrency = 1_000_000_000_u64.into();
@@ -99,36 +155,19 @@ fn run_yuma_epoch_snapshot() -> EpochSnapshot {
             0
         ));
 
-        let epoch_output = SubtensorModule::epoch(netuid, rao_emission);
+        let epoch_output = match epoch_path {
+            EpochPath::Sparse => SubtensorModule::epoch(netuid, rao_emission),
+            EpochPath::Dense => SubtensorModule::epoch_dense(netuid, rao_emission),
+        };
 
-        EpochSnapshot {
-            epoch_output: epoch_output
-                .into_iter()
-                .map(|(hotkey, server_emission, validator_emission)| {
-                    (
-                        hotkey.low_u64(),
-                        u64::from(server_emission),
-                        u64::from(validator_emission),
-                    )
-                })
-                .collect(),
-            combined_emission: SubtensorModule::get_emission(netuid)
-                .into_iter()
-                .map(u64::from)
-                .collect(),
-            consensus: SubtensorModule::get_consensus(netuid),
-            incentive: SubtensorModule::get_incentive(NetUidStorageIndex::from(netuid)),
-            dividends: SubtensorModule::get_dividends(netuid),
-            validator_trust: SubtensorModule::get_validator_trust(netuid),
-            validator_permit: SubtensorModule::get_validator_permit(netuid),
-        }
+        snapshot_epoch_state(netuid, epoch_output)
     })
 }
 
 #[test]
 fn determinism_identical_yuma_inputs_produce_stable_epoch_outputs() {
-    let first_run = run_yuma_epoch_snapshot();
-    let second_run = run_yuma_epoch_snapshot();
+    let first_run = run_yuma_epoch_snapshot(EpochPath::Sparse);
+    let second_run = run_yuma_epoch_snapshot(EpochPath::Sparse);
 
     assert_eq!(
         first_run, second_run,
@@ -174,5 +213,16 @@ fn determinism_identical_yuma_inputs_produce_stable_epoch_outputs() {
         &second_run.combined_emission,
         total_emission,
         "combined emission",
+    );
+}
+
+#[test]
+fn dense_sparse_epoch_paths_produce_identical_state() {
+    let sparse_run = run_yuma_epoch_snapshot(EpochPath::Sparse);
+    let dense_run = run_yuma_epoch_snapshot(EpochPath::Dense);
+
+    assert_eq!(
+        sparse_run, dense_run,
+        "dense epoch compatibility path must stay bit-identical to the sparse production epoch"
     );
 }
