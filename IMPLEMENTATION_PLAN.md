@@ -47,7 +47,7 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
   Verification: `bash tests/e2e/three_node_finality.sh`
   Required tests: The E2E script is the test. Should assert finalized block height increases after epoch transitions.
   Dependencies: P-005 (two_node_sync in CI — proves the infrastructure works).
-  Blocker (2026-04-05): A draft 3-node harness proved common finalized heads while all three authorities were online, but stopping `authority-3` consistently stalled GRANDPA finality on the remaining two authorities even though best blocks kept importing. Repros: `bash tests/e2e/three_node_finality.sh` (stalls at finalized `#1` after stop) and `MYOSU_E2E_FINALITY_TARGET_BLOCK=2 bash tests/e2e/three_node_finality.sh` (stalls at finalized `#2` after stop). Bootnode / authority logs show `Backing off claiming new slot for block authorship: finality is lagging`, so this is currently a chain/runtime behavior issue rather than a missing-harness issue.
+  Blocker (2026-04-05): Live repros now confirm this is a chain/runtime issue, not just a draft-harness topology bug. Two ad hoc full-mesh 3-authority devnets with unique Prometheus ports reproduced the same stall on both the default `litep2p` backend and explicit `--network-backend libp2p`: all three authorities reached finalized block `#2`, then after terminating `authority-3` the surviving authorities kept importing blocks past `#10` while finalized height stayed frozen at `#2` on both nodes. There is still no tracked `tests/e2e/three_node_finality.sh`; do not treat that missing script as absence of a repro.
   Estimated scope: M
   Completion signal: 3-node finality script passes in CI.
 
@@ -125,24 +125,6 @@ After P-011 and P-012: 3-node finality is proven, cross-node emission agreement 
   Blocker (2026-04-05): `docs/adr/008-future-token-economics-direction.md` now records the repo-local recommendation, but the spec requires review by at least two contributors with context before `F-003` can be removed from the queue. That review is external to the current coding loop and is not yet recorded in-repo.
   Estimated scope: L
   Completion signal: Decision document exists, the multi-contributor review is recorded, and only then is `NoOpSwap` replacement work allowed to start.
-
-### Stage-0 Extrinsic Reduction (follows P-006)
-
-- [ ] `F-006` Remove identified dead extrinsics from stage-0 surface
-
-  Spec: `specs/050426-chain-runtime-pallet.md`
-  Why now: Follows the audit in P-006. Each unnecessary extrinsic is attack surface.
-  Codebase evidence: Determined by P-006 audit.
-  Audit note: `gen-20260405-145446/p-006-stage0-surface-audit.md` found that the live default-build `SubtensorModule` surface is already the 8-call set enforced by `stage_0_flow.rs`, and it did not mark any live default-build game-solver extrinsic as `remove`. Re-scope or delete this task before execution unless a later slice re-expands the default-build call surface.
-  Owns: Game-solver pallet dispatch surface, runtime integration.
-  Integration touchpoints: RPC clients, operator tooling (if any tool calls removed extrinsics), CI tests.
-  Scope boundary: Remove only extrinsics marked "remove" in P-006 audit. Feature-gate if removal is risky.
-  Acceptance criteria: (1) Stage-0 extrinsic count decreases. (2) All tests pass. (3) No operator-facing tool breaks.
-  Verification: `cargo test -p pallet-game-solver && cargo test -p myosu-chain-runtime`
-  Required tests: Existing tests must still pass. Add negative tests for removed extrinsics (call returns error).
-  Dependencies: P-006 (audit complete).
-  Estimated scope: M
-  Completion signal: Extrinsic count reduced per P-006 recommendations, CI green.
 
 ### Miner Convergence Gate
 
