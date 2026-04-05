@@ -21,21 +21,6 @@ After P-001 through P-007: emission is measured, E2E tests are wired, CI is hard
 
 ### Cluster 5: Validation and Scoring Hardening (dependency: P-001)
 
-- [ ] `P-009` Validate INV-003 determinism across game types
-
-  Spec: `specs/050426-ci-invariant-enforcement.md`
-  Why now: INV-003 (validator determinism, epsilon < 1e-6) is enforced by `validator_determinism.sh` in CI, but the spec notes this may only cover poker. Liar's Dice and Kuhn validation paths should also be covered.
-  Codebase evidence: `tests/e2e/validator_determinism.sh` (11.2K). `crates/myosu-validator/src/validation.rs` handles `GameSelection::Poker`, `GameSelection::LiarsDice`, `GameSelection::Kuhn`. Unclear if E2E script exercises all three.
-  Owns: `tests/e2e/validator_determinism.sh` (extend or parametrize), or new unit tests in `validation.rs`.
-  Integration touchpoints: Validator binary, game-specific solver paths, CI `integration-e2e` job.
-  Scope boundary: Verify existing determinism test covers all implemented games. If not, extend it. Do not add new games.
-  Acceptance criteria: (1) Determinism is verified for Poker, Liar's Dice, and Kuhn. (2) Epsilon < 1e-6 for all three. (3) CI enforces this.
-  Verification: `bash tests/e2e/validator_determinism.sh` (with all game types)
-  Required tests: Extended determinism script or new unit tests per game type.
-  Dependencies: P-001 (clean trunk, scoring formula landed).
-  Estimated scope: S
-  Completion signal: Determinism assertion passes for all three game types in CI.
-
 ---
 
 ### Cluster 6: Miner HTTP Axon Gaps (dependency: P-001)

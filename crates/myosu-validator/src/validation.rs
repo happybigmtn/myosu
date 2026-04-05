@@ -503,9 +503,7 @@ mod tests {
         assert!(!report.exact_match);
         assert!(expected_l1_distance > 0.0);
         assert!((report.l1_distance - expected_l1_distance).abs() < 1e-12);
-        assert!(
-            (report.score - score_from_l1_distance(expected_l1_distance)).abs() < 1e-12
-        );
+        assert!((report.score - score_from_l1_distance(expected_l1_distance)).abs() < 1e-12);
     }
 
     #[test]
@@ -607,6 +605,43 @@ mod tests {
         assert!(report.exact_match);
         assert_eq!(report.score, 1.0);
         assert_eq!(report.l1_distance, 0.0);
+    }
+
+    #[test]
+    fn liars_dice_inv_003_determinism() {
+        let mut solver = LiarsDiceSolver::<LIARS_DICE_SOLVER_TREES>::new();
+        solver.train(8).expect("training should succeed");
+        let opening = myosu_games_liars_dice::LiarsDiceGame::root()
+            .apply(myosu_games_liars_dice::LiarsDiceEdge::Roll { p1: 2, p2: 5 });
+        let query = myosu_games_liars_dice::LiarsDiceStrategyQuery::new(
+            opening
+                .info()
+                .expect("opening player turn should expose info"),
+        );
+        let query_bytes =
+            myosu_games_liars_dice::encode_strategy_query(&query).expect("query should encode");
+        let response_bytes =
+            myosu_games_liars_dice::encode_strategy_response(&solver.answer(query))
+                .expect("response should encode");
+
+        let first = score_liars_dice_response_with_solver(
+            &solver,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("first validation should succeed");
+        let second = score_liars_dice_response_with_solver(
+            &solver,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("second validation should succeed");
+
+        assert_eq!(first, second);
     }
 
     fn weighted_solver() -> PokerSolver {
