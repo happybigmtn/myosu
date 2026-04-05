@@ -17,3 +17,6 @@ rbp-transport = { git = "https://github.com/happybigmtn/robopoker", rev = "04716
 ratatui = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"

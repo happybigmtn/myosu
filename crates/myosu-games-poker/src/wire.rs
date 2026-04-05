@@ -107,7 +107,10 @@ mod tests {
     use rbp_nlhe::NlheInfo;
 
     use super::*;
-    use crate::robopoker::{NlheBlueprint, NlheInfoKey, RbpNlheEncoder, RbpNlheProfile};
+    use crate::robopoker::{
+        NlheBlueprint, NlheInfoKey, NlheStrategyQuery, NlheStrategyResponse, RbpNlheEncoder,
+        RbpNlheProfile,
+    };
 
     #[test]
     fn info_key_roundtrips_through_bincode() {
@@ -244,7 +247,68 @@ mod tests {
         );
     }
 
+    fn arb_strategy_query() -> impl Strategy<Value = NlheStrategyQuery> {
+        (any::<u64>(), any::<i16>(), any::<u64>()).prop_map(|(subgame, bucket, choices)| {
+            NlheStrategyQuery::new(NlheInfoKey {
+                subgame,
+                bucket,
+                choices,
+            })
+        })
+    }
+
+    fn arb_nlhe_edge() -> impl Strategy<Value = crate::RbpNlheEdge> {
+        prop_oneof![
+            Just(crate::RbpNlheEdge::from(Edge::Fold)),
+            Just(crate::RbpNlheEdge::from(Edge::Call)),
+            (1u8..=3, 1u8..=3)
+                .prop_map(|(numerator, denominator)| {
+                    crate::RbpNlheEdge::from(Edge::Raise(Odds::new(
+                        i16::from(numerator),
+                        i16::from(denominator),
+                    )))
+                }),
+        ]
+    }
+
+    fn arb_strategy_response() -> impl Strategy<Value = NlheStrategyResponse> {
+        vec((arb_nlhe_edge(), 0u16..=1000), 0..=6).prop_map(|actions| {
+            let total = actions
+                .iter()
+                .map(|(_, weight)| f32::from(*weight))
+                .sum::<f32>();
+            if total == 0.0 {
+                return NlheStrategyResponse::new(Vec::new());
+            }
+
+            let normalized = actions
+                .into_iter()
+                .map(|(edge, weight)| (edge, f32::from(weight) / total))
+                .collect();
+            NlheStrategyResponse::new(normalized)
+        })
+    }
+
     proptest! {
+        #[test]
+        fn fuzz_strategy_query_roundtrips_through_bincode(query in arb_strategy_query()) {
+            let encoded = encode_strategy_query(&query).expect("query should encode");
+            let decoded = decode_strategy_query(&encoded).expect("query should decode");
+
+            prop_assert_eq!(decoded, query);
+        }
+
+        #[test]
+        fn fuzz_strategy_response_roundtrips_through_bincode(
+            response in arb_strategy_response()
+        ) {
+            let encoded = encode_strategy_response(&response).expect("response should encode");
+            let decoded = decode_strategy_response(&encoded).expect("response should decode");
+
+            prop_assert_eq!(&decoded, &response);
+            prop_assert!(decoded.is_valid());
+        }
+
         #[test]
         fn prop_decode_info_key_rejects_truncated_payloads(trim_seed in any::<usize>()) {
             let key = NlheInfoKey {
@@ -290,6 +354,20 @@ mod tests {
 
             prop_assert!(result.is_ok());
             prop_assert!(result.expect("decode should not panic").is_err());
+        }
+
+        #[test]
+        fn fuzz_random_strategy_query_bytes_never_panic(bytes in vec(any::<u8>(), 0..=1024)) {
+            let result = catch_unwind(AssertUnwindSafe(|| decode_strategy_query(&bytes)));
+
+            prop_assert!(result.is_ok());
+        }
+
+        #[test]
+        fn fuzz_random_strategy_response_bytes_never_panic(bytes in vec(any::<u8>(), 0..=1024)) {
+            let result = catch_unwind(AssertUnwindSafe(|| decode_strategy_response(&bytes)));
+
+            prop_assert!(result.is_ok());
         }
     }
 

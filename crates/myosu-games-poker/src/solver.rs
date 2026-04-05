@@ -409,7 +409,7 @@ mod tests {
     #[test]
     fn panic_message_extracts_io_error_payload() {
         let payload = catch_unwind(AssertUnwindSafe(|| {
-            std::panic::panic_any(io::Error::new(io::ErrorKind::Other, "io boom"));
+            std::panic::panic_any(io::Error::other("io boom"));
         }))
         .expect_err("panic payload should be captured");
 

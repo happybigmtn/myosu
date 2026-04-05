@@ -7774,6 +7774,7 @@ dependencies = [
  "bincode",
  "myosu-games",
  "myosu-tui",
+ "proptest",
  "ratatui",
  "rbp-mccfr",
  "rbp-transport",

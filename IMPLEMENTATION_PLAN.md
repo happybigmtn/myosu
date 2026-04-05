@@ -21,21 +21,6 @@ After P-001 through P-007: emission is measured, E2E tests are wired, CI is hard
 
 ### Cluster 5: Validation and Scoring Hardening (dependency: P-001)
 
-- [ ] `P-008` Add wire codec fuzz tests for poker and Liar's Dice
-
-  Spec: `specs/050426-ci-invariant-enforcement.md`
-  Why now: The CI spec notes "no fuzzing or adversarial input testing exists for wire codecs." Wire codecs are the trust boundary between miner and validator — malformed payloads could crash validators or produce incorrect scores. The decode budget was tightened (P-001) but no fuzz coverage exists.
-  Codebase evidence: `crates/myosu-games-poker/src/wire.rs` (poker codec with 1MB limit), `crates/myosu-games-liars-dice/src/` (Liar's Dice codec). No `fuzz/` directory exists.
-  Owns: New fuzz targets (likely `fuzz/` directories in relevant crates) or proptest-based roundtrip tests.
-  Integration touchpoints: `wire.rs` in poker, codec paths in Liar's Dice, `StrategyQuery`/`StrategyResponse` types from `myosu-games`.
-  Scope boundary: Fuzz decode paths only (the trust boundary). Do not fuzz solver internals. Proptest roundtrip (encode→decode→re-encode == original) is sufficient if `cargo-fuzz` setup is too heavy.
-  Acceptance criteria: (1) Roundtrip property tests exist for `StrategyQuery` and `StrategyResponse` for poker and Liar's Dice. (2) Decode of random bytes does not panic (returns error). (3) Tests run in CI under `active-crates` job.
-  Verification: `cargo test -p myosu-games-poker -- fuzz && cargo test -p myosu-games-liars-dice -- fuzz`
-  Required tests: Proptest roundtrip tests, random-bytes-decode-doesn't-panic tests.
-  Dependencies: P-001 (clean trunk, decode limits landed).
-  Estimated scope: S
-  Completion signal: Fuzz/property tests pass in CI.
-
 - [ ] `P-009` Validate INV-003 determinism across game types
 
   Spec: `specs/050426-ci-invariant-enforcement.md`
