@@ -26,6 +26,22 @@ finality and emission agreement proofs required for stage-0 exit.
   - Peer discovers bootnode via libp2p multiaddr.
   - Peer syncs to the same best block number as the bootnode.
   - Both nodes report >= 1 peer.
+- **Four-authority automated devnet**: `tests/e2e/four_node_finality.sh`
+  starts four separate authority processes on `--chain devnet`, each with its
+  own base path, libp2p key, RPC port, and `MYOSU_NODE_AUTHORITY_SURI`.
+- **GRANDPA finality across multiple nodes**:
+  `tests/e2e/four_node_finality.sh` proves finalized block advancement on a
+  four-authority devnet and shows finality continues after stopping one
+  authority because the surviving 3 of 4 still meet the threshold.
+- **Node restart resilience**: `tests/e2e/consensus_resilience.sh` stops
+  authority-4, waits for authorities 1-3 to finalize onward, restarts
+  authority-4 on the same base path, and requires all four nodes to converge on
+  the offline block hash and a later finalized head.
+- **Cross-node emission agreement**: `tests/e2e/cross_node_emission.sh`
+  drives the endowed devnet operator accounts through three epoch transitions
+  and compares `TotalIssuance`, `TotalStake`, pending emission maps,
+  incentives/dividends/emissions, and per-member `TotalHotkeyAlpha` at the same
+  finalized block hash across all four nodes.
 - **Devnet genesis state**: The devnet chain spec bootstraps subnet 7 with a
   pre-registered owner, pool balances, and storage items. This is the starting
   state all devnet nodes share.
@@ -36,19 +52,8 @@ finality and emission agreement proofs required for stage-0 exit.
 
 ### Not Proven
 
-- **GRANDPA finality across multiple nodes**: The two-node sync test checks
-  best block agreement but does not verify finalized block advancement.
-  GRANDPA finality has not been tested with 4 authorities.
-- **Node restart resilience**: No test stops a node and verifies it catches up
-  without forking the chain.
-- **Cross-node emission agreement**: Emission distribution has been tested in
-  single-node unit and E2E tests only. No multi-node test compares emission
-  state across independent node processes.
 - **Network partition tolerance**: No test simulates network splits or delayed
   message delivery between validators.
-- **Four-authority automated devnet**: The devnet chain spec should define four
-  authority keys so the proof can survive one authority loss, but no test
-  script currently starts all four as separate processes.
 
 ## Architecture
 
@@ -127,19 +132,22 @@ public bootstrap node list.
 ```bash
 # Two-node sync (proven)
 bash tests/e2e/two_node_sync.sh
+
+# Four-authority finality and one-node-down resilience (proven)
+bash tests/e2e/four_node_finality.sh
+
+# Consensus resilience under node restart (proven)
+bash tests/e2e/consensus_resilience.sh
+
+# Cross-node emission agreement (proven)
+bash tests/e2e/cross_node_emission.sh
 ```
 
 ### Planned verification scripts
 
 ```bash
-# Four-authority devnet finality
-bash tests/e2e/four_node_finality.sh
-
-# Consensus resilience under node restart (Plan 007)
-bash tests/e2e/consensus_resilience.sh
-
-# Cross-node emission agreement (Plan 008)
-bash tests/e2e/cross_node_emission.sh
+# Network partition tolerance (future)
+# No script exists yet.
 ```
 
 Each planned script should exit nonzero on any assertion failure and clean up

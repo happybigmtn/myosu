@@ -37,21 +37,6 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
 
 ### Operator Tooling and Onboarding
 
-- [ ] `F-002` Node restart resilience test
-
-  Spec: `specs/050426-network-consensus.md`
-  Why now: The spec lists "node restart resilience (catch-up without fork)" as unproven. Operators will restart nodes; this must work.
-  Codebase evidence: No restart test exists in `tests/e2e/`.
-  Owns: New E2E script testing node restart and catch-up.
-  Integration touchpoints: Node binary, GRANDPA, block import.
-  Scope boundary: Single node restart in a 4-authority network. Verify it catches up to finalized head. Do not test simultaneous restart of all nodes.
-  Acceptance criteria: (1) A restarted node catches up to the finalized head within a bounded time. (2) No fork occurs.
-  Verification: E2E script.
-  Required tests: The E2E script.
-  Dependencies: the landed 4-authority devnet proof from `P-011`.
-  Estimated scope: M
-  Completion signal: Restart test passes in CI.
-
 ### Token Economics Research Gate
 
 - [ ] `F-003` Token economics decision document
