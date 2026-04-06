@@ -31,6 +31,13 @@ After P-001 through P-007: emission is measured, E2E tests are wired, CI is hard
 
 After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified across all games, and the Liar's Dice HTTP gap is resolved. Verify CI green before proceeding to multi-node work.
 
+Ready-state note (2026-04-05): after live repo re-verification, no unchecked task
+in this queue is implementation-ready. `F-003` still depends on external
+multi-contributor review being recorded on ADR 008, and `F-007` still depends
+on a truthful quality benchmark surface; the current validator path reuses the
+miner checkpoint as its oracle, and the checked-in poker bootstrap artifacts are
+still too sparse for positive-iteration training benchmarks.
+
 ---
 
 ## Follow-On Work
