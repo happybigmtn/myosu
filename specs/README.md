@@ -1,16 +1,18 @@
-# Archived Legacy Specs
+# Specs Surface
 
-The files in this directory are the pre-Fabro Myosu spec corpus that originally
-lived in `specs/`.
+`specs/` is still a live repo surface.
 
-They are preserved unchanged for historical and product context, especially
-because they contain the earlier chain, miner, validator, gameplay, and Malinka
-reasoning that still informs the project. They are no longer the canonical
-planning surface.
+Use the directory like this:
 
-Use these rules going forward:
+- `specs/050426-*.md` capture the current stage-0 contracts, evidence, and
+  review-aligned acceptance criteria for the checked-in repo.
+- `specs/031626-*.md` remain active bootstrap doctrine and product specs; they
+  are still referenced by `AGENTS.md` and the repo mission doctrine.
+- `specsarchive/` and other historical planning surfaces are reference-only.
 
-- write new durable decisions and migration targets in `../specs/`
-- write live implementation slices in `../plans/`
-- treat `specsarchive/` as reference material during the Fabro migration
-- do not reopen the archive as the default place for new planning work
+When behavior changes, update the matching spec in the same slice instead of
+leaving drift for a later cleanup pass.
+
+Durable design decisions belong in `docs/adr/`. Execution state belongs in
+`IMPLEMENTATION_PLAN.md`, `REVIEW.md`, `ARCHIVED.md`, `WORKLIST.md`, and the
+Fabro/Raspberry manifests under `fabro/`.

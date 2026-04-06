@@ -13,26 +13,29 @@ All claims below are verified against the current codebase as of 2026-04-05.
 
 | Claim | Source | Status |
 |-------|--------|--------|
-| 10 CI jobs with documented sequencing | `.github/workflows/ci.yml` | Verified |
-| INV-004 cargo-tree gate in `active-crates` | `.github/workflows/ci.yml:98-111` | Verified |
+| 11 CI jobs with documented sequencing | `.github/workflows/ci.yml` | Verified |
+| INV-004 cargo-tree gate in `active-crates` | `.github/workflows/ci.yml` | Verified |
 | INV-003 determinism proof in `integration-e2e` | `tests/e2e/validator_determinism.sh` | Verified |
-| Workspace clippy denies arithmetic-side-effects, expect-used, indexing-slicing, unwrap-used | `Cargo.toml:25-33` | Verified |
-| 7 suppressed RUSTSECs from inherited Substrate stack | `.github/workflows/ci.yml:258-274` | Verified |
-| 4 E2E scripts exist (local_loop, validator_determinism, emission_flow, two_node_sync) | `tests/e2e/` | Verified |
-| `actions/checkout@v6` used without SHA pin | `.github/workflows/ci.yml` (all jobs) | Verified |
-| `SKIP_WASM_BUILD=1` set on off-chain jobs | `.github/workflows/ci.yml` (active-crates, chain-core, integration-e2e, operator-network, chain-clippy) | Verified |
+| Runtime migration smoke test runs in `chain-core` | `.github/workflows/ci.yml`, `crates/myosu-chain/node/src/chain_spec/devnet.rs` | Verified |
+| Robopoker fork coherence has an advisory CI job | `.github/workflows/ci.yml`, `.github/scripts/check_robopoker_fork_status.sh` | Verified |
+| Workspace clippy denies arithmetic-side-effects, expect-used, indexing-slicing, unwrap-used | `Cargo.toml` | Verified |
+| 19 RUSTSECs are explicitly allowlisted in the current dependency-audit gate | `.github/workflows/ci.yml` | Verified |
+| 7 runtime/E2E proofs are wired into `integration-e2e` | `.github/workflows/ci.yml`, `tests/e2e/` | Verified |
+| All mutable GitHub Action refs are SHA-pinned and checkout disables credential persistence | `.github/workflows/ci.yml` | Verified |
+| `SKIP_WASM_BUILD=1` is set on the off-chain jobs that should reuse the cached runtime wasm | `.github/workflows/ci.yml` | Verified |
 
 ## Pipeline Architecture
 
-### Jobs (10 total)
+### Jobs (11 total)
 
 | Job | Purpose | Runner |
 |-----|---------|--------|
 | `repo-shape` | Validates workspace structure against doctrine | ubuntu-latest |
+| `robopoker-fork-coherence` | Advisory fork-divergence report for INV-006 | ubuntu-latest |
 | `python-research-qa` | Ruff lint + pytest on research code (numpy, pytest, ruff) | ubuntu-latest |
 | `active-crates` | Cargo check, focused tests, INV-004 boundary, full test suite, clippy, rustfmt | ubuntu-latest |
-| `chain-core` | Runtime/pallet/node check, stage-0 pallet tests, runtime tests | ubuntu-latest |
-| `integration-e2e` | local_loop.sh and validator_determinism.sh proofs | ubuntu-latest |
+| `chain-core` | Runtime/pallet/node check, pallet stage-0 tests, runtime tests, migration smoke | ubuntu-latest |
+| `integration-e2e` | local_loop, sync, finality, restart, emission, determinism proofs | ubuntu-latest |
 | `doctrine` | Canonical spec integrity verification | ubuntu-latest |
 | `dependency-audit` | cargo-audit with managed RUSTSEC allowlist | ubuntu-latest |
 | `plan-quality` | Genesis plan quality checks (milestones, proof commands) | ubuntu-latest |
@@ -44,6 +47,7 @@ All claims below are verified against the current codebase as of 2026-04-05.
 ```
 repo-shape
   |
+  +---> robopoker-fork-coherence
   +---> python-research-qa
   +---> active-crates
   +---> doctrine
@@ -55,7 +59,7 @@ repo-shape
 ```
 
 `repo-shape` is the universal gate. All other jobs depend on it. `integration-e2e`
-depends on `chain-core`. The remaining 7 jobs run in parallel after `repo-shape`.
+depends on `chain-core`. The remaining 8 jobs run in parallel after `repo-shape`.
 
 ### Concurrency
 
@@ -74,13 +78,14 @@ remainder rely on structural or manual verification.
 | INV-003 | Game verification determinism (epsilon < 1e-6) | `integration-e2e` via `validator_determinism.sh` |
 | INV-004 | Solver-gameplay separation | `active-crates` via `cargo tree` gate |
 | INV-005 | Plan/land coherence | `plan-quality` + `doctrine` jobs |
-| INV-006 | Robopoker fork coherence | Not directly enforced in CI |
+| INV-006 | Robopoker fork coherence | Advisory `robopoker-fork-coherence` job |
 
 ### INV-003: Determinism Gate
 
 The `validator_determinism.sh` script runs two independent validator instances
 against the same game state and asserts their scores agree within epsilon < 1e-6.
-This runs in the `integration-e2e` job, which has a 10-minute timeout.
+This runs in the `integration-e2e` job, which currently has a 15-minute timeout
+because it now covers seven shell proofs instead of the earlier two-proof slice.
 
 ### INV-004: Solver-Gameplay Separation Gate
 
@@ -102,11 +107,10 @@ clippy step and the `chain-clippy` job.
 
 ### Dependency Audit Allowlist
 
-Seven RUSTSECs are suppressed, all from the inherited Substrate/opentensor fork:
-
-- `ring` via libp2p QUIC in the node stack
-- `wasmtime` via the inherited executor/runtime stack
-- `tracing-subscriber 0.2.25` via the inherited runtime graph
+Nineteen RUSTSECs are currently suppressed. This set includes inherited
+Substrate/opentensor debt plus the already-deferred direct `bincode 1.x`
+usage in the owned game crates. The gate still runs with `-D warnings`, so any
+advisory outside the explicit allowlist fails CI.
 
 The audit runs with `-D warnings` so any non-ignored advisory fails the gate.
 
@@ -115,13 +119,17 @@ The audit runs with `-D warnings` so any non-ignored advisory fails the gate.
 | Script | Purpose | CI Job |
 |--------|---------|--------|
 | `local_loop.sh` | Full miner/validator/play proof on live devnet | `integration-e2e` |
+| `two_node_sync.sh` | Named-network peer discovery proof | `integration-e2e` |
+| `four_node_finality.sh` | Four-authority GRANDPA finality proof | `integration-e2e` |
+| `consensus_resilience.sh` | Restart/catch-up proof for the fourth authority | `integration-e2e` |
+| `cross_node_emission.sh` | Cross-node emission/state agreement proof | `integration-e2e` |
 | `validator_determinism.sh` | Cross-validator scoring agreement | `integration-e2e` |
-| `emission_flow.sh` | On-chain emission distribution proof | Not wired into CI |
-| `two_node_sync.sh` | Named-network peer discovery proof | Not wired into CI |
+| `emission_flow.sh` | On-chain emission distribution proof | `integration-e2e` |
 
 ## Acceptance Criteria
 
-- All 10 jobs pass on every PR merge to `trunk`.
+- All 11 jobs pass on every PR merge to `trunk`, except the explicitly advisory
+  `robopoker-fork-coherence` job which may report drift without blocking the run.
 - INV-003 determinism epsilon remains below 1e-6 as verified by `validator_determinism.sh`.
 - INV-004 cargo-tree gate rejects any PR that introduces a dependency between `myosu-play` and `myosu-miner`.
 - Workspace clippy denials (arithmetic-side-effects, expect-used, indexing-slicing, unwrap-used) produce hard failures, not warnings.
@@ -151,7 +159,19 @@ cargo audit -D warnings \
   --ignore RUSTSEC-2024-0438 \
   --ignore RUSTSEC-2025-0118 \
   --ignore RUSTSEC-2026-0020 \
-  --ignore RUSTSEC-2026-0021
+  --ignore RUSTSEC-2026-0021 \
+  --ignore RUSTSEC-2025-0141 \
+  --ignore RUSTSEC-2024-0388 \
+  --ignore RUSTSEC-2025-0057 \
+  --ignore RUSTSEC-2024-0384 \
+  --ignore RUSTSEC-2020-0168 \
+  --ignore RUSTSEC-2022-0061 \
+  --ignore RUSTSEC-2024-0436 \
+  --ignore RUSTSEC-2024-0370 \
+  --ignore RUSTSEC-2025-0010 \
+  --ignore RUSTSEC-2021-0127 \
+  --ignore RUSTSEC-2026-0002 \
+  --ignore RUSTSEC-2024-0442
 
 # Repo shape
 bash .github/scripts/check_stage0_repo_shape.sh
@@ -159,28 +179,34 @@ bash .github/scripts/check_stage0_repo_shape.sh
 
 ## Open Questions
 
-1. **SHA-pinned actions**: All `actions/checkout@v6` references use a tag, not a
-   SHA hash. This is a low-severity supply-chain risk. Should these be pinned to
-   full SHAs with version comments?
+1. **Advisory vs blocking fork coherence**: Should `robopoker-fork-coherence`
+   stay `continue-on-error`, or should INV-006 become a hard gate once the fork
+   changelog and divergence policy settle?
 
-2. **Unwired E2E scripts**: `emission_flow.sh` and `two_node_sync.sh` exist but
-   are not wired into any CI job. Should they be added to `integration-e2e` or a
-   separate job? What is the expected runtime cost?
+2. **`dtolnay/rust-toolchain` handling**: `zizmor --min-severity medium` is
+   currently clean, but raw `zizmor` still reports low-severity
+   `superfluous-actions` advisories on this helper action. Should the workflow
+   switch to explicit `rustup` shell steps or carry an explicit allowlist?
 
-3. **INV-006 enforcement**: Robopoker fork coherence has no automated CI gate.
-   Should a diff-based or hash-based check be added?
+3. **Integration runtime budget**: `integration-e2e` now runs seven proofs
+   under a 15-minute budget. Should the job stay monolithic for artifact reuse,
+   or split once additional multi-node/operator proofs land?
 
-4. **Multi-node consensus finality**: No test validates that two nodes reach
-   consensus and finalize blocks. `two_node_sync.sh` checks peer discovery but
-   not finality. Is this an acceptable gap for stage 0?
+4. **Fuzzing and adversarial inputs**: No `cargo-fuzz` targets exist even though
+   property-style codec proofs now exist in unit tests. Should true fuzz
+   harnesses be added for wire codecs and chain-facing parsers?
 
-5. **Fuzzing and adversarial inputs**: No fuzzing or adversarial input testing
-   exists for wire codecs (`myosu-games-poker` serialization). Should
-   `cargo-fuzz` targets be added?
+5. **Weight-submission isolation**: The validator weight-submission path is
+   exercised by `local_loop.sh`, not by a dedicated E2E proof. Is that broad
+   coverage sufficient, or should weight submission get its own focused script?
 
-6. **Runtime upgrade/migration tests**: No tests verify that a runtime upgrade
-   preserves storage and state. Should these be added before any mainnet
-   deployment?
+6. **Cross-architecture determinism**: The multi-node proofs are currently
+   single-architecture local checks. Should CI add an ARM/x86 split before the
+   project treats emission agreement as hardware-agnostic?
 
-7. **Miner training convergence**: The pipeline tests that miners run, but does
+7. **Runtime upgrade/migration coverage depth**: The new devnet smoke test
+   proves a fresh-genesis upgrade path. Should follow-on coverage add a
+   non-empty-state migration or a multi-node upgrade rehearsal?
+
+8. **Miner training convergence**: The pipeline tests that miners run, but does
    not assert training quality or convergence. Is this intentionally deferred?

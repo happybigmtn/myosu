@@ -42,3 +42,28 @@
 - `G3-001` commit `608f1786d9133cbf731e52eed3a069f343c65663`; validated with `cargo test -p myosu-games-kuhn --quiet`; `cargo test -p myosu-games --quiet`
 - `G3-002` commit `1ffa3299e719faba5d4c24bcaf72e8624200e6a6`; validated with `cargo test -p myosu-games-kuhn --quiet`
 - `G3-003` commit `9aef01245ad7617e6bbf6243db86945dfe88a784`; validated with `SKIP_WASM_BUILD=1 cargo test -p myosu-play --quiet smoke_demo_renderer_uses_builtin_poker_surface`; `cargo test -p myosu-games-kuhn --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --game kuhn --smoke-test`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`
+
+## 2026-04-05 review pass
+
+- Review note: this pass repaired stale `specs/README.md`, `specs/050426-ci-invariant-enforcement.md`, `specs/050426-chain-runtime-pallet.md`, and `specs/050426-validation-surface.md` before archiving queue items whose code and proofs were already green.
+- `F-002` commit `b0a7ecaedb9be154e923d38dffbe62968b87f667`; review note: corrected the broken queue hash and revalidated the 4-authority restart contract. Validated with `bash tests/e2e/consensus_resilience.sh`; `bash tests/e2e/four_node_finality.sh`
+- `F-001` commit `40e876699169447089f7f3b7031846498de39a8c`; validated with `bash .github/scripts/check_operator_network_bootstrap.sh`; `bash .github/scripts/check_operator_network_fresh_machine.sh`
+- `P-012` commit `1f74669f80198feb5df6df2723497a4b182d94e0`; validated with `bash tests/e2e/cross_node_emission.sh`
+- `P-011` commit `ba97343059d2ad018dd5c8a74dc5525fb6ec035e`; review note: corrected the broken queue hash and revalidated the 4-authority finality contract. Validated with `bash tests/e2e/four_node_finality.sh`; `bash tests/e2e/two_node_sync.sh`
+- `F-008` commit `3ac4661201c4268ca4aa74957a584d55d8e95605`; review note: ADR 009 still matches the live fork pin and leaves `CHAIN-SDK-001` correctly open in `WORKLIST.md`
+- `F-006` commit `fead811110200b8b35972df133f9b19f09a3f42f`; review note: corrected the broken queue hash and updated the governing runtime spec to the audited 8-call default-build surface. Validated with `cargo test -p pallet-game-solver stage_0_flow_dispatch_surface_matches_live_chain_loop --quiet`; `cargo test -p pallet-game-solver stage_0_flow_registers_stakes_serves_and_emits --quiet`
+- `P-001` review note: the older queue claim remained reconciled against landed repo state and needed no further code changes
+- `P-002` commit `9675dd9428bede39ad0065794d090a564421dd75`; validated with `cargo test -p pallet-game-solver stage_0_flow_dispatch_surface_matches_live_chain_loop --quiet`; `cargo test -p pallet-game-solver stage_0_flow_registers_stakes_serves_and_emits --quiet`; `bash tests/e2e/emission_flow.sh`
+- `P-003` commit `99ea7cc424be6cd0ef4a232b48eb19970e318dad`; review note: corrected the broken queue hash and revalidated the wired emission proof plus 15-minute job contract after refreshing the CI spec. Validated with `bash tests/e2e/emission_flow.sh`
+- `P-004` commit `e7f7944b2178215aa610e8a394675b1fdc70a45b`; validated with workflow SHA-pin scan over `.github/workflows/ci.yml`; `git diff --check -- specs/050426-ci-invariant-enforcement.md`
+- `P-005` commit `6e1556a081cac5df847e60b61e3937b12dd4a05c`; review note: the stale `DOC-OPS-001` follow-up is now resolved because `AGENTS.md` no longer references `@RTK.md`. Validated with `bash tests/e2e/two_node_sync.sh`; `bash tests/e2e/validator_determinism.sh`; `bash tests/e2e/emission_flow.sh`
+- `P-005` follow-up commit `d44b522ccd0652cc173ff85ec8e0c8c7af89a205`; validated with `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --features fast-runtime,try-runtime --quiet devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis`
+- `P-005` follow-up commit `382b5692b9fcc6b61c08828910a2d8dcc60adc61`; validated with `bash tests/e2e/two_node_sync.sh`; `bash tests/e2e/emission_flow.sh`
+- `P-005` follow-up commit `5a12551d44f61f4eb20089323de53303c6a9db3d`; review note: the live CI allowlist and chain-clippy spec are now aligned with the shipped workflow after the spec cleanup in this pass
+- `P-006` commit `f92abef66894102dfde1216078aab6ad1f021984`; review note: the stage-0 surface audit now matches the governing runtime spec instead of contradicting it. Validated with `cargo test -p pallet-game-solver stage_0_flow_dispatch_surface_matches_live_chain_loop --quiet`; `cargo test -p pallet-game-solver stage_0_flow_registers_stakes_serves_and_emits --quiet`
+- `P-007` commit `d0b7b10ac168226e038f65c604df2e71a9c04a6e`; validated with `cargo test -p pallet-game-solver dense_sparse_epoch_paths_produce_identical_state --quiet`
+- `P-008` commit `11f6662f8d390e2ce36f1cf4cf261cca24865716`; validated with `cargo test -p myosu-games-poker --quiet fuzz`; `cargo test -p myosu-games-liars-dice --quiet fuzz`
+- `P-009` commit `dfa02cf1e9755b037d89b8451a8c51c8d2333ef1`; validated with `cargo test -p myosu-validator --quiet inv_003_determinism`; `cargo test -p myosu-validator --quiet liars_dice_inv_003_determinism`; `bash tests/e2e/validator_determinism.sh`
+- `P-010` commit `a1e55be205d13a8d9843ec1f48aa3615efc9f5c3`; validated with `cargo test -p myosu-miner --quiet liars_dice_http_plan_is_explicitly_unsupported`
+- `F-004` commit `dd1f72e894dc8894a542bdb6adea52207bac6f63`; validated with `bash .github/scripts/check_robopoker_fork_status.sh`
+- `F-005` commit `f1148e00be8a7cc11f3f9214d9341a4d0f0ba6e4`; validated with `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --features fast-runtime,try-runtime --quiet devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis`

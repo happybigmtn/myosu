@@ -256,7 +256,7 @@ CI command: `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet`
 | Determinism | Unit test: `inv_003_determinism`; E2E: `validator_determinism.sh` | Both |
 | CLI completeness | Unit tests: `cli_parses_stage_zero_flags`, `cli_parses_config_backed_key_source` | `cli.rs` |
 | Report stability | Unit tests: all `*_report_includes_*` tests | `lib.rs` |
-| Weight submission | E2E test with `--submit-weights` flag | `validator_determinism.sh` |
+| Weight submission | E2E test with `--submit-weights` flag | `local_loop.sh` |
 | Multi-game | Unit test: `liars_dice_validation_plan_does_not_require_encoder_dir` | `validation.rs` |
 
 ---

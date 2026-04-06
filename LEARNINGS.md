@@ -14,3 +14,8 @@
 - Zeroing root-weight terms is not the same as removing AMM or swap-shaped logic from the stage-0 coinbase path. Review single-token emission claims against the whole execution path, not just the final weighting variables.
 - A TODO/FIXME cap is weaker than a truthful live-surface cleanup. If the default-build code still ships raw backlog markers, review should land a replacement cleanup increment that rewrites them as explicit rationale comments or removes them entirely.
 - Yuma-output determinism and cross-validator scoring determinism are different claims. Keep the pallet unit proof and the validator/e2e proof named separately so review does not clear one with evidence for the other.
+
+## 2026-04-05
+
+- Review provenance is part of the implementation contract. If `REVIEW.md` cites non-resolvable commit hashes, repair the queue metadata before archiving anything; a green test run does not make a broken audit trail truthful.
+- Queue-completion commits are not enough when the governing specs still describe the pre-change system. Archive only after the authoritative spec files, the queue docs, and the live proof surfaces all agree on the same contract.
