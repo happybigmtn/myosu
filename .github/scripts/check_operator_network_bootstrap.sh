@@ -58,18 +58,15 @@ test -s "$bundle_dir/README.md"
 test -s "$bundle_dir/devnet-spec.json"
 test -s "$bundle_dir/test-finney-spec.json"
 "$bundle_dir/verify-bundle.sh" >/dev/null
-python - "$bundle_dir/bundle-manifest.toml" "$bundle_dir/devnet-spec.json" <<'PY'
+manifest_bootnode="$(sed -n 's/^bootnode_multiaddr = \"\(.*\)\"$/\1/p' "$bundle_dir/bundle-manifest.toml")"
+manifest_rpc_endpoint="$(sed -n 's/^bootnode_rpc_endpoint = \"\(.*\)\"$/\1/p' "$bundle_dir/bundle-manifest.toml")"
+python3 - "$manifest_bootnode" "$manifest_rpc_endpoint" "$bundle_dir/devnet-spec.json" <<'PY'
 import json
 import sys
-import tomllib
 
-manifest_path, spec_path = sys.argv[1:3]
-with open(manifest_path, "rb") as manifest_file:
-    manifest = tomllib.load(manifest_file)
+bootnode, rpc_endpoint, spec_path = sys.argv[1:4]
 with open(spec_path, "r", encoding="utf-8") as spec_file:
     spec = json.load(spec_file)
-bootnode = manifest["bootnode_multiaddr"]
-rpc_endpoint = manifest["bootnode_rpc_endpoint"]
 if not bootnode or "/p2p/" not in bootnode:
     raise SystemExit("bundle manifest is missing a truthful bootnode_multiaddr")
 if rpc_endpoint != "ws://127.0.0.1:9944":

@@ -52,7 +52,7 @@ The documented sequence:
 1. Build required surfaces (chain node, miner, validator, keys binary)
 2. Create operator key via `myosu-keys create`
 3. Materialize operator bundle via `prepare_operator_network_bundle.sh`
-4. Bring up chain connection (local follower node or shared devnet)
+4. Bring up chain connection (local authority-backed devnet or shared devnet)
 5. Bootstrap miner: register on-chain, serve axon, stage training artifacts
 6. Bootstrap validator: register on-chain, acquire permit, stake
 7. Start miner HTTP server
@@ -64,11 +64,18 @@ Produced by `.github/scripts/prepare_operator_network_bundle.sh`. Contains
 startup scripts (`start-miner.sh`, `start-validator.sh`), chain spec
 generators, `verify-bundle.sh`, `bundle-manifest.toml`, and a README.
 
-Gap: the bundle script has not been tested on a fresh machine outside CI.
+Fresh-machine proof: `.github/scripts/check_operator_network_fresh_machine.sh`
+now runs the bundle inside Ubuntu 22.04 from a bare container, installs the
+required toolchain and packages, funds a generated operator key on the local
+authority-backed `devnet`, and verifies the miner + validator bootstrap flow
+end to end.
 
 ### Chain specs
 
-- `devnet`: single-authority (Alice), used for local development
+- `devnet`: custom four-authority devnet with subnet `7` bootstrapped in
+  genesis and named operator accounts endowed; the quickstart local path often
+  launches only `authority-1`, which means blocks land on that path about once
+  every 48 seconds
 - `test_finney`: multi-authority, used for multi-node testing
 
 ### E2E scripts
@@ -122,8 +129,6 @@ Data distribution:
 
 ### Gaps to close
 
-- The operator bundle builds and verifies on a fresh machine outside CI
-    (manual test, documented result).
 - First-run guidance: `myosu-keys create` prints next-step instructions when
     no keyfile exists yet (or the quickstart guide covers this explicitly).
 - No secrets appear in process listings, shell history, or log output during
@@ -134,7 +139,8 @@ Data distribution:
 ### Automated (CI)
 
 - `operator-network` job: builds the bundle, runs `verify-bundle.sh`, executes
-  `myosu-keys print-bootstrap` and confirms output parses.
+  `myosu-keys print-bootstrap`, confirms output parses, and runs the Ubuntu
+  22.04 fresh-machine operator proof.
 - E2E scripts (`local_loop.sh`, `emission_flow.sh`) exercise the full
   miner-chain-validator loop.
 - Key management unit tests in `crates/myosu-keys/` cover create, import,

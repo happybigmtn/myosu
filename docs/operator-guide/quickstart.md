@@ -46,7 +46,7 @@ rustup target add wasm32v1-none
 rustup target add wasm32-unknown-unknown
 cargo build -p myosu-chain-runtime
 SKIP_WASM_BUILD=1 cargo build -p myosu-chain --features fast-runtime
-SKIP_WASM_BUILD=1 cargo build -p myosu-keys -p myosu-games-poker -p myosu-miner -p myosu-validator
+SKIP_WASM_BUILD=1 cargo build -p myosu-chain-client -p myosu-keys -p myosu-games-poker -p myosu-miner -p myosu-validator
 ```
 
 ## 2. Create and Inspect an Operator Key
@@ -71,7 +71,7 @@ The last command should print:
 Decide which chain endpoint your miner and validator should use:
 
 - If you already have a shared devnet RPC endpoint, use that.
-- If you want a local follower node, use `ws://127.0.0.1:9955`.
+- If you want a local authority-backed devnet, use `ws://127.0.0.1:9955`.
 
 Export that endpoint before generating the bundle so the wrapper scripts point
 at the same place:
@@ -103,15 +103,18 @@ Choose one of the following paths.
 If your operator lead gave you a live RPC endpoint, keep `MYOSU_CHAIN` pointed
 at that endpoint, regenerate the bundle if needed, and skip to step 5.
 
-### Path B: Local Follower Node
+### Path B: Local Authority-Backed Devnet
 
 Run this in a separate terminal:
 
 ```bash
-env SKIP_WASM_BUILD=1 cargo run -p myosu-chain -- \
+env MYOSU_NODE_AUTHORITY_SURI='//myosu//devnet//authority-1' SKIP_WASM_BUILD=1 cargo run -p myosu-chain -- \
   --chain ./operator-bundle/devnet-spec.json \
   --base-path "$MYOSU_WORKDIR/devnet-node" \
+  --validator \
   --rpc-port 9955 \
+  --port 30333 \
+  --allow-private-ip \
   --prometheus-port 9616
 ```
 
@@ -125,6 +128,35 @@ curl -fsS \
 ```
 
 Continue once that request returns JSON.
+
+Fresh local devnet note: the generated operator key is new and does not start
+funded. The checked-in `devnet` genesis only endows the named bootstrap
+accounts (`//myosu//devnet//subnet-owner`, `//myosu//devnet//miner-1`,
+`//myosu//devnet//validator-1`, `//myosu//devnet//validator-2`), so fund the
+generated key before you attempt `--register` or `--stake-amount`:
+
+```bash
+export MYOSU_OPERATOR_ADDRESS="$(
+  cargo run -p myosu-keys --quiet -- show-active --config-dir "$MYOSU_CONFIG_DIR" \
+    | sed -n 's/^Active Address: //p'
+)"
+cargo run --quiet -p myosu-chain-client --example fund_account -- \
+  "$MYOSU_CHAIN" \
+  "//myosu//devnet//subnet-owner" \
+  "$MYOSU_OPERATOR_ADDRESS" \
+  "120000000000000"
+```
+
+That amount truthfully covers the current stage-0 local path: one `0.1 TAO`
+burned registration plus the validator bootstrap stake of
+`100000000000000`, with room for fees.
+
+The local authority-backed `devnet` is still a four-authority chain spec even
+when you only launch `authority-1` on one machine. That means authored blocks
+arrive about once every 48 seconds, so `--register`, `--serve-axon`, and
+`--stake-amount` can take 1-3 minutes to print their success lines on the local
+path. Treat that slower cadence as normal unless the command actually exits
+non-zero.
 
 ## 5. Probe the Chain with the Printed Bootstrap Commands
 

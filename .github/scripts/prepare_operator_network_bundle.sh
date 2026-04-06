@@ -11,10 +11,12 @@ fi
 
 bundle_dir="${1:-${MYOSU_OPERATOR_BUNDLE_DIR:-$repo_root/target/operator-network-bundle}}"
 config_dir="${2:-${MYOSU_OPERATOR_CONFIG_DIR:-$bundle_dir/config}}"
+cargo_target_dir="${CARGO_TARGET_DIR:-$repo_root/target}"
 network="${MYOSU_OPERATOR_NETWORK:-devnet}"
 subnet="${MYOSU_OPERATOR_SUBNET:-7}"
 password_env="${MYOSU_OPERATOR_PASSWORD_ENV:-MYOSU_KEY_PASSWORD}"
 bootnode_base_path="${MYOSU_OPERATOR_BOOTNODE_BASE_PATH:-${repo_root}/target/bootnode/devnet}"
+bootnode_node_bin="${MYOSU_OPERATOR_BOOTNODE_NODE_BIN:-${cargo_target_dir}/debug/myosu-chain}"
 bootnode_chain="${MYOSU_OPERATOR_BOOTNODE_CHAIN:-devnet}"
 bootnode_public_host="${MYOSU_OPERATOR_BOOTNODE_PUBLIC_HOST:-127.0.0.1}"
 bootnode_p2p_port="${MYOSU_OPERATOR_BOOTNODE_P2P_PORT:-30333}"
@@ -43,6 +45,7 @@ bash ops/deploy-bootnode.sh \
   --dry-run \
   --base-path "$bootnode_base_path" \
   --chain "$bootnode_chain" \
+  --node-bin "$bootnode_node_bin" \
   --public-host "$bootnode_public_host" \
   --p2p-port "$bootnode_p2p_port" \
   --rpc-port "$bootnode_rpc_port" \
@@ -121,7 +124,7 @@ if [[ -z "\$bootnode_multiaddr" ]]; then
   echo "missing bootnode metadata in \$bootnode_info_file" >&2
   exit 1
 fi
-python - "\$temp_path" "\$output_path" "\$bootnode_multiaddr" <<'PY'
+python3 - "\$temp_path" "\$output_path" "\$bootnode_multiaddr" <<'PY'
 import json
 import sys
 
@@ -247,17 +250,18 @@ test -s "\$temp_dir/devnet.json"
 test -s "\$temp_dir/test-finney.json"
 grep -q 'bootnode_multiaddr = ' "\$bundle_dir/bundle-manifest.toml"
 grep -Fq -- $(printf '%q' "$bootnode_multiaddr") "\$bundle_dir/README.md"
-python - "\$bundle_dir/bundle-manifest.toml" "\$temp_dir/devnet.json" <<'PY'
+manifest_bootnode="\$(sed -n 's/^bootnode_multiaddr = \"\\(.*\\)\"$/\\1/p' "\$bundle_dir/bundle-manifest.toml")"
+if [[ -z "\$manifest_bootnode" ]]; then
+  echo "bundle-manifest.toml is missing bootnode_multiaddr" >&2
+  exit 1
+fi
+python3 - "\$manifest_bootnode" "\$temp_dir/devnet.json" <<'PY'
 import json
 import sys
-import tomllib
 
-manifest_path, spec_path = sys.argv[1:3]
-with open(manifest_path, "rb") as manifest_file:
-    manifest = tomllib.load(manifest_file)
+bootnode, spec_path = sys.argv[1:3]
 with open(spec_path, "r", encoding="utf-8") as spec_file:
     spec = json.load(spec_file)
-bootnode = manifest["bootnode_multiaddr"]
 if not bootnode or "/p2p/" not in bootnode:
     raise SystemExit("invalid bootnode_multiaddr in bundle-manifest.toml")
 if bootnode not in spec.get("bootNodes", []):

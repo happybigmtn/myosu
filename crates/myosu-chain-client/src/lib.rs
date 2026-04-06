@@ -29,6 +29,7 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use sp_core::H256;
 use sp_core::Pair;
+use sp_core::crypto::Ss58Codec;
 use sp_core::hashing::blake2_128;
 use sp_core::hashing::twox_64;
 use sp_core::hashing::twox_128;
@@ -72,6 +73,10 @@ pub enum ChainClientError {
     /// Returned when a secret URI cannot be parsed as an sr25519 key.
     #[error("failed to parse sr25519 secret URI `{uri}`: {detail}")]
     InvalidSecretUri { uri: String, detail: String },
+
+    /// Returned when an SS58 address cannot be decoded into an account ID.
+    #[error("failed to parse ss58 address `{address}`: {detail}")]
+    InvalidSs58Address { address: String, detail: String },
 
     /// Returned when a chain hash response is malformed.
     #[error("failed to parse chain hash `{value}`: {source}")]
@@ -202,6 +207,16 @@ pub struct StakeAddReport {
     pub added_stake: u64,
     pub extrinsic_hash: Option<String>,
     pub already_staked: bool,
+}
+
+/// Report describing a successful balance transfer.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BalanceTransferReport {
+    pub signer: AccountId32,
+    pub dest: AccountId32,
+    pub value: u64,
+    pub extrinsic_hash: String,
+    pub inclusion_block: H256,
 }
 
 /// Report describing a successful subnet start and staking enablement.
@@ -337,6 +352,16 @@ impl ChainClient {
             }
         })?;
         Ok(AccountId32::from(pair.public()))
+    }
+
+    /// Parses an SS58 address into the corresponding account ID.
+    pub fn account_id_from_ss58(address: &str) -> Result<AccountId32, ChainClientError> {
+        AccountId32::from_ss58check(address).map_err(|source| {
+            ChainClientError::InvalidSs58Address {
+                address: address.to_string(),
+                detail: source.to_string(),
+            }
+        })
     }
 
     /// Calls `system_health` and returns the typed node health payload.
@@ -989,6 +1014,32 @@ impl ChainClient {
             subnet: netuid,
             extrinsic_hash: Some(extrinsic_hash),
             already_enabled: false,
+        })
+    }
+
+    /// Transfers an on-chain balance while keeping the sender account alive.
+    pub async fn transfer_keep_alive(
+        &self,
+        signer_uri: &str,
+        dest: &AccountId32,
+        value: u64,
+        timeout: Duration,
+    ) -> Result<BalanceTransferReport, ChainClientError> {
+        let signer = Self::account_id_from_uri(signer_uri)?;
+        let call = runtime::RuntimeCall::Balances(runtime::BalancesCall::transfer_keep_alive {
+            dest: dest.clone().into(),
+            value,
+        });
+        let watched = self
+            .submit_signed_call_and_watch_inclusion(signer_uri, call, timeout)
+            .await?;
+
+        Ok(BalanceTransferReport {
+            signer,
+            dest: dest.clone(),
+            value,
+            extrinsic_hash: watched.extrinsic_hash,
+            inclusion_block: watched.inclusion_block,
         })
     }
 
@@ -2028,6 +2079,24 @@ mod tests {
             account.to_string(),
             "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
         );
+    }
+
+    #[test]
+    fn account_id_from_ss58_roundtrips_known_address() {
+        let account =
+            ChainClient::account_id_from_ss58("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY")
+                .expect("Alice address should decode");
+        assert_eq!(
+            account,
+            ChainClient::account_id_from_uri("//Alice").expect("Alice URI should decode")
+        );
+    }
+
+    #[test]
+    fn account_id_from_ss58_rejects_invalid_address() {
+        let error =
+            ChainClient::account_id_from_ss58("not-an-address").expect_err("invalid address");
+        assert!(matches!(error, ChainClientError::InvalidSs58Address { .. }));
     }
 
     #[test]

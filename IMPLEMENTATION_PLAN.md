@@ -37,21 +37,6 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
 
 ### Operator Tooling and Onboarding
 
-- [ ] `F-001` Fresh-machine operator bundle test
-
-  Spec: `specs/050426-operator-tooling.md`
-  Why now: The spec explicitly states "bundle has not been tested on a fresh machine outside CI." Operator onboarding cannot be trusted until this is verified.
-  Codebase evidence: `.github/scripts/prepare_operator_network_bundle.sh`, `docs/operator-guide/quickstart.md`, CI `operator-network` job.
-  Owns: Test procedure (Docker or VM) that runs the bundle from scratch and verifies miner+validator pair starts.
-  Integration touchpoints: Bundle scripts, node binary, miner binary, validator binary, key management.
-  Scope boundary: Test the existing bundle. Document failures. Do not rewrite the bundle.
-  Acceptance criteria: (1) Bundle produces a running miner+validator pair on a clean Ubuntu 22.04 (or equivalent) with no pre-existing Rust toolchain (or documents exact prerequisites). (2) Failures are filed as concrete fix tasks.
-  Verification: Run bundle on fresh Docker image, verify miner and validator produce expected report output.
-  Required tests: The bundle test procedure itself.
-  Dependencies: the landed 4-authority devnet proof from `P-011`.
-  Estimated scope: M
-  Completion signal: Bundle test passes or failures are documented as fix tasks.
-
 - [ ] `F-002` Node restart resilience test
 
   Spec: `specs/050426-network-consensus.md`

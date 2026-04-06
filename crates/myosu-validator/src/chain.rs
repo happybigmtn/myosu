@@ -10,6 +10,8 @@ use std::time::Duration;
 use subtensor_runtime_common::NetUid;
 use thiserror::Error;
 
+const OPERATOR_CHAIN_ACTION_TIMEOUT: Duration = Duration::from_secs(180);
+
 /// Startup connectivity summary for the bootstrap validator.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChainProbeReport {
@@ -92,7 +94,7 @@ pub async fn ensure_registered(
 ) -> Result<RegistrationReport, ChainActionError> {
     let client = ChainClient::connect(endpoint).await?;
     client
-        .ensure_burned_registration(key_uri, subnet, Duration::from_secs(20))
+        .ensure_burned_registration(key_uri, subnet, OPERATOR_CHAIN_ACTION_TIMEOUT)
         .await
         .map_err(Into::into)
 }
@@ -105,7 +107,7 @@ pub async fn ensure_subtoken_enabled(
 ) -> Result<SubtokenBootstrapReport, ChainActionError> {
     let client = ChainClient::connect(endpoint).await?;
     let report = client
-        .ensure_subtoken_enabled(key_uri, subnet, Duration::from_secs(20))
+        .ensure_subtoken_enabled(key_uri, subnet, OPERATOR_CHAIN_ACTION_TIMEOUT)
         .await?;
 
     Ok(subtoken_bootstrap_report(report))
@@ -125,7 +127,7 @@ pub async fn ensure_validator_permit_ready(
             key_uri,
             subnet,
             requested_minimum_stake,
-            Duration::from_secs(20),
+            OPERATOR_CHAIN_ACTION_TIMEOUT,
         )
         .await?;
     let uid = client

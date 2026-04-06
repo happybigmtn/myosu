@@ -8,6 +8,8 @@ use std::time::Duration;
 use subtensor_runtime_common::NetUid;
 use thiserror::Error;
 
+const OPERATOR_CHAIN_ACTION_TIMEOUT: Duration = Duration::from_secs(180);
+
 /// Startup connectivity summary for the bootstrap miner.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChainProbeReport {
@@ -69,7 +71,7 @@ pub async fn ensure_registered(
 ) -> Result<RegistrationReport, ChainActionError> {
     let client = ChainClient::connect(endpoint).await?;
     client
-        .ensure_burned_registration(key_uri, subnet, Duration::from_secs(20))
+        .ensure_burned_registration(key_uri, subnet, OPERATOR_CHAIN_ACTION_TIMEOUT)
         .await
         .map_err(Into::into)
 }
@@ -83,7 +85,7 @@ pub async fn ensure_serving(
 ) -> Result<AxonServeReport, ChainActionError> {
     let client = ChainClient::connect(endpoint).await?;
     client
-        .ensure_axon_served(key_uri, subnet, 1, 0, port, Duration::from_secs(20))
+        .ensure_axon_served(key_uri, subnet, 1, 0, port, OPERATOR_CHAIN_ACTION_TIMEOUT)
         .await
         .map_err(Into::into)
 }

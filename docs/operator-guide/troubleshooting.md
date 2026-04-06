@@ -157,10 +157,13 @@ Resolution:
 ```bash
 export MYOSU_CHAIN='ws://127.0.0.1:9955'
 export MYOSU_OPERATOR_CHAIN="$MYOSU_CHAIN"
-env SKIP_WASM_BUILD=1 cargo run -p myosu-chain -- \
+env MYOSU_NODE_AUTHORITY_SURI='//myosu//devnet//authority-1' SKIP_WASM_BUILD=1 cargo run -p myosu-chain -- \
   --chain ./operator-bundle/devnet-spec.json \
   --base-path "$MYOSU_WORKDIR/devnet-node" \
+  --validator \
   --rpc-port 9955 \
+  --port 30333 \
+  --allow-private-ip \
   --prometheus-port 9616
 ```
 
@@ -179,7 +182,73 @@ the correct `MYOSU_OPERATOR_CHAIN`.
 Healthy result: the curl probe returns JSON, and the miner/validator startup
 report prints `bootstrap ok`.
 
-## 7. The node looks stuck or `wait_for_block` times out
+## 7. Registration or staking fails with `Inability to pay some fees`
+
+Symptom: `start-miner.sh --register` or `start-validator.sh --stake-amount ...`
+fails with `Invalid Transaction: Inability to pay some fees (e.g. account
+balance too low)`.
+
+Cause: on the checked-in local `devnet`, a freshly created operator key is not
+endowed at genesis. Only the named bootstrap accounts start funded, so local
+registration and staking require an explicit transfer into the new key first.
+
+Resolution:
+
+```bash
+export MYOSU_OPERATOR_ADDRESS="$(
+  cargo run -p myosu-keys --quiet -- show-active --config-dir "$MYOSU_CONFIG_DIR" \
+    | sed -n 's/^Active Address: //p'
+)"
+cargo run --quiet -p myosu-chain-client --example fund_account -- \
+  "$MYOSU_CHAIN" \
+  "//myosu//devnet//subnet-owner" \
+  "$MYOSU_OPERATOR_ADDRESS" \
+  "120000000000000"
+```
+
+If you are joining a shared devnet instead of a local one, ask the operator
+lead which funded account or faucet flow is expected there before retrying.
+
+Healthy result: the funding command prints
+`TRANSFER myosu-chain-client keep-alive ok`, and the later miner/validator
+registration step stops failing on insufficient balance.
+
+## 8. Registration or staking times out on the local authority-backed devnet
+
+Symptom: `start-miner.sh --register`, `--serve-axon`, or
+`start-validator.sh --stake-amount ...` appears to stall for a while, or older
+binaries fail with a timeout even though the local node is still healthy.
+
+Cause: the checked-in `devnet` chain spec reserves four Aura authorities, but
+the quickstart local path only starts `authority-1`. On that single-authority
+bring-up, the node only authors its own slots, so blocks land about once every
+48 seconds. Bootstrap transactions can therefore need multiple tens of seconds
+before inclusion.
+
+Resolution:
+
+- Wait for at least 1-3 minutes before treating the command as hung.
+- Confirm the node is still producing blocks:
+
+```bash
+curl -fsS \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"chain_getHeader","params":[]}' \
+  http://127.0.0.1:9955
+```
+
+- Rebuild to pick up the current operator timeout budget if your local binary
+  still exits too early:
+
+```bash
+SKIP_WASM_BUILD=1 cargo build -p myosu-miner -p myosu-validator
+```
+
+Healthy result: the head number keeps advancing over time, and the miner or
+validator eventually prints its `REGISTRATION ... ok`, `AXON ... ok`, or
+`PERMIT ... ready ok` line.
+
+## 9. The node looks stuck or `wait_for_block` times out
 
 Symptom: the local node starts, but the RPC endpoint takes a long time to come
 up, or block waiting/sync checks time out during a cold start.
@@ -201,7 +270,7 @@ declaring failure.
 Healthy result: the node reaches block `1` or higher, and `system_health`
 starts reporting usable RPC state.
 
-## 8. Miner or validator registration fails because subnet `7` is not ready
+## 10. Miner or validator registration fails because subnet `7` is not ready
 
 Symptom: `--register`, `--stake-amount`, or `--enable-subtoken` does not reach
 its expected success line.
@@ -224,7 +293,7 @@ bash tests/e2e/local_loop.sh
 Healthy result: the relevant command prints `REGISTRATION ... subnet ok`,
 `SUBTOKEN ... subnet ok`, or `PERMIT ... ready ok`.
 
-## 9. Miner bootstrap exits with `--encoder-dir` / `--checkpoint` / `--query-file` errors
+## 11. Miner bootstrap exits with `--encoder-dir` / `--checkpoint` / `--query-file` errors
 
 Symptom: `myosu-miner` stops immediately with a flag-contract error such as
 `--query-file requires --encoder-dir when --game poker` or
@@ -255,7 +324,7 @@ Healthy result: the miner prints `TRAINING myosu-miner batch ok` and
 `STRATEGY myosu-miner query ok`, and the checkpoint exists under
 `$MYOSU_WORKDIR/poker/miner-data/checkpoints/latest.bin`.
 
-## 10. The live HTTP miner will not start or `/health` is not `{"status":"ok"}`
+## 12. The live HTTP miner will not start or `/health` is not `{"status":"ok"}`
 
 Symptom: `--serve-http` fails with a checkpoint or encoder error, the process
 cannot bind the port, or `curl http://127.0.0.1:8080/health` does not return an
@@ -286,7 +355,7 @@ score the emitted files directly.
 Healthy result: the miner prints `HTTP myosu-miner axon ok`, and `curl /health`
 returns JSON containing `"status":"ok"`.
 
-## 11. Validator scoring or weight submission fails
+## 13. Validator scoring or weight submission fails
 
 Symptom: the validator does not print `VALIDATION myosu-validator score ok` or
 `WEIGHTS myosu-validator submission ok`, or it reports decode/checkpoint
@@ -317,7 +386,7 @@ validator self-weights by default.
 Healthy result: the validator prints both `VALIDATION myosu-validator score ok`
 and `WEIGHTS myosu-validator submission ok`.
 
-## 12. The validator exits after one run and looks like it crashed
+## 14. The validator exits after one run and looks like it crashed
 
 Symptom: `start-validator.sh` prints its success lines and then exits back to
 the shell instead of staying resident.

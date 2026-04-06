@@ -375,6 +375,9 @@ jobs:
       - name: Verify operator bundle and named-network packaging
         run: bash .github/scripts/check_operator_network_bootstrap.sh
 
+      - name: Fresh-machine operator proof
+        run: bash .github/scripts/check_operator_network_fresh_machine.sh
+
   chain-clippy:
     name: Chain Clippy
     runs-on: ubuntu-latest
