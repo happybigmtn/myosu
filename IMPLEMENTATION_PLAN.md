@@ -51,7 +51,7 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
   Verification: Review-based.
   Required tests: None (research task).
   Dependencies: P-002 (emission understanding informs economic model).
-  Blocker (2026-04-05): `docs/adr/008-future-token-economics-direction.md` now records the repo-local recommendation, but the spec requires review by at least two contributors with context before `F-003` can be removed from the queue. That review is external to the current coding loop and is not yet recorded in-repo.
+  Blocker (2026-04-05, re-verified 2026-04-05): `docs/adr/008-future-token-economics-direction.md` now records the repo-local recommendation, but it still says `Status: Proposed` and `Deciders: pending maintainer review required by specs/050426-token-economics.md`. A repo search found no recorded multi-contributor signoff in `docs/adr/README.md`, `ops/decision_log.md`, or `.github/`. The spec requires review by at least two contributors with context before `F-003` can be removed from the queue, so this remains blocked on external review rather than code changes.
   Estimated scope: L
   Completion signal: Decision document exists, the multi-contributor review is recorded, and only then is `NoOpSwap` replacement work allowed to start.
 
@@ -69,27 +69,9 @@ After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified 
   Verification: Run miner with varying iteration counts, measure validator score.
   Required tests: None (research task).
   Dependencies: P-009 (determinism verified across games).
-  Blocker (2026-04-05): The poker half is not currently measurable with repo-owned stage-0 artifacts. The only checked-in bootstrap artifact path (`crates/myosu-games-poker/examples/bootstrap_artifacts.rs`) emits the same sparse single-lookup encoder that `crates/myosu-miner/src/training.rs` already tests as non-trainable: `run_training_batch_reports_sparse_encoder_failure_cleanly` proves `--train-iterations 1` fails with upstream `isomorphism not found`. Until richer poker encoder artifacts exist (or the abstraction pipeline work is pulled forward), this task cannot truthfully document a poker score-vs-iterations threshold.
+  Blocker (2026-04-05, re-verified 2026-04-05): The poker half is not currently measurable with repo-owned stage-0 artifacts. The only checked-in bootstrap artifact path (`crates/myosu-games-poker/examples/bootstrap_artifacts.rs`) still emits a single preflop lookup, `cargo test -p myosu-miner --quiet run_training_batch_reports_sparse_encoder_failure_cleanly` and `cargo test -p myosu-games-poker --quiet step_reports_sparse_encoder_failure_instead_of_panicking` both confirm sparse encoders fail with upstream `isomorphism not found`, and `specs/031626-08-abstraction-pipeline.md` still describes full artifact generation as future work. Until richer poker encoder artifacts exist (or the abstraction pipeline work is pulled forward), this task cannot truthfully document a poker score-vs-iterations threshold. This task subsumes the deferred Nemesis follow-up `NEM-008`; keep one canonical queue entry here.
   Estimated scope: S
   Completion signal: Minimum iterations documented per game type.
-
----
-
-- [ ] `NEM-008` Document minimum training iteration recommendations
-
-  Status (2026-04-05): Deferred. This pass prioritized executable correctness
-  fixes and did not run the iteration-to-score measurements needed to publish a
-  truthful operator recommendation.
-
-  Spec: `crates/myosu-miner/src/training.rs`  
-  Why now: A miner can train for 0 iterations and serve garbage. No guidance exists for minimum viable training.  
-  Codebase evidence: `crates/myosu-miner/src/cli.rs` — `train_iterations` defaults to 0 with no minimum enforced.  
-  Owns: Research document, CLI help text.  
-  Integration touchpoints: Miner CLI documentation, operator guide.  
-  Scope boundary: Measure validator scores at varying iteration counts. Document recommended minimums.  
-  Required tests: None (research/documentation task).  
-  Dependencies: None.  
-  Completion signal: `docs/operator-guide/` documents recommended minimum iterations per game type.
 
 
 ## Completed / Already Satisfied
