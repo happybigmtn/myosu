@@ -13,7 +13,7 @@
   missing security-focused cases. Removed `TEST-001` from
   [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `cargo test -p myosu-miner --quiet -- axon`; `SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet -- axon`; `SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet`; `cargo fmt --check`.
-  Commit: `c860197`
+  Commit: `a728d82`
 
 - `EMIT-001` Closed the stage-0 emission dust policy with
   [ADR 011](/home/r/coding/myosu/docs/adr/011-emission-dust-policy.md): the
