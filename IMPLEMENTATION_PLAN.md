@@ -12,26 +12,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 2: Harden and Measure
 
-- [ ] `GATE-002` Checkpoint: Hardening verification
-
-  Spec: `specs/070426-validator-subsystem.md`
-  Why now: After emission dust is decided and test gaps are closed, verify the hardening work before proceeding to the miner quality benchmark (which builds on this foundation). This is a lightweight stop-and-verify, not a full gate.
-  Codebase evidence: Verification against state produced by EMIT-001, TEST-001, TEST-002, TEST-003.
-  Owns: Run test suite and confirm all new tests pass alongside existing suite. Verify WORKLIST.md items are updated.
-  Integration touchpoints: All files modified in Phase 2 tasks.
-  Scope boundary: Verification only. No code changes.
-  Acceptance criteria: (1) `SKIP_WASM_BUILD=1 cargo test --workspace --quiet` passes. (2) `bash tests/e2e/emission_flow.sh` passes. (3) WORKLIST.md `EM-DUST-001` is resolved. (4) HTTP axon tests exist and pass.
-  Verification:
-  ```bash
-  SKIP_WASM_BUILD=1 cargo test --workspace --quiet
-  bash tests/e2e/emission_flow.sh
-  bash tests/e2e/local_loop.sh
-  ```
-  Required tests: Full workspace test suite.
-  Dependencies: EMIT-001, TEST-001, TEST-002, TEST-003.
-  Estimated scope: XS
-  Completion signal: Hardening verified, proceed to benchmark.
-
 - [ ] `BENCH-001` Miner quality benchmark surface for Liar's Dice
 
   Spec: `specs/070426-miner-subsystem.md`

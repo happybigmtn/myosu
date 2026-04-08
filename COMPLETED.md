@@ -1,5 +1,19 @@
 # COMPLETED
 
+- `GATE-002` Verified the Phase 2 hardening checkpoint against the live repo
+  state and removed the task from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
+  The current codebase already satisfied the gate without further code changes:
+  `WORKLIST.md` resolves `EM-DUST-001` via
+  [ADR 011](/home/r/coding/myosu/docs/adr/011-emission-dust-policy.md), the
+  miner HTTP axon security tests remain present in
+  [crates/myosu-miner/src/axon.rs](/home/r/coding/myosu/crates/myosu-miner/src/axon.rs),
+  and the broad workspace plus stage-0 E2E proofs are green on this checkout.
+  Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet axon`;
+  `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`;
+  `bash tests/e2e/emission_flow.sh`; `bash tests/e2e/local_loop.sh`.
+  Commit: `PENDING`
+
 - `TEST-003` Added cross-game scoring documentation coverage in
   [crates/myosu-validator/src/validation.rs](/home/r/coding/myosu/crates/myosu-validator/src/validation.rs)
   by exercising the live validator scoring path against the same response
