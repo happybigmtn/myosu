@@ -14,27 +14,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 3: Package and Document
 
-- [ ] `OPS-002` Planned Fabro ghost infrastructure resolution
-
-  Spec: `specs/070426-operator-infrastructure.md`
-  Why now: After DEBT-005 marks the planned Fabro references in docs, a decision must be made: create the minimum execution infrastructure or fully remove all references. DEBT-005 marks them as "planned" — this task resolves the decision.
-  Codebase evidence: `fabro.toml` exists at root (24 lines, references MiniMax model). The planned `fabro/` directory does not exist yet. AGENTS.md "Bootstrap Lanes" and OS.md "Planned Control Plane" describe a planned supervision model built on Fabro/Raspberry.
-  Owns: Decision and execution: (A) If Fabro is the intended substrate, create the planned `fabro/programs/myosu-bootstrap.yaml` and one working run config, OR (B) If not, remove all Fabro/Raspberry references from AGENTS.md, OS.md, and delete `fabro.toml`.
-  Integration touchpoints: AGENTS.md, OS.md, `fabro.toml`, `.github/scripts/check_doctrine_integrity.sh`.
-  Scope boundary: Resolve the ghost. If option A, create only the minimum viable entrypoint. Do not build a full execution framework.
-  Acceptance criteria: Either (A) `fabro run <config>` executes something meaningful, OR (B) `grep -rq "fabro/" AGENTS.md OS.md README.md` returns zero results and `fabro.toml` is deleted.
-  Verification:
-  ```bash
-  # Option B verification (more likely):
-  ! grep -rq "fabro/" AGENTS.md OS.md README.md 2>/dev/null
-  test ! -f fabro.toml
-  bash .github/scripts/check_doctrine_integrity.sh
-  ```
-  Required tests: Doctrine integrity check passes.
-  Dependencies: DEBT-005, GATE-001.
-  Estimated scope: S
-  Completion signal: No ghost infrastructure in documentation.
-
 - [ ] `OPS-003` Container packaging research and implementation
 
   Spec: `specs/070426-operator-infrastructure.md`

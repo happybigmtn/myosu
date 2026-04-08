@@ -114,11 +114,10 @@ Use this order when sources disagree:
 6. local generated state such as `target/` and helper temp dirs
    Runtime truth for the current machine, not the top-level control doctrine.
 
-## Planned Control Plane
+## Current Control Plane
 
-Historical planning material still mentions Fabro/Raspberry. As of 2026-04-08,
-that control plane is planned, not yet implemented in this checkout: there is
-no checked-in Fabro directory tree or Raspberry local state to operate.
+Historical planning material still mentions a bootstrap supervision layer that
+is not part of the checked-in repo. The current control plane is:
 
 Today the truthful control plane is simpler:
 - specs, plans, and invariants define intent
@@ -137,9 +136,6 @@ The truthful current operator surfaces are:
 1. Doctrine integrity and repo-shape checks for document truth.
 2. The node-owned stage-0 local loop for end-to-end chain truth.
 3. The local gameplay/advisor surface for human and agent consumption.
-
-Fabro/Raspberry bootstrap supervision remains planned, not implemented in this
-checkout. Use the direct proofs below instead.
 
 Doctrine and operator proof:
 

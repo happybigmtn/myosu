@@ -248,23 +248,21 @@ Myosu remains in stage 0 until ALL of the following are true:
 | 5 | `specsarchive/`, `ralph/IMPLEMENT.md` | historical context only; not the active control plane |
 | 6 | local generated state under `target/` and related temp dirs | machine-local evidence, never top-level doctrine |
 
-## Planned Fabro/Raspberry Control Plane
+## Current Control Plane
 
-Historical docs still mention a Fabro/Raspberry supervision model. As of
-2026-04-08, that control plane is planned, not yet implemented in this repo:
-there is no checked-in Fabro directory tree or Raspberry local state to run
-against.
-
-Operational rule for current loops:
+Historical planning material still mentions a bootstrap supervision layer that
+is not part of the checked-in repo. The current control plane is simpler:
 - use executable cargo and shell proofs that exist in this checkout
 - keep `outputs/` and `ops/` truthful when repo facts change
-- do not add new Fabro/Raspberry operational guidance until `OPS-002`
-  resolves whether that control plane will be built or removed
+- treat untracked local state as machine-local only, not repo doctrine
 
 Historical-only surfaces:
 - `ralph/IMPLEMENT.md`
 - `specsarchive/`
 - deleted Malinka control files such as `project.yaml` and `WORKFLOW.md`
+
+Operational rule for current loops: prefer direct proof commands and nearby
+playbooks over placeholder control-plane narratives.
 
 ## Current Operator Loop
 
@@ -345,11 +343,11 @@ Historical bootstrap lane names remain useful as planning labels:
 - `chain:pallet` — restart lane, blocked on runtime review
 
 There is no checked-in bootstrap manifest for these lanes today, so do not
-present them as runnable Fabro units. Do not widen the conceptual lane set
+present them as runnable supervised units. Do not widen the conceptual lane set
 until:
 - doctrine cutover is complete
 - the trusted lanes have produced curated `spec.md` and `review.md` artifacts
-- the repo has a truthful replacement for the planned control plane
+- the repo has a truthful checked-in execution entrypoint
 
 ## Current Expectations
 
@@ -358,8 +356,7 @@ When adding or changing active supervisory work:
 - add or update checked-in specs, plans, docs, or scripts that actually exist
 - add or update curated artifact roots in `outputs/` when a lane produces them
 - add or update nearby proof commands or playbooks when operational truth moves
-- keep planned Fabro/Raspberry references marked as planned until `OPS-002`
-  resolves them
+- remove stale control-plane references instead of normalizing them
 
 When evaluating whether something is "done":
 

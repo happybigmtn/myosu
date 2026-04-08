@@ -179,3 +179,17 @@
   `pallet_subtensor_proxy`, `pallet_subtensor_swap`, and `pallet_subtensor_utility`.
   Validation: `rg -n '\\bpallet_subtensor\\b|\\bSubtensorModule\\b|subtensorModule' crates/myosu-chain crates/myosu-chain-client Cargo.toml`; `SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime -p myosu-chain`; `cargo test -p pallet-game-solver --quiet -- stage_0`; `cargo clean -p myosu-chain-runtime && SKIP_WASM_BUILD=1 cargo build -p myosu-chain-runtime --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-chain --quiet -- build-spec --chain devnet --raw > /dev/null`.
   Commit: `b59351c`
+
+- `OPS-002` Removed the tracked ghost bootstrap control-plane surface instead
+  of inventing a fake execution entrypoint. Deleted
+  [fabro.toml](/home/r/coding/myosu/fabro.toml), rewrote
+  [AGENTS.md](/home/r/coding/myosu/AGENTS.md) and
+  [OS.md](/home/r/coding/myosu/OS.md) so the repo-owned control plane is now
+  only checked-in doctrine plus executable proof commands, and cleaned the last
+  active operator-facing references in
+  [docs/execution-playbooks/README.md](/home/r/coding/myosu/docs/execution-playbooks/README.md)
+  and [specs/README.md](/home/r/coding/myosu/specs/README.md). The live repo
+  may still contain ignored local `.raspberry/` state on a developer machine,
+  but it is not tracked and no longer appears in active doctrine.
+  Validation: `! rg -n "Fabro|fabro|Raspberry|raspberry" AGENTS.md OS.md README.md docs/execution-playbooks/README.md specs/README.md`; `test ! -f fabro.toml`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`.
+  Commit: `PENDING`

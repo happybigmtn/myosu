@@ -8,7 +8,7 @@ operator stories.
 
 ### Bootstrap
 Use when the goal is to verify and refresh curated artifacts under `outputs/`
-through the current Raspberry bootstrap program.
+through the repo-owned bootstrap playbook and direct proof commands.
 
 See [bootstrap.md](bootstrap.md).
 

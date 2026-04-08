@@ -14,5 +14,6 @@ When behavior changes, update the matching spec in the same slice instead of
 leaving drift for a later cleanup pass.
 
 Durable design decisions belong in `docs/adr/`. Execution state belongs in
-`IMPLEMENTATION_PLAN.md`, `REVIEW.md`, `ARCHIVED.md`, `WORKLIST.md`, and the
-Fabro/Raspberry manifests under `fabro/`.
+`IMPLEMENTATION_PLAN.md`, `REVIEW.md`, `ARCHIVED.md`, `WORKLIST.md`,
+`ops/evidence/`, and the checked-in proof/playbook surfaces that describe the
+current operator loop.
