@@ -11,7 +11,10 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 const MANIFEST_FILE: &str = "manifest.json";
-const MAX_DECODE_BYTES: u64 = 256 * 1024 * 1024;
+// Local artifact loads must accommodate full NLHE abstraction bundles. This is
+// intentionally much larger than the 1 MiB network wire budget because these
+// bytes come from operator-owned disk artifacts, not untrusted miner payloads.
+const MAX_DECODE_BYTES: u64 = 16 * 1024 * 1024 * 1024;
 
 #[derive(Serialize, Deserialize)]
 struct EncoderLookupArtifact(BTreeMap<Isomorphism, Abstraction>);
@@ -577,6 +580,14 @@ mod tests {
         assert!(
             result.is_err(),
             "bounded codec should reject over-budget values"
+        );
+    }
+
+    #[test]
+    fn artifact_decode_budget_leaves_room_for_full_river_files() {
+        assert!(
+            MAX_DECODE_BYTES >= 4 * 1024 * 1024 * 1024,
+            "full river abstraction files are multi-gigabyte and should fit under the local artifact budget"
         );
     }
 

@@ -2,7 +2,9 @@
 
 pub mod action;
 pub mod artifacts;
+pub mod benchmark;
 pub mod codexpoker;
+pub mod lookup_dump;
 pub mod renderer;
 pub mod request;
 pub mod robopoker;
@@ -16,7 +18,9 @@ pub use artifacts::{
     NlheAbstractionStreet, NlheEncoderArtifactBundle, decode_encoder, encode_encoder,
     encoder_from_lookup, load_encoder_bundle, load_encoder_dir, write_encoder_dir,
 };
+pub use benchmark::{PokerBenchmarkError, PokerBenchmarkPoint, benchmark_points_from_encoder_dir};
 pub use codexpoker::{CodexpokerBlueprint, CodexpokerBlueprintError};
+pub use lookup_dump::{LookupDumpError, write_encoder_dir_from_lookup_dump};
 pub use renderer::NlheRenderer;
 pub use request::{NlheHistoryAction, NlheStrategyRequest, StrategyRequestError};
 pub use robopoker::{

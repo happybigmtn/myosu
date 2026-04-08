@@ -1,5 +1,29 @@
 # COMPLETED
 
+- `RES-003` Closed the poker-only quality-benchmark follow-up by adding a
+  repo-owned full-encoder path instead of pretending the sparse bootstrap
+  artifacts are sufficient. The poker crate now has
+  [import_robopoker_lookup.rs](/home/r/coding/myosu/crates/myosu-games-poker/examples/import_robopoker_lookup.rs),
+  [quality_benchmark.rs](/home/r/coding/myosu/crates/myosu-games-poker/examples/quality_benchmark.rs),
+  and supporting library surfaces in
+  [benchmark.rs](/home/r/coding/myosu/crates/myosu-games-poker/src/benchmark.rs)
+  and
+  [lookup_dump.rs](/home/r/coding/myosu/crates/myosu-games-poker/src/lookup_dump.rs).
+  The local artifact loader in
+  [artifacts.rs](/home/r/coding/myosu/crates/myosu-games-poker/src/artifacts.rs)
+  now leaves room for multi-gigabyte full encoder files instead of capping them
+  at `256 MiB`, and the operator flow is documented in
+  [poker-quality-benchmark.md](/home/r/coding/myosu/docs/execution-playbooks/poker-quality-benchmark.md)
+  plus
+  [ops/poker_quality_benchmark.sh](/home/r/coding/myosu/ops/poker_quality_benchmark.sh).
+  Removed `RES-003` from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md) and
+  narrowed `WORKLIST.md` `MINER-QUAL-001` to the remaining task of recording a
+  real full-encoder exploitability ladder and choosing a poker minimum
+  iteration floor.
+  Validation: `cargo test -p myosu-games-poker --quiet`; `bash -n ops/poker_quality_benchmark.sh`; `bash .github/scripts/check_doctrine_integrity.sh`.
+  Commit: `eb4e192`
+
 - `RES-002` Classified the 21 fork-only `opentensor/polkadot-sdk` commits in
   [ADR 009](/home/r/coding/myosu/docs/adr/009-polkadot-sdk-migration-feasibility.md)
   against `upstream/stable2506`, refreshed the audit counts from the live fork

@@ -15,11 +15,18 @@
   and the operator guidance in
   [docs/operator-guide/quickstart.md](/home/r/coding/myosu/docs/operator-guide/quickstart.md):
   the repo now has a truthful, exploitability-based Liar's Dice benchmark and a
-  current recommendation of `512` minimum training iterations. The remaining
-  blocker is poker only. The validator's same-checkpoint path still self-scores
-  the miner response, and the checked-in poker bootstrap artifacts remain
-  intentionally sparse enough that positive-iteration poker training fails
-  upstream with `isomorphism not found`.
+  current recommendation of `512` minimum training iterations. Poker is no
+  longer missing a benchmark path: `docs/execution-playbooks/poker-quality-benchmark.md`
+  and `bash ops/poker_quality_benchmark.sh --db-url ... --robopoker-dir ... --encoder-dir ...`
+  now show how to generate a full encoder from robopoker's PostgreSQL
+  `isomorphism` table and measure exploitability through
+  `cargo run -p myosu-games-poker --example quality_benchmark -- <encoder-dir> ...`.
+  The remaining blocker is recording a real full-encoder poker exploitability
+  ladder and turning it into a minimum-iterations recommendation. The
+  validator's same-checkpoint path still self-scores the miner response, and
+  the checked-in poker bootstrap artifacts remain intentionally sparse enough
+  that positive-iteration poker training fails upstream with
+  `isomorphism not found`.
 
 ## 2026-04-08 follow-ups
 

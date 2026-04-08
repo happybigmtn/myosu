@@ -40,24 +40,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
   Estimated scope: L
   Completion signal: Decision document accepted, NoOpSwap replacement work allowed to start.
 
-- [ ] `RES-003` Poker quality benchmark (blocked on encoder artifacts)
-
-  Spec: `specs/070426-validator-subsystem.md`
-  Why now: Poker quality measurement requires either richer encoder artifacts (7-11 GB RAM for full encoder) or an independent reference checkpoint. The checked-in bootstrap artifacts are intentionally sparse — positive-iteration poker training fails with `isomorphism not found`. This blocks documenting minimum poker training iterations.
-  Codebase evidence: `crates/myosu-games-poker/examples/bootstrap_artifacts.rs` emits a single preflop lookup. `cargo test -p myosu-games-poker -- step_reports_sparse_encoder_failure_instead_of_panicking` confirms sparse artifact limitation. WORKLIST.md `MINER-QUAL-001` documents this.
-  Owns: Either (a) ship richer poker encoder artifacts as test fixtures and build an exploitability benchmark, or (b) document the hardware requirements for generating full encoder and provide a script for operators to self-generate.
-  Integration touchpoints: `crates/myosu-games-poker/`, `crates/myosu-validator/`, robopoker fork.
-  Scope boundary: Poker encoder artifacts and benchmark only. Do not change robopoker fork algorithm.
-  Acceptance criteria: (1) A path exists to measure poker strategy quality independent of self-scoring. (2) Hardware requirements documented. (3) Minimum poker training iterations documented (or explicitly blocked with requirements).
-  Verification: Research task — verify benchmark or documentation exists.
-  Required tests: Poker quality benchmark test if encoder artifacts are shipped.
-  Dependencies: BENCH-001 (Liar's Dice benchmark proves the pattern first).
-  Blocker: Encoder artifact size and robopoker upstream limitations.
-  Estimated scope: M
-  Completion signal: Poker quality measurement path is documented and actionable.
-
----
-
 - [!] `F-003` Token economics decision document
 
   Spec: `specs/050426-token-economics.md`
@@ -94,7 +76,7 @@ Specs: gen-20260408-013810/specs/080426-*.md
   Verification: Run miner with varying iteration counts against the chosen quality benchmark. Do not use the current same-checkpoint validator exact-match path as convergence evidence.
   Required tests: None (research task).
   Dependencies: P-009 (determinism verified across games).
-  Blocker (2026-04-05, re-verified 2026-04-05): The current stage-0 validator score is not a convergence metric. `score_response()` in `crates/myosu-validator/src/validation.rs` compares the observed miner response against `solver.answer(query)` from the checkpoint supplied on the validator CLI, and the repo-owned happy-path harnesses (`tests/e2e/local_loop.sh`, `tests/e2e/validator_determinism.sh`) pass the miner checkpoint straight into that validator path, so the truthful expected result is `exact_match=true` / `score=1.0` whenever the miner response came from the same checkpoint. Poker is additionally blocked because the only checked-in bootstrap artifact path (`crates/myosu-games-poker/examples/bootstrap_artifacts.rs`) still emits a single preflop lookup, and direct re-verification against the generated `target/e2e/*/poker/encoder/manifest.json` outputs shows the same shape (`preflop.entries = 1`, no flop/turn/river files). `cargo test -p myosu-validator --quiet exact_match_scores_one`, `cargo test -p myosu-miner --quiet run_training_batch_reports_sparse_encoder_failure_cleanly`, and `cargo test -p myosu-games-poker --quiet step_reports_sparse_encoder_failure_instead_of_panicking` confirm that the current validator happy path is a self-check and that any positive poker training iteration on those sparse artifacts fails upstream with `isomorphism not found`. Until the repo has either (a) richer poker encoder artifacts plus a quality benchmark such as exploitability, or (b) an independent reference-checkpoint validator path that does not self-score the miner checkpoint, this task cannot truthfully document minimum training iterations. This task subsumes the deferred Nemesis follow-up `NEM-008`; keep one canonical queue entry here.
+  Blocker (2026-04-05, re-verified 2026-04-08): The current stage-0 validator score is not a convergence metric. `score_response()` in `crates/myosu-validator/src/validation.rs` compares the observed miner response against `solver.answer(query)` from the checkpoint supplied on the validator CLI, and the repo-owned happy-path harnesses (`tests/e2e/local_loop.sh`, `tests/e2e/validator_determinism.sh`) pass the miner checkpoint straight into that validator path, so the truthful expected result is `exact_match=true` / `score=1.0` whenever the miner response came from the same checkpoint. Liar's Dice is no longer blocked: `cargo test -p myosu-validator --quiet -- quality_benchmark` provides the repo-owned exploitability ladder and the operator guide now recommends `512` minimum iterations there. Poker now also has a truthful path, but not a checked-in result: `docs/execution-playbooks/poker-quality-benchmark.md` and `bash ops/poker_quality_benchmark.sh --db-url ... --robopoker-dir ... --encoder-dir ...` document how to generate a full encoder from the robopoker `isomorphism` table and run `cargo run -p myosu-games-poker --example quality_benchmark -- <encoder-dir> ...` against it. The checked-in bootstrap artifact path (`crates/myosu-games-poker/examples/bootstrap_artifacts.rs`) is still intentionally sparse, and `cargo test -p myosu-games-poker --quiet benchmark_reports_sparse_encoder_failure_cleanly` confirms that positive poker training iterations on those bootstrap artifacts still fail upstream with `isomorphism not found`. Until an operator records a real full-encoder exploitability ladder and turns it into a recommended poker minimum, this task cannot truthfully document the Poker side of the convergence floor. This task subsumes the deferred Nemesis follow-up `NEM-008`; keep one canonical queue entry here.
   Estimated scope: S
   Completion signal: Minimum iterations documented per game type.
 

@@ -281,6 +281,12 @@ Poker remains blocked for the same quality-benchmark workflow. The checked-in
 bootstrap encoder artifacts are still intentionally sparse, so positive-iteration
 poker training continues to fail upstream with `isomorphism not found`.
 
+The repo now carries a truthful full-encoder benchmark path for operators who
+have the required robopoker/PostgreSQL hardware footprint. Use
+[`poker-quality-benchmark.md`](../execution-playbooks/poker-quality-benchmark.md)
+and `bash ops/poker_quality_benchmark.sh` when you need a real exploitability
+ladder instead of the bounded bootstrap artifacts.
+
 ## 7. Start a Validator
 
 The current validator surface is a bounded bootstrap/scoring command, not a
