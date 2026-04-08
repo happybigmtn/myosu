@@ -12,25 +12,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 2: Harden and Measure
 
-- [ ] `TEST-003` Cross-game scoring fairness documentation test
-
-  Spec: `specs/070426-validator-subsystem.md`
-  Why now: Different games may produce incomparable quality metrics. The validator uses the same `score_from_l1_distance` formula for all games, but no test verifies that scores are comparable across game types. This is a documentation test — it explicitly records whether scores are comparable or not.
-  Codebase evidence: `crates/myosu-validator/src/validation.rs` — `score_from_l1_distance()` is game-agnostic. No cross-game scoring test exists.
-  Owns: Add at least 1 test that evaluates the same "quality level" (e.g., blueprint vs. trained strategy) for both poker and Liar's Dice and documents whether the resulting scores are in comparable ranges. If they are not, document the discrepancy with a code comment explaining the implications for cross-subnet emission fairness.
-  Integration touchpoints: `crates/myosu-validator/src/validation.rs`, `crates/myosu-games-poker/`, `crates/myosu-games-liars-dice/`.
-  Scope boundary: Test and document only. Do not change scoring formula. If scores are incomparable, document — do not fix (that is a design decision for a future spec).
-  Acceptance criteria: (1) Test exists comparing scoring ranges across at least 2 game types. (2) Test output or comment documents comparability conclusion. (3) Existing tests pass.
-  Verification:
-  ```bash
-  SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet
-  SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- cross_game
-  ```
-  Required tests: 1 cross-game scoring test.
-  Dependencies: GATE-001.
-  Estimated scope: S
-  Completion signal: Cross-game scoring behavior is documented in code.
-
 - [ ] `GATE-002` Checkpoint: Hardening verification
 
   Spec: `specs/070426-validator-subsystem.md`

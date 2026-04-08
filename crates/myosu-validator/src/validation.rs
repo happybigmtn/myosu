@@ -677,8 +677,96 @@ mod tests {
         assert_eq!(first, second);
     }
 
+    #[test]
+    fn cross_game_one_hot_degradation_stays_in_same_score_band() {
+        let poker_solver = weighted_solver();
+        let poker_query = myosu_games_poker::NlheBlueprint::query_for_info(&sample_info());
+        let poker_query_bytes = encode_strategy_query(&poker_query).expect("query should encode");
+        let poker_expected = poker_solver.answer(poker_query);
+        let poker_observed = poker_one_hot_least_likely_action(&poker_expected);
+        let poker_response_bytes =
+            encode_strategy_response(&poker_observed).expect("response should encode");
+        let poker_report = score_poker_response_with_solver(
+            &poker_solver,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &poker_query_bytes,
+            &poker_response_bytes,
+        )
+        .expect("poker validation should succeed");
+
+        let mut liars_dice_solver = LiarsDiceSolver::<LIARS_DICE_SOLVER_TREES>::new();
+        liars_dice_solver.train(8).expect("training should succeed");
+        let opening = myosu_games_liars_dice::LiarsDiceGame::root()
+            .apply(myosu_games_liars_dice::LiarsDiceEdge::Roll { p1: 2, p2: 5 });
+        let liars_dice_query = myosu_games_liars_dice::LiarsDiceStrategyQuery::new(
+            opening
+                .info()
+                .expect("opening player turn should expose info"),
+        );
+        let liars_dice_query_bytes =
+            myosu_games_liars_dice::encode_strategy_query(&liars_dice_query)
+                .expect("query should encode");
+        let liars_dice_expected = liars_dice_solver.answer(liars_dice_query);
+        let liars_dice_observed = liars_dice_one_hot_least_likely_action(&liars_dice_expected);
+        let liars_dice_response_bytes =
+            myosu_games_liars_dice::encode_strategy_response(&liars_dice_observed)
+                .expect("response should encode");
+        let liars_dice_report = score_liars_dice_response_with_solver(
+            &liars_dice_solver,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &liars_dice_query_bytes,
+            &liars_dice_response_bytes,
+        )
+        .expect("liar's dice validation should succeed");
+
+        // Documentation test: the current stage-0 validator score only sees
+        // normalized L1 distance. For the same "collapse the policy to one weak
+        // legal action" degradation pattern, the sampled poker and liar's-dice
+        // states stay in the same rough score band. That is encouraging for
+        // stage-0 fairness, but it does not prove full cross-subnet fairness for
+        // different game configs or exploitability units.
+        let score_gap = (poker_report.score - liars_dice_report.score).abs();
+
+        assert!(!poker_report.exact_match);
+        assert!(!liars_dice_report.exact_match);
+        assert!(poker_report.score < 1.0);
+        assert!(liars_dice_report.score < 1.0);
+        assert!(
+            score_gap <= 0.1,
+            "sampled cross-game scores diverged: poker={:.6} liar's-dice={:.6}",
+            poker_report.score,
+            liars_dice_report.score
+        );
+    }
+
     fn weighted_solver() -> PokerSolver {
         PokerSolver::from_parts(weighted_profile(sample_info()), sample_encoder())
+    }
+
+    fn poker_one_hot_least_likely_action(
+        response: &StrategyResponse<RbpNlheEdge>,
+    ) -> StrategyResponse<RbpNlheEdge> {
+        let (action, _) = response
+            .actions
+            .iter()
+            .min_by(|left, right| left.1.total_cmp(&right.1))
+            .expect("response should contain at least one action");
+
+        StrategyResponse::new(vec![(action.clone(), 1.0)])
+    }
+
+    fn liars_dice_one_hot_least_likely_action(
+        response: &StrategyResponse<LiarsDiceEdge>,
+    ) -> StrategyResponse<LiarsDiceEdge> {
+        let (action, _) = response
+            .actions
+            .iter()
+            .min_by(|left, right| left.1.total_cmp(&right.1))
+            .expect("response should contain at least one action");
+
+        StrategyResponse::new(vec![(action.clone(), 1.0)])
     }
 
     fn sample_encoder() -> NlheEncoder {
