@@ -12,25 +12,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 2: Harden and Measure
 
-- [ ] `TEST-001` HTTP axon security tests
-
-  Spec: `specs/070426-miner-subsystem.md`
-  Why now: The miner HTTP axon (`crates/myosu-miner/src/axon.rs`, 20.2K) is the only network-exposed surface. No tests exist for malformed requests, oversized payloads, or concurrent access. This is the highest-priority test gap per the ASSESSMENT.
-  Codebase evidence: `crates/myosu-miner/src/axon.rs` serves poker strategy over HTTP. No test file for axon in `myosu-miner`. WORKLIST.md `AXON-HTTP-001` notes Liar's Dice uses file-based path only.
-  Owns: Add at least 3 tests to `myosu-miner`: (1) Malformed request body returns error, does not panic. (2) Oversized request body (>1 MiB) is rejected. (3) Concurrent requests do not deadlock or corrupt shared state.
-  Integration touchpoints: `crates/myosu-miner/src/axon.rs`, any shared state accessed during strategy serving.
-  Scope boundary: Test-only changes to `myosu-miner`. Do not modify axon serving logic unless a test reveals a real bug (then fix minimally).
-  Acceptance criteria: (1) 3+ new tests in myosu-miner covering malformed, oversized, and concurrent HTTP requests. (2) All tests pass. (3) Existing tests unaffected.
-  Verification:
-  ```bash
-  SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet
-  SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet -- axon
-  ```
-  Required tests: 3 new HTTP axon tests as described.
-  Dependencies: GATE-001.
-  Estimated scope: S
-  Completion signal: Axon has basic security coverage.
-
 - [ ] `TEST-002` Key management corruption recovery test
 
   Spec: `specs/070426-operator-infrastructure.md`

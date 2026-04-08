@@ -1,5 +1,20 @@
 # COMPLETED
 
+- `TEST-001` Added miner HTTP axon security coverage in
+  [crates/myosu-miner/src/axon.rs](/home/r/coding/myosu/crates/myosu-miner/src/axon.rs)
+  for the live TCP server path: malformed `/strategy` payloads now have an
+  explicit regression test proving they return `400` without panicking,
+  oversized requests with a `>1 MiB` declared body are verified to hit the
+  current 64 KiB server limit and return a clean rejection, and 16 concurrent
+  strategy requests are exercised against one server instance to prove the
+  sequential accept loop completes without deadlock or response corruption.
+  The task plan's claim that no axon tests existed was stale; the live code
+  already covered health/strategy happy paths, and this increment closes the
+  missing security-focused cases. Removed `TEST-001` from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `cargo test -p myosu-miner --quiet -- axon`; `SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet -- axon`; `SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet`; `cargo fmt --check`.
+  Commit: `c860197`
+
 - `EMIT-001` Closed the stage-0 emission dust policy with
   [ADR 011](/home/r/coding/myosu/docs/adr/011-emission-dust-policy.md): the
   coinbase split now closes its integer remainder in the validator bucket

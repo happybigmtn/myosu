@@ -470,12 +470,28 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use myosu_games_poker::{
-        NlheAbstractionStreet, NlheInfoKey, NlheStrategyQuery, RbpNlheEncoder, write_encoder_dir,
+        NlheAbstractionStreet, NlheInfoKey, NlheStrategyQuery, RbpNlheEncoder,
+        decode_strategy_response, write_encoder_dir,
     };
     use rbp_cards::{Isomorphism, Observation};
     use rbp_gameplay::Abstraction;
+    use tokio::task::JoinHandle;
+    use tokio::time::{Duration, timeout};
 
     use super::*;
+
+    struct TestServer {
+        root: PathBuf,
+        endpoint: String,
+        task: JoinHandle<Result<(), AxonServeError>>,
+    }
+
+    impl Drop for TestServer {
+        fn drop(&mut self) {
+            self.task.abort();
+            let _ = std::fs::remove_dir_all(&self.root);
+        }
+    }
 
     #[test]
     fn plan_requires_checkpoint_for_http_serving() {
@@ -505,6 +521,118 @@ mod tests {
 
     #[tokio::test]
     async fn server_answers_health_and_strategy() {
+        let server = spawn_test_server().await;
+
+        let health = issue_request(
+            &server.endpoint,
+            b"GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+        )
+        .await;
+        assert!(health.starts_with(b"HTTP/1.1 200 OK"));
+        assert!(String::from_utf8_lossy(&health).contains("\"status\":\"ok\""));
+
+        let query = NlheStrategyQuery::new(NlheInfoKey {
+            subgame: 0,
+            bucket: 0,
+            choices: 0,
+        });
+        let query_body =
+            myosu_games_poker::encode_strategy_query(&query).expect("query should encode");
+        let request = format!(
+            "POST /strategy HTTP/1.1\r\nHost: localhost\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            query_body.len()
+        );
+        let mut strategy_request = request.into_bytes();
+        strategy_request.extend_from_slice(&query_body);
+        let strategy = issue_request(&server.endpoint, &strategy_request).await;
+        assert!(strategy.starts_with(b"HTTP/1.1 200 OK"));
+    }
+
+    #[tokio::test]
+    async fn server_rejects_malformed_strategy_body_without_panicking() {
+        let server = spawn_test_server().await;
+        let body = vec![0_u8, 1, 2, 3];
+        let request = format!(
+            "POST /strategy HTTP/1.1\r\nHost: localhost\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        );
+        let mut bytes = request.into_bytes();
+        bytes.extend_from_slice(&body);
+
+        let response = issue_request(&server.endpoint, &bytes).await;
+        assert!(response.starts_with(b"HTTP/1.1 400 Bad Request"));
+
+        let expected_error = decode_strategy_query(&body)
+            .expect_err("malformed payload should fail to decode")
+            .to_string();
+        assert_eq!(response_text(&response), expected_error);
+    }
+
+    #[tokio::test]
+    async fn server_rejects_oversized_request_body() {
+        let server = spawn_test_server().await;
+        let oversized_length = (1024 * 1024) + 1;
+        let request = format!(
+            "POST /strategy HTTP/1.1\r\nHost: localhost\r\nContent-Length: {oversized_length}\r\nConnection: close\r\n\r\n",
+        );
+
+        let response = issue_request(&server.endpoint, request.as_bytes()).await;
+        assert!(response.starts_with(b"HTTP/1.1 400 Bad Request"));
+        assert_eq!(
+            response_text(&response),
+            RequestReadError::RequestTooLarge.to_string()
+        );
+    }
+
+    #[tokio::test]
+    async fn server_handles_concurrent_strategy_requests_without_corruption() {
+        let server = spawn_test_server().await;
+        let strategy_request = sample_strategy_request();
+        let mut tasks = Vec::new();
+
+        for _ in 0..16 {
+            let endpoint = server.endpoint.clone();
+            let request = strategy_request.clone();
+            tasks.push(tokio::spawn(async move {
+                issue_request(&endpoint, &request).await
+            }));
+        }
+
+        let mut first_body: Option<Vec<u8>> = None;
+        for task in tasks {
+            let response = timeout(Duration::from_secs(5), task)
+                .await
+                .expect("concurrent request should finish before timeout")
+                .expect("request task should not panic");
+            assert!(response.starts_with(b"HTTP/1.1 200 OK"));
+
+            let body = response_body(&response).to_vec();
+            decode_strategy_response(&body).expect("response body should decode");
+            if let Some(expected) = &first_body {
+                assert_eq!(&body, expected, "all concurrent responses should match");
+            } else {
+                first_body = Some(body);
+            }
+        }
+    }
+
+    async fn issue_request(endpoint: &str, request: &[u8]) -> Vec<u8> {
+        let mut stream = TcpStream::connect(endpoint)
+            .await
+            .expect("server should accept connection");
+        stream
+            .write_all(request)
+            .await
+            .expect("request should write");
+        let mut response = Vec::new();
+        stream
+            .read_to_end(&mut response)
+            .await
+            .expect("response should read");
+        response
+    }
+
+    async fn spawn_test_server() -> TestServer {
         let root = unique_temp_root();
         let encoder_dir = root.join("encoder");
         let checkpoint_path = root.join("checkpoints").join("latest.bin");
@@ -533,14 +661,14 @@ mod tests {
         let endpoint = server.report().connect_endpoint.clone();
         let task = tokio::spawn(server.serve());
 
-        let health = issue_request(
-            &endpoint,
-            b"GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
-        )
-        .await;
-        assert!(health.starts_with(b"HTTP/1.1 200 OK"));
-        assert!(String::from_utf8_lossy(&health).contains("\"status\":\"ok\""));
+        TestServer {
+            root,
+            endpoint,
+            task,
+        }
+    }
 
+    fn sample_strategy_request() -> Vec<u8> {
         let query = NlheStrategyQuery::new(NlheInfoKey {
             subgame: 0,
             bucket: 0,
@@ -552,29 +680,20 @@ mod tests {
             "POST /strategy HTTP/1.1\r\nHost: localhost\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
             query_body.len()
         );
-        let mut strategy_request = request.into_bytes();
-        strategy_request.extend_from_slice(&query_body);
-        let strategy = issue_request(&endpoint, &strategy_request).await;
-        assert!(strategy.starts_with(b"HTTP/1.1 200 OK"));
-
-        task.abort();
-        let _ = std::fs::remove_dir_all(root);
+        let mut bytes = request.into_bytes();
+        bytes.extend_from_slice(&query_body);
+        bytes
     }
 
-    async fn issue_request(endpoint: &str, request: &[u8]) -> Vec<u8> {
-        let mut stream = TcpStream::connect(endpoint)
-            .await
-            .expect("server should accept connection");
-        stream
-            .write_all(request)
-            .await
-            .expect("request should write");
-        let mut response = Vec::new();
-        stream
-            .read_to_end(&mut response)
-            .await
-            .expect("response should read");
-        response
+    fn response_body(response: &[u8]) -> &[u8] {
+        let Some(header_end) = response.windows(4).position(|window| window == b"\r\n\r\n") else {
+            panic!("response should contain a header terminator");
+        };
+        &response[header_end + 4..]
+    }
+
+    fn response_text(response: &[u8]) -> String {
+        String::from_utf8_lossy(response_body(response)).into_owned()
     }
 
     fn sample_encoder_streets()
