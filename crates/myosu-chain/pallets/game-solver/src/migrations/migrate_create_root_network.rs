@@ -8,6 +8,7 @@ use frame_support::{
 use sp_std::vec::Vec;
 use subtensor_runtime_common::NetUid;
 
+// Retained for default-build tests that still exercise root-network setup.
 // TODO (camfairchild): TEST MIGRATION
 
 /// Module containing deprecated storage format for LoadedEmission

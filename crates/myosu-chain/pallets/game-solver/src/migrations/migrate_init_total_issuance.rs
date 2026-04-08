@@ -3,6 +3,7 @@ use frame_support::pallet_prelude::{Identity, OptionQuery, Weight};
 use frame_support::storage_alias;
 use sp_std::vec::Vec;
 
+// Retained because the runtime's live Migrations tuple still executes it.
 // TODO: Implement comprehensive tests for this migration
 
 /// Module containing deprecated storage format for LoadedEmission

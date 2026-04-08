@@ -10,28 +10,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 1: Reduce and Clean
 
-- [ ] `DEBT-004` Inherited migration file cleanup
-
-  Spec: `specs/070426-technical-debt-surface.md`
-  Why now: 57 `migrate_*.rs` files exist in `pallets/game-solver/src/migrations/`. The `mod.rs` only imports 2 (`migrate_create_root_network`, `migrate_init_total_issuance`). The runtime `Migrations` type only wires `migrate_init_total_issuance`. The other 55 files are dead on disk — not compiled, not referenced. They reference subtensor-era state (Alpha/TAO dual-token, root network, EVM, commit-reveal V2/V3, specific subnet IDs) that myosu has never had.
-  Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/migrations/mod.rs` imports only `migrate_create_root_network` and `migrate_init_total_issuance`. `crates/myosu-chain/runtime/src/lib.rs:1303-1309` wires only `migrate_init_total_issuance`. `ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l` returns 57.
-  Owns: Delete 55 unreferenced `migrate_*.rs` files. Retain `migrate_init_total_issuance.rs` (wired into runtime Migrations) and `migrate_create_root_network.rs` (referenced by mod.rs — verify if actually needed or can also be removed). Add a one-line comment to each retained file explaining why.
-  Integration touchpoints: `pallets/game-solver/src/migrations/mod.rs`, `runtime/src/lib.rs` Migrations type.
-  Scope boundary: Delete unreferenced files only. Do not modify any migration logic. If `migrate_create_root_network` is only retained as a namespace stub, evaluate whether it can be removed.
-  Acceptance criteria: (1) `ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l` returns 2 or 3. (2) `SKIP_WASM_BUILD=1 cargo check --workspace` succeeds. (3) `cargo test -p pallet-game-solver --quiet -- stage_0` passes. (4) `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --features fast-runtime,try-runtime --quiet devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis` passes.
-  Verification:
-  ```bash
-  ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l
-  # Should be <= 3
-  SKIP_WASM_BUILD=1 cargo check --workspace
-  cargo test -p pallet-game-solver --quiet -- stage_0
-  SKIP_WASM_BUILD=1 cargo test -p myosu-chain --features fast-runtime,try-runtime --quiet devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis
-  ```
-  Required tests: Existing migration smoke test must pass.
-  Dependencies: DEBT-002 (avoids confusion about which migrations directory to clean).
-  Estimated scope: S
-  Completion signal: Migration directory contains only actively-wired migrations.
-
 - [ ] `DEBT-005` Stale document cleanup
 
   Spec: `specs/070426-operator-infrastructure.md`
