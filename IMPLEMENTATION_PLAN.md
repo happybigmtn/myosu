@@ -12,25 +12,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 2: Harden and Measure
 
-- [ ] `TEST-002` Key management corruption recovery test
-
-  Spec: `specs/070426-operator-infrastructure.md`
-  Why now: `myosu-keys` has 19 tests but no concurrent access or corruption recovery coverage. Key files are the operator's most sensitive local state.
-  Codebase evidence: `crates/myosu-keys/src/lib.rs` (1,956 lines). Existing tests cover create, import, export, switch, list operations. No test for corrupted key file handling.
-  Owns: Add at least 1 test: corrupted key file (truncated or garbage bytes) is detected and reported with a clear error, does not panic or silently produce wrong keys.
-  Integration touchpoints: `crates/myosu-keys/src/` key loading and parsing logic.
-  Scope boundary: Test-only changes. Fix loading logic only if the test reveals a real panic (then fix minimally).
-  Acceptance criteria: (1) Test exists that writes a corrupted key file and verifies the load path returns an error. (2) No panic on corrupted input. (3) Existing tests pass.
-  Verification:
-  ```bash
-  SKIP_WASM_BUILD=1 cargo test -p myosu-keys --quiet
-  SKIP_WASM_BUILD=1 cargo test -p myosu-keys --quiet -- corrupt
-  ```
-  Required tests: 1 corruption recovery test.
-  Dependencies: GATE-001.
-  Estimated scope: XS
-  Completion signal: Key corruption is handled gracefully.
-
 - [ ] `TEST-003` Cross-game scoring fairness documentation test
 
   Spec: `specs/070426-validator-subsystem.md`

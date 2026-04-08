@@ -637,6 +637,32 @@ mod tests {
     }
 
     #[test]
+    fn corrupted_active_keyfile_returns_parse_error_without_panicking() {
+        let root = temp_root("corrupt-keyfile");
+        let stored = save_mnemonic(&root, &generate_mnemonic(), "hunter2", "devnet")
+            .expect("save should succeed");
+        fs::write(&stored.key_path, "{\"version\": 1,").expect("corrupt key write should succeed");
+
+        let error = match load_active_pair(&root, "hunter2") {
+            Ok(_) => panic!("corrupted key should fail"),
+            Err(error) => error,
+        };
+
+        match error {
+            crate::KeyError::DeserializeKeyfile { ref path, .. } => {
+                assert_eq!(path, &stored.key_path);
+            }
+            other => panic!("expected parse error for corrupted keyfile, got {other}"),
+        }
+        assert!(
+            error.to_string().contains("failed to parse key file"),
+            "error should explain the corrupted keyfile parse failure: {error}"
+        );
+
+        fs::remove_dir_all(&root).expect("temp root should clean");
+    }
+
+    #[test]
     fn mnemonic_keystore_loads_as_standard_secret_uri() {
         let root = temp_root("secret-uri");
         let mnemonic = generate_mnemonic();

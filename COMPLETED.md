@@ -1,5 +1,17 @@
 # COMPLETED
 
+- `TEST-002` Added corrupted-keyfile recovery coverage in
+  [crates/myosu-keys/src/storage.rs](/home/r/coding/myosu/crates/myosu-keys/src/storage.rs)
+  by exercising the real `load_active_pair()` path against a deliberately
+  truncated active key JSON file. The new regression proves `myosu-keys`
+  returns `KeyError::DeserializeKeyfile` with a clear parse-failure message
+  instead of panicking or silently producing bad key material, and the task
+  plan’s claim about missing corruption coverage is now closed. Removed
+  `TEST-002` from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-keys --quiet -- corrupt`; `SKIP_WASM_BUILD=1 cargo test -p myosu-keys --quiet`.
+  Commit: `PENDING`
+
 - `TEST-001` Added miner HTTP axon security coverage in
   [crates/myosu-miner/src/axon.rs](/home/r/coding/myosu/crates/myosu-miner/src/axon.rs)
   for the live TCP server path: malformed `/strategy` payloads now have an
