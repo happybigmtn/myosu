@@ -10,28 +10,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 1: Reduce and Clean
 
-- [ ] `DEBT-002` Delete dead pallet-subtensor directory
-
-  Spec: `specs/070426-technical-debt-surface.md`
-  Why now: 90.6K lines of dead code that confuses search, bloats compilation, and risks accidental linking. The runtime uses `pallet-game-solver` exclusively (aliased as `pallet_subtensor`). DEBT-001 already relocated the two live support crates to `pallets/game-solver/{rpc,runtime-api}`, so nothing in the build should need the dead pallet directory anymore.
-  Codebase evidence: `crates/myosu-chain/pallets/subtensor/src/lib.rs` is 2,750 lines / 92.4K. Not referenced in any `construct_runtime!` call. Not a workspace member. `pallets/subtensor/Cargo.toml` package name is `pallet-subtensor`. Workspace and runtime RPC path deps now point to `crates/myosu-chain/pallets/game-solver/{rpc,runtime-api}` instead.
-  Owns: Delete `crates/myosu-chain/pallets/subtensor/` directory entirely.
-  Integration touchpoints: Workspace Cargo.toml (verify no remaining references), any CI scripts that glob over pallet directories.
-  Scope boundary: Delete only. Do not rename the `pallet_subtensor` alias (that is DEBT-003). Do not modify game-solver code.
-  Acceptance criteria: (1) `crates/myosu-chain/pallets/subtensor/` does not exist. (2) `SKIP_WASM_BUILD=1 cargo check --workspace` succeeds. (3) `cargo test -p pallet-game-solver --quiet -- stage_0` passes. (4) `grep -r "pallets/subtensor" crates/` returns zero results. (5) No Cargo.toml in the workspace references `pallet-subtensor` as a package dependency (the alias `pallet_subtensor = { package = "pallet-game-solver" }` is a different thing and stays).
-  Verification:
-  ```bash
-  test ! -d crates/myosu-chain/pallets/subtensor
-  SKIP_WASM_BUILD=1 cargo check --workspace
-  cargo test -p pallet-game-solver --quiet -- stage_0
-  SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
-  ! grep -rq "pallets/subtensor" crates/
-  ```
-  Required tests: Existing stage-0 and integration tests must pass unchanged.
-  Dependencies: DEBT-001.
-  Estimated scope: S
-  Completion signal: Dead pallet removed, workspace compiles, all tests green.
-
 - [ ] `DEBT-003` Pallet naming normalization
 
   Spec: `specs/070426-technical-debt-surface.md`

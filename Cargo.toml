@@ -104,7 +104,6 @@ pallet-registry = { path = "crates/myosu-chain/pallets/registry", default-featur
 pallet-root-testing = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 pallet-safe-mode = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 pallet-scheduler = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
-pallet-subtensor = { path = "crates/myosu-chain/pallets/subtensor", default-features = false }
 pallet-subtensor-proxy = { path = "crates/myosu-chain/pallets/proxy", default-features = false }
 pallet-subtensor-swap = { path = "crates/myosu-chain/pallets/swap", default-features = false }
 pallet-subtensor-swap-rpc = { path = "crates/myosu-chain/pallets/swap/rpc", default-features = false }
