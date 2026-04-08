@@ -506,7 +506,7 @@ async fn snapshot_subnet(
 ) -> Result<SubnetSnapshot, Box<dyn Error>> {
     let pending_server = storage_at::<AlphaCurrency>(
         client,
-        &map_identity_storage_key("SubtensorModule", "PendingServerEmission", &netuid),
+        &map_identity_storage_key("GameSolver", "PendingServerEmission", &netuid),
         finalized_hash,
     )
     .await?
@@ -514,7 +514,7 @@ async fn snapshot_subnet(
     .unwrap_or_default();
     let pending_validator = storage_at::<AlphaCurrency>(
         client,
-        &map_identity_storage_key("SubtensorModule", "PendingValidatorEmission", &netuid),
+        &map_identity_storage_key("GameSolver", "PendingValidatorEmission", &netuid),
         finalized_hash,
     )
     .await?
@@ -522,7 +522,7 @@ async fn snapshot_subnet(
     .unwrap_or_default();
     let pending_root = storage_at::<AlphaCurrency>(
         client,
-        &map_identity_storage_key("SubtensorModule", "PendingRootAlphaDivs", &netuid),
+        &map_identity_storage_key("GameSolver", "PendingRootAlphaDivs", &netuid),
         finalized_hash,
     )
     .await?
@@ -530,7 +530,7 @@ async fn snapshot_subnet(
     .unwrap_or_default();
     let pending_owner_cut = storage_at::<AlphaCurrency>(
         client,
-        &map_identity_storage_key("SubtensorModule", "PendingOwnerCut", &netuid),
+        &map_identity_storage_key("GameSolver", "PendingOwnerCut", &netuid),
         finalized_hash,
     )
     .await?
@@ -540,7 +540,7 @@ async fn snapshot_subnet(
     let incentives = storage_at::<Vec<u16>>(
         client,
         &map_identity_storage_key(
-            "SubtensorModule",
+            "GameSolver",
             "Incentive",
             &NetUidStorageIndex::from(netuid),
         ),
@@ -550,14 +550,14 @@ async fn snapshot_subnet(
     .unwrap_or_default();
     let dividends = storage_at::<Vec<u16>>(
         client,
-        &map_identity_storage_key("SubtensorModule", "Dividends", &netuid),
+        &map_identity_storage_key("GameSolver", "Dividends", &netuid),
         finalized_hash,
     )
     .await?
     .unwrap_or_default();
     let emissions = storage_at::<Vec<AlphaCurrency>>(
         client,
-        &map_identity_storage_key("SubtensorModule", "Emission", &netuid),
+        &map_identity_storage_key("GameSolver", "Emission", &netuid),
         finalized_hash,
     )
     .await?
@@ -568,7 +568,7 @@ async fn snapshot_subnet(
 
     let member_count = storage_at::<u16>(
         client,
-        &map_identity_storage_key("SubtensorModule", "SubnetworkN", &netuid),
+        &map_identity_storage_key("GameSolver", "SubnetworkN", &netuid),
         finalized_hash,
     )
     .await?
@@ -577,7 +577,7 @@ async fn snapshot_subnet(
     for uid in 0..member_count {
         let hotkey = storage_at::<AccountId32>(
             client,
-            &double_map_identity_identity_storage_key("SubtensorModule", "Keys", &netuid, &uid),
+            &double_map_identity_identity_storage_key("GameSolver", "Keys", &netuid, &uid),
             finalized_hash,
         )
         .await?
@@ -585,7 +585,7 @@ async fn snapshot_subnet(
         let stake = storage_at::<AlphaCurrency>(
             client,
             &double_map_blake2_identity_storage_key(
-                "SubtensorModule",
+                "GameSolver",
                 "TotalHotkeyAlpha",
                 &hotkey,
                 &netuid,
@@ -618,7 +618,7 @@ async fn collect_snapshot(
 ) -> Result<NodeSnapshot, Box<dyn Error>> {
     let total_issuance = storage_at::<TaoCurrency>(
         client,
-        &storage_prefix("SubtensorModule", "TotalIssuance"),
+        &storage_prefix("GameSolver", "TotalIssuance"),
         finalized_hash,
     )
     .await?
@@ -626,7 +626,7 @@ async fn collect_snapshot(
     .unwrap_or_default();
     let total_stake = storage_at::<TaoCurrency>(
         client,
-        &storage_prefix("SubtensorModule", "TotalStake"),
+        &storage_prefix("GameSolver", "TotalStake"),
         finalized_hash,
     )
     .await?

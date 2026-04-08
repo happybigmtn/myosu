@@ -1,5 +1,25 @@
 # COMPLETED
 
+- `GATE-003` Verified the Phase 2 hardening gate against the live repo state,
+  recorded the decision in
+  [ops/evidence/gate-003-phase-2-checkpoint-2026-04-08.md](/home/r/coding/myosu/ops/evidence/gate-003-phase-2-checkpoint-2026-04-08.md),
+  and removed the task from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
+  The gate surfaced one real blocker instead of closing cleanly on the first
+  pass: the repo-owned
+  [tests/e2e/cross_node_emission.sh](/home/r/coding/myosu/tests/e2e/cross_node_emission.sh)
+  proof was still reading runtime storage through the stale `SubtensorModule`
+  prefix after the live pallet rename to `GameSolver`, which made the
+  comparison snapshot read zero emissions and fail its own non-zero assertion.
+  This increment updated that E2E driver to the live storage prefix, reran the
+  proof green, and then closed the gate with the full workspace suite plus all
+  seven repo-owned E2E scripts passing. `WORKLIST.md` already resolves
+  `EM-DUST-001` and truthfully narrows `MINER-QUAL-001` to the remaining
+  poker-only follow-on, so Phase 3 packaging can proceed without bluffing that
+  poker quality measurement is solved.
+  Validation: `test -f docs/adr/011-emission-dust-policy.md`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`; `bash tests/e2e/local_loop.sh`; `bash tests/e2e/two_node_sync.sh`; `bash tests/e2e/four_node_finality.sh`; `bash tests/e2e/consensus_resilience.sh`; `bash tests/e2e/cross_node_emission.sh`; `bash tests/e2e/validator_determinism.sh`; `bash tests/e2e/emission_flow.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_plan_quality.sh`.
+  Commit: `PENDING`
+
 - `BENCH-001` Added a truthful Liar's Dice quality benchmark in
   [crates/myosu-validator/src/validation.rs](/home/r/coding/myosu/crates/myosu-validator/src/validation.rs)
   that bypasses the validator same-checkpoint path and measures the solver's

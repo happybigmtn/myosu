@@ -12,28 +12,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 2: Harden and Measure
 
-- [ ] `GATE-003` Phase 2 decision gate
-
-  Spec: `specs/070426-validator-subsystem.md`
-  Why now: Verify that Phase 2 hardening is complete before proceeding to operator packaging. Emission dust decided, test gaps closed, Liar's Dice quality benchmark exists.
-  Codebase evidence: Verification against all Phase 2 task outputs.
-  Owns: Run full verification suite and produce a decision artifact.
-  Integration touchpoints: All Phase 2 outputs.
-  Scope boundary: Verification only.
-  Acceptance criteria: (1) Emission dust policy ADR exists. (2) `try_state` threshold justified. (3) HTTP axon security tests exist. (4) Key corruption test exists. (5) Cross-game scoring documented. (6) Liar's Dice quality benchmark exists with minimum iterations documented. (7) All CI jobs green. (8) All E2E scripts pass. (9) WORKLIST.md `EM-DUST-001` and `MINER-QUAL-001` resolved or have concrete follow-on.
-  Verification:
-  ```bash
-  SKIP_WASM_BUILD=1 cargo test --workspace --quiet
-  bash tests/e2e/local_loop.sh
-  bash tests/e2e/emission_flow.sh
-  bash tests/e2e/validator_determinism.sh
-  test -f docs/adr/011-emission-dust-policy.md
-  ```
-  Required tests: Full suite plus all E2E scripts.
-  Dependencies: EMIT-001, TEST-001, TEST-002, TEST-003, BENCH-001.
-  Estimated scope: XS
-  Completion signal: Decision artifact produced. Green = proceed to Phase 3.
-
 ### Phase 3: Package and Document
 
 - [ ] `OPS-001` README and onboarding overhaul
