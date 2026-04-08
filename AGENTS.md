@@ -272,6 +272,8 @@ Primary local commands:
 bash .github/scripts/check_doctrine_integrity.sh
 SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
 SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test
+docker build --target chain-runtime -t myosu-chain .
+docker compose up --build --abort-on-container-exit --exit-code-from validator
 ```
 
 Preferred runtime truth sources:
@@ -311,6 +313,7 @@ Runtime wasm cache for node smoke proofs:
 - `bash ops/deploy-bootnode.sh --dry-run` now prepares `target/bootnode/devnet/` with a stable node key, launcher script, systemd unit, and metadata file, then prints the truthful bootnode multiaddr without starting the process
 - `env MYOSU_KEY_PASSWORD=... bash .github/scripts/prepare_operator_network_bundle.sh` now defaults to `target/operator-network-bundle/`, reads bootnode metadata from that `ops/deploy-bootnode.sh --dry-run` surface, and rewrites the bundled `devnet-spec.json` with the same `bootnode_multiaddr`; `bash .github/scripts/check_operator_network_bootstrap.sh` is the truthful proof for that operator bundle contract
 - `bash .github/scripts/check_operator_network_fresh_machine.sh` is the truthful `F-001` proof: it runs the operator bundle inside `ubuntu:22.04`, installs the required host packages + Rust targets, launches the local authority-backed `devnet`, funds a generated operator key, and verifies miner/validator bootstrap end to end
+- The repo-owned container proof uses `docker build --target chain-runtime -t myosu-chain .` plus `docker compose up --build --abort-on-container-exit --exit-code-from validator`; the compose stack intentionally uses the built-in `devnet` spec so subnet `7` and the named devnet keys already exist, the chain service must keep `--rpc-cors all` so the helper curl health checks can hit `http://chain:9944`, the miner container keeps running as the live HTTP axon after its bounded bootstrap pass, and the validator container is the authoritative exit-code source for the full proof
 - The quickstart's local authority-backed `devnet` only launches `authority-1` out of a four-authority chain spec, so local operator transactions often wait roughly 48 seconds per authored block; miner registration / axon publish / validator stake flows should use minute-scale timeouts, not the old 20-second budget
 - `bash .github/scripts/prepare_operator_network_bundle.sh <bundle-dir> <config-dir>` reuses the existing operator keystore when you pass the second `config-dir` argument; omitting it makes the helper use a bundle-local config tree instead
 - `bash ops/release.sh --dry-run v0.1.0` now materializes a versioned operator bundle and `release-notes.md` under `target/releases/v0.1.0/`, injects release metadata into the generated `bundle-manifest.toml`, auto-seeds a temporary password env only for dry-run, and does not mutate git state

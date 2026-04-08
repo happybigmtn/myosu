@@ -49,6 +49,35 @@ SKIP_WASM_BUILD=1 cargo build -p myosu-chain --features fast-runtime
 SKIP_WASM_BUILD=1 cargo build -p myosu-chain-client -p myosu-keys -p myosu-games-poker -p myosu-miner -p myosu-validator
 ```
 
+## Optional: Containerized Devnet
+
+If you want the repo-owned single-host devnet without installing the Rust
+toolchain on the host, the checked-in `Dockerfile` and `docker-compose.yml`
+now provide a stage-0 container path:
+
+```bash
+docker build --target chain-runtime -t myosu-chain .
+docker compose up --build --abort-on-container-exit --exit-code-from validator
+```
+
+That compose flow starts:
+
+- one `devnet` authority node using `//myosu//devnet//authority-1`
+- one miner container using `//myosu//devnet//miner-1`
+- one validator container that first enables subnet staking as
+  `//myosu//devnet//subnet-owner`, then scores/submits weights as
+  `//myosu//devnet//validator-1`
+
+The compose proof intentionally uses the built-in `devnet` chain spec because
+it already bootstraps subnet `7` and funds those named accounts. The miner
+container writes the bounded poker checkpoint to a shared Docker volume, then
+stays up as the live HTTP axon while the validator container exits with the
+proof status. Clean up the local Docker state with:
+
+```bash
+docker compose down -v
+```
+
 ## 2. Create and Inspect an Operator Key
 
 Create a keystore, print the active account, and print the repo-owned bootstrap

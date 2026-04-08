@@ -14,26 +14,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 3: Package and Document
 
-- [ ] `OPS-003` Container packaging research and implementation
-
-  Spec: `specs/070426-operator-infrastructure.md`
-  Why now: Operators currently must compile from source with Rust nightly, WASM target, and protoc. Cold compilation takes 10-30 minutes. Containerization is the single highest-impact operator experience improvement. However, WASM build inside Docker is untested and may require 8+ GB RAM.
-  Codebase evidence: No Dockerfile, docker-compose, or container configs exist anywhere in the repo. `.github/scripts/check_operator_network_fresh_machine.sh` proves the full operator flow inside `ubuntu:22.04`, so compilation requirements are well-understood.
-  Owns: (1) Research: verify WASM build works inside Docker with acceptable resource requirements. (2) If feasible: create multi-stage Dockerfile(s) for chain, miner, validator. (3) Create docker-compose.yml for single-authority devnet with miner and validator. (4) If WASM build exceeds 16GB RAM or 30 minutes: document the limitation and consider pre-built WASM approach.
-  Integration touchpoints: New files at repo root: `Dockerfile` (or `Dockerfile.chain`, `Dockerfile.miner`), `docker-compose.yml`. Chain spec configuration for containerized devnet.
-  Scope boundary: Devnet containers only. No production deployment. No Kubernetes. No CI Docker image building (follow-on).
-  Acceptance criteria: (1) `docker build` succeeds for at least the chain binary. (2) `docker compose up` produces logs showing chain block production + miner registration + validator scoring. (3) Container images under 500MB each. (4) No secrets baked into images. (5) If WASM build is infeasible inside Docker, the decision is documented in an ADR.
-  Verification:
-  ```bash
-  docker build -t myosu-chain -f Dockerfile.chain .
-  docker compose up --abort-on-container-exit 2>&1 | tail -20
-  docker images myosu-chain --format '{{.Size}}'
-  ```
-  Required tests: `docker compose up` produces the expected lifecycle logs.
-  Dependencies: GATE-003 (binaries should be in final form before containerizing).
-  Estimated scope: M
-  Completion signal: Operator can `docker compose up` and see a working devnet.
-
 ---
 
 ## Follow-On Work

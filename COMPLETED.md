@@ -1,5 +1,24 @@
 # COMPLETED
 
+- `OPS-003` Added a repo-owned container packaging path for the stage-0
+  operator workflow with a multi-stage
+  [Dockerfile](/home/r/coding/myosu/Dockerfile), a single-host
+  [docker-compose.yml](/home/r/coding/myosu/docker-compose.yml), and runtime
+  entrypoint helpers under
+  [ops/docker/](/home/r/coding/myosu/ops/docker/). The compose proof now
+  boots the built-in `devnet` chain spec inside Docker, starts an authority
+  node with the named `//myosu//devnet//authority-1` key, runs a bounded miner
+  bootstrap that writes the shared checkpoint and stays up as the live HTTP
+  axon, and exits from the validator container only after enabling subnet
+  staking, scoring the miner response, and submitting weights on subnet `7`.
+  The operator docs in
+  [docs/operator-guide/quickstart.md](/home/r/coding/myosu/docs/operator-guide/quickstart.md)
+  and the operational notes in
+  [AGENTS.md](/home/r/coding/myosu/AGENTS.md) now point at that compose-based
+  proof surface instead of source-only setup.
+  Validation: `docker build --target chain-runtime -t myosu-chain .`; `docker build --target miner-runtime -t myosu-miner .`; `docker build --target validator-runtime -t myosu-validator .`; `docker compose up --build --abort-on-container-exit --exit-code-from validator`; `docker image inspect myosu-chain myosu-miner myosu-validator --format '{{.RepoTags}} {{.Size}}'`; `docker compose down -v`; `bash .github/scripts/check_doctrine_integrity.sh`.
+  Commit: `691bba2`
+
 - `OPS-001` Reworked
   [README.md](/home/r/coding/myosu/README.md) into a truthful onboarding
   surface for the current stage-0 repo: it now lists the missing prerequisites

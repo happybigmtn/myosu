@@ -1,0 +1,17 @@
+.auto
+.git
+.github
+__pycache__
+archive
+gen-*
+genesis
+loop
+nemesis
+outputs
+ralph
+research
+results.json
+state
+target
+tests
+Untitled.ipynb
