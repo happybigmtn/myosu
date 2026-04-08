@@ -11,7 +11,7 @@
   removed `EMIT-001` from
   [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `test -f docs/adr/011-emission-dust-policy.md`; `cargo test -p pallet-game-solver --quiet -- truncation`; `cargo test -p pallet-game-solver --quiet -- stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget`; `bash tests/e2e/emission_flow.sh`; `bash .github/scripts/check_doctrine_integrity.sh`.
-  Commit: `PENDING`
+  Commit: `2c5eb39`
 
 - `GATE-001` Verified the Phase 1 cleanup gate and recorded the decision in
   [ops/evidence/gate-001-phase-1-checkpoint-2026-04-08.md](/home/r/coding/myosu/ops/evidence/gate-001-phase-1-checkpoint-2026-04-08.md):
