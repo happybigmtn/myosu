@@ -12,7 +12,7 @@
   still talks about the old `pallet_subtensor` alias, while the live runtime and
   queue acceptance criteria correctly use `pallet_game_solver` / `GameSolver`.
   Validation: `test ! -d crates/myosu-chain/pallets/subtensor`; `ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l`; `SKIP_WASM_BUILD=1 cargo check --workspace`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`; `cargo test -p pallet-game-solver --quiet -- stage_0`; `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`; `bash tests/e2e/local_loop.sh`; `bash tests/e2e/emission_flow.sh`; `bash .github/scripts/check_doctrine_integrity.sh`.
-  Commit: `PENDING`
+  Commit: `6e3b88f`
 
 - `DEBT-005` Cleaned the stale root documentation surfaces so they no longer
   present the nonexistent Fabro/Raspberry control plane as current repo truth:
