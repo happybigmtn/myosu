@@ -12,25 +12,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 2: Harden and Measure
 
-- [ ] `BENCH-001` Miner quality benchmark surface for Liar's Dice
-
-  Spec: `specs/070426-miner-subsystem.md`
-  Why now: The current validator self-scores the miner checkpoint — identical checkpoint in and out always produces `exact_match=true, score=1.0`. This is a determinism proof, not a quality benchmark. Liar's Dice has a complete native solver with no external encoder dependency, making it the viable first target for a truthful quality benchmark. Poker is blocked on sparse encoder artifacts (WORKLIST.md `MINER-QUAL-001`).
-  Codebase evidence: `crates/myosu-validator/src/validation.rs` — `score_response()` compares against `solver.answer(query)` from the validator CLI checkpoint. `crates/myosu-games-liars-dice/` has a complete MCCFR implementation with no external dependency. WORKLIST.md `MINER-QUAL-001` documents the self-scoring limitation.
-  Owns: (1) Add a benchmark test or command that trains a Liar's Dice strategy for varying iterations and measures exploitability independent of the self-scoring path. (2) Document minimum recommended training iterations for Liar's Dice based on measured exploitability convergence. (3) Update WORKLIST.md `MINER-QUAL-001` with the chosen approach.
-  Integration touchpoints: `crates/myosu-validator/`, `crates/myosu-games-liars-dice/`, WORKLIST.md, operator guide.
-  Scope boundary: Liar's Dice only. Do not attempt poker benchmark (blocked on encoder). Do not change validator scoring logic. Do not enforce minimum iterations in code (guidance only).
-  Acceptance criteria: (1) A test or command exists that measures Liar's Dice strategy exploitability after N iterations. (2) Exploitability decreases with more iterations (convergence proof). (3) Minimum training iteration recommendation documented for Liar's Dice. (4) WORKLIST.md `MINER-QUAL-001` updated. (5) Poker benchmark explicitly documented as blocked on encoder artifacts.
-  Verification:
-  ```bash
-  SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- quality_benchmark
-  SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet
-  ```
-  Required tests: Quality benchmark test showing exploitability convergence for Liar's Dice.
-  Dependencies: GATE-002, TEST-003.
-  Estimated scope: M
-  Completion signal: Liar's Dice has a truthful quality benchmark with documented minimum iterations.
-
 - [ ] `GATE-003` Phase 2 decision gate
 
   Spec: `specs/070426-validator-subsystem.md`

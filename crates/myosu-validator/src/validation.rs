@@ -427,6 +427,12 @@ mod tests {
 
     use super::*;
 
+    #[derive(Clone, Copy, Debug)]
+    struct LiarsDiceBenchmarkPoint {
+        iterations: usize,
+        exploitability: f32,
+    }
+
     #[test]
     fn validation_plan_requires_both_artifact_paths() {
         let cli = Cli {
@@ -741,8 +747,60 @@ mod tests {
         );
     }
 
+    #[test]
+    fn quality_benchmark_liars_dice_exploitability_converges() {
+        // This bypasses the validator self-check path and measures the
+        // solver's exact exploitability directly.
+        let benchmark = liars_dice_benchmark_points(&[0, 128, 256, 512]);
+
+        assert!(
+            benchmark
+                .windows(2)
+                .all(|pair| pair[1].exploitability < pair[0].exploitability),
+            "expected exploitability to decrease across benchmark points: {:?}",
+            benchmark
+        );
+
+        let baseline_drop =
+            benchmark[0].exploitability - benchmark[benchmark.len() - 1].exploitability;
+        assert!(
+            baseline_drop >= 0.15,
+            "expected 512 iterations to materially improve exploitability: {:?}",
+            benchmark
+        );
+
+        let recommended = benchmark
+            .iter()
+            .find(|point| point.exploitability <= 0.70)
+            .map(|point| point.iterations);
+        assert_eq!(
+            recommended,
+            Some(512),
+            "expected the benchmark ladder to recommend 512 iterations: {:?}",
+            benchmark
+        );
+    }
+
     fn weighted_solver() -> PokerSolver {
         PokerSolver::from_parts(weighted_profile(sample_info()), sample_encoder())
+    }
+
+    fn liars_dice_benchmark_points(iterations: &[usize]) -> Vec<LiarsDiceBenchmarkPoint> {
+        iterations
+            .iter()
+            .copied()
+            .map(|iterations| {
+                let mut solver = LiarsDiceSolver::<LIARS_DICE_SOLVER_TREES>::new();
+                solver
+                    .train(iterations)
+                    .expect("benchmark training should succeed");
+
+                LiarsDiceBenchmarkPoint {
+                    iterations,
+                    exploitability: solver.exact_exploitability(),
+                }
+            })
+            .collect()
     }
 
     fn poker_one_hot_least_likely_action(

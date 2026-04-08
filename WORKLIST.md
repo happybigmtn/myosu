@@ -10,7 +10,17 @@
 - `CI-SEC-001` Decide whether to replace `dtolnay/rust-toolchain` with `rustup` script steps or carry an explicit `zizmor` allowance. Raw `zizmor .github/workflows/ci.yml` is now clean on pinning/permissions/artifact risks but still emits six low-severity `superfluous-actions` advisories against the current helper action.
 - `AXON-HTTP-001` Revisit Liar's Dice HTTP axon parity only if remote validator queries become necessary. Stage-0 now intentionally keeps `myosu-miner --serve-http` poker-only and uses the bounded file-based query/response path for Liar's Dice validation.
 - `CHAIN-SDK-001` Triage the 21 fork-only `opentensor/polkadot-sdk` commits against upstream `stable2506` before attempting any re-pin. `docs/adr/009-polkadot-sdk-migration-feasibility.md` shows the delta is moderate but consensus-path heavy (`sc-grandpa`, `sc-babe`, txpool, `frame-system`, `frame-support` dispatch, `sc-cli`, `sc-keystore`), so migration work should start with patch classification, not a blind dependency swap.
-- `MINER-QUAL-001` Add a truthful miner-quality benchmark surface so `F-007` can be executed without scope creep. The current validator path still self-scores the miner checkpoint (`myosu-validator` compares the observed response against `solver.answer(query)` from the checkpoint supplied on the validator CLI), and the checked-in poker bootstrap artifacts remain intentionally sparse enough that positive-iteration poker training fails upstream with `isomorphism not found`. Either richer poker encoder artifacts or an independent reference-checkpoint/exploitability benchmark is needed before the queue can truthfully document minimum training iterations.
+- `MINER-QUAL-001` Narrowed 2026-04-08 by the new Liar's Dice
+  `quality_benchmark` proof in
+  [crates/myosu-validator/src/validation.rs](/home/r/coding/myosu/crates/myosu-validator/src/validation.rs)
+  and the operator guidance in
+  [docs/operator-guide/quickstart.md](/home/r/coding/myosu/docs/operator-guide/quickstart.md):
+  the repo now has a truthful, exploitability-based Liar's Dice benchmark and a
+  current recommendation of `512` minimum training iterations. The remaining
+  blocker is poker only. The validator's same-checkpoint path still self-scores
+  the miner response, and the checked-in poker bootstrap artifacts remain
+  intentionally sparse enough that positive-iteration poker training fails
+  upstream with `isomorphism not found`.
 
 ## 2026-04-08 follow-ups
 

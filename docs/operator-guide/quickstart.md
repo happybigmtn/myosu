@@ -234,6 +234,24 @@ Stage-0 decision: `--serve-http` is intentionally poker-only. For
 (`--query-file`/`--response-file`) instead of the live HTTP axon. The
 cross-validator determinism proof follows that file-based path today.
 
+For Liar's Dice quality work, do not use the current validator
+same-checkpoint path as a convergence metric. The truthful benchmark is:
+
+```bash
+SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- quality_benchmark
+```
+
+The current benchmark ladder measures exact exploitability at 0, 128, 256, and
+512 training iterations. On the pinned stage-0 solver constants, exploitability
+falls from about `0.880` at 0 iterations to `0.823` at 128, `0.753` at 256,
+and `0.674` at 512. Treat `512` iterations as the current minimum meaningful
+Liar's Dice training floor; `1024` iterations measured about `0.560` and are a
+better local target when the runtime budget allows.
+
+Poker remains blocked for the same quality-benchmark workflow. The checked-in
+bootstrap encoder artifacts are still intentionally sparse, so positive-iteration
+poker training continues to fail upstream with `isomorphism not found`.
+
 ## 7. Start a Validator
 
 The current validator surface is a bounded bootstrap/scoring command, not a
