@@ -22,7 +22,7 @@
   real full-encoder exploitability ladder and choosing a poker minimum
   iteration floor.
   Validation: `cargo test -p myosu-games-poker --quiet`; `bash -n ops/poker_quality_benchmark.sh`; `bash .github/scripts/check_doctrine_integrity.sh`.
-  Commit: `eb4e192`
+  Commit: `25ffc41` (implementation commit)
 
 - `RES-002` Classified the 21 fork-only `opentensor/polkadot-sdk` commits in
   [ADR 009](/home/r/coding/myosu/docs/adr/009-polkadot-sdk-migration-feasibility.md)
