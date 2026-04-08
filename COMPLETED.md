@@ -1,5 +1,20 @@
 # COMPLETED
 
+- `OPS-001` Reworked
+  [README.md](/home/r/coding/myosu/README.md) into a truthful onboarding
+  surface for the current stage-0 repo: it now lists the missing prerequisites
+  called out by the plan (stable Rust with edition 2024 support, the required
+  WASM targets, and `protoc`), documents
+  `cargo test -p myosu-games-kuhn --quiet` as the fastest meaningful quick
+  verify, separates the developer proof path from the operator path, and
+  points operator onboarding at the maintained
+  [docs/operator-guide/quickstart.md](/home/r/coding/myosu/docs/operator-guide/quickstart.md)
+  instead of duplicating a long command wall in the landing page. Removed the
+  task from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `! grep -q "fabro run" README.md && grep -q "Prerequisites" README.md && grep -q "myosu-games-kuhn" README.md`; `cargo test -p myosu-games-kuhn --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`; `printf 'quit\n' | SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- pipe`.
+  Commit: `PENDING`
+
 - `GATE-003` Verified the Phase 2 hardening gate against the live repo state,
   recorded the decision in
   [ops/evidence/gate-003-phase-2-checkpoint-2026-04-08.md](/home/r/coding/myosu/ops/evidence/gate-003-phase-2-checkpoint-2026-04-08.md),

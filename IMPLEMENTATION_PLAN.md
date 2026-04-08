@@ -14,27 +14,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 3: Package and Document
 
-- [ ] `OPS-001` README and onboarding overhaul
-
-  Spec: `specs/070426-gameplay-advisor-surface.md`
-  Why now: README is the first file a new developer reads. Currently it lacks prerequisites, references broken fabro commands, and doesn't document the fastest path to success. After Phase 1 cleanup, the README should describe the post-cleanup codebase.
-  Codebase evidence: `README.md` (~143 lines). Missing: Rust edition 2024 prerequisite, WASM target, protoc. Contains `fabro run` commands that fail. Fastest meaningful test (`cargo test -p myosu-games-kuhn --quiet`, ~30s warm cache) is not documented.
-  Owns: (1) Add "Prerequisites" section (Rust 2024 edition, WASM target, protoc). (2) Add "Quick Verify" section with fastest passing command. (3) Remove or replace all `fabro run` commands. (4) Separate "Developer" and "Operator" paths. (5) Point operator path to `docs/operator-guide/quickstart.md`.
-  Integration touchpoints: README.md, `docs/operator-guide/quickstart.md` (link target).
-  Scope boundary: README.md only. Do not rewrite operator guide. Do not add new documentation files.
-  Acceptance criteria: (1) Every command in README succeeds on a fresh checkout with prerequisites installed. (2) `cargo test -p myosu-games-kuhn --quiet` is documented as the quick verify. (3) No `fabro run` commands remain. (4) Prerequisites are listed.
-  Verification:
-  ```bash
-  ! grep -q "fabro run" README.md
-  grep -q "Prerequisites\|prerequisites" README.md
-  grep -q "myosu-games-kuhn" README.md
-  cargo test -p myosu-games-kuhn --quiet
-  ```
-  Required tests: Quick verify command must pass.
-  Dependencies: GATE-001 (README describes post-cleanup state).
-  Estimated scope: S
-  Completion signal: New developer can go from README to green test in under 5 minutes.
-
 - [ ] `OPS-002` Planned Fabro ghost infrastructure resolution
 
   Spec: `specs/070426-operator-infrastructure.md`
