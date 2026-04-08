@@ -14,7 +14,7 @@
   [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md) instead
   of leaving them as runnable.
   Validation: `git -C /tmp/polkadot-sdk-audit rev-list --left-right --count 71629fd93b6c12a362a5cfb6331accef9b2b2b61...upstream/stable2506`; `base=$(git -C /tmp/polkadot-sdk-audit merge-base 71629fd93b6c12a362a5cfb6331accef9b2b2b61 upstream/stable2506) && git -C /tmp/polkadot-sdk-audit log --reverse --format='%H%x09%s' ${base}..71629fd93b6c12a362a5cfb6331accef9b2b2b61`; `rg -n "DispatchGuard =|copy_keys\\(|raw_public_keys|key_phrase_by_type|initial_consensus|HardForks::new_initial_set_id|skip_block_justifications|SingleState" crates/myosu-chain -g '!target'`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`.
-  Commit: `0c40de1`
+  Commit: `5587a9a`
 
 - `OPS-003` Added a repo-owned container packaging path for the stage-0
   operator workflow with a multi-stage
