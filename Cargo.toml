@@ -181,8 +181,8 @@ sp-tracing = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71
 sp-transaction-pool = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 sp-version = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 sp-weights = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
-subtensor-custom-rpc = { path = "crates/myosu-chain/pallets/subtensor/rpc", default-features = false }
-subtensor-custom-rpc-runtime-api = { path = "crates/myosu-chain/pallets/subtensor/runtime-api", default-features = false }
+subtensor-custom-rpc = { path = "crates/myosu-chain/pallets/game-solver/rpc", default-features = false }
+subtensor-custom-rpc-runtime-api = { path = "crates/myosu-chain/pallets/game-solver/runtime-api", default-features = false }
 subtensor-macros = { path = "crates/myosu-chain/support/macros", default-features = false }
 subtensor-runtime-common = { path = "crates/myosu-chain/common", default-features = false }
 subtensor-swap-interface = { path = "crates/myosu-chain/pallets/swap-interface", default-features = false }

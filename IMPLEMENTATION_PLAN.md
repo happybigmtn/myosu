@@ -10,33 +10,11 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 1: Reduce and Clean
 
-- [ ] `DEBT-001` Relocate RPC and runtime-API crates from dead pallet directory
-
-  Spec: `specs/070426-technical-debt-surface.md`
-  Why now: The dead `pallet-subtensor` directory hosts two live subdirectories — `runtime-api/` (14 lines, `subtensor-custom-rpc-runtime-api`) and `rpc/` (82 lines, `subtensor-custom-rpc`) — that the runtime and node still import. These must be moved before the dead pallet can be deleted. This is the single prerequisite for the highest-leverage cleanup task (DEBT-002).
-  Codebase evidence: `Cargo.toml:184-185` defines workspace deps pointing to `crates/myosu-chain/pallets/subtensor/rpc` and `crates/myosu-chain/pallets/subtensor/runtime-api`. `crates/myosu-chain/runtime/Cargo.toml:154` imports `subtensor-custom-rpc-runtime-api`. `crates/myosu-chain/node/Cargo.toml:86-87` imports both. `crates/myosu-chain/node/src/rpc.rs:53` uses `subtensor_custom_rpc::{SubtensorCustom, SubtensorCustomApiServer}`. The runtime-api `lib.rs` already imports from `pallet_game_solver::rpc_info`, not the dead pallet.
-  Owns: Move `pallets/subtensor/runtime-api/` to `pallets/game-solver/runtime-api/` and `pallets/subtensor/rpc/` to `pallets/game-solver/rpc/`. Update all Cargo.toml path references (workspace root, runtime, node). Rename crate packages from `subtensor-custom-rpc*` to `game-solver-rpc*` (or keep names if rename is deferred to DEBT-003).
-  Integration touchpoints: Workspace `Cargo.toml` (lines 184-185), `crates/myosu-chain/runtime/Cargo.toml` (line 154), `crates/myosu-chain/node/Cargo.toml` (lines 86-87), `crates/myosu-chain/node/src/rpc.rs` (line 53).
-  Scope boundary: Move directories and update paths only. Do not rename crate package names yet (that belongs to DEBT-003). Do not modify runtime-api or RPC logic.
-  Acceptance criteria: (1) `pallets/game-solver/runtime-api/` and `pallets/game-solver/rpc/` exist with identical content. (2) No Cargo.toml references `pallets/subtensor/runtime-api` or `pallets/subtensor/rpc`. (3) `SKIP_WASM_BUILD=1 cargo check --workspace` succeeds. (4) `cargo test -p pallet-game-solver --quiet -- stage_0` passes.
-  Verification:
-  ```bash
-  test -d crates/myosu-chain/pallets/game-solver/runtime-api
-  test -d crates/myosu-chain/pallets/game-solver/rpc
-  ! grep -rq "pallets/subtensor/r" Cargo.toml crates/myosu-chain/*/Cargo.toml
-  SKIP_WASM_BUILD=1 cargo check --workspace
-  cargo test -p pallet-game-solver --quiet -- stage_0
-  ```
-  Required tests: Existing stage-0 tests must pass. No new tests needed (logic unchanged).
-  Dependencies: None.
-  Estimated scope: S
-  Completion signal: Workspace compiles with RPC/runtime-API crates living under game-solver.
-
 - [ ] `DEBT-002` Delete dead pallet-subtensor directory
 
   Spec: `specs/070426-technical-debt-surface.md`
-  Why now: 90.6K lines of dead code that confuses search, bloats compilation, and risks accidental linking. The runtime uses `pallet-game-solver` exclusively (aliased as `pallet_subtensor`). After DEBT-001 relocates the live RPC/runtime-API subdirectories, nothing in the build depends on this directory.
-  Codebase evidence: `crates/myosu-chain/pallets/subtensor/src/lib.rs` is 2,750 lines / 92.4K. Not referenced in any `construct_runtime!` call. Not a workspace member. `pallets/subtensor/Cargo.toml` package name is `pallet-subtensor`. After DEBT-001, the only references are `pallets/subtensor/rpc/` and `pallets/subtensor/runtime-api/` which will have been moved.
+  Why now: 90.6K lines of dead code that confuses search, bloats compilation, and risks accidental linking. The runtime uses `pallet-game-solver` exclusively (aliased as `pallet_subtensor`). DEBT-001 already relocated the two live support crates to `pallets/game-solver/{rpc,runtime-api}`, so nothing in the build should need the dead pallet directory anymore.
+  Codebase evidence: `crates/myosu-chain/pallets/subtensor/src/lib.rs` is 2,750 lines / 92.4K. Not referenced in any `construct_runtime!` call. Not a workspace member. `pallets/subtensor/Cargo.toml` package name is `pallet-subtensor`. Workspace and runtime RPC path deps now point to `crates/myosu-chain/pallets/game-solver/{rpc,runtime-api}` instead.
   Owns: Delete `crates/myosu-chain/pallets/subtensor/` directory entirely.
   Integration touchpoints: Workspace Cargo.toml (verify no remaining references), any CI scripts that glob over pallet directories.
   Scope boundary: Delete only. Do not rename the `pallet_subtensor` alias (that is DEBT-003). Do not modify game-solver code.

@@ -12,7 +12,7 @@ const TOML_PATHS: [&str; 8] = [
     "pallets/commitments",
     "pallets/registry",
     "pallets/subtensor",
-    "pallets/subtensor/runtime-api",
+    "pallets/game-solver/runtime-api",
     "pallets/admin-utils",
     "runtime",
     "node",

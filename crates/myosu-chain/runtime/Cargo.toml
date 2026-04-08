@@ -151,7 +151,7 @@ sp-storage = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71
 sp-transaction-pool = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 sp-version = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed.git", tag = "v0.6.0", default-features = false }
-subtensor-custom-rpc-runtime-api = { path = "../pallets/subtensor/runtime-api", default-features = false }
+subtensor-custom-rpc-runtime-api = { path = "../pallets/game-solver/runtime-api", default-features = false }
 subtensor-macros = { path = "../support/macros", default-features = false }
 subtensor-runtime-common = { path = "../common", default-features = false }
 subtensor-swap-interface = { path = "../pallets/swap-interface", default-features = false }
