@@ -1,5 +1,20 @@
 # COMPLETED
 
+- `BENCH-001` Added a truthful Liar's Dice quality benchmark in
+  [crates/myosu-validator/src/validation.rs](/home/r/coding/myosu/crates/myosu-validator/src/validation.rs)
+  that bypasses the validator same-checkpoint path and measures the solver's
+  exact exploitability directly at 0, 128, 256, and 512 iterations. The
+  benchmark proves exploitability decreases materially across that ladder and
+  supports the current operator recommendation in
+  [docs/operator-guide/quickstart.md](/home/r/coding/myosu/docs/operator-guide/quickstart.md)
+  to treat `512` iterations as the minimum meaningful Liar's Dice training
+  floor. Removed `BENCH-001` from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md) and
+  narrowed `WORKLIST.md` `MINER-QUAL-001` to the remaining poker-only blocker
+  around sparse encoder artifacts.
+  Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- quality_benchmark`; `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet`; `bash .github/scripts/check_doctrine_integrity.sh`.
+  Commit: `c8be68f`
+
 - `GATE-002` Verified the Phase 2 hardening checkpoint against the live repo
   state and removed the task from
   [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
