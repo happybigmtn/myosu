@@ -1,5 +1,20 @@
 # COMPLETED
 
+- `TEST-003` Added cross-game scoring documentation coverage in
+  [crates/myosu-validator/src/validation.rs](/home/r/coding/myosu/crates/myosu-validator/src/validation.rs)
+  by exercising the live validator scoring path against the same response
+  degradation pattern in both poker and Liar's Dice: each sampled strategy is
+  collapsed to one weak legal action, then scored through the existing
+  `score_from_l1_distance()` flow. The new `cross_game_*` test records the
+  current stage-0 conclusion in code comments: for this sampled one-hot
+  degradation pattern, both games stay in the same rough score band, which is
+  encouraging for stage-0 fairness but not a proof of universal cross-subnet
+  fairness across all game configs or exploitability units. Removed
+  `TEST-003` from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- cross_game`; `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet`.
+  Commit: `8e47ebe`
+
 - `TEST-002` Added corrupted-keyfile recovery coverage in
   [crates/myosu-keys/src/storage.rs](/home/r/coding/myosu/crates/myosu-keys/src/storage.rs)
   by exercising the real `load_active_pair()` path against a deliberately
