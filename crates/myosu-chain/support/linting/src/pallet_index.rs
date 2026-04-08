@@ -167,7 +167,7 @@ mod tests {
                 Grandpa : pallet_grandpa = 4,
                 Balances : pallet_balances = 5,
                 TransactionPayment : pallet_transaction_payment = 6,
-                SubtensorModule : pallet_subtensor = 7,
+                GameSolver : pallet_game_solver = 7,
                 Utility : pallet_subtensor_utility = 11,
                 Sudo : pallet_sudo = 12,
                 Multisig : pallet_multisig = 13,
@@ -192,7 +192,7 @@ mod tests {
             pub enum Test {
                 System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
                 Balances: pallet_balances::{Pallet, Call, Config<T>, Storage, Event<T>},
-                SubtensorModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>},
+                GameSolver: pallet_game_solver::{Pallet, Call, Storage, Event<T>},
                 Utility: pallet_utility::{Pallet, Call, Storage, Event},
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
                 Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>},
@@ -261,7 +261,7 @@ mod tests {
                 System: frame_system = 1,
                 Balances: pallet_balances = 2,
                 AdminUtils: pallet_admin_utils = 3,
-                SubtensorModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>, Error<T>} = 4,
+                GameSolver: pallet_game_solver::{Pallet, Call, Storage, Event<T>, Error<T>} = 4,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 5,
             }
         }
@@ -277,7 +277,7 @@ mod tests {
             pub enum Test {
                 System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>} = 1,
                 Balances: pallet_balances::{Pallet, Call, Config<T>, Storage, Event<T>},
-                SubtensorModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>} = 7,
+                GameSolver: pallet_game_solver::{Pallet, Call, Storage, Event<T>} = 7,
                 Utility: pallet_utility::{Pallet, Call, Storage, Event} = 8,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 9,
                 Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 10,

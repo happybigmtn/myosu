@@ -83,8 +83,8 @@ sp-session.workspace = true
 sp-state-machine = { workspace = true, features = ["std"] }
 sp-timestamp.workspace = true
 sp-transaction-pool = { workspace = true, features = ["default"] }
-subtensor-custom-rpc = { workspace = true, features = ["std"] }
-subtensor-custom-rpc-runtime-api = { workspace = true, features = ["std"] }
+game-solver-rpc = { workspace = true, features = ["std"] }
+game-solver-rpc-runtime-api = { workspace = true, features = ["std"] }
 subtensor-macros.workspace = true
 subtensor-runtime-common = { workspace = true, features = ["std"] }
 substrate-fixed.workspace = true

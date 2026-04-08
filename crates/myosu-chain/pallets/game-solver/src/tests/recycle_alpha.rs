@@ -22,10 +22,10 @@ fn test_recycle_success() {
         Balances::make_free_balance_be(&coldkey, initial_balance);
 
         // associate coldkey and hotkey
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // add stake to coldkey-hotkey pair so we can recycle it
         let stake = 200_000;
@@ -39,7 +39,7 @@ fn test_recycle_success() {
         let recycle_amount = AlphaCurrency::from(stake / 2);
 
         // recycle
-        assert_ok!(SubtensorModule::recycle_alpha(
+        assert_ok!(GameSolver::recycle_alpha(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             recycle_amount,
@@ -49,16 +49,15 @@ fn test_recycle_success() {
         assert!(TotalHotkeyAlpha::<Test>::get(hotkey, netuid) < initial_alpha);
         assert!(SubnetAlphaOut::<Test>::get(netuid) < initial_net_alpha);
         assert!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid)
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid)
                 < initial_alpha
         );
 
-        assert!(System::events().iter().any(|e| {
-            matches!(
-                &e.event,
-                RuntimeEvent::SubtensorModule(Event::AlphaRecycled(..))
-            )
-        }));
+        assert!(
+            System::events().iter().any(|e| {
+                matches!(&e.event, RuntimeEvent::GameSolver(Event::AlphaRecycled(..)))
+            })
+        );
     });
 }
 
@@ -78,10 +77,10 @@ fn test_recycle_two_stakers() {
         Balances::make_free_balance_be(&coldkey, initial_balance);
 
         // associate coldkey and hotkey
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // add stake to coldkey-hotkey pair so we can recycle it
         let stake = 200_000;
@@ -99,7 +98,7 @@ fn test_recycle_two_stakers() {
         let recycle_amount = AlphaCurrency::from(stake / 2);
 
         // recycle
-        assert_ok!(SubtensorModule::recycle_alpha(
+        assert_ok!(GameSolver::recycle_alpha(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             recycle_amount,
@@ -109,26 +108,21 @@ fn test_recycle_two_stakers() {
         assert!(TotalHotkeyAlpha::<Test>::get(hotkey, netuid) < initial_alpha);
         assert!(SubnetAlphaOut::<Test>::get(netuid) < initial_net_alpha);
         assert!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid)
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid)
                 < stake.into()
         );
         // Make sure the other coldkey has no change
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey,
-                &other_coldkey,
-                netuid
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &other_coldkey, netuid),
             expected_alpha,
             epsilon = 2.into()
         );
 
-        assert!(System::events().iter().any(|e| {
-            matches!(
-                &e.event,
-                RuntimeEvent::SubtensorModule(Event::AlphaRecycled(..))
-            )
-        }));
+        assert!(
+            System::events().iter().any(|e| {
+                matches!(&e.event, RuntimeEvent::GameSolver(Event::AlphaRecycled(..)))
+            })
+        );
     });
 }
 
@@ -148,10 +142,10 @@ fn test_recycle_staker_is_nominator() {
         Balances::make_free_balance_be(&coldkey, initial_balance);
 
         // associate coldkey and hotkey
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // add stake to coldkey-hotkey pair so we can recycle it
         let stake = 200_000;
@@ -163,7 +157,7 @@ fn test_recycle_staker_is_nominator() {
         increase_stake_on_coldkey_hotkey_account(&other_coldkey, &hotkey, stake.into(), netuid);
         // Verify the ownership
         assert_ne!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&hotkey),
+            GameSolver::get_owning_coldkey_for_hotkey(&hotkey),
             other_coldkey
         );
 
@@ -175,7 +169,7 @@ fn test_recycle_staker_is_nominator() {
         let recycle_amount = AlphaCurrency::from(stake / 2);
 
         // recycle from nominator coldkey
-        assert_ok!(SubtensorModule::recycle_alpha(
+        assert_ok!(GameSolver::recycle_alpha(
             RuntimeOrigin::signed(other_coldkey),
             hotkey,
             recycle_amount,
@@ -185,25 +179,21 @@ fn test_recycle_staker_is_nominator() {
         assert!(TotalHotkeyAlpha::<Test>::get(hotkey, netuid) < initial_alpha);
         assert!(SubnetAlphaOut::<Test>::get(netuid) < initial_net_alpha);
         assert!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey,
-                &other_coldkey,
-                netuid
-            ) < stake.into()
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &other_coldkey, netuid)
+                < stake.into()
         );
         // Make sure the other coldkey has no change
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid),
             expected_alpha,
             epsilon = 2.into()
         );
 
-        assert!(System::events().iter().any(|e| {
-            matches!(
-                &e.event,
-                RuntimeEvent::SubtensorModule(Event::AlphaRecycled(..))
-            )
-        }));
+        assert!(
+            System::events().iter().any(|e| {
+                matches!(&e.event, RuntimeEvent::GameSolver(Event::AlphaRecycled(..)))
+            })
+        );
     });
 }
 
@@ -221,10 +211,10 @@ fn test_burn_success() {
         Balances::make_free_balance_be(&coldkey, initial_balance);
 
         // associate coldkey and hotkey
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // add stake to coldkey-hotkey pair so we can recycle it
         let stake = 200_000;
@@ -238,7 +228,7 @@ fn test_burn_success() {
         let burn_amount = stake / 2;
 
         // burn
-        assert_ok!(SubtensorModule::burn_alpha(
+        assert_ok!(GameSolver::burn_alpha(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             burn_amount.into(),
@@ -248,16 +238,15 @@ fn test_burn_success() {
         assert!(TotalHotkeyAlpha::<Test>::get(hotkey, netuid) < initial_alpha);
         assert!(SubnetAlphaOut::<Test>::get(netuid) == initial_net_alpha);
         assert!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid)
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid)
                 < stake.into()
         );
 
-        assert!(System::events().iter().any(|e| {
-            matches!(
-                &e.event,
-                RuntimeEvent::SubtensorModule(Event::AlphaBurned(..))
-            )
-        }));
+        assert!(
+            System::events()
+                .iter()
+                .any(|e| { matches!(&e.event, RuntimeEvent::GameSolver(Event::AlphaBurned(..))) })
+        );
     });
 }
 
@@ -277,10 +266,10 @@ fn test_burn_staker_is_nominator() {
         Balances::make_free_balance_be(&coldkey, initial_balance);
 
         // associate coldkey and hotkey
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // add stake to coldkey-hotkey pair so we can recycle it
         let stake = 200_000;
@@ -299,7 +288,7 @@ fn test_burn_staker_is_nominator() {
         let burn_amount = AlphaCurrency::from(stake / 2);
 
         // burn from nominator coldkey
-        assert_ok!(SubtensorModule::burn_alpha(
+        assert_ok!(GameSolver::burn_alpha(
             RuntimeOrigin::signed(other_coldkey),
             hotkey,
             burn_amount,
@@ -309,25 +298,21 @@ fn test_burn_staker_is_nominator() {
         assert!(TotalHotkeyAlpha::<Test>::get(hotkey, netuid) < initial_alpha);
         assert!(SubnetAlphaOut::<Test>::get(netuid) == initial_net_alpha);
         assert!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey,
-                &other_coldkey,
-                netuid
-            ) < stake.into()
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &other_coldkey, netuid)
+                < stake.into()
         );
         // Make sure the other coldkey has no change
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid),
             expected_alpha,
             epsilon = 2.into()
         );
 
-        assert!(System::events().iter().any(|e| {
-            matches!(
-                &e.event,
-                RuntimeEvent::SubtensorModule(Event::AlphaBurned(..))
-            )
-        }));
+        assert!(
+            System::events()
+                .iter()
+                .any(|e| { matches!(&e.event, RuntimeEvent::GameSolver(Event::AlphaBurned(..))) })
+        );
     });
 }
 
@@ -347,10 +332,10 @@ fn test_burn_two_stakers() {
         Balances::make_free_balance_be(&coldkey, initial_balance);
 
         // associate coldkey and hotkey
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // add stake to coldkey-hotkey pair so we can recycle it
         let stake = 200_000;
@@ -368,7 +353,7 @@ fn test_burn_two_stakers() {
         let burn_amount = AlphaCurrency::from(stake / 2);
 
         // burn from coldkey
-        assert_ok!(SubtensorModule::burn_alpha(
+        assert_ok!(GameSolver::burn_alpha(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             burn_amount,
@@ -378,26 +363,21 @@ fn test_burn_two_stakers() {
         assert!(TotalHotkeyAlpha::<Test>::get(hotkey, netuid) < initial_alpha);
         assert!(SubnetAlphaOut::<Test>::get(netuid) == initial_net_alpha);
         assert!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid)
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid)
                 < stake.into()
         );
         // Make sure the other coldkey has no change
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey,
-                &other_coldkey,
-                netuid
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &other_coldkey, netuid),
             expected_alpha,
             epsilon = 2.into()
         );
 
-        assert!(System::events().iter().any(|e| {
-            matches!(
-                &e.event,
-                RuntimeEvent::SubtensorModule(Event::AlphaBurned(..))
-            )
-        }));
+        assert!(
+            System::events()
+                .iter()
+                .any(|e| { matches!(&e.event, RuntimeEvent::GameSolver(Event::AlphaBurned(..))) })
+        );
     });
 }
 
@@ -418,14 +398,14 @@ fn test_recycle_errors() {
         let initial_balance = 1_000_000_000;
         Balances::make_free_balance_be(&coldkey, initial_balance);
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
         let stake_amount = 200_000;
         increase_stake_on_coldkey_hotkey_account(&coldkey, &hotkey, stake_amount.into(), netuid);
 
         assert_noop!(
-            SubtensorModule::recycle_alpha(
+            GameSolver::recycle_alpha(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 100_000.into(),
@@ -435,7 +415,7 @@ fn test_recycle_errors() {
         );
 
         assert_noop!(
-            SubtensorModule::recycle_alpha(
+            GameSolver::recycle_alpha(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 100_000.into(),
@@ -445,7 +425,7 @@ fn test_recycle_errors() {
         );
 
         assert_noop!(
-            SubtensorModule::recycle_alpha(
+            GameSolver::recycle_alpha(
                 RuntimeOrigin::signed(coldkey),
                 wrong_hotkey,
                 100_000.into(),
@@ -462,7 +442,7 @@ fn test_recycle_errors() {
         );
 
         assert_noop!(
-            SubtensorModule::recycle_alpha(
+            GameSolver::recycle_alpha(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 SubnetAlphaOut::<Test>::get(netuid) + 1.into(),
@@ -490,14 +470,14 @@ fn test_burn_errors() {
         let initial_balance = 1_000_000_000;
         Balances::make_free_balance_be(&coldkey, initial_balance);
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
         let stake_amount = 200_000;
         increase_stake_on_coldkey_hotkey_account(&coldkey, &hotkey, stake_amount.into(), netuid);
 
         assert_noop!(
-            SubtensorModule::burn_alpha(
+            GameSolver::burn_alpha(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 100_000.into(),
@@ -507,7 +487,7 @@ fn test_burn_errors() {
         );
 
         assert_noop!(
-            SubtensorModule::burn_alpha(
+            GameSolver::burn_alpha(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 100_000.into(),
@@ -517,7 +497,7 @@ fn test_burn_errors() {
         );
 
         assert_noop!(
-            SubtensorModule::burn_alpha(
+            GameSolver::burn_alpha(
                 RuntimeOrigin::signed(coldkey),
                 wrong_hotkey,
                 100_000.into(),
@@ -534,7 +514,7 @@ fn test_burn_errors() {
         );
 
         assert_noop!(
-            SubtensorModule::burn_alpha(
+            GameSolver::burn_alpha(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 SubnetAlphaOut::<Test>::get(netuid) + 1.into(),
@@ -555,7 +535,7 @@ fn test_recycle_precision_loss() {
 
         Balances::make_free_balance_be(&coldkey, 1_000_000_000);
         // sanity check
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // add stake to coldkey-hotkey pair so we can recycle it
         let stake = 200_000;
@@ -571,7 +551,7 @@ fn test_recycle_precision_loss() {
 
         // recycle, expect error due to precision loss
         assert_noop!(
-            SubtensorModule::recycle_alpha(
+            GameSolver::recycle_alpha(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 recycle_amount,
@@ -592,7 +572,7 @@ fn test_burn_precision_loss() {
 
         Balances::make_free_balance_be(&coldkey, 1_000_000_000);
         // sanity check
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // add stake to coldkey-hotkey pair so we can recycle it
         let stake = 200_000;
@@ -608,12 +588,7 @@ fn test_burn_precision_loss() {
 
         // burn, expect error due to precision loss
         assert_noop!(
-            SubtensorModule::burn_alpha(
-                RuntimeOrigin::signed(coldkey),
-                hotkey,
-                burn_amount,
-                netuid
-            ),
+            GameSolver::burn_alpha(RuntimeOrigin::signed(coldkey), hotkey, burn_amount, netuid),
             Error::<Test>::PrecisionLoss
         );
     });
@@ -634,16 +609,16 @@ fn test_add_stake_burn_success() {
             (amount * 10_000_000).into(),
         );
 
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, amount);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, amount);
 
         // Check we have zero staked before transfer
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey_account_id),
+            GameSolver::get_total_stake_for_hotkey(&hotkey_account_id),
             TaoCurrency::ZERO
         );
 
         // Execute add_stake_burn - this stakes TAO to get Alpha, then burns the Alpha
-        assert_ok!(SubtensorModule::add_stake_burn(
+        assert_ok!(GameSolver::add_stake_burn(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,
@@ -653,30 +628,29 @@ fn test_add_stake_burn_success() {
 
         // After "add stake and burn", hotkey should have zero stake since alpha is burned immediately
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey_account_id),
+            GameSolver::get_total_stake_for_hotkey(&hotkey_account_id),
             TaoCurrency::ZERO
         );
 
         // We spent TAO
         assert_abs_diff_eq!(
-            SubtensorModule::get_coldkey_balance(&coldkey_account_id),
+            GameSolver::get_coldkey_balance(&coldkey_account_id),
             0u64,
             epsilon = 1u64
         );
 
         // Verify AlphaBurned event was emitted
-        assert!(System::events().iter().any(|e| {
-            matches!(
-                &e.event,
-                RuntimeEvent::SubtensorModule(Event::AlphaBurned(..))
-            )
-        }));
+        assert!(
+            System::events()
+                .iter()
+                .any(|e| { matches!(&e.event, RuntimeEvent::GameSolver(Event::AlphaBurned(..))) })
+        );
 
         // Verify AddStakeBurn event was emitted
         assert!(System::events().iter().any(|e| {
             matches!(
                 &e.event,
-                RuntimeEvent::SubtensorModule(Event::AddStakeBurn { .. })
+                RuntimeEvent::GameSolver(Event::AddStakeBurn { .. })
             )
         }));
     });
@@ -703,16 +677,16 @@ fn test_add_stake_burn_with_limit_success() {
         assert_eq!(current_price, U96F32::from_num(1.0));
 
         // Give coldkey sufficient balance
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, amount);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, amount);
 
-        let initial_balance = SubtensorModule::get_coldkey_balance(&coldkey_account_id);
+        let initial_balance = GameSolver::get_coldkey_balance(&coldkey_account_id);
 
         // Setup limit price at 2.0 TAO per Alpha
         // With 100 TAO into 1000/1000 pool, price moves from 1.0 to ~1.21
         let limit_price = TaoCurrency::from(2_000_000_000); // 2.0 TAO per Alpha
 
         // Execute add_stake_burn with limit
-        assert_ok!(SubtensorModule::add_stake_burn(
+        assert_ok!(GameSolver::add_stake_burn(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,
@@ -722,12 +696,12 @@ fn test_add_stake_burn_with_limit_success() {
 
         // After "add stake and burn", hotkey should have zero stake since alpha is burned immediately
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey_account_id),
+            GameSolver::get_total_stake_for_hotkey(&hotkey_account_id),
             TaoCurrency::ZERO
         );
 
         // TAO should have been spent
-        let final_balance = SubtensorModule::get_coldkey_balance(&coldkey_account_id);
+        let final_balance = GameSolver::get_coldkey_balance(&coldkey_account_id);
         assert!(
             final_balance < initial_balance,
             "TAO should have been spent"
@@ -743,12 +717,11 @@ fn test_add_stake_burn_with_limit_success() {
         );
 
         // Verify AlphaBurned event was emitted
-        assert!(System::events().iter().any(|e| {
-            matches!(
-                &e.event,
-                RuntimeEvent::SubtensorModule(Event::AlphaBurned(..))
-            )
-        }));
+        assert!(
+            System::events()
+                .iter()
+                .any(|e| { matches!(&e.event, RuntimeEvent::GameSolver(Event::AlphaBurned(..))) })
+        );
     });
 }
 
@@ -770,11 +743,11 @@ fn test_add_stake_burn_non_owner_fails() {
         );
 
         // Give non-owner some balance
-        SubtensorModule::add_balance_to_coldkey_account(&non_owner_coldkey, amount);
+        GameSolver::add_balance_to_coldkey_account(&non_owner_coldkey, amount);
 
         // Non-owner trying to call add_stake_burn should fail with BadOrigin
         assert_noop!(
-            SubtensorModule::add_stake_burn(
+            GameSolver::add_stake_burn(
                 RuntimeOrigin::signed(non_owner_coldkey),
                 hotkey_account_id,
                 netuid,
@@ -794,12 +767,12 @@ fn test_add_stake_burn_nonexistent_subnet_fails() {
         let amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
         // Give some balance
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, amount);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, amount);
 
         // Try to call add_stake_burn on non-existent subnet
         let nonexistent_netuid = NetUid::from(999);
         assert_noop!(
-            SubtensorModule::add_stake_burn(
+            GameSolver::add_stake_burn(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 nonexistent_netuid,
@@ -829,7 +802,7 @@ fn test_add_stake_burn_insufficient_balance_fails() {
 
         // Try to call add_stake_burn without sufficient balance
         assert_noop!(
-            SubtensorModule::add_stake_burn(
+            GameSolver::add_stake_burn(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 netuid,
@@ -857,15 +830,15 @@ fn test_add_stake_burn_rate_limit_exceeded() {
         mock::setup_reserves(netuid, tao_reserve, alpha_in);
 
         // Give coldkey sufficient balance for multiple "add stake and burn" operations.
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, amount * 10);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, amount * 10);
 
         assert_eq!(
-            SubtensorModule::get_rate_limited_last_block(&RateLimitKey::AddStakeBurn(netuid)),
+            GameSolver::get_rate_limited_last_block(&RateLimitKey::AddStakeBurn(netuid)),
             0
         );
 
         // First "add stake and burn" should succeed
-        assert_ok!(SubtensorModule::add_stake_burn(
+        assert_ok!(GameSolver::add_stake_burn(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,
@@ -874,13 +847,13 @@ fn test_add_stake_burn_rate_limit_exceeded() {
         ));
 
         assert_eq!(
-            SubtensorModule::get_rate_limited_last_block(&RateLimitKey::AddStakeBurn(netuid)),
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_rate_limited_last_block(&RateLimitKey::AddStakeBurn(netuid)),
+            GameSolver::get_current_block_as_u64()
         );
 
         // Second "add stake and burn" immediately after should fail due to rate limit
         assert_noop!(
-            SubtensorModule::add_stake_burn(
+            GameSolver::add_stake_burn(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 netuid,
@@ -894,7 +867,7 @@ fn test_add_stake_burn_rate_limit_exceeded() {
         let rate_limit = TransactionType::AddStakeBurn.rate_limit_on_subnet::<Test>(netuid);
         step_block(rate_limit as u16);
 
-        assert_ok!(SubtensorModule::add_stake_burn(
+        assert_ok!(GameSolver::add_stake_burn(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,

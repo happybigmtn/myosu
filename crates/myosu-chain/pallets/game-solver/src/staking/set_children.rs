@@ -647,7 +647,7 @@ impl<T: Config> Pallet<T> {
     ///
     /// # Example
     /// ```
-    /// let children = SubtensorModule::get_children(&hotkey, netuid);
+    /// let children = GameSolver::get_children(&hotkey, netuid);
      */
     pub fn get_children(hotkey: &T::AccountId, netuid: NetUid) -> Vec<(u64, T::AccountId)> {
         ChildKeys::<T>::get(hotkey, netuid)
@@ -664,7 +664,7 @@ impl<T: Config> Pallet<T> {
     ///
     /// # Example
     /// ```
-    /// let parents = SubtensorModule::get_parents(&child, netuid);
+    /// let parents = GameSolver::get_parents(&child, netuid);
      */
     pub fn get_parents(child: &T::AccountId, netuid: NetUid) -> Vec<(u64, T::AccountId)> {
         ParentKeys::<T>::get(child, netuid)

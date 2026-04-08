@@ -8,7 +8,7 @@ use sp_io::storage::clear_prefix;
 use sp_std::vec::Vec;
 fn remove_prefix<T: Config>(old_map: &str) -> Weight {
     let mut prefix = Vec::new();
-    prefix.extend_from_slice(&twox_128("SubtensorModule".as_bytes()));
+    prefix.extend_from_slice(&twox_128("GameSolver".as_bytes()));
     prefix.extend_from_slice(&twox_128(old_map.as_bytes()));
 
     let removal_results = clear_prefix(&prefix, Some(u32::MAX));

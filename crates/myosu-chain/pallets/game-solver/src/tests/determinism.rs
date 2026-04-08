@@ -72,21 +72,21 @@ fn snapshot_epoch_state(
     epoch_output: Vec<(U256, AlphaCurrency, AlphaCurrency)>,
 ) -> EpochSnapshot {
     let netuid_index = NetUidStorageIndex::from(netuid);
-    let subnet_n = SubtensorModule::get_subnetwork_n(netuid);
+    let subnet_n = GameSolver::get_subnetwork_n(netuid);
 
     EpochSnapshot {
         epoch_output: collect_epoch_output(epoch_output),
-        active: SubtensorModule::get_active(netuid),
+        active: GameSolver::get_active(netuid),
         stake_weight: StakeWeight::<Test>::get(netuid),
-        combined_emission: SubtensorModule::get_emission(netuid)
+        combined_emission: GameSolver::get_emission(netuid)
             .into_iter()
             .map(u64::from)
             .collect(),
-        consensus: SubtensorModule::get_consensus(netuid),
-        incentive: SubtensorModule::get_incentive(netuid_index),
-        dividends: SubtensorModule::get_dividends(netuid),
-        validator_trust: SubtensorModule::get_validator_trust(netuid),
-        validator_permit: SubtensorModule::get_validator_permit(netuid),
+        consensus: GameSolver::get_consensus(netuid),
+        incentive: GameSolver::get_incentive(netuid_index),
+        dividends: GameSolver::get_dividends(netuid),
+        validator_trust: GameSolver::get_validator_trust(netuid),
+        validator_permit: GameSolver::get_validator_permit(netuid),
         bonds: (0..subnet_n)
             .map(|uid| {
                 let mut row = Bonds::<Test>::get(netuid_index, uid);
@@ -111,15 +111,15 @@ fn run_yuma_epoch_snapshot(epoch_path: EpochPath) -> EpochSnapshot {
         let validator_stakes = [700_000_u64, 300_000_u64, 0_u64, 0_u64, 0_u64];
 
         add_network_disable_commit_reveal(netuid, u16::MAX - 1, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, hotkeys.len() as u16);
-        SubtensorModule::set_max_allowed_validators(netuid, 2);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_stake_threshold(0);
+        GameSolver::set_max_allowed_uids(netuid, hotkeys.len() as u16);
+        GameSolver::set_max_allowed_validators(netuid, 2);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_stake_threshold(0);
 
         for (hotkey, stake) in hotkeys.iter().zip(validator_stakes) {
-            SubtensorModule::add_balance_to_coldkey_account(hotkey, stake);
-            SubtensorModule::append_neuron(netuid, hotkey, 0);
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::add_balance_to_coldkey_account(hotkey, stake);
+            GameSolver::append_neuron(netuid, hotkey, 0);
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 hotkey,
                 hotkey,
                 netuid,
@@ -127,27 +127,24 @@ fn run_yuma_epoch_snapshot(epoch_path: EpochPath) -> EpochSnapshot {
             );
         }
 
-        assert_eq!(
-            SubtensorModule::get_subnetwork_n(netuid),
-            hotkeys.len() as u16
-        );
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), hotkeys.len() as u16);
 
-        SubtensorModule::epoch(netuid, 1_u64.into());
+        GameSolver::epoch(netuid, 1_u64.into());
         assert_eq!(
-            SubtensorModule::get_validator_permit(netuid),
+            GameSolver::get_validator_permit(netuid),
             vec![true, true, false, false, false],
             "bootstrap epoch should select the two staked validators"
         );
 
         let server_uids = vec![2_u16, 3_u16, 4_u16];
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkeys[0]),
             netuid,
             server_uids.clone(),
             vec![40_000_u16, 20_000_u16, 5_535_u16],
             0
         ));
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkeys[1]),
             netuid,
             server_uids,
@@ -156,8 +153,8 @@ fn run_yuma_epoch_snapshot(epoch_path: EpochPath) -> EpochSnapshot {
         ));
 
         let epoch_output = match epoch_path {
-            EpochPath::Sparse => SubtensorModule::epoch(netuid, rao_emission),
-            EpochPath::Dense => SubtensorModule::epoch_dense(netuid, rao_emission),
+            EpochPath::Sparse => GameSolver::epoch(netuid, rao_emission),
+            EpochPath::Dense => GameSolver::epoch_dense(netuid, rao_emission),
         };
 
         snapshot_epoch_state(netuid, epoch_output)

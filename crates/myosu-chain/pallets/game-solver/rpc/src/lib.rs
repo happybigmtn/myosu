@@ -1,4 +1,4 @@
-//! RPC interface for the custom Subtensor rpc methods
+//! RPC interface for the custom game-solver RPC methods.
 
 use codec::Encode;
 use jsonrpsee::{
@@ -12,21 +12,21 @@ use sp_runtime::traits::Block as BlockT;
 use std::sync::Arc;
 use subtensor_runtime_common::NetUid;
 
-pub use subtensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi;
+pub use game_solver_rpc_runtime_api::NeuronInfoRuntimeApi;
 
 #[rpc(client, server)]
-pub trait SubtensorCustomApi<BlockHash> {
+pub trait GameSolverApi<BlockHash> {
     #[method(name = "neuronInfo_getNeuronsLite")]
     fn get_neurons_lite(&self, netuid: NetUid, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 }
 
-pub struct SubtensorCustom<C, P> {
+pub struct GameSolverRpc<C, P> {
     /// Shared reference to the client.
     client: Arc<C>,
     _marker: std::marker::PhantomData<P>,
 }
 
-impl<C, P> SubtensorCustom<C, P> {
+impl<C, P> GameSolverRpc<C, P> {
     /// Creates a new instance of the TransactionPayment Rpc helper.
     pub fn new(client: Arc<C>) -> Self {
         Self {
@@ -58,7 +58,7 @@ impl From<Error> for i32 {
     }
 }
 
-impl<C, Block> SubtensorCustomApiServer<<Block as BlockT>::Hash> for SubtensorCustom<C, Block>
+impl<C, Block> GameSolverApiServer<<Block as BlockT>::Hash> for GameSolverRpc<C, Block>
 where
     Block: BlockT,
     C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + Send + Sync + 'static,

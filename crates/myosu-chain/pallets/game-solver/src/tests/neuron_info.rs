@@ -7,7 +7,7 @@ use subtensor_runtime_common::NetUid;
 fn test_get_neurons_lite_empty() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1);
-        let neurons = SubtensorModule::get_neurons_lite(netuid);
+        let neurons = GameSolver::get_neurons_lite(netuid);
         assert!(neurons.is_empty());
     });
 }
@@ -29,7 +29,7 @@ fn test_get_neurons_lite_list() {
             register_ok_neuron(netuid, hotkey, coldkey, nonce);
         }
 
-        let neurons = SubtensorModule::get_neurons_lite(netuid);
+        let neurons = GameSolver::get_neurons_lite(netuid);
         assert_eq!(neurons.len(), neuron_count as usize);
     });
 }

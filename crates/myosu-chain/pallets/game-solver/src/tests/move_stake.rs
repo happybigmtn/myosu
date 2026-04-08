@@ -26,9 +26,9 @@ fn test_do_move_success() {
         let stake_amount = DefaultMinStake::<Test>::get() * 10.into();
 
         // Set up initial stake
-        SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &destination_hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &destination_hotkey);
+        GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             netuid.into(),
@@ -38,7 +38,7 @@ fn test_do_move_success() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
@@ -46,7 +46,7 @@ fn test_do_move_success() {
 
         // Perform the move
         let expected_alpha = alpha;
-        assert_ok!(SubtensorModule::do_move_stake(
+        assert_ok!(GameSolver::do_move_stake(
             RuntimeOrigin::signed(coldkey),
             origin_hotkey,
             destination_hotkey,
@@ -57,7 +57,7 @@ fn test_do_move_success() {
 
         // Check that the stake has been moved
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &origin_hotkey,
                 &coldkey,
                 netuid
@@ -65,7 +65,7 @@ fn test_do_move_success() {
             AlphaCurrency::ZERO
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &destination_hotkey,
                 &coldkey,
                 netuid
@@ -103,9 +103,9 @@ fn test_do_move_different_subnets() {
         );
 
         // Set up initial stake and subnets
-        SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &destination_hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &destination_hotkey);
+        GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             origin_netuid,
@@ -115,14 +115,14 @@ fn test_do_move_different_subnets() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &origin_hotkey,
             &coldkey,
             origin_netuid,
         );
 
         // Perform the move
-        assert_ok!(SubtensorModule::do_move_stake(
+        assert_ok!(GameSolver::do_move_stake(
             RuntimeOrigin::signed(coldkey),
             origin_hotkey,
             destination_hotkey,
@@ -133,7 +133,7 @@ fn test_do_move_different_subnets() {
 
         // Check that the stake has been moved
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &origin_hotkey,
                 &coldkey,
                 origin_netuid
@@ -143,7 +143,7 @@ fn test_do_move_different_subnets() {
         let fee =
             <Test as Config>::SwapInterface::approx_fee_amount(destination_netuid.into(), alpha);
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &destination_hotkey,
                 &coldkey,
                 destination_netuid
@@ -173,7 +173,7 @@ fn test_do_move_nonexistent_subnet() {
         mock::setup_reserves(origin_netuid, reserve.into(), reserve.into());
 
         // Set up initial stake
-        SubtensorModule::stake_into_subnet(
+        GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             origin_netuid,
@@ -183,7 +183,7 @@ fn test_do_move_nonexistent_subnet() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &origin_hotkey,
             &coldkey,
             origin_netuid,
@@ -191,7 +191,7 @@ fn test_do_move_nonexistent_subnet() {
 
         // Attempt to move stake to a non-existent subnet
         assert_noop!(
-            SubtensorModule::do_move_stake(
+            GameSolver::do_move_stake(
                 RuntimeOrigin::signed(coldkey),
                 origin_hotkey,
                 destination_hotkey,
@@ -204,7 +204,7 @@ fn test_do_move_nonexistent_subnet() {
 
         // Check that the stake remains unchanged
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &origin_hotkey,
                 &coldkey,
                 origin_netuid
@@ -229,7 +229,7 @@ fn test_do_move_nonexistent_origin_hotkey() {
 
         // Attempt to move stake from a non-existent origin hotkey
         assert_noop!(
-            SubtensorModule::do_move_stake(
+            GameSolver::do_move_stake(
                 RuntimeOrigin::signed(coldkey),
                 nonexistent_origin_hotkey,
                 destination_hotkey,
@@ -242,7 +242,7 @@ fn test_do_move_nonexistent_origin_hotkey() {
 
         // Check that no stake was moved
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &nonexistent_origin_hotkey,
                 &coldkey,
                 netuid
@@ -250,7 +250,7 @@ fn test_do_move_nonexistent_origin_hotkey() {
             AlphaCurrency::ZERO
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &destination_hotkey,
                 &coldkey,
                 netuid
@@ -276,8 +276,8 @@ fn test_do_move_nonexistent_destination_hotkey() {
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
 
         // Set up initial stake
-        SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-        let alpha = SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+        let alpha = GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
@@ -291,7 +291,7 @@ fn test_do_move_nonexistent_destination_hotkey() {
         // Attempt to move stake from a non-existent origin hotkey
         add_network(netuid, 1, 0);
         assert_noop!(
-            SubtensorModule::do_move_stake(
+            GameSolver::do_move_stake(
                 RuntimeOrigin::signed(coldkey),
                 origin_hotkey,
                 nonexistent_destination_hotkey,
@@ -304,7 +304,7 @@ fn test_do_move_nonexistent_destination_hotkey() {
 
         // Check that the stake was not moved
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &origin_hotkey,
                 &coldkey,
                 netuid
@@ -313,7 +313,7 @@ fn test_do_move_nonexistent_destination_hotkey() {
         );
 
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &nonexistent_destination_hotkey,
                 &coldkey,
                 netuid
@@ -342,7 +342,7 @@ fn test_do_move_partial_stake() {
                 let total_stake = DefaultMinStake::<Test>::get().to_u64() * 20;
 
                 // Set up initial stake
-                SubtensorModule::stake_into_subnet(
+                GameSolver::stake_into_subnet(
                     &origin_hotkey,
                     &coldkey,
                     netuid,
@@ -352,7 +352,7 @@ fn test_do_move_partial_stake() {
                     false,
                 )
                 .unwrap();
-                let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+                let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                     &origin_hotkey,
                     &coldkey,
                     netuid,
@@ -360,9 +360,9 @@ fn test_do_move_partial_stake() {
 
                 // Move partial stake
                 let alpha_moved = AlphaCurrency::from(alpha.to_u64() * portion_moved / 10);
-                SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-                SubtensorModule::create_account_if_non_existent(&coldkey, &destination_hotkey);
-                assert_ok!(SubtensorModule::do_move_stake(
+                GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+                GameSolver::create_account_if_non_existent(&coldkey, &destination_hotkey);
+                assert_ok!(GameSolver::do_move_stake(
                     RuntimeOrigin::signed(coldkey),
                     origin_hotkey,
                     destination_hotkey,
@@ -373,7 +373,7 @@ fn test_do_move_partial_stake() {
 
                 // Check that the correct amount of stake was moved
                 assert_abs_diff_eq!(
-                    SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+                    GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                         &origin_hotkey,
                         &coldkey,
                         netuid
@@ -382,7 +382,7 @@ fn test_do_move_partial_stake() {
                     epsilon = 10.into()
                 );
                 assert_abs_diff_eq!(
-                    SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+                    GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                         &destination_hotkey,
                         &coldkey,
                         netuid
@@ -409,9 +409,9 @@ fn test_do_move_multiple_times() {
         let initial_stake = DefaultMinStake::<Test>::get().to_u64() * 10;
 
         // Set up initial stake
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey1);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey2);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey1);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey2);
+        GameSolver::stake_into_subnet(
             &hotkey1,
             &coldkey,
             netuid,
@@ -422,16 +422,15 @@ fn test_do_move_multiple_times() {
         )
         .unwrap();
         let alpha =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
 
         // Move stake multiple times
         let expected_alpha = alpha;
         for _ in 0..3 {
-            let alpha1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey1, &coldkey, netuid,
-            );
+            let alpha1 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
             remove_stake_rate_limit_for_tests(&hotkey1, &coldkey, netuid);
-            assert_ok!(SubtensorModule::do_move_stake(
+            assert_ok!(GameSolver::do_move_stake(
                 RuntimeOrigin::signed(coldkey),
                 hotkey1,
                 hotkey2,
@@ -439,11 +438,10 @@ fn test_do_move_multiple_times() {
                 netuid,
                 alpha1,
             ));
-            let alpha2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey2, &coldkey, netuid,
-            );
+            let alpha2 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
             remove_stake_rate_limit_for_tests(&hotkey2, &coldkey, netuid);
-            assert_ok!(SubtensorModule::do_move_stake(
+            assert_ok!(GameSolver::do_move_stake(
                 RuntimeOrigin::signed(coldkey),
                 hotkey2,
                 hotkey1,
@@ -455,12 +453,12 @@ fn test_do_move_multiple_times() {
 
         // Check final stake distribution
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid),
             expected_alpha,
             epsilon = expected_alpha / 1000.into(),
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid),
             AlphaCurrency::ZERO
         );
     });
@@ -483,7 +481,7 @@ fn test_do_move_wrong_origin() {
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
 
         // Set up initial stake
-        SubtensorModule::stake_into_subnet(
+        GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
@@ -493,7 +491,7 @@ fn test_do_move_wrong_origin() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
@@ -501,10 +499,10 @@ fn test_do_move_wrong_origin() {
 
         // Attempt to move stake with wrong origin
         add_network(netuid, 1, 0);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &destination_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &destination_hotkey);
         assert_err!(
-            SubtensorModule::do_move_stake(
+            GameSolver::do_move_stake(
                 RuntimeOrigin::signed(wrong_coldkey),
                 origin_hotkey,
                 destination_hotkey,
@@ -517,7 +515,7 @@ fn test_do_move_wrong_origin() {
 
         // Check that no stake was moved
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &origin_hotkey,
                 &coldkey,
                 netuid
@@ -525,7 +523,7 @@ fn test_do_move_wrong_origin() {
             alpha
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &destination_hotkey,
                 &coldkey,
                 netuid
@@ -549,8 +547,8 @@ fn test_do_move_same_hotkey_fails() {
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
         // Set up initial stake
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -561,11 +559,11 @@ fn test_do_move_same_hotkey_fails() {
         )
         .unwrap();
         let alpha =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
 
         // Attempt to move stake to the same hotkey
         assert_eq!(
-            SubtensorModule::do_move_stake(
+            GameSolver::do_move_stake(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 hotkey,
@@ -578,7 +576,7 @@ fn test_do_move_same_hotkey_fails() {
 
         // Check that stake remains unchanged
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid),
             alpha,
         );
     });
@@ -599,9 +597,9 @@ fn test_do_move_event_emission() {
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
         // Set up initial stake
-        SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &destination_hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &destination_hotkey);
+        GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
@@ -611,7 +609,7 @@ fn test_do_move_event_emission() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
@@ -622,7 +620,7 @@ fn test_do_move_event_emission() {
         let current_price =
             <Test as pallet::Config>::SwapInterface::current_alpha_price(netuid.into());
         let tao_equivalent = (current_price * U96F32::from_num(alpha)).to_num::<u64>(); // no fee conversion
-        assert_ok!(SubtensorModule::do_move_stake(
+        assert_ok!(GameSolver::do_move_stake(
             RuntimeOrigin::signed(coldkey),
             origin_hotkey,
             destination_hotkey,
@@ -662,7 +660,7 @@ fn test_do_move_storage_updates() {
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
         // Set up initial stake
-        SubtensorModule::stake_into_subnet(
+        GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             origin_netuid,
@@ -674,9 +672,9 @@ fn test_do_move_storage_updates() {
         .unwrap();
 
         // Move stake
-        SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &destination_hotkey);
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &destination_hotkey);
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &origin_hotkey,
             &coldkey,
             origin_netuid,
@@ -684,7 +682,7 @@ fn test_do_move_storage_updates() {
 
         let (tao_equivalent, _) = mock::swap_alpha_to_tao_ext(origin_netuid, alpha, true);
         let (alpha2, _) = mock::swap_tao_to_alpha(destination_netuid, tao_equivalent);
-        assert_ok!(SubtensorModule::do_move_stake(
+        assert_ok!(GameSolver::do_move_stake(
             RuntimeOrigin::signed(coldkey),
             origin_hotkey,
             destination_hotkey,
@@ -695,7 +693,7 @@ fn test_do_move_storage_updates() {
 
         // Verify storage updates
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &origin_hotkey,
                 &coldkey,
                 origin_netuid
@@ -704,7 +702,7 @@ fn test_do_move_storage_updates() {
         );
 
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &destination_hotkey,
                 &coldkey,
                 destination_netuid
@@ -725,11 +723,11 @@ fn test_move_full_amount_same_netuid() {
         let origin_hotkey = U256::from(2);
         let destination_hotkey = U256::from(3);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
-        SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &destination_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &destination_hotkey);
 
         // Set up initial stake
-        SubtensorModule::stake_into_subnet(
+        GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
@@ -741,12 +739,12 @@ fn test_move_full_amount_same_netuid() {
         .unwrap();
 
         // Move all stake
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
         );
-        assert_ok!(SubtensorModule::do_move_stake(
+        assert_ok!(GameSolver::do_move_stake(
             RuntimeOrigin::signed(coldkey),
             origin_hotkey,
             destination_hotkey,
@@ -757,7 +755,7 @@ fn test_move_full_amount_same_netuid() {
 
         // Verify storage updates
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &origin_hotkey,
                 &coldkey,
                 netuid
@@ -765,7 +763,7 @@ fn test_move_full_amount_same_netuid() {
             AlphaCurrency::ZERO
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &destination_hotkey,
                 &coldkey,
                 netuid
@@ -790,14 +788,14 @@ fn test_do_move_max_values() {
         let netuid = add_dynamic_network(&subnet_owner_hotkey, &subnet_owner_coldkey);
 
         // Set up initial stake with maximum value
-        SubtensorModule::create_account_if_non_existent(&coldkey, &origin_hotkey);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &destination_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &origin_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &destination_hotkey);
 
         // Add lots of liquidity to bypass low liquidity check
         let reserve = u64::MAX / 1000;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
 
-        SubtensorModule::stake_into_subnet(
+        GameSolver::stake_into_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
@@ -807,14 +805,14 @@ fn test_do_move_max_values() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &origin_hotkey,
             &coldkey,
             netuid,
         );
 
         // Move maximum stake
-        assert_ok!(SubtensorModule::do_move_stake(
+        assert_ok!(GameSolver::do_move_stake(
             RuntimeOrigin::signed(coldkey),
             origin_hotkey,
             destination_hotkey,
@@ -825,7 +823,7 @@ fn test_do_move_max_values() {
 
         // Verify stake movement without overflow
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &origin_hotkey,
                 &coldkey,
                 netuid
@@ -833,7 +831,7 @@ fn test_do_move_max_values() {
             AlphaCurrency::ZERO
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &destination_hotkey,
                 &coldkey,
                 netuid
@@ -859,12 +857,9 @@ fn test_moving_too_little_unstakes() {
 
         let (_, fee) = mock::swap_tao_to_alpha(netuid, amount);
 
-        SubtensorModule::add_balance_to_coldkey_account(
-            &coldkey_account_id,
-            amount.to_u64() + fee * 2,
-        );
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, amount.to_u64() + fee * 2);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,
@@ -873,7 +868,7 @@ fn test_moving_too_little_unstakes() {
 
         remove_stake_rate_limit_for_tests(&hotkey_account_id, &coldkey_account_id, netuid);
         assert_err!(
-            SubtensorModule::move_stake(
+            GameSolver::move_stake(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 hotkey_account_id,
@@ -901,9 +896,9 @@ fn test_do_transfer_success() {
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
         // 3. Set up initial stake: (origin_coldkey, hotkey) on netuid.
-        SubtensorModule::create_account_if_non_existent(&origin_coldkey, &hotkey);
-        SubtensorModule::create_account_if_non_existent(&destination_coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&origin_coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&destination_coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
@@ -913,7 +908,7 @@ fn test_do_transfer_success() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
@@ -921,7 +916,7 @@ fn test_do_transfer_success() {
 
         // 4. Transfer the entire stake to the destination coldkey on the same subnet (netuid, netuid).
         let expected_alpha = alpha;
-        assert_ok!(SubtensorModule::do_transfer_stake(
+        assert_ok!(GameSolver::do_transfer_stake(
             RuntimeOrigin::signed(origin_coldkey),
             destination_coldkey,
             hotkey,
@@ -932,7 +927,7 @@ fn test_do_transfer_success() {
 
         // 5. Check that the stake has moved.
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &origin_coldkey,
                 netuid
@@ -940,7 +935,7 @@ fn test_do_transfer_success() {
             AlphaCurrency::ZERO
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &destination_coldkey,
                 netuid
@@ -961,7 +956,7 @@ fn test_do_transfer_nonexistent_subnet() {
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 5;
 
         assert_noop!(
-            SubtensorModule::do_transfer_stake(
+            GameSolver::do_transfer_stake(
                 RuntimeOrigin::signed(origin_coldkey),
                 destination_coldkey,
                 hotkey,
@@ -986,7 +981,7 @@ fn test_do_transfer_nonexistent_hotkey() {
         let nonexistent_hotkey = U256::from(999);
 
         assert_noop!(
-            SubtensorModule::do_transfer_stake(
+            GameSolver::do_transfer_stake(
                 RuntimeOrigin::signed(origin_coldkey),
                 destination_coldkey,
                 nonexistent_hotkey,
@@ -1011,8 +1006,8 @@ fn test_do_transfer_insufficient_stake() {
         let hotkey = U256::from(3);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&origin_coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&origin_coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
@@ -1026,7 +1021,7 @@ fn test_do_transfer_insufficient_stake() {
         // Amount over available stake succeeds (because fees can be paid in Alpha,
         // this limitation is removed)
         let alpha = stake_amount * 2;
-        assert_ok!(SubtensorModule::do_transfer_stake(
+        assert_ok!(GameSolver::do_transfer_stake(
             RuntimeOrigin::signed(origin_coldkey),
             destination_coldkey,
             hotkey,
@@ -1051,9 +1046,9 @@ fn test_do_transfer_wrong_origin() {
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
         let fee: u64 = 0; // FIXME: DefaultStakingFee is deprecated
 
-        SubtensorModule::create_account_if_non_existent(&origin_coldkey, &hotkey);
-        SubtensorModule::add_balance_to_coldkey_account(&origin_coldkey, stake_amount + fee);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&origin_coldkey, &hotkey);
+        GameSolver::add_balance_to_coldkey_account(&origin_coldkey, stake_amount + fee);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
@@ -1065,7 +1060,7 @@ fn test_do_transfer_wrong_origin() {
         .unwrap();
 
         assert_noop!(
-            SubtensorModule::do_transfer_stake(
+            GameSolver::do_transfer_stake(
                 RuntimeOrigin::signed(wrong_coldkey),
                 destination_coldkey,
                 hotkey,
@@ -1090,8 +1085,8 @@ fn test_do_transfer_minimum_stake_check() {
         let hotkey = U256::from(3);
 
         let stake_amount = DefaultMinStake::<Test>::get();
-        SubtensorModule::create_account_if_non_existent(&origin_coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&origin_coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
@@ -1103,7 +1098,7 @@ fn test_do_transfer_minimum_stake_check() {
         .unwrap();
 
         assert_err!(
-            SubtensorModule::do_transfer_stake(
+            GameSolver::do_transfer_stake(
                 RuntimeOrigin::signed(origin_coldkey),
                 destination_coldkey,
                 hotkey,
@@ -1132,14 +1127,14 @@ fn test_do_transfer_different_subnets() {
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
         // 3. Create accounts if needed.
-        SubtensorModule::create_account_if_non_existent(&origin_coldkey, &hotkey);
-        SubtensorModule::create_account_if_non_existent(&destination_coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&origin_coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&destination_coldkey, &hotkey);
 
         // 4. Deposit free balance so transaction fees do not reduce staked funds.
-        SubtensorModule::add_balance_to_coldkey_account(&origin_coldkey, 1_000_000_000);
+        GameSolver::add_balance_to_coldkey_account(&origin_coldkey, 1_000_000_000);
 
         // 5. Stake into the origin subnet.
-        SubtensorModule::stake_into_subnet(
+        GameSolver::stake_into_subnet(
             &hotkey,
             &origin_coldkey,
             origin_netuid,
@@ -1151,7 +1146,7 @@ fn test_do_transfer_different_subnets() {
         .unwrap();
 
         // 6. Transfer entire stake from origin_netuid -> destination_netuid.
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &origin_coldkey,
             origin_netuid,
@@ -1160,7 +1155,7 @@ fn test_do_transfer_different_subnets() {
         let (tao_equivalent, _) = mock::swap_alpha_to_tao_ext(origin_netuid, alpha, true);
         let (expected_alpha, _) = mock::swap_tao_to_alpha(destination_netuid, tao_equivalent);
 
-        assert_ok!(SubtensorModule::do_transfer_stake(
+        assert_ok!(GameSolver::do_transfer_stake(
             RuntimeOrigin::signed(origin_coldkey),
             destination_coldkey,
             hotkey,
@@ -1171,7 +1166,7 @@ fn test_do_transfer_different_subnets() {
 
         // 7. Verify origin now has 0 in origin_netuid.
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &origin_coldkey,
                 origin_netuid
@@ -1181,7 +1176,7 @@ fn test_do_transfer_different_subnets() {
 
         // 8. Verify stake ended up in destination subnet for destination coldkey.
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &destination_coldkey,
                 destination_netuid,
@@ -1204,8 +1199,8 @@ fn test_do_swap_success() {
         let hotkey = U256::from(2);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             origin_netuid,
@@ -1215,7 +1210,7 @@ fn test_do_swap_success() {
             false,
         )
         .unwrap();
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             origin_netuid,
@@ -1223,7 +1218,7 @@ fn test_do_swap_success() {
 
         let (tao_equivalent, _) = mock::swap_alpha_to_tao_ext(origin_netuid, alpha_before, true);
         let (expected_alpha, _) = mock::swap_tao_to_alpha(destination_netuid, tao_equivalent);
-        assert_ok!(SubtensorModule::do_swap_stake(
+        assert_ok!(GameSolver::do_swap_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             origin_netuid,
@@ -1232,7 +1227,7 @@ fn test_do_swap_success() {
         ));
 
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &coldkey,
                 origin_netuid
@@ -1240,7 +1235,7 @@ fn test_do_swap_success() {
             AlphaCurrency::ZERO
         );
 
-        let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             destination_netuid,
@@ -1259,10 +1254,10 @@ fn test_do_swap_nonexistent_subnet() {
         let nonexistent_netuid2 = NetUid::from(9999);
         let stake_amount = 1_000_000;
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
 
         assert_noop!(
-            SubtensorModule::do_swap_stake(
+            GameSolver::do_swap_stake(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 nonexistent_netuid1,
@@ -1287,7 +1282,7 @@ fn test_do_swap_nonexistent_hotkey() {
         let stake_amount = 10_000;
 
         assert_noop!(
-            SubtensorModule::do_swap_stake(
+            GameSolver::do_swap_stake(
                 RuntimeOrigin::signed(coldkey),
                 nonexistent_hotkey,
                 netuid1,
@@ -1312,8 +1307,8 @@ fn test_do_swap_insufficient_stake() {
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 5;
         let attempted_swap = stake_amount * 2;
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             netuid1,
@@ -1324,7 +1319,7 @@ fn test_do_swap_insufficient_stake() {
         )
         .unwrap();
 
-        assert_ok!(SubtensorModule::do_swap_stake(
+        assert_ok!(GameSolver::do_swap_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid1,
@@ -1347,8 +1342,8 @@ fn test_do_swap_wrong_origin() {
         let hotkey = U256::from(3);
         let stake_amount = 100_000;
 
-        SubtensorModule::create_account_if_non_existent(&real_coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&real_coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &real_coldkey,
             netuid1,
@@ -1360,7 +1355,7 @@ fn test_do_swap_wrong_origin() {
         .unwrap();
 
         assert_noop!(
-            SubtensorModule::do_swap_stake(
+            GameSolver::do_swap_stake(
                 RuntimeOrigin::signed(wrong_coldkey),
                 hotkey,
                 netuid1,
@@ -1385,8 +1380,8 @@ fn test_do_swap_minimum_stake_check() {
         let total_stake = DefaultMinStake::<Test>::get();
         let swap_amount = 1;
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             netuid1,
@@ -1398,7 +1393,7 @@ fn test_do_swap_minimum_stake_check() {
         .unwrap();
 
         assert_err!(
-            SubtensorModule::do_swap_stake(
+            GameSolver::do_swap_stake(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid1,
@@ -1421,8 +1416,8 @@ fn test_do_swap_same_subnet() {
         let hotkey = U256::from(2);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -1434,10 +1429,10 @@ fn test_do_swap_same_subnet() {
         .unwrap();
 
         let alpha_before =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
 
         assert_err!(
-            SubtensorModule::do_swap_stake(
+            GameSolver::do_swap_stake(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -1448,7 +1443,7 @@ fn test_do_swap_same_subnet() {
         );
 
         let alpha_after =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
         assert_eq!(alpha_after, alpha_before);
     });
 }
@@ -1466,8 +1461,8 @@ fn test_do_swap_partial_stake() {
         let hotkey = U256::from(2);
         let total_stake_tao = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             origin_netuid,
@@ -1477,7 +1472,7 @@ fn test_do_swap_partial_stake() {
             false,
         )
         .unwrap();
-        let total_stake_alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let total_stake_alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             origin_netuid,
@@ -1486,7 +1481,7 @@ fn test_do_swap_partial_stake() {
         let swap_amount = total_stake_alpha / 2.into();
         let (tao_equivalent, _) = mock::swap_alpha_to_tao_ext(origin_netuid, swap_amount, true);
         let (expected_alpha, _) = mock::swap_tao_to_alpha(destination_netuid, tao_equivalent);
-        assert_ok!(SubtensorModule::do_swap_stake(
+        assert_ok!(GameSolver::do_swap_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             origin_netuid,
@@ -1495,7 +1490,7 @@ fn test_do_swap_partial_stake() {
         ));
 
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &coldkey,
                 destination_netuid
@@ -1518,8 +1513,8 @@ fn test_do_swap_storage_updates() {
         let hotkey = U256::from(2);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             origin_netuid,
@@ -1530,14 +1525,14 @@ fn test_do_swap_storage_updates() {
         )
         .unwrap();
 
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             origin_netuid,
         );
         let (tao_equivalent, _) = mock::swap_alpha_to_tao_ext(origin_netuid, alpha, true);
         let (expected_alpha, _) = mock::swap_tao_to_alpha(destination_netuid, tao_equivalent);
-        assert_ok!(SubtensorModule::do_swap_stake(
+        assert_ok!(GameSolver::do_swap_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             origin_netuid,
@@ -1546,7 +1541,7 @@ fn test_do_swap_storage_updates() {
         ));
 
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &coldkey,
                 origin_netuid
@@ -1555,7 +1550,7 @@ fn test_do_swap_storage_updates() {
         );
 
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &coldkey,
                 destination_netuid
@@ -1578,8 +1573,8 @@ fn test_do_swap_multiple_times() {
         let hotkey = U256::from(2);
         let initial_stake = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             netuid1,
@@ -1592,12 +1587,11 @@ fn test_do_swap_multiple_times() {
 
         let mut expected_alpha = AlphaCurrency::ZERO;
         for _ in 0..3 {
-            let alpha1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey, &coldkey, netuid1,
-            );
+            let alpha1 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid1);
             if !alpha1.is_zero() {
                 remove_stake_rate_limit_for_tests(&hotkey, &coldkey, netuid1);
-                assert_ok!(SubtensorModule::do_swap_stake(
+                assert_ok!(GameSolver::do_swap_stake(
                     RuntimeOrigin::signed(coldkey),
                     hotkey,
                     netuid1,
@@ -1605,15 +1599,14 @@ fn test_do_swap_multiple_times() {
                     alpha1
                 ));
             }
-            let alpha2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey, &coldkey, netuid2,
-            );
+            let alpha2 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid2);
             if !alpha2.is_zero() {
                 let (tao_equivalent, _) = mock::swap_alpha_to_tao_ext(netuid2, alpha2, true);
                 // we do this in the loop, because we need the value before the swap
                 expected_alpha = mock::swap_tao_to_alpha(netuid1, tao_equivalent).0;
                 remove_stake_rate_limit_for_tests(&hotkey, &coldkey, netuid2);
-                assert_ok!(SubtensorModule::do_swap_stake(
+                assert_ok!(GameSolver::do_swap_stake(
                     RuntimeOrigin::signed(coldkey),
                     hotkey,
                     netuid2,
@@ -1624,12 +1617,12 @@ fn test_do_swap_multiple_times() {
         }
 
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid1),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid1),
             expected_alpha,
             epsilon = 1000.into()
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid2),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid2),
             AlphaCurrency::ZERO
         );
     });
@@ -1649,8 +1642,8 @@ fn test_do_swap_allows_non_owned_hotkey() {
         let foreign_coldkey = U256::from(3);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&foreign_coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&foreign_coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &coldkey,
             origin_netuid,
@@ -1660,13 +1653,13 @@ fn test_do_swap_allows_non_owned_hotkey() {
             false,
         )
         .unwrap();
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             origin_netuid,
         );
 
-        assert_ok!(SubtensorModule::do_swap_stake(
+        assert_ok!(GameSolver::do_swap_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             origin_netuid,
@@ -1707,12 +1700,12 @@ fn test_move_stake_specific_stake_into_subnet_fail() {
 
         // Check we have zero staked
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey_account_id),
+            GameSolver::get_total_stake_for_hotkey(&hotkey_account_id),
             TaoCurrency::ZERO
         );
 
         // Set a hotkey pool for the hotkey on destination subnet
-        let mut hotkey_pool = SubtensorModule::get_alpha_share_pool(hotkey_account_id, netuid);
+        let mut hotkey_pool = GameSolver::get_alpha_share_pool(hotkey_account_id, netuid);
         hotkey_pool.update_value_for_one(&hotkey_owner_account_id, 1234); // Doesn't matter, will be overridden
 
         // Adjust the total hotkey stake and shares to match the existing values
@@ -1727,23 +1720,20 @@ fn test_move_stake_specific_stake_into_subnet_fail() {
         SubnetTAO::<Test>::insert(netuid, tao_in);
 
         // Give TAO balance to coldkey
-        SubtensorModule::add_balance_to_coldkey_account(
-            &coldkey_account_id,
-            tao_staked + 1_000_000_000,
-        );
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, tao_staked + 1_000_000_000);
 
         // Setup Subnet pool for origin netuid
         SubnetAlphaIn::<Test>::insert(origin_netuid, alpha_in + 10_000_000.into());
         SubnetTAO::<Test>::insert(origin_netuid, tao_in + 10_000_000.into());
 
         // Add stake as new hotkey
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             origin_netuid,
             tao_staked.into(),
         ),);
-        let alpha_to_move = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_to_move = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_account_id,
             &coldkey_account_id,
             origin_netuid,
@@ -1753,7 +1743,7 @@ fn test_move_stake_specific_stake_into_subnet_fail() {
         let (tao_equivalent, _) = mock::swap_alpha_to_tao_ext(origin_netuid, alpha_to_move, true);
         let (expected_value, _) = mock::swap_tao_to_alpha(netuid, tao_equivalent);
         remove_stake_rate_limit_for_tests(&hotkey_account_id, &coldkey_account_id, origin_netuid);
-        assert_ok!(SubtensorModule::move_stake(
+        assert_ok!(GameSolver::move_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             hotkey_account_id,
@@ -1764,7 +1754,7 @@ fn test_move_stake_specific_stake_into_subnet_fail() {
 
         // Check that the stake has been moved
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey_account_id,
                 &coldkey_account_id,
                 origin_netuid
@@ -1773,7 +1763,7 @@ fn test_move_stake_specific_stake_into_subnet_fail() {
         );
 
         assert_abs_diff_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey_account_id,
                 &coldkey_account_id,
                 netuid
@@ -1796,9 +1786,9 @@ fn test_transfer_stake_rate_limited() {
         let hotkey = U256::from(3);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&origin_coldkey, &hotkey);
-        SubtensorModule::create_account_if_non_existent(&destination_coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&origin_coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&destination_coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
@@ -1808,14 +1798,14 @@ fn test_transfer_stake_rate_limited() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
         );
 
         assert_err!(
-            SubtensorModule::do_transfer_stake(
+            GameSolver::do_transfer_stake(
                 RuntimeOrigin::signed(origin_coldkey),
                 destination_coldkey,
                 hotkey,
@@ -1841,9 +1831,9 @@ fn test_transfer_stake_doesnt_limit_destination_coldkey() {
         let hotkey = U256::from(3);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&origin_coldkey, &hotkey);
-        SubtensorModule::create_account_if_non_existent(&destination_coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&origin_coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&destination_coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
@@ -1853,13 +1843,13 @@ fn test_transfer_stake_doesnt_limit_destination_coldkey() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
         );
 
-        assert_ok!(SubtensorModule::do_transfer_stake(
+        assert_ok!(GameSolver::do_transfer_stake(
             RuntimeOrigin::signed(origin_coldkey),
             destination_coldkey,
             hotkey,
@@ -1888,8 +1878,8 @@ fn test_swap_stake_limits_destination_netuid() {
         let hotkey = U256::from(3);
         let stake_amount = DefaultMinStake::<Test>::get().to_u64() * 10;
 
-        SubtensorModule::create_account_if_non_existent(&origin_coldkey, &hotkey);
-        SubtensorModule::stake_into_subnet(
+        GameSolver::create_account_if_non_existent(&origin_coldkey, &hotkey);
+        GameSolver::stake_into_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
@@ -1899,13 +1889,13 @@ fn test_swap_stake_limits_destination_netuid() {
             false,
         )
         .unwrap();
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &origin_coldkey,
             netuid,
         );
 
-        assert_ok!(SubtensorModule::do_swap_stake(
+        assert_ok!(GameSolver::do_swap_stake(
             RuntimeOrigin::signed(origin_coldkey),
             hotkey,
             netuid,

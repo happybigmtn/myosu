@@ -35,7 +35,7 @@ fn test_stake_base_case() {
         // Perform swap
         let (alpha_expected, fee) = mock::swap_tao_to_alpha(netuid, tao_to_swap);
         let alpha_received = AlphaCurrency::from(
-            SubtensorModule::swap_tao_for_alpha(
+            GameSolver::swap_tao_for_alpha(
                 netuid,
                 tao_to_swap,
                 <Test as Config>::SwapInterface::max_price(),
@@ -93,13 +93,13 @@ fn test_share_based_staking() {
 
         // Test Case 1: Initial Stake
         // The first stake should create shares 1:1 with the staked amount
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
             stake_amount,
         );
-        let initial_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let initial_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
@@ -118,13 +118,13 @@ fn test_share_based_staking() {
 
         // Test Case 2: Additional Stake to Same Account
         // Adding more stake to the same account should increase shares proportionally
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
             stake_amount,
         );
-        let stake_after_second = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let stake_after_second = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
@@ -145,8 +145,8 @@ fn test_share_based_staking() {
 
         // Test Case 3: Direct Hotkey Stake
         // When staking directly to hotkey, the stake should be distributed proportionally
-        SubtensorModule::increase_stake_for_hotkey_on_subnet(&primary_hotkey, netuid, stake_amount);
-        let stake_after_direct = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_on_subnet(&primary_hotkey, netuid, stake_amount);
+        let stake_after_direct = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
@@ -169,13 +169,13 @@ fn test_share_based_staking() {
         // Test Case 4: Multiple Coldkey Support
         // System should support multiple coldkeys staking to the same hotkey
         let secondary_coldkey = U256::from(3);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &secondary_coldkey,
             netuid,
             stake_amount,
         );
-        let secondary_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let secondary_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &secondary_coldkey,
             netuid,
@@ -195,7 +195,7 @@ fn test_share_based_staking() {
         // Test Case 5: Total Stake Verification
         // Verify the total stake across all coldkeys matches expected amount
         let total_hotkey_stake =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&primary_hotkey, netuid);
+            GameSolver::get_stake_for_hotkey_on_subnet(&primary_hotkey, netuid);
         log::info!(
             "Total hotkey stake: {} = {}",
             total_hotkey_stake,
@@ -211,13 +211,13 @@ fn test_share_based_staking() {
 
         // Test Case 6: Proportional Distribution
         // When adding stake directly to hotkey, it should be distributed proportionally
-        SubtensorModule::increase_stake_for_hotkey_on_subnet(&primary_hotkey, netuid, stake_amount);
-        let primary_final_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_on_subnet(&primary_hotkey, netuid, stake_amount);
+        let primary_final_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
         );
-        let secondary_final_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let secondary_final_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &secondary_coldkey,
             netuid,
@@ -247,13 +247,13 @@ fn test_share_based_staking() {
 
         // Test Case 7: Stake Removal
         // Verify correct stake removal from both accounts
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
             stake_amount,
         );
-        let primary_after_removal = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let primary_after_removal = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
@@ -273,13 +273,13 @@ fn test_share_based_staking() {
             "Stake removal should decrease balance by exact amount"
         );
 
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &secondary_coldkey,
             netuid,
             stake_amount,
         );
-        let secondary_after_removal = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let secondary_after_removal = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &secondary_coldkey,
             netuid,
@@ -301,7 +301,7 @@ fn test_share_based_staking() {
 
         // Test Case 8: Final Total Verification
         // Verify final total matches sum of remaining stakes
-        let final_total = SubtensorModule::get_stake_for_hotkey_on_subnet(&primary_hotkey, netuid);
+        let final_total = GameSolver::get_stake_for_hotkey_on_subnet(&primary_hotkey, netuid);
         log::info!(
             "Final total stake: {} = {} + {} = {}",
             final_total,
@@ -320,13 +320,13 @@ fn test_share_based_staking() {
         // Additional Edge Cases to Test:
 
         // Test staking with zero amount
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
             AlphaCurrency::ZERO,
         );
-        let zero_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let zero_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
@@ -337,7 +337,7 @@ fn test_share_based_staking() {
         );
 
         // Test removing more stake than available
-        let available_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let available_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
@@ -346,13 +346,13 @@ fn test_share_based_staking() {
         log::info!(
             "Attempting to remove excessive stake: {available_stake} + 1000 = {excessive_amount}"
         );
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
             excessive_amount,
         );
-        let after_excessive_removal = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let after_excessive_removal = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &primary_coldkey,
             netuid,
@@ -365,13 +365,13 @@ fn test_share_based_staking() {
 
         // Test staking to non-existent hotkey
         let non_existent_hotkey = U256::from(4);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &non_existent_hotkey,
             &primary_coldkey,
             netuid,
             stake_amount,
         );
-        let non_existent_hotkey_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let non_existent_hotkey_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &non_existent_hotkey,
             &primary_coldkey,
             netuid,
@@ -383,18 +383,17 @@ fn test_share_based_staking() {
 
         // Test removing stake from non-existent coldkey
         let non_existent_coldkey = U256::from(5);
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &primary_hotkey,
             &non_existent_coldkey,
             netuid,
             stake_amount,
         );
-        let non_existent_coldkey_stake =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &primary_hotkey,
-                &non_existent_coldkey,
-                netuid,
-            );
+        let non_existent_coldkey_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
+            &primary_hotkey,
+            &non_existent_coldkey,
+            netuid,
+        );
         assert!(
             non_existent_coldkey_stake.is_zero(),
             "Removing stake from non-existent coldkey should not change the stake"
@@ -423,7 +422,7 @@ fn test_share_based_staking_denominator_precision() {
             let stake_amount = AlphaCurrency::from(test_case.0);
             let unstake_amount = AlphaCurrency::from(test_case.1);
 
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey1,
                 &coldkey1,
                 netuid,
@@ -435,16 +434,15 @@ fn test_share_based_staking_denominator_precision() {
                     .to_num::<u64>()
                     .into(),
             );
-            SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey1,
                 &coldkey1,
                 netuid,
                 unstake_amount,
             );
 
-            let stake1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey1, &coldkey1, netuid,
-            );
+            let stake1 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey1, netuid);
             let expected_remaining_stake = if (stake_amount.to_u64() as f64
                 - unstake_amount.to_u64() as f64)
                 / (stake_amount.to_u64() as f64)
@@ -484,38 +482,36 @@ fn test_share_based_staking_stake_unstake_inject() {
             let inject_amount = AlphaCurrency::from(test_case.2);
             let tolerance = test_case.3;
 
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey1,
                 &coldkey1,
                 netuid,
                 stake_amount,
             );
-            SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey1,
                 &coldkey1,
                 netuid,
                 unstake_amount,
             );
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey1,
                 &coldkey2,
                 netuid,
                 stake_amount,
             );
-            SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey1,
                 &coldkey2,
                 netuid,
                 unstake_amount,
             );
-            SubtensorModule::increase_stake_for_hotkey_on_subnet(&hotkey1, netuid, inject_amount);
+            GameSolver::increase_stake_for_hotkey_on_subnet(&hotkey1, netuid, inject_amount);
 
-            let stake1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey1, &coldkey1, netuid,
-            );
-            let stake2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey1, &coldkey2, netuid,
-            );
+            let stake1 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey1, netuid);
+            let stake2 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey2, netuid);
 
             assert!(
                 (stake1.to_u64() as i64
@@ -556,26 +552,24 @@ fn test_share_based_staking_stake_inject_stake_new() {
             let stake_amount_2 = AlphaCurrency::from(test_case.2);
             let tolerance = test_case.3;
 
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey1,
                 &coldkey1,
                 netuid,
                 stake_amount,
             );
-            SubtensorModule::increase_stake_for_hotkey_on_subnet(&hotkey1, netuid, inject_amount);
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_on_subnet(&hotkey1, netuid, inject_amount);
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey1,
                 &coldkey2,
                 netuid,
                 stake_amount_2,
             );
 
-            let stake1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey1, &coldkey1, netuid,
-            );
-            let stake2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey1, &coldkey2, netuid,
-            );
+            let stake1 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey1, netuid);
+            let stake2 =
+                GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey2, netuid);
 
             assert!(
                 (stake1.to_u64() as i64 - (stake_amount.to_u64() + inject_amount.to_u64()) as i64)
@@ -596,26 +590,25 @@ fn test_try_associate_hotkey() {
         let coldkey2 = U256::from(3);
 
         // Check initial association
-        assert!(!SubtensorModule::hotkey_account_exists(&hotkey1));
+        assert!(!GameSolver::hotkey_account_exists(&hotkey1));
 
         // Associate hotkey1 with coldkey1
-        assert_ok!(SubtensorModule::try_associate_hotkey(
+        assert_ok!(GameSolver::try_associate_hotkey(
             RuntimeOrigin::signed(coldkey1),
             hotkey1
         ));
 
         // Check that hotkey1 is associated with coldkey1
-        assert!(SubtensorModule::hotkey_account_exists(&hotkey1));
+        assert!(GameSolver::hotkey_account_exists(&hotkey1));
         assert_eq!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&hotkey1),
+            GameSolver::get_owning_coldkey_for_hotkey(&hotkey1),
             coldkey1
         );
-        assert_ne!(SubtensorModule::get_owned_hotkeys(&coldkey1).len(), 0);
-        assert!(SubtensorModule::get_owned_hotkeys(&coldkey1).contains(&hotkey1));
+        assert_ne!(GameSolver::get_owned_hotkeys(&coldkey1).len(), 0);
+        assert!(GameSolver::get_owned_hotkeys(&coldkey1).contains(&hotkey1));
 
         // Verify this tx requires a fee
-        let call =
-            RuntimeCall::SubtensorModule(crate::Call::try_associate_hotkey { hotkey: hotkey1 });
+        let call = RuntimeCall::GameSolver(crate::Call::try_associate_hotkey { hotkey: hotkey1 });
         let dispatch_info = call.get_dispatch_info();
         // Verify tx weight > 0
         assert!(dispatch_info.call_weight.all_gte(Weight::from_all(0)));
@@ -623,28 +616,28 @@ fn test_try_associate_hotkey() {
         assert_eq!(dispatch_info.pays_fee, Pays::Yes);
 
         // Check that coldkey2 is not associated with any hotkey
-        assert!(!SubtensorModule::get_owned_hotkeys(&coldkey2).contains(&hotkey1));
-        assert_eq!(SubtensorModule::get_owned_hotkeys(&coldkey2).len(), 0);
+        assert!(!GameSolver::get_owned_hotkeys(&coldkey2).contains(&hotkey1));
+        assert_eq!(GameSolver::get_owned_hotkeys(&coldkey2).len(), 0);
 
         // Try to associate hotkey1 with coldkey2
         // Should have no effect because coldkey1 is already associated with hotkey1
-        assert_ok!(SubtensorModule::try_associate_hotkey(
+        assert_ok!(GameSolver::try_associate_hotkey(
             RuntimeOrigin::signed(coldkey2),
             hotkey1
         ));
 
         // Check that hotkey1 is still associated with coldkey1
-        assert!(SubtensorModule::hotkey_account_exists(&hotkey1));
+        assert!(GameSolver::hotkey_account_exists(&hotkey1));
         assert_eq!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&hotkey1),
+            GameSolver::get_owning_coldkey_for_hotkey(&hotkey1),
             coldkey1
         );
-        assert_ne!(SubtensorModule::get_owned_hotkeys(&coldkey1).len(), 0);
-        assert!(SubtensorModule::get_owned_hotkeys(&coldkey1).contains(&hotkey1));
+        assert_ne!(GameSolver::get_owned_hotkeys(&coldkey1).len(), 0);
+        assert!(GameSolver::get_owned_hotkeys(&coldkey1).contains(&hotkey1));
 
         // Check that coldkey2 is still not associated with any hotkey
-        assert!(!SubtensorModule::get_owned_hotkeys(&coldkey2).contains(&hotkey1));
-        assert_eq!(SubtensorModule::get_owned_hotkeys(&coldkey2).len(), 0);
+        assert!(!GameSolver::get_owned_hotkeys(&coldkey2).contains(&hotkey1));
+        assert_eq!(GameSolver::get_owned_hotkeys(&coldkey2).len(), 0);
     });
 }
 
@@ -691,7 +684,7 @@ fn test_stake_fee_api() {
         TotalHotkeyAlpha::<Test>::insert(hotkey1, netuid1, total_hotkey_alpha);
 
         // Test stake fee for add_stake
-        let stake_fee_0 = SubtensorModule::get_stake_fee(
+        let stake_fee_0 = GameSolver::get_stake_fee(
             None,
             coldkey1,
             Some((hotkey1, netuid0)),
@@ -706,7 +699,7 @@ fn test_stake_fee_api() {
         assert_eq!(stake_fee_0, dynamic_fee_0);
 
         // Test stake fee for remove on root
-        let stake_fee_1 = SubtensorModule::get_stake_fee(
+        let stake_fee_1 = GameSolver::get_stake_fee(
             Some((hotkey1, root_netuid)),
             coldkey1,
             None,
@@ -721,7 +714,7 @@ fn test_stake_fee_api() {
         assert_eq!(stake_fee_1, dynamic_fee_1);
 
         // Test stake fee for move from root to non-root
-        let stake_fee_2 = SubtensorModule::get_stake_fee(
+        let stake_fee_2 = GameSolver::get_stake_fee(
             Some((hotkey1, root_netuid)),
             coldkey1,
             Some((hotkey1, netuid0)),
@@ -736,7 +729,7 @@ fn test_stake_fee_api() {
         assert_eq!(stake_fee_2, dynamic_fee_2);
 
         // Test stake fee for move between hotkeys on root
-        let stake_fee_3 = SubtensorModule::get_stake_fee(
+        let stake_fee_3 = GameSolver::get_stake_fee(
             Some((hotkey1, root_netuid)),
             coldkey1,
             Some((hotkey2, root_netuid)),
@@ -751,7 +744,7 @@ fn test_stake_fee_api() {
         assert_eq!(stake_fee_3, dynamic_fee_3);
 
         // Test stake fee for move between coldkeys on root
-        let stake_fee_4 = SubtensorModule::get_stake_fee(
+        let stake_fee_4 = GameSolver::get_stake_fee(
             Some((hotkey1, root_netuid)),
             coldkey1,
             Some((hotkey1, root_netuid)),
@@ -766,7 +759,7 @@ fn test_stake_fee_api() {
         assert_eq!(stake_fee_4, dynamic_fee_4);
 
         // Test stake fee for *swap* from non-root to root
-        let stake_fee_5 = SubtensorModule::get_stake_fee(
+        let stake_fee_5 = GameSolver::get_stake_fee(
             Some((hotkey1, netuid0)),
             coldkey1,
             Some((hotkey1, root_netuid)),
@@ -781,7 +774,7 @@ fn test_stake_fee_api() {
         assert_eq!(stake_fee_5, dynamic_fee_5);
 
         // Test stake fee for move between hotkeys on non-root
-        let stake_fee_6 = SubtensorModule::get_stake_fee(
+        let stake_fee_6 = GameSolver::get_stake_fee(
             Some((hotkey1, netuid0)),
             coldkey1,
             Some((hotkey2, netuid0)),
@@ -796,7 +789,7 @@ fn test_stake_fee_api() {
         assert_eq!(stake_fee_6, dynamic_fee_6);
 
         // Test stake fee for move between coldkeys on non-root
-        let stake_fee_7 = SubtensorModule::get_stake_fee(
+        let stake_fee_7 = GameSolver::get_stake_fee(
             Some((hotkey1, netuid0)),
             coldkey1,
             Some((hotkey1, netuid0)),
@@ -811,7 +804,7 @@ fn test_stake_fee_api() {
         assert_eq!(stake_fee_7, dynamic_fee_7);
 
         // Test stake fee for *swap* from non-root to non-root
-        let stake_fee_8 = SubtensorModule::get_stake_fee(
+        let stake_fee_8 = GameSolver::get_stake_fee(
             Some((hotkey1, netuid0)),
             coldkey1,
             Some((hotkey1, netuid1)),

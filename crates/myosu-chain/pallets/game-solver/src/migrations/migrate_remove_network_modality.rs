@@ -35,7 +35,7 @@ pub fn migrate_remove_network_modality<T: Config>() -> Weight {
 
     // Use raw storage operations to remove NetworkModality entries
     // NetworkModality was a StorageMap<_, Identity, NetUid, u16>
-    let pallet_prefix = sp_io::hashing::twox_128("SubtensorModule".as_bytes());
+    let pallet_prefix = sp_io::hashing::twox_128("GameSolver".as_bytes());
     let storage_prefix = sp_io::hashing::twox_128("NetworkModality".as_bytes());
 
     for netuid in 0..total_networks {

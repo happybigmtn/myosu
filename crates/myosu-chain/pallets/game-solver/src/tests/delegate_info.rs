@@ -19,7 +19,7 @@ fn test_return_per_1000_tao() {
     let emissions_per_day = U64F64::from_num(1000.0 * 1e9);
 
     let return_per_1000 =
-        SubtensorModule::return_per_1000_tao_test(take, total_stake, emissions_per_day);
+        GameSolver::return_per_1000_tao_test(take, total_stake, emissions_per_day);
 
     // We expect 82 TAO per day with 10% of total_stake
     let expected_return_per_1000 = U64F64::from_num(82.0);
@@ -119,14 +119,14 @@ fn test_get_delegated() {
                 let Some(delegate) = delegate else {
                     continue;
                 };
-                SubtensorModule::add_balance_to_coldkey_account(delegatee, *amount + 500_000);
-                assert_ok!(SubtensorModule::add_stake(
+                GameSolver::add_balance_to_coldkey_account(delegatee, *amount + 500_000);
+                assert_ok!(GameSolver::add_stake(
                     RuntimeOrigin::signed(*delegatee),
                     *delegate,
                     *netuid,
                     (*amount).into()
                 ));
-                let expected_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+                let expected_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                     delegate, delegatee, *netuid,
                 );
                 let stakes = expected_stake_map
@@ -140,7 +140,7 @@ fn test_get_delegated() {
 
         // Check delegated info for each coldkey
         for coldkey in coldkeys {
-            let delegated = SubtensorModule::get_delegated(coldkey);
+            let delegated = GameSolver::get_delegated(coldkey);
 
             for (delegate_info, (netuid, staked)) in delegated.iter() {
                 if let Some(coldkey_stakes_map) = expected_stake_map.get(&coldkey) {

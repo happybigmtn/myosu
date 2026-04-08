@@ -1,5 +1,5 @@
 [package]
-name = "subtensor-custom-rpc-runtime-api"
+name = "game-solver-rpc-runtime-api"
 version = "0.0.2"
 edition.workspace = true
 authors = ['Cameron Fairchild <https://github.com/camfairchild>']

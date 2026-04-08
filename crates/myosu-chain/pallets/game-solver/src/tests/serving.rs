@@ -42,7 +42,7 @@ fn test_serving_subscribe_ok_dispatch_info_ok() {
         let protocol: u8 = 0;
         let placeholder1: u8 = 0;
         let placeholder2: u8 = 0;
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::serve_axon {
+        let call = RuntimeCall::GameSolver(SubtensorCall::serve_axon {
             netuid,
             version,
             ip,
@@ -75,7 +75,7 @@ fn test_serving_ok() {
         let placeholder2: u8 = 0;
         add_network(netuid, tempo, modality);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -86,7 +86,7 @@ fn test_serving_ok() {
             placeholder1,
             placeholder2
         ));
-        let neuron = SubtensorModule::get_axon_info(netuid, &hotkey_account_id);
+        let neuron = GameSolver::get_axon_info(netuid, &hotkey_account_id);
         assert_eq!(neuron.ip, ip);
         assert_eq!(neuron.version, version);
         assert_eq!(neuron.port, port);
@@ -114,7 +114,7 @@ fn test_serving_tls_ok() {
         let certificate: Vec<u8> = "CERT".as_bytes().to_vec();
         add_network(netuid, tempo, modality);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
-        assert_ok!(SubtensorModule::serve_axon_tls(
+        assert_ok!(GameSolver::serve_axon_tls(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -134,7 +134,7 @@ fn test_serving_tls_ok() {
             certificate.get(1..).expect("Certificate should exist")
         );
         let new_certificate = "UPDATED_CERT".as_bytes().to_vec();
-        assert_ok!(SubtensorModule::serve_axon_tls(
+        assert_ok!(GameSolver::serve_axon_tls(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -171,7 +171,7 @@ fn test_serving_set_metadata_update() {
         let placeholder2: u8 = 0;
         add_network(netuid, tempo, modality);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -182,7 +182,7 @@ fn test_serving_set_metadata_update() {
             placeholder1,
             placeholder2
         ));
-        let neuron = SubtensorModule::get_axon_info(netuid, &hotkey_account_id);
+        let neuron = GameSolver::get_axon_info(netuid, &hotkey_account_id);
         assert_eq!(neuron.ip, ip);
         assert_eq!(neuron.version, version);
         assert_eq!(neuron.port, port);
@@ -197,7 +197,7 @@ fn test_serving_set_metadata_update() {
         let protocol2: u8 = protocol + 1;
         let placeholder12: u8 = placeholder1 + 1;
         let placeholder22: u8 = placeholder2 + 1;
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version2,
@@ -208,7 +208,7 @@ fn test_serving_set_metadata_update() {
             placeholder12,
             placeholder22
         ));
-        let neuron = SubtensorModule::get_axon_info(netuid, &hotkey_account_id);
+        let neuron = GameSolver::get_axon_info(netuid, &hotkey_account_id);
         assert_eq!(neuron.ip, ip2);
         assert_eq!(neuron.version, version2);
         assert_eq!(neuron.port, port2);
@@ -237,7 +237,7 @@ fn test_axon_serving_rate_limit_exceeded() {
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
         run_to_block(1); // Go to block 1
         // No issue on multiple
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -248,7 +248,7 @@ fn test_axon_serving_rate_limit_exceeded() {
             placeholder1,
             placeholder2
         ));
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -259,7 +259,7 @@ fn test_axon_serving_rate_limit_exceeded() {
             placeholder1,
             placeholder2
         ));
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -270,7 +270,7 @@ fn test_axon_serving_rate_limit_exceeded() {
             placeholder1,
             placeholder2
         ));
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -281,11 +281,11 @@ fn test_axon_serving_rate_limit_exceeded() {
             placeholder1,
             placeholder2
         ));
-        SubtensorModule::set_serving_rate_limit(netuid, 2);
+        GameSolver::set_serving_rate_limit(netuid, 2);
         run_to_block(2); // Go to block 2
         // Needs to be 2 blocks apart, we are only 1 block apart
         assert_eq!(
-            SubtensorModule::serve_axon(
+            GameSolver::serve_axon(
                 <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
                 netuid,
                 version,
@@ -319,7 +319,7 @@ fn test_axon_invalid_port() {
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
         run_to_block(1); // Go to block 1
         assert_eq!(
-            SubtensorModule::serve_axon(
+            GameSolver::serve_axon(
                 <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
                 netuid,
                 version,
@@ -343,7 +343,7 @@ fn test_prometheus_serving_subscribe_ok_dispatch_info_ok() {
         let ip: u128 = 1676056785;
         let port: u16 = 128;
         let ip_type: u8 = 4;
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::serve_prometheus {
+        let call = RuntimeCall::GameSolver(SubtensorCall::serve_prometheus {
             netuid,
             version,
             ip,
@@ -370,7 +370,7 @@ fn test_prometheus_serving_ok() {
         let modality: u16 = 0;
         add_network(netuid, tempo, modality);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
-        assert_ok!(SubtensorModule::serve_prometheus(
+        assert_ok!(GameSolver::serve_prometheus(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -378,7 +378,7 @@ fn test_prometheus_serving_ok() {
             port,
             ip_type
         ));
-        let neuron = SubtensorModule::get_prometheus_info(netuid, &hotkey_account_id);
+        let neuron = GameSolver::get_prometheus_info(netuid, &hotkey_account_id);
         assert_eq!(neuron.ip, ip);
         assert_eq!(neuron.version, version);
         assert_eq!(neuron.port, port);
@@ -399,7 +399,7 @@ fn test_prometheus_serving_set_metadata_update() {
         let modality: u16 = 0;
         add_network(netuid, tempo, modality);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
-        assert_ok!(SubtensorModule::serve_prometheus(
+        assert_ok!(GameSolver::serve_prometheus(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -407,7 +407,7 @@ fn test_prometheus_serving_set_metadata_update() {
             port,
             ip_type
         ));
-        let neuron = SubtensorModule::get_prometheus_info(netuid, &hotkey_account_id);
+        let neuron = GameSolver::get_prometheus_info(netuid, &hotkey_account_id);
         assert_eq!(neuron.ip, ip);
         assert_eq!(neuron.version, version);
         assert_eq!(neuron.port, port);
@@ -416,7 +416,7 @@ fn test_prometheus_serving_set_metadata_update() {
         let ip2: u128 = ip + 1;
         let port2: u16 = port + 1;
         let ip_type2: u8 = 6;
-        assert_ok!(SubtensorModule::serve_prometheus(
+        assert_ok!(GameSolver::serve_prometheus(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version2,
@@ -424,7 +424,7 @@ fn test_prometheus_serving_set_metadata_update() {
             port2,
             ip_type2
         ));
-        let neuron = SubtensorModule::get_prometheus_info(netuid, &hotkey_account_id);
+        let neuron = GameSolver::get_prometheus_info(netuid, &hotkey_account_id);
         assert_eq!(neuron.ip, ip2);
         assert_eq!(neuron.version, version2);
         assert_eq!(neuron.port, port2);
@@ -447,7 +447,7 @@ fn test_prometheus_serving_rate_limit_exceeded() {
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
         run_to_block(1); // Go to block 1
         // No issue on multiple
-        assert_ok!(SubtensorModule::serve_prometheus(
+        assert_ok!(GameSolver::serve_prometheus(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -455,7 +455,7 @@ fn test_prometheus_serving_rate_limit_exceeded() {
             port,
             ip_type
         ));
-        assert_ok!(SubtensorModule::serve_prometheus(
+        assert_ok!(GameSolver::serve_prometheus(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -463,7 +463,7 @@ fn test_prometheus_serving_rate_limit_exceeded() {
             port,
             ip_type
         ));
-        assert_ok!(SubtensorModule::serve_prometheus(
+        assert_ok!(GameSolver::serve_prometheus(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -471,7 +471,7 @@ fn test_prometheus_serving_rate_limit_exceeded() {
             port,
             ip_type
         ));
-        assert_ok!(SubtensorModule::serve_prometheus(
+        assert_ok!(GameSolver::serve_prometheus(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             version,
@@ -479,10 +479,10 @@ fn test_prometheus_serving_rate_limit_exceeded() {
             port,
             ip_type
         ));
-        SubtensorModule::set_serving_rate_limit(netuid, 1);
+        GameSolver::set_serving_rate_limit(netuid, 1);
         // Same block, need 1 block to pass
         assert_eq!(
-            SubtensorModule::serve_prometheus(
+            GameSolver::serve_prometheus(
                 <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
                 netuid,
                 version,
@@ -510,7 +510,7 @@ fn test_prometheus_invalid_port() {
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
         run_to_block(1); // Go to block 1
         assert_eq!(
-            SubtensorModule::serve_prometheus(
+            GameSolver::serve_prometheus(
                 <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
                 netuid,
                 version,
@@ -526,34 +526,34 @@ fn test_prometheus_invalid_port() {
 #[test]
 fn test_serving_is_valid_ip_type_ok_ipv4() {
     new_test_ext(1).execute_with(|| {
-        assert!(SubtensorModule::is_valid_ip_type(4));
+        assert!(GameSolver::is_valid_ip_type(4));
     });
 }
 
 #[test]
 fn test_serving_is_valid_ip_type_ok_ipv6() {
     new_test_ext(1).execute_with(|| {
-        assert!(SubtensorModule::is_valid_ip_type(6));
+        assert!(GameSolver::is_valid_ip_type(6));
     });
 }
 
 #[test]
 fn test_serving_is_valid_ip_type_nok() {
     new_test_ext(1).execute_with(|| {
-        assert!(!SubtensorModule::is_valid_ip_type(10));
+        assert!(!GameSolver::is_valid_ip_type(10));
     });
 }
 
 #[test]
 fn test_serving_is_valid_ip_address_ipv4() {
     new_test_ext(1).execute_with(|| {
-        assert!(SubtensorModule::is_valid_ip_address(
+        assert!(GameSolver::is_valid_ip_address(
             4,
             test::ipv4(8, 8, 8, 8),
             false
         ));
 
-        assert!(SubtensorModule::is_valid_ip_address(
+        assert!(GameSolver::is_valid_ip_address(
             4,
             test::ipv4(0, 0, 0, 0),
             true
@@ -564,17 +564,17 @@ fn test_serving_is_valid_ip_address_ipv4() {
 #[test]
 fn test_serving_is_valid_ip_address_ipv6() {
     new_test_ext(1).execute_with(|| {
-        assert!(SubtensorModule::is_valid_ip_address(
+        assert!(GameSolver::is_valid_ip_address(
             6,
             test::ipv6(1, 2, 3, 4, 5, 6, 7, 8),
             false
         ));
-        assert!(SubtensorModule::is_valid_ip_address(
+        assert!(GameSolver::is_valid_ip_address(
             6,
             test::ipv6(1, 2, 3, 4, 5, 6, 7, 8),
             false
         ));
-        assert!(SubtensorModule::is_valid_ip_address(
+        assert!(GameSolver::is_valid_ip_address(
             6,
             test::ipv6(0, 0, 0, 0, 0, 0, 0, 0),
             true
@@ -585,37 +585,37 @@ fn test_serving_is_valid_ip_address_ipv6() {
 #[test]
 fn test_serving_is_invalid_ipv4_address() {
     new_test_ext(1).execute_with(|| {
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv4(0, 0, 0, 0),
             false
         ));
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv4(255, 255, 255, 255),
             false
         ));
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv4(127, 0, 0, 1),
             false
         ));
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv6(0xffff, 2, 3, 4, 5, 6, 7, 8),
             false
         ));
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv4(255, 255, 255, 255),
             true
         ));
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv4(127, 0, 0, 1),
             true
         ));
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv6(0xffff, 2, 3, 4, 5, 6, 7, 8),
             true
@@ -626,19 +626,19 @@ fn test_serving_is_invalid_ipv4_address() {
 #[test]
 fn test_serving_is_invalid_ipv6_address() {
     new_test_ext(1).execute_with(|| {
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             6,
             test::ipv6(0, 0, 0, 0, 0, 0, 0, 0),
             false
         ));
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv6(
                 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff
             ),
             false
         ));
-        assert!(!SubtensorModule::is_valid_ip_address(
+        assert!(!GameSolver::is_valid_ip_address(
             4,
             test::ipv6(
                 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff
@@ -670,7 +670,7 @@ fn test_do_set_identity() {
         let additional = b"Additional info".to_vec();
 
         // Set identity
-        assert_ok!(SubtensorModule::do_set_identity(
+        assert_ok!(GameSolver::do_set_identity(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             name.clone(),
             url.clone(),
@@ -693,7 +693,7 @@ fn test_do_set_identity() {
         // Test setting identity with no registered hotkey
         let coldkey_without_hotkey = U256::from(3);
         assert_noop!(
-            SubtensorModule::do_set_identity(
+            GameSolver::do_set_identity(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_without_hotkey),
                 name.clone(),
                 url.clone(),
@@ -709,7 +709,7 @@ fn test_do_set_identity() {
         // Test updating an existing identity
         let new_name = b"Alice Updated".to_vec();
         let new_url = b"https://alice-updated.com".to_vec();
-        assert_ok!(SubtensorModule::do_set_identity(
+        assert_ok!(GameSolver::do_set_identity(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             new_name.clone(),
             new_url.clone(),
@@ -728,7 +728,7 @@ fn test_do_set_identity() {
         // Test setting identity with invalid data (exceeding 512 bytes total)
         let long_data = vec![0; 513];
         assert_noop!(
-            SubtensorModule::do_set_identity(
+            GameSolver::do_set_identity(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey),
                 long_data.clone(),
                 long_data.clone(),
@@ -757,7 +757,7 @@ fn test_is_valid_identity() {
             description: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(SubtensorModule::is_valid_identity(&valid_identity));
+        assert!(GameSolver::is_valid_identity(&valid_identity));
 
         // Test identity with total length exactly at the maximum
         let max_length_identity = ChainIdentityV2 {
@@ -769,7 +769,7 @@ fn test_is_valid_identity() {
             description: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(SubtensorModule::is_valid_identity(&max_length_identity));
+        assert!(GameSolver::is_valid_identity(&max_length_identity));
 
         // Test identity with total length exceeding the maximum
         let invalid_length_identity = ChainIdentityV2 {
@@ -781,9 +781,7 @@ fn test_is_valid_identity() {
             description: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(!SubtensorModule::is_valid_identity(
-            &invalid_length_identity
-        ));
+        assert!(!GameSolver::is_valid_identity(&invalid_length_identity));
 
         // Test identity with one field exceeding its maximum
         let invalid_field_identity = ChainIdentityV2 {
@@ -795,7 +793,7 @@ fn test_is_valid_identity() {
             description: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(!SubtensorModule::is_valid_identity(&invalid_field_identity));
+        assert!(!GameSolver::is_valid_identity(&invalid_field_identity));
 
         // Test identity with empty fields
         let empty_identity = ChainIdentityV2 {
@@ -807,7 +805,7 @@ fn test_is_valid_identity() {
             description: vec![],
             additional: vec![],
         };
-        assert!(SubtensorModule::is_valid_identity(&empty_identity));
+        assert!(GameSolver::is_valid_identity(&empty_identity));
 
         // Test identity with some empty and some filled fields
         let mixed_identity = ChainIdentityV2 {
@@ -819,7 +817,7 @@ fn test_is_valid_identity() {
             description: vec![],
             additional: b"Additional info".to_vec(),
         };
-        assert!(SubtensorModule::is_valid_identity(&mixed_identity));
+        assert!(GameSolver::is_valid_identity(&mixed_identity));
 
         // Test identity with all fields at maximum allowed length
         let max_field_identity = ChainIdentityV2 {
@@ -831,7 +829,7 @@ fn test_is_valid_identity() {
             description: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(SubtensorModule::is_valid_identity(&max_field_identity));
+        assert!(GameSolver::is_valid_identity(&max_field_identity));
     });
 }
 
@@ -857,7 +855,7 @@ fn test_set_and_get_identity() {
         let additional = b"More about Bob".to_vec();
 
         // Set identity
-        assert_ok!(SubtensorModule::do_set_identity(
+        assert_ok!(GameSolver::do_set_identity(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             name.clone(),
             url.clone(),
@@ -880,7 +878,7 @@ fn test_set_and_get_identity() {
         // Update identity
         let new_name = b"Bobby".to_vec();
         let new_url = b"https://bobby.com".to_vec();
-        assert_ok!(SubtensorModule::do_set_identity(
+        assert_ok!(GameSolver::do_set_identity(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             new_name.clone(),
             new_url.clone(),
@@ -933,7 +931,7 @@ fn test_do_set_subnet_identity() {
         let additional = b"tao foreva".to_vec();
 
         // Set subnet identity
-        assert_ok!(SubtensorModule::do_set_subnet_identity(
+        assert_ok!(GameSolver::do_set_subnet_identity(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             netuid,
             subnet_name.clone(),
@@ -957,7 +955,7 @@ fn test_do_set_subnet_identity() {
         // Test setting subnet identity by non-owner
         let non_owner_coldkey = U256::from(2);
         assert_noop!(
-            SubtensorModule::do_set_subnet_identity(
+            GameSolver::do_set_subnet_identity(
                 <<Test as Config>::RuntimeOrigin>::signed(non_owner_coldkey),
                 netuid,
                 subnet_name.clone(),
@@ -975,7 +973,7 @@ fn test_do_set_subnet_identity() {
         // Test updating an existing subnet identity
         let new_subnet_name = b"Updated Subnet".to_vec();
         let new_github_repo = b"https://github.com/test/subnet-updated".to_vec();
-        assert_ok!(SubtensorModule::do_set_subnet_identity(
+        assert_ok!(GameSolver::do_set_subnet_identity(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             netuid,
             new_subnet_name.clone(),
@@ -997,7 +995,7 @@ fn test_do_set_subnet_identity() {
         // Test setting subnet identity with invalid data (exceeding 1024 bytes total)
         let long_data = vec![0; 1025];
         assert_noop!(
-            SubtensorModule::do_set_subnet_identity(
+            GameSolver::do_set_subnet_identity(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey),
                 netuid,
                 long_data.clone(),
@@ -1029,7 +1027,7 @@ fn test_is_valid_subnet_identity() {
             logo_url: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(SubtensorModule::is_valid_subnet_identity(&valid_identity));
+        assert!(GameSolver::is_valid_subnet_identity(&valid_identity));
 
         // Test subnet identity with total length exactly at the maximum
         let max_length_identity = SubnetIdentityV3 {
@@ -1042,9 +1040,7 @@ fn test_is_valid_subnet_identity() {
             logo_url: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(SubtensorModule::is_valid_subnet_identity(
-            &max_length_identity
-        ));
+        assert!(GameSolver::is_valid_subnet_identity(&max_length_identity));
 
         // Test subnet identity with total length exceeding the maximum
         let invalid_length_identity = SubnetIdentityV3 {
@@ -1057,7 +1053,7 @@ fn test_is_valid_subnet_identity() {
             logo_url: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(!SubtensorModule::is_valid_subnet_identity(
+        assert!(!GameSolver::is_valid_subnet_identity(
             &invalid_length_identity
         ));
 
@@ -1072,7 +1068,7 @@ fn test_is_valid_subnet_identity() {
             logo_url: vec![0; 1024],
             additional: vec![0; 1024],
         };
-        assert!(!SubtensorModule::is_valid_subnet_identity(
+        assert!(!GameSolver::is_valid_subnet_identity(
             &invalid_field_identity
         ));
 
@@ -1087,7 +1083,7 @@ fn test_is_valid_subnet_identity() {
             logo_url: vec![],
             additional: vec![],
         };
-        assert!(SubtensorModule::is_valid_subnet_identity(&empty_identity));
+        assert!(GameSolver::is_valid_subnet_identity(&empty_identity));
 
         // Test subnet identity with some empty and some filled fields
         let mixed_identity = SubnetIdentityV3 {
@@ -1100,7 +1096,7 @@ fn test_is_valid_subnet_identity() {
             logo_url: vec![],
             additional: vec![],
         };
-        assert!(SubtensorModule::is_valid_subnet_identity(&mixed_identity));
+        assert!(GameSolver::is_valid_subnet_identity(&mixed_identity));
     });
 }
 
@@ -1122,7 +1118,7 @@ fn test_set_identity_for_non_existent_subnet() {
 
         // Attempt to set identity for a non-existent subnet
         assert_noop!(
-            SubtensorModule::do_set_subnet_identity(
+            GameSolver::do_set_subnet_identity(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey),
                 netuid,
                 subnet_name.clone(),
@@ -1152,7 +1148,7 @@ fn test_set_subnet_identity_dispatch_info_ok() {
         let logo_url = b"https://testsubnet.com/logo.png".to_vec();
         let additional = b"tao foreva".to_vec();
 
-        let call: RuntimeCall = RuntimeCall::SubtensorModule(SubtensorCall::set_subnet_identity {
+        let call: RuntimeCall = RuntimeCall::GameSolver(SubtensorCall::set_subnet_identity {
             netuid,
             subnet_name,
             github_repo,
@@ -1189,7 +1185,7 @@ fn test_serve_axon_validate() {
         let placeholder2: u8 = 0;
 
         // Serve axon bad call
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::serve_axon {
+        let call = RuntimeCall::GameSolver(SubtensorCall::serve_axon {
             netuid,
             version,
             ip,

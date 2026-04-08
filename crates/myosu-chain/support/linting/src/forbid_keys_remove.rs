@@ -32,7 +32,7 @@ impl<'ast> Visit<'ast> for KeysRemoveVisitor {
 
         if is_keys_remove_call(func, args) && !is_allowed(attrs) {
             let msg = "Keys::<T>::remove()` is banned to prevent accidentally breaking \
-                the neuron sequence. If you need to replace neurons, try `SubtensorModule::replace_neuron()`";
+                the neuron sequence. If you need to replace neurons, try `GameSolver::replace_neuron()`";
             self.errors.push(syn::Error::new(node.func.span(), msg));
         }
     }

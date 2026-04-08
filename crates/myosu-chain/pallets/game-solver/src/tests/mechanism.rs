@@ -76,7 +76,7 @@ fn test_index_from_netuid_and_subnet() {
         ]
         .iter()
         .for_each(|(netuid, sub_id)| {
-            let idx = SubtensorModule::get_mechanism_storage_index(
+            let idx = GameSolver::get_mechanism_storage_index(
                 NetUid::from(*netuid),
                 MechId::from(*sub_id),
             );
@@ -116,8 +116,7 @@ fn test_netuid_and_subnet_from_index() {
             );
 
             let (netuid, mecid) =
-                SubtensorModule::get_netuid_and_subid(NetUidStorageIndex::from(*netuid_index))
-                    .unwrap();
+                GameSolver::get_netuid_and_subid(NetUidStorageIndex::from(*netuid_index)).unwrap();
             assert_eq!(netuid, NetUid::from(expected_netuid));
             assert_eq!(mecid, MechId::from(expected_subid));
         });
@@ -143,7 +142,7 @@ fn ensure_mechanism_exists_ok() {
 
         // Allow at least 2 sub-subnets (so sub_id = 1 is valid)
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(2u8));
-        assert_ok!(SubtensorModule::ensure_mechanism_exists(netuid, sub_id));
+        assert_ok!(GameSolver::ensure_mechanism_exists(netuid, sub_id));
     });
 }
 
@@ -156,7 +155,7 @@ fn ensure_mechanism_fails_when_base_subnet_missing() {
         // Intentionally DO NOT create the base subnet
 
         assert_noop!(
-            SubtensorModule::ensure_mechanism_exists(netuid, sub_id),
+            GameSolver::ensure_mechanism_exists(netuid, sub_id),
             Error::<Test>::MechanismDoesNotExist
         );
     });
@@ -174,14 +173,14 @@ fn ensure_mechanism_fails_when_subid_out_of_range() {
         // sub_id == 2 is out of range (must be < 2)
         let sub_id_eq = MechId::from(2u8);
         assert_noop!(
-            SubtensorModule::ensure_mechanism_exists(netuid, sub_id_eq),
+            GameSolver::ensure_mechanism_exists(netuid, sub_id_eq),
             Error::<Test>::MechanismDoesNotExist
         );
 
         // sub_id > 2 is also out of range
         let sub_id_gt = MechId::from(3u8);
         assert_noop!(
-            SubtensorModule::ensure_mechanism_exists(netuid, sub_id_gt),
+            GameSolver::ensure_mechanism_exists(netuid, sub_id_gt),
             Error::<Test>::MechanismDoesNotExist
         );
     });
@@ -193,7 +192,7 @@ fn do_set_mechanism_count_ok_minimal() {
         let netuid = NetUid::from(3u16);
         NetworksAdded::<Test>::insert(NetUid::from(3u16), true); // base subnet exists
 
-        assert_ok!(SubtensorModule::do_set_mechanism_count(
+        assert_ok!(GameSolver::do_set_mechanism_count(
             netuid,
             MechId::from(1u8)
         ));
@@ -221,7 +220,7 @@ fn do_set_mechanism_count_ok_at_effective_cap() {
             compile_cap
         };
 
-        assert_ok!(SubtensorModule::do_set_mechanism_count(netuid, bound));
+        assert_ok!(GameSolver::do_set_mechanism_count(netuid, bound));
         assert_eq!(MechanismCountCurrent::<Test>::get(netuid), bound);
     });
 }
@@ -233,7 +232,7 @@ fn do_set_fails_when_base_subnet_missing() {
         // No NetworksAdded insert => base subnet absent
 
         assert_noop!(
-            SubtensorModule::do_set_mechanism_count(netuid, MechId::from(1u8)),
+            GameSolver::do_set_mechanism_count(netuid, MechId::from(1u8)),
             Error::<Test>::MechanismDoesNotExist
         );
     });
@@ -246,7 +245,7 @@ fn do_set_fails_for_zero() {
         NetworksAdded::<Test>::insert(NetUid::from(9u16), true); // base subnet exists
 
         assert_noop!(
-            SubtensorModule::do_set_mechanism_count(netuid, MechId::from(0u8)),
+            GameSolver::do_set_mechanism_count(netuid, MechId::from(0u8)),
             Error::<Test>::InvalidValue
         );
     });
@@ -260,7 +259,7 @@ fn do_set_fails_when_over_runtime_cap() {
 
         // Runtime cap is 8 (per function), so 9 must fail
         assert_noop!(
-            SubtensorModule::do_set_mechanism_count(netuid, MechId::from(9u8)),
+            GameSolver::do_set_mechanism_count(netuid, MechId::from(9u8)),
             Error::<Test>::InvalidValue
         );
     });
@@ -274,7 +273,7 @@ fn do_set_fails_when_over_compile_time_cap() {
 
         let too_big = MechId::from(MAX_MECHANISM_COUNT_PER_SUBNET + 1);
         assert_noop!(
-            SubtensorModule::do_set_mechanism_count(netuid, too_big),
+            GameSolver::do_set_mechanism_count(netuid, too_big),
             Error::<Test>::InvalidValue
         );
     });
@@ -298,8 +297,8 @@ fn update_mechanism_counts_decreases_and_cleans() {
         MechanismEmissionSplit::<Test>::insert(netuid, vec![123u16, 234u16, 345u16]);
 
         // Seed data at a kept mecid (1) and a removed mecid (2)
-        let idx_keep = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(1u8));
-        let idx_rm3 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(2u8));
+        let idx_keep = GameSolver::get_mechanism_storage_index(netuid, MechId::from(1u8));
+        let idx_rm3 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(2u8));
 
         Weights::<Test>::insert(idx_keep, 0u16, vec![(1u16, 1u16)]);
         Incentive::<Test>::insert(idx_keep, vec![1u16]);
@@ -332,7 +331,7 @@ fn update_mechanism_counts_decreases_and_cleans() {
         );
 
         // Act
-        SubtensorModule::update_mechanism_counts_if_needed(netuid, desired);
+        GameSolver::update_mechanism_counts_if_needed(netuid, desired);
 
         // New count is as desired
         assert_eq!(MechanismCountCurrent::<Test>::get(netuid), desired);
@@ -378,7 +377,7 @@ fn update_mechanism_counts_increases() {
         MechanismEmissionSplit::<Test>::insert(netuid, vec![123u16, 234u16, 345u16]);
 
         // Act
-        SubtensorModule::update_mechanism_counts_if_needed(netuid, desired);
+        GameSolver::update_mechanism_counts_if_needed(netuid, desired);
 
         // New count is as desired
         assert_eq!(MechanismCountCurrent::<Test>::get(netuid), desired);
@@ -393,7 +392,7 @@ fn split_emissions_even_division() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(5u16);
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(5u8)); // 5 sub-subnets
-        let out = SubtensorModule::split_emissions(netuid, AlphaCurrency::from(25u64));
+        let out = GameSolver::split_emissions(netuid, AlphaCurrency::from(25u64));
         assert_eq!(out, vec![AlphaCurrency::from(5u64); 5]);
     });
 }
@@ -403,7 +402,7 @@ fn split_emissions_rounding_to_first() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(6u16);
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(4u8)); // 4 sub-subnets
-        let out = SubtensorModule::split_emissions(netuid, AlphaCurrency::from(10u64)); // 10 / 4 = 2, rem=2
+        let out = GameSolver::split_emissions(netuid, AlphaCurrency::from(10u64)); // 10 / 4 = 2, rem=2
         assert_eq!(
             out,
             vec![
@@ -422,7 +421,7 @@ fn split_emissions_fibbonacci() {
         let netuid = NetUid::from(5u16);
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(5u8)); // 5 sub-subnets
         MechanismEmissionSplit::<Test>::insert(netuid, vec![3450, 6899, 10348, 17247, 27594]);
-        let out = SubtensorModule::split_emissions(netuid, AlphaCurrency::from(19u64));
+        let out = GameSolver::split_emissions(netuid, AlphaCurrency::from(19u64));
         assert_eq!(
             out,
             vec![
@@ -440,8 +439,8 @@ fn split_emissions_fibbonacci() {
 /// incentives & dividends.
 /// Returns the sub-subnet storage index.
 pub fn mock_epoch_state(netuid: NetUid, ck0: U256, hk0: U256, ck1: U256, hk1: U256) {
-    let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0));
-    let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(1));
+    let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0));
+    let idx1 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(1));
 
     // Base subnet exists; 2 neurons.
     NetworksAdded::<Test>::insert(NetUid::from(u16::from(netuid)), true);
@@ -462,18 +461,8 @@ pub fn mock_epoch_state(netuid: NetUid, ck0: U256, hk0: U256, ck1: U256, hk1: U2
 
     // Add stake
     let stake_amount = AlphaCurrency::from(1_000_000_000); // 1 Alpha
-    SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
-        &hk0,
-        &ck0,
-        netuid,
-        stake_amount,
-    );
-    SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
-        &hk1,
-        &ck1,
-        netuid,
-        stake_amount,
-    );
+    GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hk0, &ck0, netuid, stake_amount);
+    GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hk1, &ck1, netuid, stake_amount);
 
     // Non-zero stake above threshold; permit both as validators.
     StakeThreshold::<Test>::put(0u64);
@@ -491,8 +480,8 @@ pub fn mock_epoch_state(netuid: NetUid, ck0: U256, hk0: U256, ck1: U256, hk1: U2
 }
 
 pub fn mock_3_neurons(netuid: NetUid, hk: U256) {
-    let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0));
-    let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(1));
+    let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0));
+    let idx1 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(1));
 
     SubnetworkN::<Test>::insert(netuid, 3);
     Keys::<Test>::insert(netuid, 2u16, hk);
@@ -505,8 +494,8 @@ pub fn mock_3_neurons(netuid: NetUid, hk: U256) {
 fn epoch_with_mechanisms_produces_per_mechanism_incentive() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1u16);
-        let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0));
-        let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(1));
+        let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0));
+        let idx1 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(1));
         let ck0 = U256::from(1);
         let hk0 = U256::from(2);
         let ck1 = U256::from(3);
@@ -514,7 +503,7 @@ fn epoch_with_mechanisms_produces_per_mechanism_incentive() {
         let emission = AlphaCurrency::from(1_000_000_000);
 
         mock_epoch_state(netuid, ck0, hk0, ck1, hk1);
-        SubtensorModule::epoch_with_mechanisms(netuid, emission);
+        GameSolver::epoch_with_mechanisms(netuid, emission);
 
         let actual_incentive_sub0 = Incentive::<Test>::get(idx0);
         let actual_incentive_sub1 = Incentive::<Test>::get(idx1);
@@ -530,8 +519,8 @@ fn epoch_with_mechanisms_produces_per_mechanism_incentive() {
 fn epoch_with_mechanisms_updates_bonds() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1u16);
-        let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0));
-        let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(1));
+        let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0));
+        let idx1 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(1));
         let ck0 = U256::from(1);
         let hk0 = U256::from(2);
         let ck1 = U256::from(3);
@@ -544,7 +533,7 @@ fn epoch_with_mechanisms_updates_bonds() {
         Weights::<Test>::insert(idx1, 0, vec![(0u16, 0xFFFF), (1u16, 0)]);
         Weights::<Test>::insert(idx1, 1, vec![(0u16, 0xFFFF), (1u16, 0xFFFF)]);
 
-        SubtensorModule::epoch_with_mechanisms(netuid, emission);
+        GameSolver::epoch_with_mechanisms(netuid, emission);
 
         let bonds_uid0_sub0 = Bonds::<Test>::get(idx0, 0);
         let bonds_uid1_sub0 = Bonds::<Test>::get(idx0, 1);
@@ -565,8 +554,8 @@ fn epoch_with_mechanisms_updates_bonds() {
 fn epoch_with_mechanisms_incentives_proportional_to_weights() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1u16);
-        let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0));
-        let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(1));
+        let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0));
+        let idx1 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(1));
         let ck0 = U256::from(1);
         let hk0 = U256::from(2);
         let ck1 = U256::from(3);
@@ -584,7 +573,7 @@ fn epoch_with_mechanisms_incentives_proportional_to_weights() {
         Weights::<Test>::insert(idx0, 0, vec![(1u16, 0xFFFF / 5 * 4), (2u16, 0xFFFF / 5)]);
         Weights::<Test>::insert(idx1, 0, vec![(1u16, 0xFFFF / 5), (2u16, 0xFFFF / 5 * 4)]);
 
-        SubtensorModule::epoch_with_mechanisms(netuid, emission);
+        GameSolver::epoch_with_mechanisms(netuid, emission);
 
         let actual_incentive_sub0 = Incentive::<Test>::get(idx0);
         let actual_incentive_sub1 = Incentive::<Test>::get(idx1);
@@ -618,8 +607,8 @@ fn epoch_with_mechanisms_incentives_proportional_to_weights() {
 fn epoch_with_mechanisms_persists_and_aggregates_all_terms() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1u16);
-        let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0));
-        let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(1));
+        let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0));
+        let idx1 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(1));
 
         // Three neurons: validator (uid=0) + two miners (uid=1,2)
         let ck0 = U256::from(1);
@@ -654,7 +643,7 @@ fn epoch_with_mechanisms_persists_and_aggregates_all_terms() {
         Weights::<Test>::insert(idx1, 0, vec![(1u16, 0xFFFF / 5), (2u16, 0xFFFF / 5 * 4)]);
 
         // Per-sub emissions (and weights used for aggregation)
-        let mechanism_emissions = SubtensorModule::split_emissions(netuid, emission);
+        let mechanism_emissions = GameSolver::split_emissions(netuid, emission);
         let w0 = U64F64::from_num(u64::from(mechanism_emissions[0]))
             / U64F64::from_num(u64::from(emission));
         let w1 = U64F64::from_num(u64::from(mechanism_emissions[1]))
@@ -663,13 +652,11 @@ fn epoch_with_mechanisms_persists_and_aggregates_all_terms() {
         assert_abs_diff_eq!(w1.to_num::<f64>(), 0.75, epsilon = 0.0001);
 
         // Get per-mechanism epoch outputs to build expectations
-        let out0 =
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), mechanism_emissions[0]);
-        let out1 =
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(1), mechanism_emissions[1]);
+        let out0 = GameSolver::epoch_mechanism(netuid, MechId::from(0), mechanism_emissions[0]);
+        let out1 = GameSolver::epoch_mechanism(netuid, MechId::from(1), mechanism_emissions[1]);
 
         // Now run the real aggregated path (also persists terms)
-        let agg = SubtensorModule::epoch_with_mechanisms(netuid, emission);
+        let agg = GameSolver::epoch_with_mechanisms(netuid, emission);
 
         // hotkey -> (server_emission_u64, validator_emission_u64)
         let agg_map: BTreeMap<U256, (u64, u64)> = agg
@@ -794,8 +781,8 @@ fn epoch_with_mechanisms_persists_and_aggregates_all_terms() {
 fn epoch_with_mechanisms_no_weight_no_incentive() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1u16);
-        let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0));
-        let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(1));
+        let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0));
+        let idx1 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(1));
         let ck0 = U256::from(1);
         let hk0 = U256::from(2);
         let ck1 = U256::from(3);
@@ -813,7 +800,7 @@ fn epoch_with_mechanisms_no_weight_no_incentive() {
         Weights::<Test>::insert(idx0, 0, vec![(1u16, 1), (2u16, 0)]);
         Weights::<Test>::insert(idx1, 0, vec![(1u16, 1), (2u16, 0)]);
 
-        SubtensorModule::epoch_with_mechanisms(netuid, emission);
+        GameSolver::epoch_with_mechanisms(netuid, emission);
 
         let actual_incentive_sub0 = Incentive::<Test>::get(idx0);
         let actual_incentive_sub1 = Incentive::<Test>::get(idx1);
@@ -851,7 +838,7 @@ fn neuron_dereg_cleans_weights_across_subids() {
 
         // Clearing per-mecid maps
         for sub in [0u8, 1u8] {
-            let idx = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(sub));
+            let idx = GameSolver::get_mechanism_storage_index(netuid, MechId::from(sub));
 
             // Incentive vector: position 1 should become 0
             Incentive::<Test>::insert(idx, vec![10u16, 20u16, 30u16]);
@@ -866,7 +853,7 @@ fn neuron_dereg_cleans_weights_across_subids() {
         }
 
         // Act
-        SubtensorModule::clear_neuron(netuid, neuron_uid);
+        GameSolver::clear_neuron(netuid, neuron_uid);
 
         // Top-level zeroed at index 1, others intact
         let e = Emission::<Test>::get(netuid);
@@ -882,7 +869,7 @@ fn neuron_dereg_cleans_weights_across_subids() {
 
         // Per-mecid cleanup
         for sub in [0u8, 1u8] {
-            let idx = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(sub));
+            let idx = GameSolver::get_mechanism_storage_index(netuid, MechId::from(sub));
 
             // Incentive element at index 1 set to 0
             let inc = Incentive::<Test>::get(idx);
@@ -913,7 +900,7 @@ fn clear_neuron_handles_absent_rows_gracefully() {
 
         // No Weights/Bonds rows at all → function should not panic
         let neuron_uid: u16 = 0;
-        SubtensorModule::clear_neuron(netuid, neuron_uid);
+        GameSolver::clear_neuron(netuid, neuron_uid);
 
         // Emission/Consensus/Dividends zeroed at index 0
         assert_eq!(
@@ -944,20 +931,15 @@ fn test_set_mechanism_weights_happy_path_sets_row_under_subid() {
         register_ok_neuron(netuid, hk2, ck2, 0);
         register_ok_neuron(netuid, hk3, ck3, 0);
 
-        let uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk1).expect("caller uid");
-        let uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk2).expect("dest uid 1");
-        let uid3 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk3).expect("dest uid 2");
+        let uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk1).expect("caller uid");
+        let uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk2).expect("dest uid 1");
+        let uid3 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk3).expect("dest uid 2");
 
         // Make caller a permitted validator with stake
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&ck1, 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
-            &hk1,
-            &ck1,
-            netuid,
-            1.into(),
-        );
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, uid1, true);
+        GameSolver::add_balance_to_coldkey_account(&ck1, 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hk1, &ck1, netuid, 1.into());
 
         // Have at least two sub-subnets; write under mecid = 1
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(2u8));
@@ -966,7 +948,7 @@ fn test_set_mechanism_weights_happy_path_sets_row_under_subid() {
         // Call extrinsic
         let dests = vec![uid2, uid3];
         let weights = vec![88u16, 0xFFFF];
-        assert_ok!(SubtensorModule::set_mechanism_weights(
+        assert_ok!(GameSolver::set_mechanism_weights(
             RawOrigin::Signed(hk1).into(),
             netuid,
             mecid,
@@ -976,13 +958,13 @@ fn test_set_mechanism_weights_happy_path_sets_row_under_subid() {
         ));
 
         // Verify row exists under the chosen mecid and not under a different mecid
-        let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, mecid);
+        let idx1 = GameSolver::get_mechanism_storage_index(netuid, mecid);
         assert_eq!(
             Weights::<Test>::get(idx1, uid1),
             vec![(uid2, 88u16), (uid3, 0xFFFF)]
         );
 
-        let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0u8));
+        let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0u8));
         assert!(Weights::<Test>::get(idx0, uid1).is_empty());
     });
 }
@@ -1002,19 +984,14 @@ fn test_set_mechanism_weights_above_mechanism_count_fails() {
         register_ok_neuron(netuid, hk1, ck1, 0);
         register_ok_neuron(netuid, hk2, ck2, 0);
 
-        let uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk1).expect("caller uid");
-        let uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk2).expect("dest uid 1");
+        let uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk1).expect("caller uid");
+        let uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk2).expect("dest uid 1");
 
         // Make caller a permitted validator with stake
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&ck1, 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
-            &hk1,
-            &ck1,
-            netuid,
-            1.into(),
-        );
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, uid1, true);
+        GameSolver::add_balance_to_coldkey_account(&ck1, 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hk1, &ck1, netuid, 1.into());
 
         // Have exactly two sub-subnets; write under mecid = 1
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(2u8));
@@ -1024,7 +1001,7 @@ fn test_set_mechanism_weights_above_mechanism_count_fails() {
         let dests = vec![uid2];
         let weights = vec![88u16];
         assert_noop!(
-            SubtensorModule::set_mechanism_weights(
+            GameSolver::set_mechanism_weights(
                 RawOrigin::Signed(hk1).into(),
                 netuid,
                 subid_above,
@@ -1057,28 +1034,23 @@ fn test_commit_reveal_mechanism_weights_ok() {
         register_ok_neuron(netuid, hk2, ck2, 0);
         register_ok_neuron(netuid, hk3, ck3, 0);
 
-        let uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk1).unwrap(); // caller
-        let uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk2).unwrap();
-        let uid3 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk3).unwrap();
+        let uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk1).unwrap(); // caller
+        let uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk2).unwrap();
+        let uid3 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk3).unwrap();
 
         // Enable commit-reveal path and make caller a validator with stake
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid1, true);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&ck1, 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
-            &hk1,
-            &ck1,
-            netuid,
-            1.into(),
-        );
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, uid1, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&ck1, 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hk1, &ck1, netuid, 1.into());
 
         // Ensure sub-subnet exists; write under mecid = 1
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(2u8));
         let mecid = MechId::from(1u8);
-        let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(0u8));
-        let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, mecid);
+        let idx0 = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0u8));
+        let idx1 = GameSolver::get_mechanism_storage_index(netuid, mecid);
 
         // Prepare payload and commit hash (include mecid!)
         let dests = vec![uid2, uid3];
@@ -1095,7 +1067,7 @@ fn test_commit_reveal_mechanism_weights_ok() {
         ));
 
         // Commit in epoch 0
-        assert_ok!(SubtensorModule::commit_mechanism_weights(
+        assert_ok!(GameSolver::commit_mechanism_weights(
             RuntimeOrigin::signed(hk1),
             netuid,
             mecid,
@@ -1104,7 +1076,7 @@ fn test_commit_reveal_mechanism_weights_ok() {
 
         // Advance one epoch, then reveal
         step_epochs(1, netuid);
-        assert_ok!(SubtensorModule::reveal_mechanism_weights(
+        assert_ok!(GameSolver::reveal_mechanism_weights(
             RuntimeOrigin::signed(hk1),
             netuid,
             mecid,
@@ -1142,26 +1114,21 @@ fn test_commit_reveal_above_mechanism_count_fails() {
         register_ok_neuron(netuid, hk1, ck1, 0);
         register_ok_neuron(netuid, hk2, ck2, 0);
 
-        let uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk1).unwrap(); // caller
-        let uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk2).unwrap();
+        let uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk1).unwrap(); // caller
+        let uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk2).unwrap();
 
         // Enable commit-reveal path and make caller a validator with stake
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid1, true);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&ck1, 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
-            &hk1,
-            &ck1,
-            netuid,
-            1.into(),
-        );
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, uid1, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&ck1, 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hk1, &ck1, netuid, 1.into());
 
         // Ensure there are two mechanisms: 0 and 1
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(2u8));
         let subid_above = MechId::from(2u8); // non-existing sub-subnet
-        let idx2 = SubtensorModule::get_mechanism_storage_index(netuid, subid_above);
+        let idx2 = GameSolver::get_mechanism_storage_index(netuid, subid_above);
 
         // Prepare payload and commit hash
         let dests = vec![uid2];
@@ -1179,7 +1146,7 @@ fn test_commit_reveal_above_mechanism_count_fails() {
 
         // Commit in epoch 0
         assert_noop!(
-            SubtensorModule::commit_mechanism_weights(
+            GameSolver::commit_mechanism_weights(
                 RuntimeOrigin::signed(hk1),
                 netuid,
                 subid_above,
@@ -1191,7 +1158,7 @@ fn test_commit_reveal_above_mechanism_count_fails() {
         // Advance one epoch, then attempt to reveal
         step_epochs(1, netuid);
         assert_noop!(
-            SubtensorModule::reveal_mechanism_weights(
+            GameSolver::reveal_mechanism_weights(
                 RuntimeOrigin::signed(hk1),
                 netuid,
                 subid_above,
@@ -1227,22 +1194,22 @@ fn test_reveal_crv3_commits_sub_success() {
         // Register neurons and set up configs
         register_ok_neuron(netuid, hotkey1, U256::from(3), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(4), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
 
-        let uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1).expect("uid1");
-        let uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey2).expect("uid2");
+        let uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1).expect("uid1");
+        let uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey2).expect("uid2");
 
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid1, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid2, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(3), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(4), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &U256::from(3), netuid, 1.into());
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &U256::from(4), netuid, 1.into());
+        GameSolver::set_validator_permit_for_uid(netuid, uid1, true);
+        GameSolver::set_validator_permit_for_uid(netuid, uid2, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(3), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(4), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &U256::from(3), netuid, 1.into());
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &U256::from(4), netuid, 1.into());
 
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
 
         // Payload (same as legacy; mecid is provided to the extrinsic)
         let payload = WeightsTlockPayload {
@@ -1271,13 +1238,13 @@ fn test_reveal_crv3_commits_sub_success() {
         ct.serialize_compressed(&mut commit_bytes).expect("serialize");
 
         // Commit (sub variant)
-        assert_ok!(SubtensorModule::commit_timelocked_mechanism_weights(
+        assert_ok!(GameSolver::commit_timelocked_mechanism_weights(
             RuntimeOrigin::signed(hotkey1),
             netuid,
             mecid,
             commit_bytes.clone().try_into().expect("bounded"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         // Inject drand pulse for the reveal round
@@ -1295,8 +1262,8 @@ fn test_reveal_crv3_commits_sub_success() {
         step_epochs(3, netuid);
 
         // Verify weights applied under the selected mecid index
-        let idx = SubtensorModule::get_mechanism_storage_index(netuid, mecid);
-        let weights_sparse = SubtensorModule::get_weights_sparse(idx);
+        let idx = GameSolver::get_mechanism_storage_index(netuid, mecid);
+        let weights_sparse = GameSolver::get_weights_sparse(idx);
         let row = weights_sparse.get(uid1 as usize).cloned().unwrap_or_default();
         assert!(!row.is_empty(), "expected weights set for validator uid1 under mecid");
 
@@ -1333,19 +1300,19 @@ fn test_crv3_above_mechanism_count_fails() {
         // Register neurons and set up configs
         register_ok_neuron(netuid, hotkey1, U256::from(3), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(4), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
 
-        let uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1).expect("uid1");
-        let uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey2).expect("uid2");
+        let uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1).expect("uid1");
+        let uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey2).expect("uid2");
 
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(3), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &U256::from(3), netuid, 1.into());
+        GameSolver::set_validator_permit_for_uid(netuid, uid1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(3), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &U256::from(3), netuid, 1.into());
 
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
 
         // Payload (same as legacy; mecid is provided to the extrinsic)
         let payload = WeightsTlockPayload {
@@ -1375,13 +1342,13 @@ fn test_crv3_above_mechanism_count_fails() {
 
         // Commit (sub variant)
         assert_noop!(
-            SubtensorModule::commit_timelocked_mechanism_weights(
+            GameSolver::commit_timelocked_mechanism_weights(
                 RuntimeOrigin::signed(hotkey1),
                 netuid,
                 subid_above,
                 commit_bytes.clone().try_into().expect("bounded"),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::MechanismDoesNotExist
         );
@@ -1402,18 +1369,18 @@ fn test_do_commit_crv3_mechanism_weights_committing_too_fast() {
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(2u8)); // allow subids {0,1}
 
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
-        let uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey).expect("uid");
-        let idx1 = SubtensorModule::get_mechanism_storage_index(netuid, mecid);
-        SubtensorModule::set_last_update_for_uid(idx1, uid, 0);
+        let uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey).expect("uid");
+        let idx1 = GameSolver::get_mechanism_storage_index(netuid, mecid);
+        GameSolver::set_last_update_for_uid(idx1, uid, 0);
 
         // make validator with stake
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(2), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, uid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(2), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &U256::from(2),
             netuid,
@@ -1421,64 +1388,64 @@ fn test_do_commit_crv3_mechanism_weights_committing_too_fast() {
         );
 
         // first commit OK on mecid=1
-        assert_ok!(SubtensorModule::commit_timelocked_mechanism_weights(
+        assert_ok!(GameSolver::commit_timelocked_mechanism_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             mecid,
             commit_data_1.clone().try_into().expect("bounded"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         // immediate second commit on SAME mecid blocked
         assert_noop!(
-            SubtensorModule::commit_timelocked_mechanism_weights(
+            GameSolver::commit_timelocked_mechanism_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 mecid,
                 commit_data_2.clone().try_into().expect("bounded"),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::CommittingWeightsTooFast
         );
 
         // BUT committing too soon on a DIFFERENT mecid is allowed
         let other_subid = MechId::from(0u8);
-        let idx0 = SubtensorModule::get_mechanism_storage_index(netuid, other_subid);
-        SubtensorModule::set_last_update_for_uid(idx0, uid, 0); // baseline like above
-        assert_ok!(SubtensorModule::commit_timelocked_mechanism_weights(
+        let idx0 = GameSolver::get_mechanism_storage_index(netuid, other_subid);
+        GameSolver::set_last_update_for_uid(idx0, uid, 0); // baseline like above
+        assert_ok!(GameSolver::commit_timelocked_mechanism_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             other_subid,
             commit_data_2.clone().try_into().expect("bounded"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         // still too fast on original mecid after 2 blocks
         step_block(2);
         assert_noop!(
-            SubtensorModule::commit_timelocked_mechanism_weights(
+            GameSolver::commit_timelocked_mechanism_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 mecid,
                 commit_data_2.clone().try_into().expect("bounded"),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::CommittingWeightsTooFast
         );
 
         // after enough blocks, OK again on original mecid
         step_block(3);
-        assert_ok!(SubtensorModule::commit_timelocked_mechanism_weights(
+        assert_ok!(GameSolver::commit_timelocked_mechanism_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             mecid,
             commit_data_2.try_into().expect("bounded"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
     });
 }
@@ -1489,12 +1456,12 @@ fn epoch_mechanism_emergency_mode_distributes_by_stake() {
         // setup a single sub-subnet where consensus sum becomes 0
         let netuid = NetUid::from(1u16);
         let mecid = MechId::from(1u8);
-        let idx = SubtensorModule::get_mechanism_storage_index(netuid, mecid);
+        let idx = GameSolver::get_mechanism_storage_index(netuid, mecid);
         let tempo: u16 = 5;
         add_network(netuid, tempo, 0);
         MechanismCountCurrent::<Test>::insert(netuid, MechId::from(2u8)); // allow subids {0,1}
-        SubtensorModule::set_max_registrations_per_block(netuid, 4);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 4);
+        GameSolver::set_max_registrations_per_block(netuid, 4);
+        GameSolver::set_target_registrations_per_interval(netuid, 4);
 
         // three neurons: make ALL permitted validators so active_stake is non-zero
         let hk0 = U256::from(10);
@@ -1511,34 +1478,34 @@ fn epoch_mechanism_emergency_mode_distributes_by_stake() {
         register_ok_neuron(netuid, hk3, ck3, 0);
 
         // active + recent updates so they're all active
-        let now = SubtensorModule::get_current_block_as_u64();
+        let now = GameSolver::get_current_block_as_u64();
         ActivityCutoff::<Test>::insert(netuid, 1_000u16);
         LastUpdate::<Test>::insert(idx, vec![now, now, now, now]);
 
         // All staking validators permitted => active_stake = stake
         ValidatorPermit::<Test>::insert(netuid, vec![true, true, true, false]);
-        SubtensorModule::set_stake_threshold(0);
+        GameSolver::set_stake_threshold(0);
 
         // force ZERO consensus/incentive path: no weights/bonds
         // (leave Weights/Bonds empty for all rows on this sub-subnet)
 
         // stake proportions: uid0:uid1:uid2 = 10:30:60
-        SubtensorModule::add_balance_to_coldkey_account(&ck0, 10);
-        SubtensorModule::add_balance_to_coldkey_account(&ck1, 30);
-        SubtensorModule::add_balance_to_coldkey_account(&ck2, 60);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::add_balance_to_coldkey_account(&ck0, 10);
+        GameSolver::add_balance_to_coldkey_account(&ck1, 30);
+        GameSolver::add_balance_to_coldkey_account(&ck2, 60);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hk0,
             &ck0,
             netuid,
             AlphaCurrency::from(10),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hk1,
             &ck1,
             netuid,
             AlphaCurrency::from(30),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hk2,
             &ck2,
             netuid,
@@ -1548,7 +1515,7 @@ fn epoch_mechanism_emergency_mode_distributes_by_stake() {
         let emission = AlphaCurrency::from(1_000_000u64);
 
         // --- act: run epoch on this sub-subnet only ---
-        let out = SubtensorModule::epoch_mechanism(netuid, mecid, emission);
+        let out = GameSolver::epoch_mechanism(netuid, mecid, emission);
 
         // collect validator emissions per hotkey
         let t0 = out.0.get(&hk0).unwrap();

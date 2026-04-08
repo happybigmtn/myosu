@@ -35,14 +35,8 @@ fn test_hotkey_take() {
     new_test_ext(1).execute_with(|| {
         let hotkey = U256::from(1);
         Delegates::<Test>::insert(hotkey, u16::MAX / 2);
-        log::info!(
-            "expected: {:?}",
-            SubtensorModule::get_hotkey_take_float(&hotkey)
-        );
-        log::info!(
-            "expected: {:?}",
-            SubtensorModule::get_hotkey_take_float(&hotkey)
-        );
+        log::info!("expected: {:?}", GameSolver::get_hotkey_take_float(&hotkey));
+        log::info!("expected: {:?}", GameSolver::get_hotkey_take_float(&hotkey));
     });
 }
 
@@ -53,7 +47,7 @@ fn test_hotkey_take() {
 #[test]
 fn test_coinbase_basecase() {
     new_test_ext(1).execute_with(|| {
-        SubtensorModule::run_coinbase(U96F32::from_num(0.0));
+        GameSolver::run_coinbase(U96F32::from_num(0.0));
     });
 }
 
@@ -73,7 +67,7 @@ fn test_coinbase_tao_issuance_base() {
         SubnetTaoFlow::<Test>::insert(netuid, 1234567_i64);
         let tao_in_before = SubnetTAO::<Test>::get(netuid);
         let total_stake_before = TotalStake::<Test>::get();
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
         assert_eq!(SubnetTAO::<Test>::get(netuid), tao_in_before + emission);
         assert_eq!(
             TotalIssuance::<Test>::get(),
@@ -93,7 +87,7 @@ fn test_coinbase_tao_issuance_base_low() {
         assert_eq!(SubnetTAO::<Test>::get(netuid), TaoCurrency::ZERO);
         // Set subnet flow to non-zero
         SubnetTaoFlow::<Test>::insert(netuid, 33433_i64);
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
         assert_eq!(SubnetTAO::<Test>::get(netuid), emission);
         assert_eq!(TotalIssuance::<Test>::get(), emission);
         assert_eq!(TotalStake::<Test>::get(), emission);
@@ -117,7 +111,7 @@ fn test_coinbase_tao_issuance_base_low() {
 
 //         let tao_in_before = SubnetTAO::<Test>::get(netuid);
 //         let total_stake_before = TotalStake::<Test>::get();
-//         SubtensorModule::run_coinbase(U96F32::from_num(emission));
+//         GameSolver::run_coinbase(U96F32::from_num(emission));
 //         assert_eq!(SubnetTAO::<Test>::get(netuid), tao_in_before + emission);
 //         assert_eq!(TotalIssuance::<Test>::get(), emission);
 //         assert_eq!(TotalStake::<Test>::get(), total_stake_before + emission);
@@ -148,7 +142,7 @@ fn test_coinbase_tao_issuance_multiple() {
         SubnetTaoFlow::<Test>::insert(netuid1, 100_000_000_i64);
         SubnetTaoFlow::<Test>::insert(netuid2, 100_000_000_i64);
         SubnetTaoFlow::<Test>::insert(netuid3, 100_000_000_i64);
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
         assert_abs_diff_eq!(
             SubnetTAO::<Test>::get(netuid1),
             emission / 3.into(),
@@ -192,20 +186,10 @@ fn test_coinbase_tao_issuance_different_prices() {
         mock::setup_reserves(netuid2, initial_tao.into(), initial_alpha2.into());
 
         // Force the swap to initialize
-        SubtensorModule::swap_tao_for_alpha(
-            netuid1,
-            TaoCurrency::ZERO,
-            1_000_000_000_000.into(),
-            false,
-        )
-        .unwrap();
-        SubtensorModule::swap_tao_for_alpha(
-            netuid2,
-            TaoCurrency::ZERO,
-            1_000_000_000_000.into(),
-            false,
-        )
-        .unwrap();
+        GameSolver::swap_tao_for_alpha(netuid1, TaoCurrency::ZERO, 1_000_000_000_000.into(), false)
+            .unwrap();
+        GameSolver::swap_tao_for_alpha(netuid2, TaoCurrency::ZERO, 1_000_000_000_000.into(), false)
+            .unwrap();
 
         // Make subnets dynamic.
         SubnetMechanism::<Test>::insert(netuid1, 1);
@@ -221,7 +205,7 @@ fn test_coinbase_tao_issuance_different_prices() {
         assert_eq!(SubnetTAO::<Test>::get(netuid2), initial_tao.into());
 
         // Run the coinbase with the emission amount.
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
 
         // Assert tao emission is split evenly.
         assert_abs_diff_eq!(
@@ -268,14 +252,14 @@ fn test_coinbase_tao_issuance_different_prices() {
 //         mock::setup_reserves(netuid2, initial_tao.into(), initial_alpha2.into());
 
 //         // Force the swap to initialize
-//         SubtensorModule::swap_tao_for_alpha(
+//         GameSolver::swap_tao_for_alpha(
 //             netuid1,
 //             TaoCurrency::ZERO,
 //             1_000_000_000_000.into(),
 //             false,
 //         )
 //         .unwrap();
-//         SubtensorModule::swap_tao_for_alpha(
+//         GameSolver::swap_tao_for_alpha(
 //             netuid2,
 //             TaoCurrency::ZERO,
 //             1_000_000_000_000.into(),
@@ -302,7 +286,7 @@ fn test_coinbase_tao_issuance_different_prices() {
 //         let total_stake_before = TotalStake::<Test>::get();
 
 //         // Run the coinbase with the emission amount.
-//         SubtensorModule::run_coinbase(U96F32::from_num(emission));
+//         GameSolver::run_coinbase(U96F32::from_num(emission));
 
 //         // Assert tao emission is split evenly.
 //         assert_abs_diff_eq!(
@@ -351,15 +335,15 @@ fn test_coinbase_moving_prices() {
 
         // Updating the moving price keeps it the same.
         assert_eq!(
-            SubtensorModule::get_moving_alpha_price(netuid),
+            GameSolver::get_moving_alpha_price(netuid),
             I96F32::from_num(1)
         );
         // Skip some blocks so that EMA price is not slowed down
         System::set_block_number(7_200_000);
 
-        SubtensorModule::update_moving_price(netuid);
+        GameSolver::update_moving_price(netuid);
         assert_eq!(
-            SubtensorModule::get_moving_alpha_price(netuid),
+            GameSolver::get_moving_alpha_price(netuid),
             I96F32::from_num(1)
         );
         // Check alpha of 1.
@@ -367,9 +351,9 @@ fn test_coinbase_moving_prices() {
         SubnetMovingPrice::<Test>::insert(netuid, I96F32::from_num(0));
         SubnetMovingAlpha::<Test>::set(I96F32::from_num(1.0));
         // Run moving 1 times.
-        SubtensorModule::update_moving_price(netuid);
+        GameSolver::update_moving_price(netuid);
         // Assert price is ~ 100% of the real price.
-        assert!(U96F32::from_num(1.0) - SubtensorModule::get_moving_alpha_price(netuid) < 0.05);
+        assert!(U96F32::from_num(1.0) - GameSolver::get_moving_alpha_price(netuid) < 0.05);
         // Set price to zero.
         SubnetMovingPrice::<Test>::insert(netuid, I96F32::from_num(0));
         SubnetMovingAlpha::<Test>::set(I96F32::from_num(0.1));
@@ -379,13 +363,13 @@ fn test_coinbase_moving_prices() {
 
         // Run moving 14 times.
         for _ in 0..14 {
-            SubtensorModule::update_moving_price(netuid);
+            GameSolver::update_moving_price(netuid);
         }
 
         // Assert price is > 50% of the real price.
         assert_abs_diff_eq!(
             0.512325,
-            SubtensorModule::get_moving_alpha_price(netuid).to_num::<f64>(),
+            GameSolver::get_moving_alpha_price(netuid).to_num::<f64>(),
             epsilon = 0.001
         );
     });
@@ -409,7 +393,7 @@ fn test_update_moving_price_initial() {
         System::set_block_number(510);
         FirstEmissionBlockNumber::<Test>::insert(netuid, 500);
 
-        SubtensorModule::update_moving_price(netuid);
+        GameSolver::update_moving_price(netuid);
 
         let new_price = SubnetMovingPrice::<Test>::get(netuid);
         assert!(new_price.to_num::<f64>() < 0.001);
@@ -434,7 +418,7 @@ fn test_update_moving_price_after_time() {
         System::set_block_number(144_000_500);
         FirstEmissionBlockNumber::<Test>::insert(netuid, 500);
 
-        SubtensorModule::update_moving_price(netuid);
+        GameSolver::update_moving_price(netuid);
 
         let new_price = SubnetMovingPrice::<Test>::get(netuid);
         assert!((new_price.to_num::<f64>() - 0.5).abs() < 0.001);
@@ -465,7 +449,7 @@ fn test_coinbase_alpha_issuance_base() {
         SubnetTaoFlow::<Test>::insert(netuid1, 100_000_000_i64);
         SubnetTaoFlow::<Test>::insert(netuid2, 100_000_000_i64);
         // Check initial
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
         // tao_in = 500_000
         // alpha_in = 500_000/price = 500_000
         assert_eq!(
@@ -507,7 +491,7 @@ fn test_coinbase_alpha_issuance_different() {
         SubnetTaoFlow::<Test>::insert(netuid2, 200_000_000_i64);
         // Do NOT Set tao flow, let it initialize
         // Run coinbase
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
         // tao_in = 333_333
         // alpha_in = 333_333/price = 333_333 + initial
         assert_eq!(
@@ -546,7 +530,7 @@ fn test_coinbase_alpha_issuance_with_cap_trigger() {
         SubnetMovingPrice::<Test>::insert(netuid1, I96F32::from_num(1));
         SubnetMovingPrice::<Test>::insert(netuid2, I96F32::from_num(2));
         // Run coinbase
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
         // tao_in = 333_333
         // alpha_in = 333_333/price > 1_000_000_000 --> 1_000_000_000 + initial_alpha
         assert!(SubnetAlphaIn::<Test>::get(netuid1) < (initial_alpha + 1_000_000_000).into());
@@ -586,20 +570,10 @@ fn test_coinbase_alpha_issuance_with_cap_trigger_and_block_emission() {
         SubnetTaoFlow::<Test>::insert(netuid2, 200_000_000_i64);
 
         // Force the swap to initialize
-        SubtensorModule::swap_tao_for_alpha(
-            netuid1,
-            TaoCurrency::ZERO,
-            1_000_000_000_000.into(),
-            false,
-        )
-        .unwrap();
-        SubtensorModule::swap_tao_for_alpha(
-            netuid2,
-            TaoCurrency::ZERO,
-            1_000_000_000_000.into(),
-            false,
-        )
-        .unwrap();
+        GameSolver::swap_tao_for_alpha(netuid1, TaoCurrency::ZERO, 1_000_000_000_000.into(), false)
+            .unwrap();
+        GameSolver::swap_tao_for_alpha(netuid2, TaoCurrency::ZERO, 1_000_000_000_000.into(), false)
+            .unwrap();
 
         // Get the prices before the run_coinbase
         let price_1_before = <Test as pallet::Config>::SwapInterface::current_alpha_price(netuid1);
@@ -610,7 +584,7 @@ fn test_coinbase_alpha_issuance_with_cap_trigger_and_block_emission() {
         SubnetAlphaOut::<Test>::insert(netuid2, AlphaCurrency::from(21_000_000_000_000_000)); // Set issuance above 21M
 
         // Run coinbase
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
 
         // Get the prices after the run_coinbase
         let price_1_after = <Test as pallet::Config>::SwapInterface::current_alpha_price(netuid1);
@@ -640,12 +614,12 @@ fn test_owner_cut_base() {
         let netuid = NetUid::from(1);
         add_network(netuid, 1, 0);
         mock::setup_reserves(netuid, 1_000_000_000_000.into(), 1_000_000_000_000.into());
-        SubtensorModule::set_tempo(netuid, 10000); // Large number (dont drain)
-        SubtensorModule::set_subnet_owner_cut(0);
-        SubtensorModule::run_coinbase(U96F32::from_num(0));
+        GameSolver::set_tempo(netuid, 10000); // Large number (dont drain)
+        GameSolver::set_subnet_owner_cut(0);
+        GameSolver::run_coinbase(U96F32::from_num(0));
         assert_eq!(PendingOwnerCut::<Test>::get(netuid), 0.into()); // No cut
-        SubtensorModule::set_subnet_owner_cut(u16::MAX);
-        SubtensorModule::run_coinbase(U96F32::from_num(0));
+        GameSolver::set_subnet_owner_cut(u16::MAX);
+        GameSolver::run_coinbase(U96F32::from_num(0));
         assert_eq!(PendingOwnerCut::<Test>::get(netuid), 1_000_000_000.into()); // Full cut.
     });
 }
@@ -662,20 +636,20 @@ fn test_pending_emission() {
         FirstEmissionBlockNumber::<Test>::insert(netuid, 0);
 
         mock::setup_reserves(netuid, 1_000_000.into(), 1.into());
-        SubtensorModule::run_coinbase(U96F32::from_num(0));
+        GameSolver::run_coinbase(U96F32::from_num(0));
         SubnetTAO::<Test>::insert(NetUid::ROOT, TaoCurrency::from(1_000_000_000)); // Add root weight.
-        SubtensorModule::run_coinbase(U96F32::from_num(0));
-        SubtensorModule::set_tempo(netuid, 10000); // Large number (dont drain)
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
+        GameSolver::run_coinbase(U96F32::from_num(0));
+        GameSolver::set_tempo(netuid, 10000); // Large number (dont drain)
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
 
         // Set moving price > 1.0
         SubnetMovingPrice::<Test>::insert(netuid, I96F32::from_num(2));
 
         // Make sure we are root selling, so we have root alpha divs.
-        let root_sell_flag = SubtensorModule::get_network_root_sell_flag(&[netuid]);
+        let root_sell_flag = GameSolver::get_network_root_sell_flag(&[netuid]);
         assert!(root_sell_flag, "Root sell flag should be true");
 
-        SubtensorModule::run_coinbase(U96F32::from_num(0));
+        GameSolver::run_coinbase(U96F32::from_num(0));
         // 1 TAO / ( 1 + 3 ) = 0.25 * 1 / 2 = 125000000
 
         assert_abs_diff_eq!(
@@ -702,7 +676,7 @@ fn test_pending_emission() {
 #[test]
 fn test_drain_base() {
     new_test_ext(1).execute_with(|| {
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             0.into(),
             AlphaCurrency::ZERO,
             AlphaCurrency::ZERO,
@@ -718,7 +692,7 @@ fn test_drain_base_with_subnet() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1);
         add_network(netuid, 1, 0);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             AlphaCurrency::ZERO,
             AlphaCurrency::ZERO,
@@ -737,14 +711,14 @@ fn test_drain_base_with_subnet_with_single_staker_not_registered() {
         let hotkey = U256::from(1);
         let coldkey = U256::from(2);
         let stake_before = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
             stake_before,
         );
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -752,7 +726,7 @@ fn test_drain_base_with_subnet_with_single_staker_not_registered() {
             AlphaCurrency::ZERO,
         );
         let stake_after =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
         assert_eq!(stake_before, stake_after); // Not registered.
     });
 }
@@ -767,14 +741,14 @@ fn test_drain_base_with_subnet_with_single_staker_registered() {
         let coldkey = U256::from(2);
         let stake_before = AlphaCurrency::from(1_000_000_000);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
             stake_before,
         );
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -782,7 +756,7 @@ fn test_drain_base_with_subnet_with_single_staker_registered() {
             AlphaCurrency::ZERO,
         );
         let stake_after =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
         close(
             (stake_before + pending_alpha).into(),
             stake_after.into(),
@@ -803,14 +777,14 @@ fn test_drain_base_with_subnet_with_single_staker_registered_root_weight() {
         // register_ok_neuron(root, hotkey, coldkey, 0);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         Delegates::<Test>::insert(hotkey, 0);
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             NetUid::ROOT,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -819,7 +793,7 @@ fn test_drain_base_with_subnet_with_single_staker_registered_root_weight() {
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
         let pending_root_alpha = AlphaCurrency::from(1_000_000_000);
         assert_eq!(SubnetTAO::<Test>::get(NetUid::ROOT), TaoCurrency::ZERO);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -827,12 +801,9 @@ fn test_drain_base_with_subnet_with_single_staker_registered_root_weight() {
             AlphaCurrency::ZERO,
         );
         let stake_after =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
-        let root_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-            &hotkey,
-            &coldkey,
-            NetUid::ROOT,
-        );
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+        let root_after =
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, NetUid::ROOT);
         close(
             (stake_before + pending_alpha).into(),
             stake_after.into(),
@@ -854,20 +825,20 @@ fn test_drain_base_with_subnet_with_two_stakers_registered() {
         let stake_before = AlphaCurrency::from(1_000_000_000);
         register_ok_neuron(netuid, hotkey1, coldkey, 0);
         register_ok_neuron(netuid, hotkey2, coldkey, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             netuid,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             netuid,
             stake_before,
         );
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -875,9 +846,9 @@ fn test_drain_base_with_subnet_with_two_stakers_registered() {
             AlphaCurrency::ZERO,
         );
         let stake_after1 =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
         let stake_after2 =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
         close(
             (stake_before + pending_alpha / 2.into()).into(),
             stake_after1.into(),
@@ -905,26 +876,26 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root() {
         register_ok_neuron(netuid, hotkey2, coldkey, 0);
         Delegates::<Test>::insert(hotkey1, 0);
         Delegates::<Test>::insert(hotkey2, 0);
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             netuid,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             NetUid::ROOT,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             netuid,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             NetUid::ROOT,
@@ -933,7 +904,7 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root() {
         let pending_tao = TaoCurrency::from(1_000_000_000);
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
         assert_eq!(SubnetTAO::<Test>::get(NetUid::ROOT), TaoCurrency::ZERO);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -941,15 +912,15 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root() {
             AlphaCurrency::ZERO,
         );
         let stake_after1 =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
-        let root_after1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
+        let root_after1 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             NetUid::ROOT,
         );
         let stake_after2 =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
-        let root_after2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
+        let root_after2 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             NetUid::ROOT,
@@ -981,26 +952,26 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root_different_am
         Delegates::<Test>::insert(hotkey2, 0);
         register_ok_neuron(netuid, hotkey1, coldkey, 0);
         register_ok_neuron(netuid, hotkey2, coldkey, 0);
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             netuid,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             NetUid::ROOT,
             stake_before * 2.into(), // Hotkey 1 has twice as much root weight.
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             netuid,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             NetUid::ROOT,
@@ -1009,7 +980,7 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root_different_am
         let pending_tao = TaoCurrency::from(1_000_000_000);
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
         assert_eq!(SubnetTAO::<Test>::get(NetUid::ROOT), TaoCurrency::ZERO);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -1017,15 +988,15 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root_different_am
             AlphaCurrency::ZERO,
         );
         let stake_after1 =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
-        let root_after1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
+        let root_after1 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             NetUid::ROOT,
         );
         let stake_after2 =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
-        let root_after2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
+        let root_after2 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             NetUid::ROOT,
@@ -1062,26 +1033,26 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root_different_am
         Delegates::<Test>::insert(hotkey2, 0);
         register_ok_neuron(netuid, hotkey1, coldkey, 0);
         register_ok_neuron(netuid, hotkey2, coldkey, 0);
-        SubtensorModule::set_tao_weight(u64::MAX / 2); // Set TAO weight to 0.5
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_tao_weight(u64::MAX / 2); // Set TAO weight to 0.5
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             netuid,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             NetUid::ROOT,
             stake_before * 2.into(), // Hotkey 1 has twice as much root weight.
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             netuid,
             stake_before,
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             NetUid::ROOT,
@@ -1090,7 +1061,7 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root_different_am
         let pending_tao = TaoCurrency::from(1_000_000_000);
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
         assert_eq!(SubnetTAO::<Test>::get(NetUid::ROOT), TaoCurrency::ZERO);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -1098,15 +1069,15 @@ fn test_drain_base_with_subnet_with_two_stakers_registered_and_root_different_am
             AlphaCurrency::ZERO,
         );
         let stake_after1 =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
-        let root_after1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &coldkey, netuid);
+        let root_after1 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &coldkey,
             NetUid::ROOT,
         );
         let stake_after2 =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
-        let root_after2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &coldkey, netuid);
+        let root_after2 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &coldkey,
             NetUid::ROOT,
@@ -1134,13 +1105,13 @@ fn test_drain_alpha_childkey_parentkey() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1);
         add_network(netuid, 1, 0);
-        SubtensorModule::set_ck_burn(0);
+        GameSolver::set_ck_burn(0);
         let parent = U256::from(1);
         let child = U256::from(2);
         let coldkey = U256::from(3);
         let stake_before = AlphaCurrency::from(1_000_000_000);
         register_ok_neuron(netuid, child, coldkey, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -1152,15 +1123,15 @@ fn test_drain_alpha_childkey_parentkey() {
         ChildkeyTake::<Test>::insert(child, netuid, u16::MAX / 10);
 
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
             AlphaCurrency::ZERO,
             AlphaCurrency::ZERO,
         );
-        let parent_stake_after = SubtensorModule::get_stake_for_hotkey_on_subnet(&parent, netuid);
-        let child_stake_after = SubtensorModule::get_stake_for_hotkey_on_subnet(&child, netuid);
+        let parent_stake_after = GameSolver::get_stake_for_hotkey_on_subnet(&parent, netuid);
+        let child_stake_after = GameSolver::get_stake_for_hotkey_on_subnet(&child, netuid);
 
         // Child gets 10%, parent gets 90%
         let expected = I96F32::from_num(stake_before)
@@ -1186,7 +1157,7 @@ fn test_get_root_children() {
         add_network(alpha, 1, 0);
 
         // Set TAO weight to 1.
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.
 
         // Create keys.
         let cold = U256::from(0);
@@ -1196,25 +1167,25 @@ fn test_get_root_children() {
         // Register Alice and Bob to the root network and alpha subnet.
         register_ok_neuron(alpha, alice, cold, 0);
         register_ok_neuron(alpha, bob, cold, 0);
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold).clone(),
             alice,
         ));
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold).clone(),
             bob,
         ));
 
         // Add stake for Alice and Bob on root.
         let alice_root_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold,
             NetUid::ROOT,
             alice_root_stake,
         );
         let bob_root_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold,
             NetUid::ROOT,
@@ -1223,14 +1194,14 @@ fn test_get_root_children() {
 
         // Add stake for Alice and Bob on netuid.
         let alice_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold,
             alpha,
             alice_alpha_stake,
         );
         let bob_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold,
             alpha,
@@ -1243,58 +1214,58 @@ fn test_get_root_children() {
 
         // Assert Alice and Bob stake on root and netuid
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&alice, NetUid::ROOT),
+            GameSolver::get_stake_for_hotkey_on_subnet(&alice, NetUid::ROOT),
             alice_root_stake
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&bob, NetUid::ROOT),
+            GameSolver::get_stake_for_hotkey_on_subnet(&bob, NetUid::ROOT),
             bob_root_stake
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&alice, alpha),
+            GameSolver::get_stake_for_hotkey_on_subnet(&alice, alpha),
             alice_alpha_stake
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&bob, alpha),
+            GameSolver::get_stake_for_hotkey_on_subnet(&bob, alpha),
             bob_alpha_stake
         );
 
         // Assert Alice and Bob inherited stakes
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&alice, NetUid::ROOT),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&alice, NetUid::ROOT),
             alice_root_stake
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&alice, alpha),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&alice, alpha),
             0.into()
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&bob, NetUid::ROOT),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&bob, NetUid::ROOT),
             bob_root_stake
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&bob, alpha),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&bob, alpha),
             bob_alpha_stake + alice_alpha_stake
         );
 
         // Assert Alice and Bob TAO inherited stakes
         assert_eq!(
-            SubtensorModule::get_tao_inherited_for_hotkey_on_subnet(&alice, alpha),
+            GameSolver::get_tao_inherited_for_hotkey_on_subnet(&alice, alpha),
             TaoCurrency::ZERO
         );
         assert_eq!(
-            SubtensorModule::get_tao_inherited_for_hotkey_on_subnet(&bob, alpha),
+            GameSolver::get_tao_inherited_for_hotkey_on_subnet(&bob, alpha),
             u64::from(bob_root_stake + alice_root_stake).into()
         );
 
         // Get Alice stake amounts on subnet alpha.
         let (alice_total, alice_alpha, alice_tao): (I64F64, I64F64, I64F64) =
-            SubtensorModule::get_stake_weights_for_hotkey_on_subnet(&alice, alpha);
+            GameSolver::get_stake_weights_for_hotkey_on_subnet(&alice, alpha);
         assert_eq!(alice_total, I64F64::from_num(0));
 
         // Get Bob stake amounts on subnet alpha.
         let (bob_total, bob_alpha, bob_tao): (I64F64, I64F64, I64F64) =
-            SubtensorModule::get_stake_weights_for_hotkey_on_subnet(&bob, alpha);
+            GameSolver::get_stake_weights_for_hotkey_on_subnet(&bob, alpha);
         assert_eq!(
             bob_total,
             I64F64::from_num(u64::from(bob_root_stake * 4.into()))
@@ -1310,9 +1281,9 @@ fn test_get_root_children_drain() {
         let alpha = NetUid::from(1);
         add_network(NetUid::ROOT, 1, 0);
         add_network(alpha, 1, 0);
-        SubtensorModule::set_ck_burn(0);
+        GameSolver::set_ck_burn(0);
         // Set TAO weight to 1.
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.
         // Create keys.
         let cold_alice = U256::from(0);
         let cold_bob = U256::from(1);
@@ -1321,24 +1292,24 @@ fn test_get_root_children_drain() {
         // Register Alice and Bob to the root network and alpha subnet.
         register_ok_neuron(alpha, alice, cold_alice, 0);
         register_ok_neuron(alpha, bob, cold_bob, 0);
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold_alice).clone(),
             alice,
         ));
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold_bob).clone(),
             bob,
         ));
         // Add stake for Alice and Bob on root.
         let alice_root_stake = 1_000_000_000;
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold_alice,
             NetUid::ROOT,
             alice_root_stake.into(),
         );
         let bob_root_stake = 1_000_000_000;
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold_bob,
             NetUid::ROOT,
@@ -1346,14 +1317,14 @@ fn test_get_root_children_drain() {
         );
         // Add stake for Alice and Bob on netuid.
         let alice_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold_alice,
             alpha,
             alice_alpha_stake,
         );
         let bob_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold_bob,
             alpha,
@@ -1368,17 +1339,17 @@ fn test_get_root_children_drain() {
 
         // Get Alice stake amounts on subnet alpha.
         let (alice_total, alice_alpha, alice_tao): (I64F64, I64F64, I64F64) =
-            SubtensorModule::get_stake_weights_for_hotkey_on_subnet(&alice, alpha);
+            GameSolver::get_stake_weights_for_hotkey_on_subnet(&alice, alpha);
         assert_eq!(alice_total, I64F64::from_num(0));
 
         // Get Bob stake amounts on subnet alpha.
         let (bob_total, bob_alpha, bob_tao): (I64F64, I64F64, I64F64) =
-            SubtensorModule::get_stake_weights_for_hotkey_on_subnet(&bob, alpha);
+            GameSolver::get_stake_weights_for_hotkey_on_subnet(&bob, alpha);
         assert_eq!(bob_total, I64F64::from_num(4 * bob_root_stake));
 
         // Lets drain
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             alpha,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -1388,11 +1359,11 @@ fn test_get_root_children_drain() {
 
         // Alice and Bob both made half of the dividends.
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&alice, alpha),
+            GameSolver::get_stake_for_hotkey_on_subnet(&alice, alpha),
             alice_alpha_stake + pending_alpha / 2.into()
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&bob, alpha),
+            GameSolver::get_stake_for_hotkey_on_subnet(&bob, alpha),
             bob_alpha_stake + pending_alpha / 2.into()
         );
 
@@ -1402,7 +1373,7 @@ fn test_get_root_children_drain() {
         // Lets drain
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
         let pending_root1 = TaoCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             alpha,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -1412,11 +1383,11 @@ fn test_get_root_children_drain() {
 
         // Alice and Bob both made half of the dividends.
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&alice, NetUid::ROOT),
+            GameSolver::get_stake_for_hotkey_on_subnet(&alice, NetUid::ROOT),
             AlphaCurrency::from(alice_root_stake)
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&bob, NetUid::ROOT),
+            GameSolver::get_stake_for_hotkey_on_subnet(&bob, NetUid::ROOT),
             AlphaCurrency::from(bob_root_stake)
         );
 
@@ -1426,7 +1397,7 @@ fn test_get_root_children_drain() {
         // Lets drain
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
         let pending_root2 = TaoCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             alpha,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -1456,9 +1427,9 @@ fn test_get_root_children_drain_half_proportion() {
         let alpha = NetUid::from(1);
         add_network(NetUid::ROOT, 1, 0);
         add_network(alpha, 1, 0);
-        SubtensorModule::set_ck_burn(0);
+        GameSolver::set_ck_burn(0);
         // Set TAO weight to 1.
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.
         // Create keys.
         let cold_alice = U256::from(0);
         let cold_bob = U256::from(1);
@@ -1467,24 +1438,24 @@ fn test_get_root_children_drain_half_proportion() {
         // Register Alice and Bob to the root network and alpha subnet.
         register_ok_neuron(alpha, alice, cold_alice, 0);
         register_ok_neuron(alpha, bob, cold_bob, 0);
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold_alice).clone(),
             alice,
         ));
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold_bob).clone(),
             bob,
         ));
         // Add stake for Alice and Bob on root.
         let alice_root_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold_alice,
             NetUid::ROOT,
             alice_root_stake,
         );
         let bob_root_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold_bob,
             NetUid::ROOT,
@@ -1492,14 +1463,14 @@ fn test_get_root_children_drain_half_proportion() {
         );
         // Add stake for Alice and Bob on netuid.
         let alice_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold_alice,
             alpha,
             alice_alpha_stake,
         );
         let bob_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold_bob,
             alpha,
@@ -1515,7 +1486,7 @@ fn test_get_root_children_drain_half_proportion() {
 
         // Lets drain!
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             alpha,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -1546,7 +1517,7 @@ fn test_get_root_children_drain_with_take() {
         add_network(NetUid::ROOT, 1, 0);
         add_network(alpha, 1, 0);
         // Set TAO weight to 1.
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.
         // Create keys.
         let cold_alice = U256::from(0);
         let cold_bob = U256::from(1);
@@ -1555,24 +1526,24 @@ fn test_get_root_children_drain_with_take() {
         // Register Alice and Bob to the root network and alpha subnet.
         register_ok_neuron(alpha, alice, cold_alice, 0);
         register_ok_neuron(alpha, bob, cold_bob, 0);
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold_alice).clone(),
             alice,
         ));
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold_bob).clone(),
             bob,
         ));
         // Add stake for Alice and Bob on root.
         let alice_root_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold_alice,
             NetUid::ROOT,
             alice_root_stake,
         );
         let bob_root_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold_bob,
             NetUid::ROOT,
@@ -1580,14 +1551,14 @@ fn test_get_root_children_drain_with_take() {
         );
         // Add stake for Alice and Bob on netuid.
         let alice_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold_alice,
             alpha,
             alice_alpha_stake,
         );
         let bob_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold_bob,
             alpha,
@@ -1602,7 +1573,7 @@ fn test_get_root_children_drain_with_take() {
 
         // Lets drain!
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             alpha,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -1633,8 +1604,8 @@ fn test_get_root_children_drain_with_half_take() {
         add_network(NetUid::ROOT, 1, 0);
         add_network(alpha, 1, 0);
         // Set TAO weight to 1.
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.
-        SubtensorModule::set_ck_burn(0);
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.
+        GameSolver::set_ck_burn(0);
         // Create keys.
         let cold_alice = U256::from(0);
         let cold_bob = U256::from(1);
@@ -1643,24 +1614,24 @@ fn test_get_root_children_drain_with_half_take() {
         // Register Alice and Bob to the root network and alpha subnet.
         register_ok_neuron(alpha, alice, cold_alice, 0);
         register_ok_neuron(alpha, bob, cold_bob, 0);
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold_alice).clone(),
             alice,
         ));
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             RuntimeOrigin::signed(cold_bob).clone(),
             bob,
         ));
         // Add stake for Alice and Bob on root.
         let alice_root_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold_alice,
             NetUid::ROOT,
             alice_root_stake,
         );
         let bob_root_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold_bob,
             NetUid::ROOT,
@@ -1668,14 +1639,14 @@ fn test_get_root_children_drain_with_half_take() {
         );
         // Add stake for Alice and Bob on netuid.
         let alice_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &alice,
             &cold_alice,
             alpha,
             alice_alpha_stake,
         );
         let bob_alpha_stake = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &bob,
             &cold_bob,
             alpha,
@@ -1690,7 +1661,7 @@ fn test_get_root_children_drain_with_half_take() {
 
         // Lets drain!
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             alpha,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
@@ -1721,7 +1692,7 @@ fn test_get_root_children_drain_with_half_take() {
 //         add_network(NetUid::ROOT, 1, 0);
 //         add_network(alpha, 1, 0);
 //         // Set TAO weight to 1.
-//         SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.
+//         GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.
 //                                                    // Create keys.
 //         let cold = U256::from(0);
 //         let alice = U256::from(1);
@@ -1729,24 +1700,24 @@ fn test_get_root_children_drain_with_half_take() {
 //         // Register Alice and Bob to the root network and alpha subnet.
 //         register_ok_neuron(alpha, alice, cold, 0);
 //         register_ok_neuron(alpha, bob, cold, 0);
-//         assert_ok!(SubtensorModule::root_register(
+//         assert_ok!(GameSolver::root_register(
 //             RuntimeOrigin::signed(cold).clone(),
 //             alice,
 //         ));
-//         assert_ok!(SubtensorModule::root_register(
+//         assert_ok!(GameSolver::root_register(
 //             RuntimeOrigin::signed(cold).clone(),
 //             bob,
 //         ));
 //         // Add stake for Alice and Bob on root.
 //         let alice_root_stake = AlphaCurrency::from(1_000_000_000);
-//         SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+//         GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
 //             &alice,
 //             &cold,
 //             NetUid::ROOT,
 //             alice_root_stake,
 //         );
 //         let bob_root_stake = AlphaCurrency::from(1_000_000_000);
-//         SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+//         GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
 //             &bob,
 //             &cold,
 //             NetUid::ROOT,
@@ -1754,14 +1725,14 @@ fn test_get_root_children_drain_with_half_take() {
 //         );
 //         // Add stake for Alice and Bob on netuid.
 //         let alice_alpha_stake = AlphaCurrency::from(1_000_000_000);
-//         SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+//         GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
 //             &alice,
 //             &cold,
 //             alpha,
 //             alice_alpha_stake,
 //         );
 //         let bob_alpha_stake = AlphaCurrency::from(1_000_000_000);
-//         SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+//         GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
 //             &bob,
 //             &cold,
 //             alpha,
@@ -1776,14 +1747,14 @@ fn test_get_root_children_drain_with_half_take() {
 //         Delegates::<Test>::insert(bob, 0);
 
 //         // Set weights on the subnet.
-//         assert_ok!(SubtensorModule::set_weights(
+//         assert_ok!(GameSolver::set_weights(
 //             RuntimeOrigin::signed(alice),
 //             alpha,
 //             vec![0, 1],
 //             vec![1, 1],
 //             0,
 //         ));
-//         assert_ok!(SubtensorModule::set_weights(
+//         assert_ok!(GameSolver::set_weights(
 //             RuntimeOrigin::signed(bob),
 //             alpha,
 //             vec![0, 1],
@@ -1793,7 +1764,7 @@ fn test_get_root_children_drain_with_half_take() {
 
 //         // Lets drain!
 //         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-//         SubtensorModule::distribute_emission(alpha, pending_alpha, 0, 0.into(), 0.into());
+//         GameSolver::distribute_emission(alpha, pending_alpha, 0, 0.into(), 0.into());
 
 //         // Alice and Bob make the same amount.
 //         close(
@@ -1835,13 +1806,13 @@ fn test_incentive_to_subnet_owner_is_burned() {
 
         // Verify stake before
         let subnet_owner_stake_before =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
+            GameSolver::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
         assert_eq!(subnet_owner_stake_before, 0.into());
-        let other_stake_before = SubtensorModule::get_stake_for_hotkey_on_subnet(&other_hk, netuid);
+        let other_stake_before = GameSolver::get_stake_for_hotkey_on_subnet(&other_hk, netuid);
         assert_eq!(other_stake_before, 0.into());
 
         // Distribute dividends and incentives
-        SubtensorModule::distribute_dividends_and_incentives(
+        GameSolver::distribute_dividends_and_incentives(
             netuid,
             owner_cut,
             incentives,
@@ -1851,9 +1822,9 @@ fn test_incentive_to_subnet_owner_is_burned() {
 
         // Verify stake after
         let subnet_owner_stake_after =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
+            GameSolver::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
         assert_eq!(subnet_owner_stake_after, 0.into());
-        let other_stake_after = SubtensorModule::get_stake_for_hotkey_on_subnet(&other_hk, netuid);
+        let other_stake_after = GameSolver::get_stake_for_hotkey_on_subnet(&other_hk, netuid);
         assert!(other_stake_after > 0.into());
     });
 }
@@ -1889,13 +1860,13 @@ fn test_incentive_to_subnet_owners_hotkey_is_burned() {
 
         // Verify stake before
         let subnet_owner_stake_before =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
+            GameSolver::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
         assert_eq!(subnet_owner_stake_before, 0.into());
-        let other_stake_before = SubtensorModule::get_stake_for_hotkey_on_subnet(&other_hk, netuid);
+        let other_stake_before = GameSolver::get_stake_for_hotkey_on_subnet(&other_hk, netuid);
         assert_eq!(other_stake_before, 0.into());
 
         // Distribute dividends and incentives
-        SubtensorModule::distribute_dividends_and_incentives(
+        GameSolver::distribute_dividends_and_incentives(
             netuid,
             owner_cut,
             incentives,
@@ -1905,9 +1876,9 @@ fn test_incentive_to_subnet_owners_hotkey_is_burned() {
 
         // Verify stake after
         let subnet_owner_stake_after =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
+            GameSolver::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
         assert_eq!(subnet_owner_stake_after, 0.into());
-        let other_stake_after = SubtensorModule::get_stake_for_hotkey_on_subnet(&other_hk, netuid);
+        let other_stake_after = GameSolver::get_stake_for_hotkey_on_subnet(&other_hk, netuid);
         assert_eq!(other_stake_after, 0.into());
     });
 }
@@ -1962,7 +1933,7 @@ fn test_burn_key_sorting() {
         incentives.insert(subnet_owner_hk, 10_000_000.into());
 
         // Distribute dividends and incentives
-        SubtensorModule::distribute_dividends_and_incentives(
+        GameSolver::distribute_dividends_and_incentives(
             netuid,
             owner_cut,
             incentives,
@@ -1972,16 +1943,13 @@ fn test_burn_key_sorting() {
 
         // SN owner is burned
         let subnet_owner_stake_after =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
+            GameSolver::get_stake_for_hotkey_on_subnet(&subnet_owner_hk, netuid);
         assert_eq!(subnet_owner_stake_after, 0.into());
 
         // No burn limits, all HKs should be burned
-        let other_stake_after_1 =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&other_hk_1, netuid);
-        let other_stake_after_2 =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&other_hk_2, netuid);
-        let other_stake_after_3 =
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&other_hk_3, netuid);
+        let other_stake_after_1 = GameSolver::get_stake_for_hotkey_on_subnet(&other_hk_1, netuid);
+        let other_stake_after_2 = GameSolver::get_stake_for_hotkey_on_subnet(&other_hk_2, netuid);
+        let other_stake_after_3 = GameSolver::get_stake_for_hotkey_on_subnet(&other_hk_3, netuid);
         assert_eq!(other_stake_after_1, 0.into());
         assert_eq!(other_stake_after_2, 0.into());
         assert_eq!(other_stake_after_3, 0.into());
@@ -2006,14 +1974,13 @@ fn test_calculate_dividend_distribution_totals() {
         dividends.insert(hotkeys[0], 77_783_738_u64.into());
         dividends.insert(hotkeys[1], 19_283_940_u64.into());
 
-        let (alpha_dividends, root_alpha_dividends) =
-            SubtensorModule::calculate_dividend_distribution(
-                pending_validator_alpha,
-                pending_root_alpha,
-                tao_weight,
-                stake_map,
-                dividends,
-            );
+        let (alpha_dividends, root_alpha_dividends) = GameSolver::calculate_dividend_distribution(
+            pending_validator_alpha,
+            pending_root_alpha,
+            tao_weight,
+            stake_map,
+            dividends,
+        );
 
         // Verify the total of each dividends type is close to the inputs.
         let total_alpha_dividends = alpha_dividends.values().sum::<U96F32>();
@@ -2050,14 +2017,13 @@ fn test_calculate_dividend_distribution_total_only_tao() {
         dividends.insert(hotkeys[0], 77_783_738_u64.into());
         dividends.insert(hotkeys[1], 19_283_940_u64.into());
 
-        let (alpha_dividends, root_alpha_dividends) =
-            SubtensorModule::calculate_dividend_distribution(
-                pending_validator_alpha,
-                pending_root_alpha,
-                tao_weight,
-                stake_map,
-                dividends,
-            );
+        let (alpha_dividends, root_alpha_dividends) = GameSolver::calculate_dividend_distribution(
+            pending_validator_alpha,
+            pending_root_alpha,
+            tao_weight,
+            stake_map,
+            dividends,
+        );
 
         // Verify the total of each dividends type is close to the inputs.
         let total_alpha_dividends = alpha_dividends.values().sum::<U96F32>();
@@ -2094,7 +2060,7 @@ fn test_calculate_dividend_distribution_total_no_tao_weight() {
         dividends.insert(hotkeys[0], 77_783_738_u64.into());
         dividends.insert(hotkeys[1], 19_283_940_u64.into());
 
-        let (alpha_dividends, tao_dividends) = SubtensorModule::calculate_dividend_distribution(
+        let (alpha_dividends, tao_dividends) = GameSolver::calculate_dividend_distribution(
             pending_validator_alpha,
             //   pending_tao,
             AlphaCurrency::ZERO,
@@ -2138,7 +2104,7 @@ fn test_calculate_dividend_distribution_total_only_alpha() {
         dividends.insert(hotkeys[0], 77_783_738_u64.into());
         dividends.insert(hotkeys[1], 19_283_940_u64.into());
 
-        let (alpha_dividends, tao_dividends) = SubtensorModule::calculate_dividend_distribution(
+        let (alpha_dividends, tao_dividends) = GameSolver::calculate_dividend_distribution(
             pending_validator_alpha,
             //   pending_tao,
             AlphaCurrency::ZERO,
@@ -2176,7 +2142,7 @@ fn test_calculate_dividend_and_incentive_distribution() {
         let coldkey = U256::from(2);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         // Give non-zero alpha
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -2193,7 +2159,7 @@ fn test_calculate_dividend_and_incentive_distribution() {
         let hotkey_emission = vec![(hotkey, pending_alpha / 2.into(), pending_alpha / 2.into())];
 
         let (incentives, (alpha_dividends, tao_dividends)) =
-            SubtensorModule::calculate_dividend_and_incentive_distribution(
+            GameSolver::calculate_dividend_and_incentive_distribution(
                 netuid,
                 //   pending_tao,
                 AlphaCurrency::ZERO,
@@ -2225,7 +2191,7 @@ fn test_calculate_dividend_and_incentive_distribution_all_to_validators() {
         let coldkey = U256::from(2);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         // Give non-zero alpha
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -2241,7 +2207,7 @@ fn test_calculate_dividend_and_incentive_distribution_all_to_validators() {
         let hotkey_emission = vec![(hotkey, 0.into(), pending_alpha)];
 
         let (incentives, (alpha_dividends, tao_dividends)) =
-            SubtensorModule::calculate_dividend_and_incentive_distribution(
+            GameSolver::calculate_dividend_and_incentive_distribution(
                 netuid,
                 //   pending_tao,
                 AlphaCurrency::ZERO,
@@ -2272,7 +2238,7 @@ fn test_calculate_dividends_and_incentives() {
         let coldkey = U256::from(2);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         // Give non-zero alpha
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -2287,7 +2253,7 @@ fn test_calculate_dividends_and_incentives() {
         let hotkey_emission = vec![(hotkey, incentive, divdends)];
 
         let (incentives, dividends) =
-            SubtensorModule::calculate_dividends_and_incentives(netuid, hotkey_emission);
+            GameSolver::calculate_dividends_and_incentives(netuid, hotkey_emission);
 
         let incentives_total = incentives
             .values()
@@ -2312,7 +2278,7 @@ fn test_calculate_dividends_and_incentives_only_validators() {
         let coldkey = U256::from(2);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         // Give non-zero alpha
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -2326,7 +2292,7 @@ fn test_calculate_dividends_and_incentives_only_validators() {
         let hotkey_emission = vec![(hotkey, incentive, divdends)];
 
         let (incentives, dividends) =
-            SubtensorModule::calculate_dividends_and_incentives(netuid, hotkey_emission);
+            GameSolver::calculate_dividends_and_incentives(netuid, hotkey_emission);
 
         let incentives_total = incentives
             .values()
@@ -2352,7 +2318,7 @@ fn test_calculate_dividends_and_incentives_only_miners() {
         let coldkey = U256::from(2);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         // Give non-zero alpha
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -2366,7 +2332,7 @@ fn test_calculate_dividends_and_incentives_only_miners() {
         let hotkey_emission = vec![(hotkey, incentive, divdends)];
 
         let (incentives, dividends) =
-            SubtensorModule::calculate_dividends_and_incentives(netuid, hotkey_emission);
+            GameSolver::calculate_dividends_and_incentives(netuid, hotkey_emission);
 
         let incentives_total = incentives
             .values()
@@ -2389,24 +2355,24 @@ fn test_distribute_emission_no_miners_all_drained() {
         let init_stake = 1;
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         // Give non-zero stake
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
             init_stake.into(),
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey),
+            GameSolver::get_total_stake_for_hotkey(&hotkey),
             init_stake.into()
         );
 
         // Set the weight of root TAO to be 0%, so only alpha is effective.
-        SubtensorModule::set_tao_weight(0);
+        GameSolver::set_tao_weight(0);
 
         // Set the emission to be 1 million.
         let emission = AlphaCurrency::from(1_000_000);
         // Run drain pending without any miners.
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             emission.saturating_div(2.into()).into(),
             emission.saturating_div(2.into()).into(),
@@ -2415,7 +2381,7 @@ fn test_distribute_emission_no_miners_all_drained() {
         );
 
         // Get the new stake of the hotkey.
-        let new_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey);
+        let new_stake = GameSolver::get_total_stake_for_hotkey(&hotkey);
         // We expect this neuron to get *all* the emission.
         // Slight epsilon due to rounding (hotkey_take).
         assert_abs_diff_eq!(
@@ -2437,34 +2403,34 @@ fn test_distribute_emission_zero_emission() {
         let miner_ck = U256::from(6);
         let init_stake: u64 = 100_000_000_000_000;
         let tempo = 2;
-        SubtensorModule::set_tempo(netuid, tempo);
+        GameSolver::set_tempo(netuid, tempo);
         // Set weight-set limit to 0.
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         register_ok_neuron(netuid, miner_hk, miner_ck, 0);
         // Give non-zero stake
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
             init_stake.into(),
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey),
+            GameSolver::get_total_stake_for_hotkey(&hotkey),
             init_stake.into()
         );
 
         // Set the weight of root TAO to be 0%, so only alpha is effective.
-        SubtensorModule::set_tao_weight(0);
+        GameSolver::set_tao_weight(0);
 
         run_to_block_no_epoch(netuid, 50);
 
         // Run epoch for initial setup.
-        SubtensorModule::epoch(netuid, AlphaCurrency::ZERO);
+        GameSolver::epoch(netuid, AlphaCurrency::ZERO);
 
         // Set weights on miner
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             vec![0, 1, 2],
@@ -2479,7 +2445,7 @@ fn test_distribute_emission_zero_emission() {
         Dividends::<Test>::remove(netuid);
 
         // Set the emission to be ZERO.
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             AlphaCurrency::ZERO,
             AlphaCurrency::ZERO,
@@ -2488,7 +2454,7 @@ fn test_distribute_emission_zero_emission() {
         );
 
         // Get the new stake of the hotkey.
-        let new_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey);
+        let new_stake = GameSolver::get_total_stake_for_hotkey(&hotkey);
         // We expect the stake to remain unchanged.
         assert_eq!(new_stake, init_stake.into());
 
@@ -2513,7 +2479,7 @@ fn test_run_coinbase_not_started() {
         let sn_owner_ck = U256::from(8);
 
         add_network_without_emission_block(netuid, tempo, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
         assert_eq!(FirstEmissionBlockNumber::<Test>::get(netuid), None);
 
         SubnetOwner::<Test>::insert(netuid, sn_owner_ck);
@@ -2525,9 +2491,9 @@ fn test_run_coinbase_not_started() {
         let miner_ck = U256::from(6);
         let init_stake: u64 = 100_000_000_000_000;
         let tempo = 2;
-        SubtensorModule::set_tempo(netuid, tempo);
+        GameSolver::set_tempo(netuid, tempo);
         // Set weight-set limit to 0.
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         let reserve = init_stake * 1000;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
@@ -2536,27 +2502,27 @@ fn test_run_coinbase_not_started() {
         register_ok_neuron(netuid, miner_hk, miner_ck, 0);
         register_ok_neuron(netuid, sn_owner_hk, sn_owner_ck, 0);
         // Give non-zero stake
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
             init_stake.into(),
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey),
+            GameSolver::get_total_stake_for_hotkey(&hotkey),
             init_stake.into()
         );
 
         // Set the weight of root TAO to be 0%, so only alpha is effective.
-        SubtensorModule::set_tao_weight(0);
+        GameSolver::set_tao_weight(0);
 
         run_to_block_no_epoch(netuid, 30);
 
         // Run epoch for initial setup.
-        SubtensorModule::epoch(netuid, AlphaCurrency::ZERO);
+        GameSolver::epoch(netuid, AlphaCurrency::ZERO);
 
         // Set weights on miner
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             vec![0, 1, 2],
@@ -2573,16 +2539,16 @@ fn test_run_coinbase_not_started() {
         next_block_no_epoch(netuid);
         next_block_no_epoch(netuid);
         let current_block = System::block_number();
-        assert!(SubtensorModule::should_run_epoch(netuid, current_block));
+        assert!(GameSolver::should_run_epoch(netuid, current_block));
 
         // Run coinbase with emission.
-        SubtensorModule::run_coinbase(U96F32::from_num(100_000_000));
+        GameSolver::run_coinbase(U96F32::from_num(100_000_000));
 
         // We expect that the epoch ran.
         assert_eq!(BlocksSinceLastStep::<Test>::get(netuid), 0);
 
         // Get the new stake of the hotkey. We expect no emissions.
-        let new_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey);
+        let new_stake = GameSolver::get_total_stake_for_hotkey(&hotkey);
         // We expect the stake to remain unchanged.
         assert_eq!(new_stake, init_stake.into());
 
@@ -2607,7 +2573,7 @@ fn test_run_coinbase_not_started_start_after() {
         let sn_owner_ck = U256::from(8);
 
         add_network_without_emission_block(netuid, tempo, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
         assert_eq!(FirstEmissionBlockNumber::<Test>::get(netuid), None);
 
         SubnetOwner::<Test>::insert(netuid, sn_owner_ck);
@@ -2619,35 +2585,35 @@ fn test_run_coinbase_not_started_start_after() {
         let miner_ck = U256::from(6);
         let init_stake: u64 = 100_000_000_000_000;
         let tempo = 2;
-        SubtensorModule::set_tempo(netuid, tempo);
+        GameSolver::set_tempo(netuid, tempo);
         // Set weight-set limit to 0.
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         register_ok_neuron(netuid, miner_hk, miner_ck, 0);
         register_ok_neuron(netuid, sn_owner_hk, sn_owner_ck, 0);
         // Give non-zero stake
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
             init_stake.into(),
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey),
+            GameSolver::get_total_stake_for_hotkey(&hotkey),
             init_stake.into()
         );
 
         // Set the weight of root TAO to be 0%, so only alpha is effective.
-        SubtensorModule::set_tao_weight(0);
+        GameSolver::set_tao_weight(0);
 
         run_to_block_no_epoch(netuid, 30);
 
         // Run epoch for initial setup.
-        SubtensorModule::epoch(netuid, AlphaCurrency::ZERO);
+        GameSolver::epoch(netuid, AlphaCurrency::ZERO);
 
         // Set weights on miner
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             vec![0, 1, 2],
@@ -2664,10 +2630,10 @@ fn test_run_coinbase_not_started_start_after() {
         next_block_no_epoch(netuid);
         next_block_no_epoch(netuid);
         let current_block = System::block_number();
-        assert!(SubtensorModule::should_run_epoch(netuid, current_block));
+        assert!(GameSolver::should_run_epoch(netuid, current_block));
 
         // Run coinbase with emission.
-        SubtensorModule::run_coinbase(U96F32::from_num(100_000_000));
+        GameSolver::run_coinbase(U96F32::from_num(100_000_000));
         // We expect that the epoch ran.
         assert_eq!(BlocksSinceLastStep::<Test>::get(netuid), 0);
 
@@ -2677,7 +2643,7 @@ fn test_run_coinbase_not_started_start_after() {
         let current_block = System::block_number();
 
         // Run start call.
-        assert_ok!(SubtensorModule::start_call(
+        assert_ok!(GameSolver::start_call(
             RuntimeOrigin::signed(sn_owner_ck),
             netuid
         ));
@@ -2687,12 +2653,12 @@ fn test_run_coinbase_not_started_start_after() {
         );
 
         // Run coinbase with emission.
-        SubtensorModule::run_coinbase(U96F32::from_num(100_000_000));
+        GameSolver::run_coinbase(U96F32::from_num(100_000_000));
         // We expect that the epoch ran.
         assert_eq!(BlocksSinceLastStep::<Test>::get(netuid), 0);
 
         // Get the new stake of the hotkey. We expect no emissions.
-        let new_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey);
+        let new_stake = GameSolver::get_total_stake_for_hotkey(&hotkey);
         // We expect the stake to remain unchanged.
         assert!(new_stake > init_stake.into());
         log::info!("new_stake: {new_stake}");
@@ -2711,13 +2677,8 @@ fn test_coinbase_v3_liquidity_update() {
         let netuid = add_dynamic_network(&owner_hotkey, &owner_coldkey);
 
         // Force the swap to initialize
-        SubtensorModule::swap_tao_for_alpha(
-            netuid,
-            TaoCurrency::ZERO,
-            1_000_000_000_000.into(),
-            false,
-        )
-        .unwrap();
+        GameSolver::swap_tao_for_alpha(netuid, TaoCurrency::ZERO, 1_000_000_000_000.into(), false)
+            .unwrap();
 
         let protocol_account_id = pallet_subtensor_swap::Pallet::<Test>::protocol_account_id();
         let position = pallet_subtensor_swap::Positions::<Test>::get((
@@ -2733,7 +2694,7 @@ fn test_coinbase_v3_liquidity_update() {
         // Set the TAO flow to non-zero
         SubnetTaoFlow::<Test>::insert(netuid, 8348383_i64);
         FirstEmissionBlockNumber::<Test>::insert(netuid, 0);
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
 
         let position_after = pallet_subtensor_swap::Positions::<Test>::get((
             netuid,
@@ -2758,7 +2719,7 @@ fn test_drain_alpha_childkey_parentkey_with_burn() {
         let coldkey = U256::from(3);
         let stake_before = AlphaCurrency::from(1_000_000_000);
         register_ok_neuron(netuid, child, coldkey, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -2769,20 +2730,20 @@ fn test_drain_alpha_childkey_parentkey_with_burn() {
         // Childkey take is 10%
         ChildkeyTake::<Test>::insert(child, netuid, u16::MAX / 10);
 
-        let burn_rate = SubtensorModule::get_ck_burn();
-        let parent_stake_before = SubtensorModule::get_stake_for_hotkey_on_subnet(&parent, netuid);
-        let child_stake_before = SubtensorModule::get_stake_for_hotkey_on_subnet(&child, netuid);
+        let burn_rate = GameSolver::get_ck_burn();
+        let parent_stake_before = GameSolver::get_stake_for_hotkey_on_subnet(&parent, netuid);
+        let child_stake_before = GameSolver::get_stake_for_hotkey_on_subnet(&child, netuid);
 
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        SubtensorModule::distribute_emission(
+        GameSolver::distribute_emission(
             netuid,
             pending_alpha.saturating_div(2.into()).into(),
             pending_alpha.saturating_div(2.into()).into(),
             AlphaCurrency::ZERO,
             AlphaCurrency::ZERO,
         );
-        let parent_stake_after = SubtensorModule::get_stake_for_hotkey_on_subnet(&parent, netuid);
-        let child_stake_after = SubtensorModule::get_stake_for_hotkey_on_subnet(&child, netuid);
+        let parent_stake_after = GameSolver::get_stake_for_hotkey_on_subnet(&parent, netuid);
+        let child_stake_after = GameSolver::get_stake_for_hotkey_on_subnet(&child, netuid);
 
         let expected_ck_burn = I96F32::from_num(pending_alpha)
             * I96F32::from_num(9.0 / 10.0)
@@ -2836,18 +2797,18 @@ fn test_incentive_is_autostaked_to_owner_destination() {
         Uids::<Test>::insert(netuid, dest_hk, 2);
 
         // Set autostake destination for the miner's coldkey
-        assert_ok!(SubtensorModule::set_coldkey_auto_stake_hotkey(
+        assert_ok!(GameSolver::set_coldkey_auto_stake_hotkey(
             RuntimeOrigin::signed(miner_ck),
             netuid,
             dest_hk,
         ));
 
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&miner_hk, netuid),
+            GameSolver::get_stake_for_hotkey_on_subnet(&miner_hk, netuid),
             0.into()
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&dest_hk, netuid),
+            GameSolver::get_stake_for_hotkey_on_subnet(&dest_hk, netuid),
             0.into()
         );
 
@@ -2856,7 +2817,7 @@ fn test_incentive_is_autostaked_to_owner_destination() {
         let incentive: AlphaCurrency = 10_000_000u64.into();
         incentives.insert(miner_hk, incentive);
 
-        SubtensorModule::distribute_dividends_and_incentives(
+        GameSolver::distribute_dividends_and_incentives(
             netuid,
             AlphaCurrency::ZERO, // owner_cut
             incentives,
@@ -2866,11 +2827,11 @@ fn test_incentive_is_autostaked_to_owner_destination() {
 
         // Expect the stake to land on the destination hotkey (not the original miner hotkey)
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&miner_hk, netuid),
+            GameSolver::get_stake_for_hotkey_on_subnet(&miner_hk, netuid),
             0.into()
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&dest_hk, netuid),
+            GameSolver::get_stake_for_hotkey_on_subnet(&dest_hk, netuid),
             incentive
         );
     });
@@ -2893,7 +2854,7 @@ fn test_incentive_goes_to_hotkey_when_no_autostake_destination() {
         Uids::<Test>::insert(netuid, miner_hk, 1);
 
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&miner_hk, netuid),
+            GameSolver::get_stake_for_hotkey_on_subnet(&miner_hk, netuid),
             0.into()
         );
 
@@ -2902,7 +2863,7 @@ fn test_incentive_goes_to_hotkey_when_no_autostake_destination() {
         let incentive: AlphaCurrency = 5_000_000u64.into();
         incentives.insert(miner_hk, incentive);
 
-        SubtensorModule::distribute_dividends_and_incentives(
+        GameSolver::distribute_dividends_and_incentives(
             netuid,
             AlphaCurrency::ZERO, // owner_cut
             incentives,
@@ -2912,7 +2873,7 @@ fn test_incentive_goes_to_hotkey_when_no_autostake_destination() {
 
         // With no autostake destination, the incentive should be staked to the original hotkey
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_on_subnet(&miner_hk, netuid),
+            GameSolver::get_stake_for_hotkey_on_subnet(&miner_hk, netuid),
             incentive
         );
     });
@@ -2939,7 +2900,7 @@ fn test_zero_shares_zero_emission() {
         SubnetMovingPrice::<Test>::insert(netuid1, I96F32::from_num(0));
         SubnetMovingPrice::<Test>::insert(netuid2, I96F32::from_num(0));
         // Run coinbase
-        SubtensorModule::run_coinbase(U96F32::from_num(emission));
+        GameSolver::run_coinbase(U96F32::from_num(emission));
         // Netuid 1 is cut off by lower limit, all emission goes to netuid2
         assert_eq!(SubnetAlphaIn::<Test>::get(netuid1), initial.into());
         assert_eq!(SubnetAlphaIn::<Test>::get(netuid2), initial.into());
@@ -2961,7 +2922,7 @@ fn test_mining_emission_distribution_with_no_root_sell() {
         let root_stake: u64 = 200_000_000_000; // 200 TAO
 
         // Create root network
-        SubtensorModule::set_tao_weight(0); // Start tao weight at 0
+        GameSolver::set_tao_weight(0); // Start tao weight at 0
         SubtokenEnabled::<Test>::insert(NetUid::ROOT, true);
         NetworksAdded::<Test>::insert(NetUid::ROOT, true);
 
@@ -2976,35 +2937,35 @@ fn test_mining_emission_distribution_with_no_root_sell() {
         register_ok_neuron(netuid, validator_hotkey, validator_coldkey, 0);
         register_ok_neuron(netuid, validator_miner_hotkey, validator_miner_coldkey, 1);
         register_ok_neuron(netuid, miner_hotkey, miner_coldkey, 2);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &validator_coldkey,
             stake + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &validator_miner_coldkey,
             stake + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &miner_coldkey,
             stake + ExistentialDeposit::get(),
         );
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
         step_block(subnet_tempo);
         SubnetOwnerCut::<Test>::set(u16::MAX / 10);
         // There are two validators and three neurons
         MaxAllowedUids::<Test>::set(netuid, 3);
-        SubtensorModule::set_max_allowed_validators(netuid, 2);
+        GameSolver::set_max_allowed_validators(netuid, 2);
 
         // Setup stakes:
         //   Stake from validator
         //   Stake from valiminer
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             netuid,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_miner_coldkey),
             validator_miner_hotkey,
             netuid,
@@ -3026,16 +2987,16 @@ fn test_mining_emission_distribution_with_no_root_sell() {
         step_block(subnet_tempo);
 
         // Add stake to validator so it has root stake
-        SubtensorModule::add_balance_to_coldkey_account(&validator_coldkey, root_stake.into());
+        GameSolver::add_balance_to_coldkey_account(&validator_coldkey, root_stake.into());
         // init root
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             NetUid::ROOT,
             root_stake.into()
         ));
         // Set tao weight non zero
-        SubtensorModule::set_tao_weight(u64::MAX / 10);
+        GameSolver::set_tao_weight(u64::MAX / 10);
 
         // Make root sell NOT happen
         // set price very low, e.g. a lot of alpha in
@@ -3046,15 +3007,15 @@ fn test_mining_emission_distribution_with_no_root_sell() {
         );
 
         // Make sure we ARE NOT root selling, so we do not have root alpha divs.
-        let root_sell_flag = SubtensorModule::get_network_root_sell_flag(&[netuid]);
+        let root_sell_flag = GameSolver::get_network_root_sell_flag(&[netuid]);
         assert!(!root_sell_flag, "Root sell flag should be false");
 
         // Run run_coinbase until emissions are drained
         step_block(subnet_tempo);
 
         let old_root_alpha_divs = PendingRootAlphaDivs::<Test>::get(netuid);
-        let per_block_emission = SubtensorModule::get_block_emission_for_issuance(
-            SubtensorModule::get_alpha_issuance(netuid).into(),
+        let per_block_emission = GameSolver::get_block_emission_for_issuance(
+            GameSolver::get_alpha_issuance(netuid).into(),
         )
         .unwrap_or(0);
 
@@ -3073,7 +3034,7 @@ fn test_mining_emission_distribution_with_no_root_sell() {
             AlphaCurrency::ZERO,
             "Root alpha divs should be zero"
         );
-        let miner_stake_before_epoch = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let miner_stake_before_epoch = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &miner_hotkey,
             &miner_coldkey,
             netuid,
@@ -3109,7 +3070,7 @@ fn test_mining_emission_distribution_with_no_root_sell() {
         log::info!("Miner incentive: {miner_incentive:?}");
 
         // Miner emissions
-        let miner_emission_1: u64 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let miner_emission_1: u64 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &miner_hotkey,
             &miner_coldkey,
             netuid,
@@ -3153,7 +3114,7 @@ fn test_mining_emission_distribution_with_root_sell() {
         let root_stake: u64 = 200_000_000_000; // 200 TAO
 
         // Create root network
-        SubtensorModule::set_tao_weight(0); // Start tao weight at 0
+        GameSolver::set_tao_weight(0); // Start tao weight at 0
         SubtokenEnabled::<Test>::insert(NetUid::ROOT, true);
         NetworksAdded::<Test>::insert(NetUid::ROOT, true);
 
@@ -3171,35 +3132,35 @@ fn test_mining_emission_distribution_with_root_sell() {
         register_ok_neuron(netuid, validator_hotkey, validator_coldkey, 0);
         register_ok_neuron(netuid, validator_miner_hotkey, validator_miner_coldkey, 1);
         register_ok_neuron(netuid, miner_hotkey, miner_coldkey, 2);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &validator_coldkey,
             stake + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &validator_miner_coldkey,
             stake + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &miner_coldkey,
             stake + ExistentialDeposit::get(),
         );
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
         step_block(subnet_tempo);
         SubnetOwnerCut::<Test>::set(u16::MAX / 10);
         // There are two validators and three neurons
         MaxAllowedUids::<Test>::set(netuid, 3);
-        SubtensorModule::set_max_allowed_validators(netuid, 2);
+        GameSolver::set_max_allowed_validators(netuid, 2);
 
         // Setup stakes:
         //   Stake from validator
         //   Stake from valiminer
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             netuid,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_miner_coldkey),
             validator_miner_hotkey,
             netuid,
@@ -3221,16 +3182,16 @@ fn test_mining_emission_distribution_with_root_sell() {
         step_block(subnet_tempo);
 
         // Add stake to validator so it has root stake
-        SubtensorModule::add_balance_to_coldkey_account(&validator_coldkey, root_stake.into());
+        GameSolver::add_balance_to_coldkey_account(&validator_coldkey, root_stake.into());
         // init root
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             NetUid::ROOT,
             root_stake.into()
         ));
         // Set tao weight non zero
-        SubtensorModule::set_tao_weight(u64::MAX / 10);
+        GameSolver::set_tao_weight(u64::MAX / 10);
 
         // Make root sell happen
         // Set moving price > 1.0
@@ -3243,14 +3204,14 @@ fn test_mining_emission_distribution_with_root_sell() {
         SubnetMovingPrice::<Test>::insert(netuid, I96F32::from_num(2));
 
         // Make sure we are root selling, so we have root alpha divs.
-        let root_sell_flag = SubtensorModule::get_network_root_sell_flag(&[netuid]);
+        let root_sell_flag = GameSolver::get_network_root_sell_flag(&[netuid]);
         assert!(root_sell_flag, "Root sell flag should be true");
 
         // Run run_coinbase until emissions are drained
         step_block(subnet_tempo);
 
         let old_root_alpha_divs = PendingRootAlphaDivs::<Test>::get(netuid);
-        let miner_stake_before_epoch = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let miner_stake_before_epoch = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &miner_hotkey,
             &miner_coldkey,
             netuid,
@@ -3285,13 +3246,13 @@ fn test_mining_emission_distribution_with_root_sell() {
         };
         log::info!("Miner incentive: {miner_incentive:?}");
 
-        let per_block_emission = SubtensorModule::get_block_emission_for_issuance(
-            SubtensorModule::get_alpha_issuance(netuid).into(),
+        let per_block_emission = GameSolver::get_block_emission_for_issuance(
+            GameSolver::get_alpha_issuance(netuid).into(),
         )
         .unwrap_or(0);
 
         // Miner emissions
-        let miner_emission_1: u64 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let miner_emission_1: u64 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &miner_hotkey,
             &miner_coldkey,
             netuid,
@@ -3333,7 +3294,7 @@ fn test_coinbase_subnets_with_no_reg_get_no_emission() {
         // Note that netuid0 has only one method allowed
         // And, netuid1 has *both* methods allowed
         // Both should be in the list.
-        let subnets_to_emit_to_0 = SubtensorModule::get_subnets_to_emit_to(&[netuid0, netuid1]);
+        let subnets_to_emit_to_0 = GameSolver::get_subnets_to_emit_to(&[netuid0, netuid1]);
         // Check that both subnets are in the list
         assert_eq!(subnets_to_emit_to_0.len(), 2);
         assert!(subnets_to_emit_to_0.contains(&netuid0));
@@ -3344,7 +3305,7 @@ fn test_coinbase_subnets_with_no_reg_get_no_emission() {
         NetworkPowRegistrationAllowed::<Test>::insert(netuid0, false);
 
         // Check that netuid0 is not in the list
-        let subnets_to_emit_to_1 = SubtensorModule::get_subnets_to_emit_to(&[netuid0, netuid1]);
+        let subnets_to_emit_to_1 = GameSolver::get_subnets_to_emit_to(&[netuid0, netuid1]);
         assert_eq!(subnets_to_emit_to_1.len(), 1);
         assert!(!subnets_to_emit_to_1.contains(&netuid0));
         // Netuid1 still in the list
@@ -3368,8 +3329,8 @@ fn test_coinbase_subnet_terms_with_alpha_in_gt_alpha_emission() {
 
         // Set netuid0 to have price tao_emission / price > alpha_emission
         let alpha_emission = U96F32::saturating_from_num(
-            SubtensorModule::get_block_emission_for_issuance(
-                SubtensorModule::get_alpha_issuance(netuid0).into(),
+            GameSolver::get_block_emission_for_issuance(
+                GameSolver::get_alpha_issuance(netuid0).into(),
             )
             .unwrap_or(0),
         );
@@ -3393,7 +3354,7 @@ fn test_coinbase_subnet_terms_with_alpha_in_gt_alpha_emission() {
         let subnet_emissions = BTreeMap::from([(netuid0, tao_emission)]);
 
         let (tao_in, alpha_in, alpha_out, excess_tao) =
-            SubtensorModule::get_subnet_terms(&subnet_emissions);
+            GameSolver::get_subnet_terms(&subnet_emissions);
 
         // Check our condition is met
         assert!(tao_emission / price_to_set_fixed > alpha_emission);
@@ -3443,8 +3404,8 @@ fn test_coinbase_subnet_terms_with_alpha_in_lte_alpha_emission() {
         Swap::maybe_initialize_v3(netuid0);
 
         let alpha_emission = U96F32::saturating_from_num(
-            SubtensorModule::get_block_emission_for_issuance(
-                SubtensorModule::get_alpha_issuance(netuid0).into(),
+            GameSolver::get_block_emission_for_issuance(
+                GameSolver::get_alpha_issuance(netuid0).into(),
             )
             .unwrap_or(0),
         );
@@ -3455,7 +3416,7 @@ fn test_coinbase_subnet_terms_with_alpha_in_lte_alpha_emission() {
         let subnet_emissions = BTreeMap::from([(netuid0, tao_emission)]);
 
         let (tao_in, alpha_in, alpha_out, excess_tao) =
-            SubtensorModule::get_subnet_terms(&subnet_emissions);
+            GameSolver::get_subnet_terms(&subnet_emissions);
 
         // Check our condition is met
         assert!(tao_emission / price <= alpha_emission);
@@ -3511,7 +3472,7 @@ fn test_coinbase_inject_and_maybe_swap_does_not_skew_reserves() {
         let excess_tao = BTreeMap::from([(netuid0, U96F32::saturating_from_num(789100))]);
 
         // Run the inject and maybe swap
-        SubtensorModule::inject_and_maybe_swap(&[netuid0], &tao_in, &alpha_in, &excess_tao);
+        GameSolver::inject_and_maybe_swap(&[netuid0], &tao_in, &alpha_in, &excess_tao);
 
         let tao_in_after = SubnetTAO::<Test>::get(netuid0);
         let alpha_in_after = SubnetAlphaIn::<Test>::get(netuid0);
@@ -3540,7 +3501,7 @@ fn test_coinbase_drain_pending_increments_blockssincelaststep() {
         let blocks_since_last_step_before = BlocksSinceLastStep::<Test>::get(netuid0);
 
         // Check that blockssincelaststep is incremented
-        SubtensorModule::drain_pending(&[netuid0], 1);
+        GameSolver::drain_pending(&[netuid0], 1);
 
         let blocks_since_last_step_after = BlocksSinceLastStep::<Test>::get(netuid0);
         assert!(blocks_since_last_step_after > blocks_since_last_step_before);
@@ -3559,14 +3520,14 @@ fn test_coinbase_drain_pending_resets_blockssincelaststep() {
         Tempo::<Test>::insert(netuid0, 100);
         // Ensure the block number we use is the tempo block
         let block_number = 98;
-        assert!(SubtensorModule::should_run_epoch(netuid0, block_number));
+        assert!(GameSolver::should_run_epoch(netuid0, block_number));
 
         let blocks_since_last_step_before = 12345678;
         BlocksSinceLastStep::<Test>::insert(netuid0, blocks_since_last_step_before);
         LastMechansimStepBlock::<Test>::insert(netuid0, 12345); // garbage value
 
         // Check that blockssincelaststep is reset to 0 on tempo
-        SubtensorModule::drain_pending(&[netuid0], block_number);
+        GameSolver::drain_pending(&[netuid0], block_number);
 
         let blocks_since_last_step_after = BlocksSinceLastStep::<Test>::get(netuid0);
         assert_eq!(blocks_since_last_step_after, 0);
@@ -3583,7 +3544,7 @@ fn test_coinbase_drain_pending_gets_counters_and_resets_them() {
         Tempo::<Test>::insert(netuid0, 100);
         // Ensure the block number we use is the tempo block
         let block_number = 98;
-        assert!(SubtensorModule::should_run_epoch(netuid0, block_number));
+        assert!(GameSolver::should_run_epoch(netuid0, block_number));
 
         let pending_server_em = AlphaCurrency::from(123434534);
         let pending_validator_em = AlphaCurrency::from(111111);
@@ -3595,7 +3556,7 @@ fn test_coinbase_drain_pending_gets_counters_and_resets_them() {
         PendingRootAlphaDivs::<Test>::insert(netuid0, pending_root);
         PendingOwnerCut::<Test>::insert(netuid0, pending_owner_cut);
 
-        let emissions_to_distribute = SubtensorModule::drain_pending(&[netuid0], block_number);
+        let emissions_to_distribute = GameSolver::drain_pending(&[netuid0], block_number);
         assert_eq!(emissions_to_distribute.len(), 1);
         assert_eq!(
             emissions_to_distribute[&netuid0],
@@ -3646,31 +3607,31 @@ fn test_coinbase_emit_to_subnets_with_no_root_sell() {
         let root_sell_flag = false;
 
         let alpha_emission = U96F32::saturating_from_num(
-            SubtensorModule::get_block_emission_for_issuance(
-                SubtensorModule::get_alpha_issuance(netuid0).into(),
+            GameSolver::get_block_emission_for_issuance(
+                GameSolver::get_alpha_issuance(netuid0).into(),
             )
             .unwrap_or(0),
         );
         let price: U96F32 = Swap::current_alpha_price(netuid0);
         let (tao_in, alpha_in, alpha_out, excess_tao) =
-            SubtensorModule::get_subnet_terms(&subnet_emissions);
+            GameSolver::get_subnet_terms(&subnet_emissions);
         // Based on the price, we should have NO excess TAO
         assert!(tao_emission / price <= alpha_emission);
 
         // ==== Run the emit to subnets =====
-        SubtensorModule::emit_to_subnets(&[netuid0], &subnet_emissions, root_sell_flag);
+        GameSolver::emit_to_subnets(&[netuid0], &subnet_emissions, root_sell_flag);
 
         // Find the owner cut expected
-        let owner_cut: U96F32 = SubtensorModule::get_float_subnet_owner_cut();
+        let owner_cut: U96F32 = GameSolver::get_float_subnet_owner_cut();
         let owner_cut_expected: U96F32 = owner_cut.saturating_mul(alpha_emission);
         log::info!("owner_cut_expected: {owner_cut_expected:?}");
         log::info!("alpha_emission: {alpha_emission:?}");
         log::info!("owner_cut: {owner_cut:?}");
 
         let alpha_issuance: U96F32 =
-            U96F32::saturating_from_num(SubtensorModule::get_alpha_issuance(netuid0));
+            U96F32::saturating_from_num(GameSolver::get_alpha_issuance(netuid0));
         let root_tao: U96F32 = U96F32::saturating_from_num(SubnetTAO::<Test>::get(NetUid::ROOT));
-        let tao_weight: U96F32 = root_tao.saturating_mul(SubtensorModule::get_tao_weight());
+        let tao_weight: U96F32 = root_tao.saturating_mul(GameSolver::get_tao_weight());
         let root_prop: U96F32 = tao_weight
             .checked_div(tao_weight.saturating_add(alpha_issuance))
             .unwrap_or(U96F32::min_value());
@@ -3737,31 +3698,31 @@ fn test_coinbase_emit_to_subnets_with_root_sell() {
         let root_sell_flag = true;
 
         let alpha_emission: U96F32 = U96F32::saturating_from_num(
-            SubtensorModule::get_block_emission_for_issuance(
-                SubtensorModule::get_alpha_issuance(netuid0).into(),
+            GameSolver::get_block_emission_for_issuance(
+                GameSolver::get_alpha_issuance(netuid0).into(),
             )
             .unwrap_or(0),
         );
         let price: U96F32 = Swap::current_alpha_price(netuid0);
         let (tao_in, alpha_in, alpha_out, excess_tao) =
-            SubtensorModule::get_subnet_terms(&subnet_emissions);
+            GameSolver::get_subnet_terms(&subnet_emissions);
         // Based on the price, we should have NO excess TAO
         assert!(tao_emission / price <= alpha_emission);
 
         // ==== Run the emit to subnets =====
-        SubtensorModule::emit_to_subnets(&[netuid0], &subnet_emissions, root_sell_flag);
+        GameSolver::emit_to_subnets(&[netuid0], &subnet_emissions, root_sell_flag);
 
         // Find the owner cut expected
-        let owner_cut: U96F32 = SubtensorModule::get_float_subnet_owner_cut();
+        let owner_cut: U96F32 = GameSolver::get_float_subnet_owner_cut();
         let owner_cut_expected: U96F32 = owner_cut.saturating_mul(alpha_emission);
         log::info!("owner_cut_expected: {owner_cut_expected:?}");
         log::info!("alpha_emission: {alpha_emission:?}");
         log::info!("owner_cut: {owner_cut:?}");
 
         let alpha_issuance: U96F32 =
-            U96F32::saturating_from_num(SubtensorModule::get_alpha_issuance(netuid0));
+            U96F32::saturating_from_num(GameSolver::get_alpha_issuance(netuid0));
         let root_tao: U96F32 = U96F32::saturating_from_num(SubnetTAO::<Test>::get(NetUid::ROOT));
-        let tao_weight: U96F32 = root_tao.saturating_mul(SubtensorModule::get_tao_weight());
+        let tao_weight: U96F32 = root_tao.saturating_mul(GameSolver::get_tao_weight());
         let root_prop: U96F32 = tao_weight
             .checked_div(tao_weight.saturating_add(alpha_issuance))
             .unwrap_or(U96F32::min_value());
@@ -3831,28 +3792,28 @@ fn test_pending_emission_start_call_not_done() {
         Tempo::<Test>::insert(netuid, subnet_tempo);
 
         register_ok_neuron(netuid, validator_hotkey, validator_coldkey, 0);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &validator_coldkey,
             stake + ExistentialDeposit::get(),
         );
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
         step_block(subnet_tempo);
         SubnetOwnerCut::<Test>::set(u16::MAX / 10);
         // There are two validators and three neurons
         MaxAllowedUids::<Test>::set(netuid, 3);
-        SubtensorModule::set_max_allowed_validators(netuid, 2);
+        GameSolver::set_max_allowed_validators(netuid, 2);
 
         // Add stake to validator so it has root stake
-        SubtensorModule::add_balance_to_coldkey_account(&validator_coldkey, root_stake.into());
+        GameSolver::add_balance_to_coldkey_account(&validator_coldkey, root_stake.into());
         // init root
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             NetUid::ROOT,
             root_stake.into()
         ));
         // Set tao weight non zero
-        SubtensorModule::set_tao_weight(u64::MAX / 10);
+        GameSolver::set_tao_weight(u64::MAX / 10);
 
         // Make root sell happen
         // Set moving price > 1.0
@@ -3865,7 +3826,7 @@ fn test_pending_emission_start_call_not_done() {
         SubnetMovingPrice::<Test>::insert(netuid, I96F32::from_num(2));
 
         // Make sure we are root selling, so we have root alpha divs.
-        let root_sell_flag = SubtensorModule::get_network_root_sell_flag(&[netuid]);
+        let root_sell_flag = GameSolver::get_network_root_sell_flag(&[netuid]);
         assert!(root_sell_flag, "Root sell flag should be true");
 
         // !!! Check that the subnet FirstEmissionBlockNumber is None -- no entry
@@ -3899,7 +3860,7 @@ fn test_root_prop_filled_on_block_step() {
         let netuid2 = add_dynamic_network(&hotkey, &coldkey);
 
         SubnetTAO::<Test>::insert(NetUid::ROOT, TaoCurrency::from(1_000_000_000_000u64));
-        SubtensorModule::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
+        GameSolver::set_tao_weight(u64::MAX); // Set TAO weight to 1.0
 
         let tao_reserve = TaoCurrency::from(50_000_000_000);
         let alpha_in = AlphaCurrency::from(100_000_000_000);
@@ -3929,17 +3890,17 @@ fn test_root_proportion() {
         SubnetTAO::<Test>::insert(NetUid::ROOT, TaoCurrency::from(root_tao_reserve));
 
         let tao_weight = 3_320_413_933_267_719_290u64;
-        SubtensorModule::set_tao_weight(tao_weight);
+        GameSolver::set_tao_weight(tao_weight);
 
         let alpha_in = 100_000_000_000u64;
         SubnetAlphaIn::<Test>::insert(netuid, AlphaCurrency::from(alpha_in));
 
-        let actual_root_proportion = SubtensorModule::root_proportion(netuid);
+        let actual_root_proportion = GameSolver::root_proportion(netuid);
         let expected_root_prop = {
-            let tao_weight = SubtensorModule::get_tao_weight();
+            let tao_weight = GameSolver::get_tao_weight();
             let root_tao = U96F32::from_num(root_tao_reserve);
             let alpha_in = {
-                let alpha: u64 = SubtensorModule::get_alpha_issuance(netuid).into();
+                let alpha: u64 = GameSolver::get_alpha_issuance(netuid).into();
 
                 U96F32::from_num(alpha)
             };
@@ -3958,7 +3919,7 @@ fn test_get_subnet_terms_alpha_emissions_cap() {
         let owner_coldkey = U256::from(11);
         let netuid = add_dynamic_network(&owner_hotkey, &owner_coldkey);
         let tao_block_emission: U96F32 = U96F32::saturating_from_num(
-            SubtensorModule::get_block_emission()
+            GameSolver::get_block_emission()
                 .unwrap_or(TaoCurrency::ZERO)
                 .to_u64(),
         );
@@ -3970,7 +3931,7 @@ fn test_get_subnet_terms_alpha_emissions_cap() {
         let emissions1 = U96F32::from_num(100_000_000);
 
         let subnet_emissions1 = BTreeMap::from([(netuid, emissions1)]);
-        let (_, alpha_in, _, _) = SubtensorModule::get_subnet_terms(&subnet_emissions1);
+        let (_, alpha_in, _, _) = GameSolver::get_subnet_terms(&subnet_emissions1);
 
         assert_eq!(alpha_in.get(&netuid).copied().unwrap(), emissions1);
 
@@ -3981,7 +3942,7 @@ fn test_get_subnet_terms_alpha_emissions_cap() {
         let emissions2 = U96F32::from_num(10_000_000_000u64);
 
         let subnet_emissions2 = BTreeMap::from([(netuid, emissions2)]);
-        let (_, alpha_in, _, _) = SubtensorModule::get_subnet_terms(&subnet_emissions2);
+        let (_, alpha_in, _, _) = GameSolver::get_subnet_terms(&subnet_emissions2);
 
         assert_eq!(alpha_in.get(&netuid).copied().unwrap(), tao_block_emission);
     });

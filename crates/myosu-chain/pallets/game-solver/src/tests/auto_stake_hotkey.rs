@@ -12,7 +12,7 @@ fn test_set_coldkey_auto_stake_hotkey_subnet_not_exists() {
         let netuid = NetUid::from(999); // Non-existent subnet
 
         assert_noop!(
-            SubtensorModule::set_coldkey_auto_stake_hotkey(
+            GameSolver::set_coldkey_auto_stake_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 netuid,
                 hotkey,
@@ -34,7 +34,7 @@ fn test_set_coldkey_auto_stake_hotkey_hotkey_not_registered() {
         let netuid = add_dynamic_network(&subnet_owner_hk, &subnet_owner_ck);
 
         assert_noop!(
-            SubtensorModule::set_coldkey_auto_stake_hotkey(
+            GameSolver::set_coldkey_auto_stake_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 netuid,
                 hotkey,
@@ -63,7 +63,7 @@ fn test_set_coldkey_auto_stake_hotkey_success() {
         assert_eq!(AutoStakeDestination::<Test>::get(coldkey, netuid), None);
 
         // Call should succeed
-        assert_ok!(SubtensorModule::set_coldkey_auto_stake_hotkey(
+        assert_ok!(GameSolver::set_coldkey_auto_stake_hotkey(
             RuntimeOrigin::signed(coldkey),
             netuid,
             hotkey,
@@ -93,7 +93,7 @@ fn test_set_coldkey_auto_stake_hotkey_same_hotkey_again() {
         Uids::<Test>::insert(netuid, hotkey, 1);
 
         // First call should succeed
-        assert_ok!(SubtensorModule::set_coldkey_auto_stake_hotkey(
+        assert_ok!(GameSolver::set_coldkey_auto_stake_hotkey(
             RuntimeOrigin::signed(coldkey),
             netuid,
             hotkey,
@@ -101,7 +101,7 @@ fn test_set_coldkey_auto_stake_hotkey_same_hotkey_again() {
 
         // Second call with same hotkey should fail
         assert_noop!(
-            SubtensorModule::set_coldkey_auto_stake_hotkey(
+            GameSolver::set_coldkey_auto_stake_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 netuid,
                 hotkey,
@@ -129,7 +129,7 @@ fn test_set_coldkey_auto_stake_hotkey_change_hotkey() {
         Uids::<Test>::insert(netuid, new_hotkey, 2);
 
         // First call should succeed
-        assert_ok!(SubtensorModule::set_coldkey_auto_stake_hotkey(
+        assert_ok!(GameSolver::set_coldkey_auto_stake_hotkey(
             RuntimeOrigin::signed(coldkey),
             netuid,
             hotkey,
@@ -150,7 +150,7 @@ fn test_set_coldkey_auto_stake_hotkey_change_hotkey() {
         );
 
         // Second call with new hotkey should succeed
-        assert_ok!(SubtensorModule::set_coldkey_auto_stake_hotkey(
+        assert_ok!(GameSolver::set_coldkey_auto_stake_hotkey(
             RuntimeOrigin::signed(coldkey),
             netuid,
             new_hotkey,

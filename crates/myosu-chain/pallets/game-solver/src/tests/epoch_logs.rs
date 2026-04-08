@@ -62,7 +62,7 @@ fn setup_epoch(neurons: Vec<Neuron>, mechanism_count: u8) {
     SubnetworkN::<Test>::insert(netuid, network_n);
     ActivityCutoff::<Test>::insert(netuid, ACTIVITY_CUTOFF);
     Tempo::<Test>::insert(netuid, TEMPO);
-    SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+    GameSolver::set_weights_set_rate_limit(netuid, 0);
     MechanismCountCurrent::<Test>::insert(netuid, MechId::from(mechanism_count));
 
     // Setup neurons
@@ -78,7 +78,7 @@ fn setup_epoch(neurons: Vec<Neuron>, mechanism_count: u8) {
         permit_vec.push(neuron.validator);
 
         // Setup stake
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &U256::from(COLDKEY),
             netuid,
@@ -88,7 +88,7 @@ fn setup_epoch(neurons: Vec<Neuron>, mechanism_count: u8) {
 
     ValidatorPermit::<Test>::insert(netuid, permit_vec);
     for m in 0..mechanism_count {
-        let netuid_index = SubtensorModule::get_mechanism_storage_index(netuid, m.into());
+        let netuid_index = GameSolver::get_mechanism_storage_index(netuid, m.into());
         LastUpdate::<Test>::insert(netuid_index, last_update_vec.clone());
     }
 }
@@ -96,7 +96,7 @@ fn setup_epoch(neurons: Vec<Neuron>, mechanism_count: u8) {
 fn set_weights(netuid: NetUid, weights: Vec<Vec<u16>>, indices: Vec<u16>) {
     for (uid, weight) in weights.iter().enumerate() {
         let hotkey = Keys::<Test>::get(netuid, uid as u16);
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             indices.clone(),
@@ -109,7 +109,7 @@ fn set_weights(netuid: NetUid, weights: Vec<Vec<u16>>, indices: Vec<u16>) {
 /// Write sparse weight rows **for a specific mechanism**.
 /// `rows` is a list of `(validator_uid, row)` where `row` is `[(dest_uid, weight_u16)]`.
 fn set_weights_for_mech(netuid: NetUid, mecid: MechId, rows: Vec<(u16, Vec<(u16, u16)>)>) {
-    let netuid_index = SubtensorModule::get_mechanism_storage_index(netuid, mecid);
+    let netuid_index = GameSolver::get_mechanism_storage_index(netuid, mecid);
     for (uid, sparse_row) in rows {
         Weights::<Test>::insert(netuid_index, uid, sparse_row);
     }
@@ -177,7 +177,7 @@ fn test_simple() {
 
             // Run epoch, watch logs
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
+            GameSolver::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -216,7 +216,7 @@ fn test_bad_permit_vector() {
 
             // Run epoch, watch logs
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
+            GameSolver::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -244,7 +244,7 @@ fn test_inactive_mask_zeroes_active_stake() {
             setup_epoch(neurons.to_vec(), 1);
 
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
+            GameSolver::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -272,7 +272,7 @@ fn test_validator_permit_masks_active_stake() {
             ValidatorPermit::<Test>::insert(netuid, vec![true, false]);
 
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), emission);
+            GameSolver::epoch_mechanism(netuid, MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -297,7 +297,7 @@ fn yuma_emergency_mode() {
 
             // No weights needed; keep defaults empty to make ranks/dividends zero.
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
+            GameSolver::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -320,7 +320,7 @@ fn epoch_uses_active_stake_when_nonzero_active() {
             setup_epoch(neurons.to_vec(), 1);
 
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
+            GameSolver::epoch_mechanism(NetUid::from(NETUID), MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -348,7 +348,7 @@ fn epoch_topk_validator_permits() {
             MaxAllowedValidators::<Test>::insert(netuid, 1u16);
 
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), emission);
+            GameSolver::epoch_mechanism(netuid, MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -376,7 +376,7 @@ fn epoch_yuma3_bonds_pipeline() {
             Yuma3On::<Test>::insert(netuid, true);
 
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), emission);
+            GameSolver::epoch_mechanism(netuid, MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -403,7 +403,7 @@ fn epoch_original_yuma_bonds_pipeline() {
             Yuma3On::<Test>::insert(netuid, false);
 
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), emission);
+            GameSolver::epoch_mechanism(netuid, MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -443,7 +443,7 @@ fn test_validators_weight_two_distinct_servers() {
             );
 
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), emission);
+            GameSolver::epoch_mechanism(netuid, MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -492,7 +492,7 @@ fn test_validator_splits_weight_across_two_servers() {
             );
 
             let emission = AlphaCurrency::from(1_000_000_000);
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), emission);
+            GameSolver::epoch_mechanism(netuid, MechId::from(0), emission);
         });
 
         let has = |s: &str| logs.contains(s);
@@ -533,7 +533,7 @@ fn epoch_mechanism_reads_weights_per_mechanism() {
             ],
         );
         let logs_m0 = with_log_capture("trace", || {
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), AlphaCurrency::from(1_000));
+            GameSolver::epoch_mechanism(netuid, MechId::from(0), AlphaCurrency::from(1_000));
         });
 
         // Mech 1: flipped routing: V0,V2 -> server 4 ; V1 -> server 3
@@ -547,7 +547,7 @@ fn epoch_mechanism_reads_weights_per_mechanism() {
             ],
         );
         let logs_m1 = with_log_capture("trace", || {
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(1), AlphaCurrency::from(1_000));
+            GameSolver::epoch_mechanism(netuid, MechId::from(1), AlphaCurrency::from(1_000));
         });
 
         // Both should run the full pipeline…
@@ -609,13 +609,13 @@ fn epoch_mechanism_three_mechanisms_separate_state() {
         );
 
         let l0 = with_log_capture("trace", || {
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(0), AlphaCurrency::from(1_000));
+            GameSolver::epoch_mechanism(netuid, MechId::from(0), AlphaCurrency::from(1_000));
         });
         let l1 = with_log_capture("trace", || {
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(1), AlphaCurrency::from(1_000));
+            GameSolver::epoch_mechanism(netuid, MechId::from(1), AlphaCurrency::from(1_000));
         });
         let l2 = with_log_capture("trace", || {
-            SubtensorModule::epoch_mechanism(netuid, MechId::from(2), AlphaCurrency::from(1_000));
+            GameSolver::epoch_mechanism(netuid, MechId::from(2), AlphaCurrency::from(1_000));
         });
 
         // Check major epoch indicators

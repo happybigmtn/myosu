@@ -23,7 +23,7 @@ use crate::{AxonInfoOf, CustomTransactionError, Error};
 #[test]
 fn test_registration_difficulty() {
     new_test_ext(1).execute_with(|| {
-        assert_eq!(SubtensorModule::get_difficulty(1.into()).as_u64(), 10000);
+        assert_eq!(GameSolver::get_difficulty(1.into()).as_u64(), 10000);
     });
 }
 
@@ -36,23 +36,15 @@ fn test_registration_invalid_seal_hotkey() {
         let hotkey_account_id_1: U256 = U256::from(1);
         let hotkey_account_id_2: U256 = U256::from(2);
         let coldkey_account_id: U256 = U256::from(667); // Neighbour of the beast, har har
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id_1,
-        );
-        let (nonce2, work2): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id_1,
-        );
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id_1);
+        let (nonce2, work2): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id_1);
 
         //add network
         add_network(netuid, tempo, 0);
 
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id_1),
             netuid,
             block_number,
@@ -61,7 +53,7 @@ fn test_registration_invalid_seal_hotkey() {
             hotkey_account_id_1,
             coldkey_account_id
         ));
-        let result = SubtensorModule::register(
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id_2),
             netuid,
             block_number,
@@ -82,7 +74,7 @@ fn test_registration_ok() {
         let tempo: u16 = 13;
         let hotkey_account_id: U256 = U256::from(1);
         let coldkey_account_id = U256::from(667); // Neighbour of the beast, har har
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             129123813,
@@ -93,7 +85,7 @@ fn test_registration_ok() {
         add_network(netuid, tempo, 0);
 
         // Subscribe and check extrinsic output
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -104,27 +96,26 @@ fn test_registration_ok() {
         ));
 
         // Check if neuron has added to the specified network(netuid)
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 1);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 1);
 
         //check if hotkey is added to the Hotkeys
         assert_eq!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&hotkey_account_id),
+            GameSolver::get_owning_coldkey_for_hotkey(&hotkey_account_id),
             coldkey_account_id
         );
 
         // Check if the neuron has added to the Keys
         let neuron_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+            GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
 
-        assert!(SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_ok());
+        assert!(GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_ok());
         // Check if neuron has added to Uids
-        let neuro_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+        let neuro_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
         assert_eq!(neuro_uid, neuron_uid);
 
         // Check if the balance of this hotkey account for this subnetwork == 0
         assert_eq!(
-            SubtensorModule::get_stake_for_uid_and_subnetwork(netuid, neuron_uid),
+            GameSolver::get_stake_for_uid_and_subnetwork(netuid, neuron_uid),
             AlphaCurrency::ZERO
         );
     });
@@ -138,7 +129,7 @@ fn test_registration_without_neuron_slot() {
         let tempo: u16 = 13;
         let hotkey_account_id: U256 = U256::from(1);
         let coldkey_account_id = U256::from(667); // Neighbour of the beast, har har
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             129123813,
@@ -147,10 +138,10 @@ fn test_registration_without_neuron_slot() {
 
         //add network
         add_network(netuid, tempo, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, 0);
 
         assert_noop!(
-            SubtensorModule::register(
+            GameSolver::register(
                 <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
                 netuid,
                 block_number,
@@ -174,9 +165,9 @@ fn test_registration_under_limit() {
         let who: <Test as frame_system::Config>::AccountId = hotkey_account_id;
 
         let max_registrants = 2;
-        SubtensorModule::set_target_registrations_per_interval(netuid, max_registrants);
+        GameSolver::set_target_registrations_per_interval(netuid, max_registrants);
 
-        let (nonce, work) = SubtensorModule::create_work_for_block_number(
+        let (nonce, work) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             129123813,
@@ -208,7 +199,7 @@ fn test_registration_under_limit() {
 
         //actually call register
         add_network(netuid, 13, 0);
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -218,8 +209,8 @@ fn test_registration_under_limit() {
             coldkey_account_id
         ));
 
-        let current_registrants = SubtensorModule::get_registrations_this_interval(netuid);
-        let target_registrants = SubtensorModule::get_target_registrations_per_interval(netuid);
+        let current_registrants = GameSolver::get_registrations_this_interval(netuid);
+        let target_registrants = GameSolver::get_target_registrations_per_interval(netuid);
         assert!(current_registrants <= target_registrants);
     });
 }
@@ -235,10 +226,10 @@ fn test_registration_rate_limit_exceeded() {
 
         let target_registrants = 1;
         let max_registrants = target_registrants * 3;
-        SubtensorModule::set_target_registrations_per_interval(netuid, target_registrants);
-        SubtensorModule::set_registrations_this_interval(netuid, max_registrants);
+        GameSolver::set_target_registrations_per_interval(netuid, target_registrants);
+        GameSolver::set_registrations_this_interval(netuid, max_registrants);
 
-        let (nonce, work) = SubtensorModule::create_work_for_block_number(
+        let (nonce, work) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             129123813,
@@ -271,7 +262,7 @@ fn test_registration_rate_limit_exceeded() {
             CustomTransactionError::RateLimitExceeded.into()
         );
 
-        let current_registrants = SubtensorModule::get_registrations_this_interval(netuid);
+        let current_registrants = GameSolver::get_registrations_this_interval(netuid);
         assert!(current_registrants <= max_registrants);
     });
 }
@@ -289,18 +280,18 @@ fn test_burned_registration_under_limit() {
         let who: <Test as frame_system::Config>::AccountId = coldkey_account_id;
         let burn_cost = 1000;
         // Set the burn cost
-        SubtensorModule::set_burn(netuid, burn_cost.into());
+        GameSolver::set_burn(netuid, burn_cost.into());
 
         let reserve = 1_000_000_000_000;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
 
         add_network(netuid, 13, 0); // Add the network
         // Give it some TAO to the coldkey balance; more than the burn cost
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost + 10_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost + 10_000);
 
         let target_registrants = 2;
         let max_registrants = target_registrants * 3; // Maximum is 3 times the target
-        SubtensorModule::set_target_registrations_per_interval(netuid, target_registrants);
+        GameSolver::set_target_registrations_per_interval(netuid, target_registrants);
 
         let call_burned_register: crate::Call<Test> = crate::Call::burned_register {
             netuid,
@@ -323,13 +314,13 @@ fn test_burned_registration_under_limit() {
         assert_ok!(burned_register_result);
 
         //actually call register
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid,
             hotkey_account_id,
         ));
 
-        let current_registrants = SubtensorModule::get_registrations_this_interval(netuid);
+        let current_registrants = GameSolver::get_registrations_this_interval(netuid);
         assert!(current_registrants <= max_registrants);
     });
 }
@@ -345,9 +336,9 @@ fn test_burned_registration_rate_limit_exceeded() {
         let target_registrants = 1;
         let max_registrants = target_registrants * 3; // Maximum is 3 times the target
 
-        SubtensorModule::set_target_registrations_per_interval(netuid, target_registrants);
+        GameSolver::set_target_registrations_per_interval(netuid, target_registrants);
         // Set the current registrations to the maximum; should not be able to register more
-        SubtensorModule::set_registrations_this_interval(netuid, max_registrants);
+        GameSolver::set_registrations_this_interval(netuid, max_registrants);
 
         let call_burned_register: crate::Call<Test> = crate::Call::burned_register {
             netuid,
@@ -373,7 +364,7 @@ fn test_burned_registration_rate_limit_exceeded() {
             CustomTransactionError::RateLimitExceeded.into()
         );
 
-        let current_registrants = SubtensorModule::get_registrations_this_interval(netuid);
+        let current_registrants = GameSolver::get_registrations_this_interval(netuid);
         assert!(current_registrants <= max_registrants);
     });
 }
@@ -389,19 +380,19 @@ fn test_burned_registration_rate_allows_burn_adjustment() {
 
         let burn_cost = 1000;
         // Set the burn cost
-        SubtensorModule::set_burn(netuid, burn_cost.into());
+        GameSolver::set_burn(netuid, burn_cost.into());
 
         let reserve = 1_000_000_000_000;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
 
         add_network(netuid, 13, 0); // Add the network
         // Give it some TAO to the coldkey balance; more than the burn cost
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost + 10_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost + 10_000);
 
         let target_registrants = 1; // Target is 1, but we can register more than that, up to some maximum.
-        SubtensorModule::set_target_registrations_per_interval(netuid, target_registrants);
+        GameSolver::set_target_registrations_per_interval(netuid, target_registrants);
         // Set the current registrations to above the target; we should be able to register at least 1 more
-        SubtensorModule::set_registrations_this_interval(netuid, target_registrants);
+        GameSolver::set_registrations_this_interval(netuid, target_registrants);
 
         // Register one more, so the current registrations are above the target
         let call_burned_register: crate::Call<Test> = crate::Call::burned_register {
@@ -425,13 +416,13 @@ fn test_burned_registration_rate_allows_burn_adjustment() {
         assert_ok!(burned_register_result);
 
         //actually call register
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid,
             hotkey_account_id
         ));
 
-        let current_registrants = SubtensorModule::get_registrations_this_interval(netuid);
+        let current_registrants = GameSolver::get_registrations_this_interval(netuid);
         assert!(current_registrants > target_registrants); // Should be able to register more than the target
     });
 }
@@ -445,43 +436,42 @@ fn test_burned_registration_ok() {
         let burn_cost = 1000;
         let coldkey_account_id = U256::from(667); // Neighbour of the beast, har har
         //add network
-        SubtensorModule::set_burn(netuid, burn_cost.into());
+        GameSolver::set_burn(netuid, burn_cost.into());
         add_network(netuid, tempo, 0);
 
         let reserve = 1_000_000_000_000;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
 
         // Give it some $$$ in his coldkey balance
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
         // Subscribe and check extrinsic output
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid,
             hotkey_account_id
         ));
         // Check if balance has  decreased to pay for the burn.
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&coldkey_account_id),
+            GameSolver::get_coldkey_balance(&coldkey_account_id),
             10000 - burn_cost
         ); // funds drained on reg.
         // Check if neuron has added to the specified network(netuid)
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 1);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 1);
         //check if hotkey is added to the Hotkeys
         assert_eq!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&hotkey_account_id),
+            GameSolver::get_owning_coldkey_for_hotkey(&hotkey_account_id),
             coldkey_account_id
         );
         // Check if the neuron has added to the Keys
         let neuron_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
-        assert!(SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_ok());
+            GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+        assert!(GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_ok());
         // Check if neuron has added to Uids
-        let neuro_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+        let neuro_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
         assert_eq!(neuro_uid, neuron_uid);
         // Check if the balance of this hotkey account for this subnetwork == 0
         assert_eq!(
-            SubtensorModule::get_stake_for_uid_and_subnetwork(netuid, neuron_uid),
+            GameSolver::get_stake_for_uid_and_subnetwork(netuid, neuron_uid),
             AlphaCurrency::ZERO
         );
     });
@@ -496,14 +486,14 @@ fn test_burn_registration_without_neuron_slot() {
         let burn_cost = 1000;
         let coldkey_account_id = U256::from(667); // Neighbour of the beast, har har
         //add network
-        SubtensorModule::set_burn(netuid, burn_cost.into());
+        GameSolver::set_burn(netuid, burn_cost.into());
         add_network(netuid, tempo, 0);
         // Give it some $$$ in his coldkey balance
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
-        SubtensorModule::set_max_allowed_uids(netuid, 0);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
+        GameSolver::set_max_allowed_uids(netuid, 0);
 
         assert_noop!(
-            SubtensorModule::burned_register(
+            GameSolver::burned_register(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
                 netuid,
                 hotkey_account_id
@@ -525,15 +515,15 @@ fn test_burn_registration_doesnt_write_on_failure() {
 
         // Add network and set burn cost
         add_network(netuid, tempo, 0);
-        SubtensorModule::set_burn(netuid, burn_cost.into());
+        GameSolver::set_burn(netuid, burn_cost.into());
         // Give coldkey balance to pay for registration
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, initial_balance);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, initial_balance);
         // Set max allowed uids to 0 so registration will fail, but only on last check.
-        SubtensorModule::set_max_allowed_uids(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, 0);
 
         // We expect this to fail at the last ensure check.
         assert_err!(
-            SubtensorModule::burned_register(
+            GameSolver::burned_register(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
                 netuid,
                 hotkey_account_id
@@ -543,13 +533,13 @@ fn test_burn_registration_doesnt_write_on_failure() {
 
         // Make sure the coldkey balance is unchanged.
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&coldkey_account_id),
+            GameSolver::get_coldkey_balance(&coldkey_account_id),
             initial_balance
         );
         // Make sure the neuron is not registered.
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 0);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 0);
         // Make sure the hotkey is not registered.
-        assert!(SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_err());
+        assert!(GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_err());
     });
 }
 
@@ -562,10 +552,10 @@ fn test_burn_adjustment() {
         let adjustment_interval = 1;
         let target_registrations_per_interval = 1;
         add_network(netuid, tempo, 0);
-        SubtensorModule::set_burn(netuid, init_burn_cost.into());
-        SubtensorModule::set_adjustment_interval(netuid, adjustment_interval);
-        SubtensorModule::set_adjustment_alpha(netuid, 58000); // Set to old value.
-        SubtensorModule::set_target_registrations_per_interval(
+        GameSolver::set_burn(netuid, init_burn_cost.into());
+        GameSolver::set_adjustment_interval(netuid, adjustment_interval);
+        GameSolver::set_adjustment_alpha(netuid, 58000); // Set to old value.
+        GameSolver::set_target_registrations_per_interval(
             netuid,
             target_registrations_per_interval,
         );
@@ -576,8 +566,8 @@ fn test_burn_adjustment() {
         // Register key 1.
         let hotkey_account_id_1 = U256::from(1);
         let coldkey_account_id_1 = U256::from(1);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id_1, init_burn_cost);
-        assert_ok!(SubtensorModule::burned_register(
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id_1, init_burn_cost);
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id_1),
             netuid,
             hotkey_account_id_1
@@ -586,8 +576,8 @@ fn test_burn_adjustment() {
         // Register key 2.
         let hotkey_account_id_2 = U256::from(2);
         let coldkey_account_id_2 = U256::from(2);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id_2, init_burn_cost);
-        assert_ok!(SubtensorModule::burned_register(
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id_2, init_burn_cost);
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id_2),
             netuid,
             hotkey_account_id_2
@@ -598,9 +588,9 @@ fn test_burn_adjustment() {
         step_block(1);
 
         // Check the adjusted burn is above the initial min burn.
-        assert!(SubtensorModule::get_burn(netuid) > init_burn_cost.into());
+        assert!(GameSolver::get_burn(netuid) > init_burn_cost.into());
         assert_abs_diff_eq!(
-            SubtensorModule::get_burn(netuid),
+            GameSolver::get_burn(netuid),
             (init_burn_cost.saturating_mul(3).saturating_div(2)).into(), // 1.5x
             epsilon = 1000.into()
         );
@@ -622,13 +612,13 @@ fn test_burn_registration_pruning_scenarios() {
         const NOT_IMMUNE: bool = false;
 
         // --- Neutralize the safety floor for this test.
-        SubtensorModule::set_min_non_immune_uids(netuid, 0);
+        GameSolver::set_min_non_immune_uids(netuid, 0);
 
         // Initial setup
-        SubtensorModule::set_burn(netuid, burn_cost.into());
-        SubtensorModule::set_max_allowed_uids(netuid, max_allowed_uids);
-        SubtensorModule::set_target_registrations_per_interval(netuid, max_allowed_uids);
-        SubtensorModule::set_immunity_period(netuid, immunity_period);
+        GameSolver::set_burn(netuid, burn_cost.into());
+        GameSolver::set_max_allowed_uids(netuid, max_allowed_uids);
+        GameSolver::set_target_registrations_per_interval(netuid, max_allowed_uids);
+        GameSolver::set_immunity_period(netuid, immunity_period);
 
         let reserve = 1_000_000_000_000;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
@@ -636,11 +626,11 @@ fn test_burn_registration_pruning_scenarios() {
         add_network(netuid, tempo, 0);
 
         let mint_balance = burn_cost * max_allowed_uids as u64 + 1_000_000_000;
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, mint_balance);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, mint_balance);
 
         // Register first half of neurons (uids: 0,1,2); all will be immune initially.
         for i in 0..3 {
-            assert_ok!(SubtensorModule::burned_register(
+            assert_ok!(GameSolver::burned_register(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
                 netuid,
                 U256::from(i)
@@ -649,9 +639,9 @@ fn test_burn_registration_pruning_scenarios() {
         }
 
         // 1) All immune neurons
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 0), IS_IMMUNE);
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 1), IS_IMMUNE);
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 2), IS_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 0), IS_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 1), IS_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 2), IS_IMMUNE);
 
         // Drive selection with emissions: lowest emission is pruned (among immune if all immune).
         // Set: uid0=100, uid1=75, uid2=50 -> expect uid2
@@ -660,20 +650,20 @@ fn test_burn_registration_pruning_scenarios() {
             v[1] = 75u64.into();
             v[2] = 50u64.into();
         });
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(2));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(2));
 
         // 2) Tie-breaking for immune neurons: uid1=50, uid2=50 -> earliest registration among {1,2} is uid1
         Emission::<Test>::mutate(netuid, |v| {
             v[1] = 50u64.into();
             v[2] = 50u64.into();
         });
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(1));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(1));
 
         // 3) Make all three non-immune
         step_block(immunity_period);
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 0), NOT_IMMUNE);
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 1), NOT_IMMUNE);
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 2), NOT_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 0), NOT_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 1), NOT_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 2), NOT_IMMUNE);
 
         // Among non-immune, choose lowest emission: set uid0=100, uid1=50, uid2=75 -> expect uid1
         Emission::<Test>::mutate(netuid, |v| {
@@ -681,18 +671,18 @@ fn test_burn_registration_pruning_scenarios() {
             v[1] = 50u64.into();
             v[2] = 75u64.into();
         });
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(1));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(1));
 
         // 4) Non-immune tie-breaking: uid1=50, uid2=50 -> earliest registration among {1,2} is uid1
         Emission::<Test>::mutate(netuid, |v| {
             v[1] = 50u64.into();
             v[2] = 50u64.into();
         });
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(1));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(1));
 
         // 5) Mixed immunity: register another 3 immune neurons (uids: 3,4,5)
         for i in 3..6 {
-            assert_ok!(SubtensorModule::burned_register(
+            assert_ok!(GameSolver::burned_register(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
                 netuid,
                 U256::from(i)
@@ -701,9 +691,9 @@ fn test_burn_registration_pruning_scenarios() {
         }
 
         // Ensure new neurons are immune
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 3), IS_IMMUNE);
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 4), IS_IMMUNE);
-        assert_eq!(SubtensorModule::get_neuron_is_immune(netuid, 5), IS_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 3), IS_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 4), IS_IMMUNE);
+        assert_eq!(GameSolver::get_neuron_is_immune(netuid, 5), IS_IMMUNE);
 
         // Set emissions:
         // non-immune (0..2): [75, 50, 60]  -> lowest among non-immune is uid1
@@ -716,13 +706,13 @@ fn test_burn_registration_pruning_scenarios() {
             v[4] = 55u64.into();
             v[5] = 45u64.into();
         });
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(1));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(1));
 
         // Remove lowest non-immune by making uid1 emission very high -> next lowest non-immune is uid2
         Emission::<Test>::mutate(netuid, |v| {
             v[1] = 10_000u64.into();
         });
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(2));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(2));
 
         // If all non-immune are equally high, choose the oldest non-immune -> uid0
         Emission::<Test>::mutate(netuid, |v| {
@@ -730,7 +720,7 @@ fn test_burn_registration_pruning_scenarios() {
             v[1] = 10_000u64.into();
             v[2] = 10_000u64.into();
         });
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(0));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(0));
     });
 }
 
@@ -740,81 +730,61 @@ fn test_registration_too_many_registrations_per_block() {
         let netuid = NetUid::from(1);
         let tempo: u16 = 13;
         add_network(netuid, tempo, 0);
-        SubtensorModule::set_max_registrations_per_block(netuid, 10);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 10);
-        assert_eq!(SubtensorModule::get_max_registrations_per_block(netuid), 10);
+        GameSolver::set_max_registrations_per_block(netuid, 10);
+        GameSolver::set_target_registrations_per_interval(netuid, 10);
+        assert_eq!(GameSolver::get_max_registrations_per_block(netuid), 10);
 
         let block_number: u64 = 0;
-        let (nonce0, work0): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            3942084,
-            &U256::from(0),
-        );
-        let (nonce1, work1): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce0, work0): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 3942084, &U256::from(0));
+        let (nonce1, work1): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             11231312312,
             &U256::from(1),
         );
-        let (nonce2, work2): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce2, work2): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             212312414,
             &U256::from(2),
         );
-        let (nonce3, work3): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce3, work3): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             21813123,
             &U256::from(3),
         );
-        let (nonce4, work4): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce4, work4): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             148141209,
             &U256::from(4),
         );
-        let (nonce5, work5): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce5, work5): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             1245235534,
             &U256::from(5),
         );
-        let (nonce6, work6): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            256234,
-            &U256::from(6),
-        );
-        let (nonce7, work7): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            6923424,
-            &U256::from(7),
-        );
-        let (nonce8, work8): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            124242,
-            &U256::from(8),
-        );
-        let (nonce9, work9): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            153453,
-            &U256::from(9),
-        );
-        let (nonce10, work10): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce6, work6): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 256234, &U256::from(6));
+        let (nonce7, work7): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 6923424, &U256::from(7));
+        let (nonce8, work8): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 124242, &U256::from(8));
+        let (nonce9, work9): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 153453, &U256::from(9));
+        let (nonce10, work10): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             345923888,
             &U256::from(10),
         );
-        assert_eq!(SubtensorModule::get_difficulty_as_u64(netuid), 10000);
+        assert_eq!(GameSolver::get_difficulty_as_u64(netuid), 10000);
 
         // Subscribe and check extrinsic output
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(0)),
             netuid,
             block_number,
@@ -823,8 +793,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(0),
             U256::from(0)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 1);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 1);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
             netuid,
             block_number,
@@ -833,8 +803,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(1),
             U256::from(1)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 2);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 2);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(2)),
             netuid,
             block_number,
@@ -843,8 +813,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(2),
             U256::from(2)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 3);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 3);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(3)),
             netuid,
             block_number,
@@ -853,8 +823,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(3),
             U256::from(3)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 4);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 4);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(4)),
             netuid,
             block_number,
@@ -863,8 +833,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(4),
             U256::from(4)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 5);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 5);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(5)),
             netuid,
             block_number,
@@ -873,8 +843,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(5),
             U256::from(5)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 6);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 6);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(6)),
             netuid,
             block_number,
@@ -883,8 +853,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(6),
             U256::from(6)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 7);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 7);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(7)),
             netuid,
             block_number,
@@ -893,8 +863,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(7),
             U256::from(7)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 8);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 8);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(8)),
             netuid,
             block_number,
@@ -903,8 +873,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(8),
             U256::from(8)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 9);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 9);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(9)),
             netuid,
             block_number,
@@ -913,8 +883,8 @@ fn test_registration_too_many_registrations_per_block() {
             U256::from(9),
             U256::from(9)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 10);
-        let result = SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 10);
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(10)),
             netuid,
             block_number,
@@ -936,81 +906,58 @@ fn test_registration_too_many_registrations_per_interval() {
         let netuid = NetUid::from(1);
         let tempo: u16 = 13;
         add_network(netuid, tempo, 0);
-        SubtensorModule::set_max_registrations_per_block(netuid, 11);
-        assert_eq!(SubtensorModule::get_max_registrations_per_block(netuid), 11);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 3);
-        assert_eq!(
-            SubtensorModule::get_target_registrations_per_interval(netuid),
-            3
-        );
+        GameSolver::set_max_registrations_per_block(netuid, 11);
+        assert_eq!(GameSolver::get_max_registrations_per_block(netuid), 11);
+        GameSolver::set_target_registrations_per_interval(netuid, 3);
+        assert_eq!(GameSolver::get_target_registrations_per_interval(netuid), 3);
         // Then the max is 3 * 3 = 9
 
         let block_number: u64 = 0;
-        let (nonce0, work0): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            3942084,
-            &U256::from(0),
-        );
-        let (nonce1, work1): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce0, work0): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 3942084, &U256::from(0));
+        let (nonce1, work1): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             11231312312,
             &U256::from(1),
         );
-        let (nonce2, work2): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce2, work2): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             212312414,
             &U256::from(2),
         );
-        let (nonce3, work3): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce3, work3): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             21813123,
             &U256::from(3),
         );
-        let (nonce4, work4): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce4, work4): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             148141209,
             &U256::from(4),
         );
-        let (nonce5, work5): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce5, work5): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             1245235534,
             &U256::from(5),
         );
-        let (nonce6, work6): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            256234,
-            &U256::from(6),
-        );
-        let (nonce7, work7): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            6923424,
-            &U256::from(7),
-        );
-        let (nonce8, work8): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            124242,
-            &U256::from(8),
-        );
-        let (nonce9, work9): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            153453,
-            &U256::from(9),
-        );
-        assert_eq!(SubtensorModule::get_difficulty_as_u64(netuid), 10000);
+        let (nonce6, work6): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 256234, &U256::from(6));
+        let (nonce7, work7): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 6923424, &U256::from(7));
+        let (nonce8, work8): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 124242, &U256::from(8));
+        let (nonce9, work9): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 153453, &U256::from(9));
+        assert_eq!(GameSolver::get_difficulty_as_u64(netuid), 10000);
 
         // Subscribe and check extrinsic output
         // Try 10 registrations, this is less than the max per block, but more than the max per interval
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(0)),
             netuid,
             block_number,
@@ -1019,8 +966,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(0),
             U256::from(0)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 1);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 1);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
             netuid,
             block_number,
@@ -1029,8 +976,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(1),
             U256::from(1)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 2);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 2);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(2)),
             netuid,
             block_number,
@@ -1039,8 +986,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(2),
             U256::from(2)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 3);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 3);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(3)),
             netuid,
             block_number,
@@ -1049,8 +996,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(3),
             U256::from(3)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 4);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 4);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(4)),
             netuid,
             block_number,
@@ -1059,8 +1006,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(4),
             U256::from(4)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 5);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 5);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(5)),
             netuid,
             block_number,
@@ -1069,8 +1016,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(5),
             U256::from(5)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 6);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 6);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(6)),
             netuid,
             block_number,
@@ -1079,8 +1026,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(6),
             U256::from(6)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 7);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 7);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(7)),
             netuid,
             block_number,
@@ -1089,8 +1036,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(7),
             U256::from(7)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 8);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 8);
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(8)),
             netuid,
             block_number,
@@ -1099,8 +1046,8 @@ fn test_registration_too_many_registrations_per_interval() {
             U256::from(8),
             U256::from(8)
         ));
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 9);
-        let result = SubtensorModule::register(
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 9);
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(9)),
             netuid,
             block_number,
@@ -1129,17 +1076,13 @@ fn test_registration_already_active_hotkey() {
         let tempo: u16 = 13;
         let hotkey_account_id = U256::from(1);
         let coldkey_account_id = U256::from(667);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id,
-        );
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id);
 
         //add network
         add_network(netuid, tempo, 0);
 
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -1152,13 +1095,9 @@ fn test_registration_already_active_hotkey() {
         let block_number: u64 = 0;
         let hotkey_account_id = U256::from(1);
         let coldkey_account_id = U256::from(667);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id,
-        );
-        let result = SubtensorModule::register(
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id);
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -1183,12 +1122,12 @@ fn test_registration_invalid_seal() {
         let hotkey_account_id = U256::from(1);
         let coldkey_account_id = U256::from(667);
         let (nonce, work): (u64, Vec<u8>) =
-            SubtensorModule::create_work_for_block_number(netuid, 1, 0, &hotkey_account_id);
+            GameSolver::create_work_for_block_number(netuid, 1, 0, &hotkey_account_id);
 
         //add network
         add_network(netuid, tempo, 0);
 
-        let result = SubtensorModule::register(
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -1210,17 +1149,13 @@ fn test_registration_invalid_block_number() {
         let tempo: u16 = 13;
         let hotkey_account_id = U256::from(1);
         let coldkey_account_id = U256::from(667);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id,
-        );
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id);
 
         //add network
         add_network(netuid, tempo, 0);
 
-        let result = SubtensorModule::register(
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -1241,19 +1176,15 @@ fn test_registration_invalid_difficulty() {
         let tempo: u16 = 13;
         let hotkey_account_id = U256::from(1);
         let coldkey_account_id = U256::from(667);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id,
-        );
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id);
 
         //add network
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_difficulty(netuid, 18_446_744_073_709_551_615u64);
+        GameSolver::set_difficulty(netuid, 18_446_744_073_709_551_615u64);
 
-        let result = SubtensorModule::register(
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -1273,15 +1204,11 @@ fn test_registration_failed_no_signature() {
         let netuid = NetUid::from(1);
         let hotkey_account_id = U256::from(1);
         let coldkey_account_id = U256::from(667); // Neighbour of the beast, har har
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id,
-        );
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id);
 
         // Subscribe and check extrinsic output
-        let result = SubtensorModule::register(
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::none(),
             netuid,
             block_number,
@@ -1303,7 +1230,7 @@ fn test_registration_get_uid_to_prune_all_in_immunity_period() {
         add_network(netuid, 1, 0);
 
         // Neutralize safety floor and owner-immortality for deterministic selection
-        SubtensorModule::set_min_non_immune_uids(netuid, 0);
+        GameSolver::set_min_non_immune_uids(netuid, 0);
         ImmuneOwnerUidsLimit::<Test>::insert(netuid, 0);
         // Make sure the subnet owner is not one of the test coldkeys
         SubnetOwner::<Test>::insert(netuid, U256::from(999_999u64));
@@ -1311,13 +1238,10 @@ fn test_registration_get_uid_to_prune_all_in_immunity_period() {
         register_ok_neuron(netuid, U256::from(0), U256::from(0), 39420842);
         register_ok_neuron(netuid, U256::from(1), U256::from(1), 12412392);
 
-        SubtensorModule::set_immunity_period(netuid, 2);
-        assert_eq!(SubtensorModule::get_immunity_period(netuid), 2);
-        assert_eq!(SubtensorModule::get_current_block_as_u64(), 0);
-        assert_eq!(
-            SubtensorModule::get_neuron_block_at_registration(netuid, 0),
-            0
-        );
+        GameSolver::set_immunity_period(netuid, 2);
+        assert_eq!(GameSolver::get_immunity_period(netuid), 2);
+        assert_eq!(GameSolver::get_current_block_as_u64(), 0);
+        assert_eq!(GameSolver::get_neuron_block_at_registration(netuid, 0), 0);
 
         // Both immune; prune lowest emission among immune (uid0=100, uid1=110 => uid0)
         Emission::<Test>::mutate(netuid, |v| {
@@ -1325,7 +1249,7 @@ fn test_registration_get_uid_to_prune_all_in_immunity_period() {
             v[1] = 110u64.into();
         });
 
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(0));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(0));
     });
 }
 
@@ -1338,24 +1262,21 @@ fn test_registration_get_uid_to_prune_none_in_immunity_period() {
         add_network(netuid, 1, 0);
 
         // Neutralize safety floor and owner-immortality for deterministic selection
-        SubtensorModule::set_min_non_immune_uids(netuid, 0);
+        GameSolver::set_min_non_immune_uids(netuid, 0);
         ImmuneOwnerUidsLimit::<Test>::insert(netuid, 0);
         SubnetOwner::<Test>::insert(netuid, U256::from(999_999u64));
 
         register_ok_neuron(netuid, U256::from(0), U256::from(0), 39420842);
         register_ok_neuron(netuid, U256::from(1), U256::from(1), 12412392);
 
-        SubtensorModule::set_immunity_period(netuid, 2);
-        assert_eq!(SubtensorModule::get_immunity_period(netuid), 2);
-        assert_eq!(SubtensorModule::get_current_block_as_u64(), 0);
-        assert_eq!(
-            SubtensorModule::get_neuron_block_at_registration(netuid, 0),
-            0
-        );
+        GameSolver::set_immunity_period(netuid, 2);
+        assert_eq!(GameSolver::get_immunity_period(netuid), 2);
+        assert_eq!(GameSolver::get_current_block_as_u64(), 0);
+        assert_eq!(GameSolver::get_neuron_block_at_registration(netuid, 0), 0);
 
         // Advance beyond immunity -> both non-immune
         step_block(3);
-        assert_eq!(SubtensorModule::get_current_block_as_u64(), 3);
+        assert_eq!(GameSolver::get_current_block_as_u64(), 3);
 
         // Among non-immune, lowest emission pruned: uid0=100, uid1=110 -> expect uid0
         Emission::<Test>::mutate(netuid, |v| {
@@ -1363,7 +1284,7 @@ fn test_registration_get_uid_to_prune_none_in_immunity_period() {
             v[1] = 110u64.into();
         });
 
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(0));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(0));
     });
 }
 
@@ -1402,7 +1323,7 @@ fn test_registration_get_uid_to_prune_owner_immortality() {
             SubnetworkN::<Test>::insert(netuid, 3);
 
             // Neutralize safety floor for this test
-            SubtensorModule::set_min_non_immune_uids(netuid, 0);
+            GameSolver::set_min_non_immune_uids(netuid, 0);
 
             step_block(10); // all non-immune
 
@@ -1416,10 +1337,7 @@ fn test_registration_get_uid_to_prune_owner_immortality() {
                 vec![AlphaCurrency::from(0), 0u64.into(), 1u64.into()],
             );
 
-            assert_eq!(
-                SubtensorModule::get_neuron_to_prune(netuid),
-                Some(*uid_to_prune)
-            );
+            assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(*uid_to_prune));
         });
     });
 }
@@ -1453,7 +1371,7 @@ fn test_registration_get_uid_to_prune_owner_immortality_all_immune() {
         SubnetworkN::<Test>::insert(netuid, 3);
 
         // Neutralize safety floor for this test
-        SubtensorModule::set_min_non_immune_uids(netuid, 0);
+        GameSolver::set_min_non_immune_uids(netuid, 0);
 
         step_block(20); // all still immune
 
@@ -1465,10 +1383,7 @@ fn test_registration_get_uid_to_prune_owner_immortality_all_immune() {
             vec![AlphaCurrency::from(0), 0u64.into(), 1u64.into()],
         );
 
-        assert_eq!(
-            SubtensorModule::get_neuron_to_prune(netuid),
-            Some(uid_to_prune)
-        );
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(uid_to_prune));
     });
 }
 
@@ -1480,7 +1395,7 @@ fn test_registration_get_neuron_metadata() {
         let tempo: u16 = 13;
         let hotkey_account_id = U256::from(1);
         let coldkey_account_id = U256::from(667);
-        let (nonce0, work0): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce0, work0): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             3942084,
@@ -1489,7 +1404,7 @@ fn test_registration_get_neuron_metadata() {
 
         add_network(netuid, tempo, 0);
 
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -1499,9 +1414,9 @@ fn test_registration_get_neuron_metadata() {
             coldkey_account_id
         ));
         //
-        //let neuron_id = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
-        // let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).unwrap();
-        let neuron: AxonInfoOf = SubtensorModule::get_axon_info(netuid, &hotkey_account_id);
+        //let neuron_id = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
+        // let neuron_uid = GameSolver::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).unwrap();
+        let neuron: AxonInfoOf = GameSolver::get_axon_info(netuid, &hotkey_account_id);
         assert_eq!(neuron.ip, 0);
         assert_eq!(neuron.version, 0);
         assert_eq!(neuron.port, 0);
@@ -1517,19 +1432,19 @@ fn test_registration_add_network_size() {
         let hotkey_account_id = U256::from(1);
         let hotkey_account_id1 = U256::from(2);
         let hotkey_account_id2 = U256::from(3);
-        let (nonce0, work0): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce0, work0): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             3942084,
             &hotkey_account_id,
         );
-        let (nonce1, work1): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce1, work1): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid2,
             block_number,
             11231312312,
             &hotkey_account_id1,
         );
-        let (nonce2, work2): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce2, work2): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid2,
             block_number,
             21813123,
@@ -1538,12 +1453,12 @@ fn test_registration_add_network_size() {
         let coldkey_account_id = U256::from(667);
 
         add_network(netuid, 13, 0);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 0);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 0);
 
         add_network(netuid2, 13, 0);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid2), 0);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid2), 0);
 
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -1552,10 +1467,10 @@ fn test_registration_add_network_size() {
             hotkey_account_id,
             coldkey_account_id
         ));
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 1);
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid), 1);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 1);
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid), 1);
 
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id1),
             netuid2,
             block_number,
@@ -1564,7 +1479,7 @@ fn test_registration_add_network_size() {
             hotkey_account_id1,
             coldkey_account_id
         ));
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id2),
             netuid2,
             block_number,
@@ -1573,8 +1488,8 @@ fn test_registration_add_network_size() {
             hotkey_account_id2,
             coldkey_account_id
         ));
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid2), 2);
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid2), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid2), 2);
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid2), 2);
     });
 }
 
@@ -1596,40 +1511,40 @@ fn test_burn_registration_increase_recycled_rao() {
         mock::setup_reserves(netuid2, reserve.into(), reserve.into());
 
         add_network(netuid, 13, 0);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 0);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 0);
 
         add_network(netuid2, 13, 0);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid2), 0);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid2), 0);
 
         run_to_block(1);
 
-        let burn_amount = SubtensorModule::get_burn(netuid);
-        assert_ok!(SubtensorModule::burned_register(
+        let burn_amount = GameSolver::get_burn(netuid);
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             hotkey_account_id
         ));
-        assert_eq!(SubtensorModule::get_rao_recycled(netuid), burn_amount);
+        assert_eq!(GameSolver::get_rao_recycled(netuid), burn_amount);
 
         run_to_block(2);
 
-        let burn_amount2 = SubtensorModule::get_burn(netuid2);
-        assert_ok!(SubtensorModule::burned_register(
+        let burn_amount2 = GameSolver::get_burn(netuid2);
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid2,
             hotkey_account_id
         ));
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(U256::from(2)),
             netuid2,
             U256::from(2)
         ));
         assert_eq!(
-            SubtensorModule::get_rao_recycled(netuid2),
+            GameSolver::get_rao_recycled(netuid2),
             burn_amount2 * 2.into()
         );
         // Validate netuid is not affected.
-        assert_eq!(SubtensorModule::get_rao_recycled(netuid), burn_amount);
+        assert_eq!(GameSolver::get_rao_recycled(netuid), burn_amount);
     });
 }
 
@@ -1668,32 +1583,32 @@ fn test_full_pass_through() {
         crate::SubnetOwner::<Test>::insert(netuid2, dummy_owner);
 
         // Check their tempo.
-        assert_eq!(SubtensorModule::get_tempo(netuid0), tempo0);
-        assert_eq!(SubtensorModule::get_tempo(netuid1), tempo1);
-        assert_eq!(SubtensorModule::get_tempo(netuid2), tempo2);
+        assert_eq!(GameSolver::get_tempo(netuid0), tempo0);
+        assert_eq!(GameSolver::get_tempo(netuid1), tempo1);
+        assert_eq!(GameSolver::get_tempo(netuid2), tempo2);
 
         // Set their max allowed uids.
-        SubtensorModule::set_max_allowed_uids(netuid0, 2);
-        SubtensorModule::set_max_allowed_uids(netuid1, 2);
-        SubtensorModule::set_max_allowed_uids(netuid2, 2);
+        GameSolver::set_max_allowed_uids(netuid0, 2);
+        GameSolver::set_max_allowed_uids(netuid1, 2);
+        GameSolver::set_max_allowed_uids(netuid2, 2);
 
         // Check their max allowed.
-        assert_eq!(SubtensorModule::get_max_allowed_uids(netuid0), 2);
-        assert_eq!(SubtensorModule::get_max_allowed_uids(netuid0), 2);
-        assert_eq!(SubtensorModule::get_max_allowed_uids(netuid0), 2);
+        assert_eq!(GameSolver::get_max_allowed_uids(netuid0), 2);
+        assert_eq!(GameSolver::get_max_allowed_uids(netuid0), 2);
+        assert_eq!(GameSolver::get_max_allowed_uids(netuid0), 2);
 
         // Set the max registration per block.
-        SubtensorModule::set_max_registrations_per_block(netuid0, 3);
-        SubtensorModule::set_max_registrations_per_block(netuid1, 3);
-        SubtensorModule::set_max_registrations_per_block(netuid2, 3);
-        assert_eq!(SubtensorModule::get_max_registrations_per_block(netuid0), 3);
-        assert_eq!(SubtensorModule::get_max_registrations_per_block(netuid1), 3);
-        assert_eq!(SubtensorModule::get_max_registrations_per_block(netuid2), 3);
+        GameSolver::set_max_registrations_per_block(netuid0, 3);
+        GameSolver::set_max_registrations_per_block(netuid1, 3);
+        GameSolver::set_max_registrations_per_block(netuid2, 3);
+        assert_eq!(GameSolver::get_max_registrations_per_block(netuid0), 3);
+        assert_eq!(GameSolver::get_max_registrations_per_block(netuid1), 3);
+        assert_eq!(GameSolver::get_max_registrations_per_block(netuid2), 3);
 
         // Check that no one has registered yet.
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid0), 0);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid1), 0);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid2), 0);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid0), 0);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid1), 0);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid2), 0);
 
         // Registered the keys to all networks.
         register_ok_neuron(netuid0, hotkey0, coldkey0, 39420842);
@@ -1708,93 +1623,93 @@ fn test_full_pass_through() {
         // n1 [ h0, h1 ]
         // n2 [ h0, h1 ]
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid0, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid0, 0).unwrap(),
             hotkey0
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid1, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid1, 0).unwrap(),
             hotkey0
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid2, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid2, 0).unwrap(),
             hotkey0
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid0, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid0, 1).unwrap(),
             hotkey1
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid1, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid1, 1).unwrap(),
             hotkey1
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid2, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid2, 1).unwrap(),
             hotkey1
         );
 
         // Check registered networks.
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid0 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid1 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid2 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid0 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid1 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid2 ) );
-        // assert!( !SubtensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid0 ) );
-        // assert!( !SubtensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid1 ) );
-        // assert!( !SubtensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid2 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid0 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid1 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid2 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid0 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid1 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid2 ) );
+        // assert!( !GameSolver::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid0 ) );
+        // assert!( !GameSolver::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid1 ) );
+        // assert!( !GameSolver::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid2 ) );
 
         // Check the number of registrations.
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid0), 2);
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid1), 2);
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid2), 2);
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid0), 2);
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid1), 2);
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid2), 2);
 
         // Get the number of uids in each network.
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid0), 2);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid1), 2);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid2), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid0), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid1), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid2), 2);
 
         // Check the uids exist.
-        assert!(SubtensorModule::is_uid_exist_on_network(netuid0, 0));
-        assert!(SubtensorModule::is_uid_exist_on_network(netuid1, 0));
-        assert!(SubtensorModule::is_uid_exist_on_network(netuid2, 0));
+        assert!(GameSolver::is_uid_exist_on_network(netuid0, 0));
+        assert!(GameSolver::is_uid_exist_on_network(netuid1, 0));
+        assert!(GameSolver::is_uid_exist_on_network(netuid2, 0));
 
         // Check the other exists.
-        assert!(SubtensorModule::is_uid_exist_on_network(netuid0, 1));
-        assert!(SubtensorModule::is_uid_exist_on_network(netuid1, 1));
-        assert!(SubtensorModule::is_uid_exist_on_network(netuid2, 1));
+        assert!(GameSolver::is_uid_exist_on_network(netuid0, 1));
+        assert!(GameSolver::is_uid_exist_on_network(netuid1, 1));
+        assert!(GameSolver::is_uid_exist_on_network(netuid2, 1));
 
         // Get the hotkey under each uid.
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid0, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid0, 0).unwrap(),
             hotkey0
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid1, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid1, 0).unwrap(),
             hotkey0
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid2, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid2, 0).unwrap(),
             hotkey0
         );
 
         // Get the hotkey under the other uid.
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid0, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid0, 1).unwrap(),
             hotkey1
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid1, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid1, 1).unwrap(),
             hotkey1
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid2, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid2, 1).unwrap(),
             hotkey1
         );
 
         // Check for replacement.
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid0), 2);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid1), 2);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid2), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid0), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid1), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid2), 2);
 
         // Register the 3rd hotkey.
         register_ok_neuron(netuid0, hotkey2, coldkey2, 59420842);
@@ -1802,67 +1717,67 @@ fn test_full_pass_through() {
         register_ok_neuron(netuid2, hotkey2, coldkey2, 451232207);
 
         // Check for replacement.
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid0), 2);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid1), 2);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid2), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid0), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid1), 2);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid2), 2);
 
         // Check uids.
         // n0 [ h0, h1 ]
         // n1 [ h0, h1 ]
         // n2 [ h0, h1 ]
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid0, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid0, 0).unwrap(),
             hotkey2
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid1, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid1, 0).unwrap(),
             hotkey2
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid2, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid2, 0).unwrap(),
             hotkey2
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid0, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid0, 1).unwrap(),
             hotkey1
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid1, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid1, 1).unwrap(),
             hotkey1
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid2, 1).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid2, 1).unwrap(),
             hotkey1
         );
 
         // Check registered networks.
         // hotkey0 has been deregistered.
-        // assert!( !SubtensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid0 ) );
-        // assert!( !SubtensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid1 ) );
-        // assert!( !SubtensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid2 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid0 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid1 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid2 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid0 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid1 ) );
-        // assert!( SubtensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid2 ) );
+        // assert!( !GameSolver::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid0 ) );
+        // assert!( !GameSolver::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid1 ) );
+        // assert!( !GameSolver::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid2 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid0 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid1 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid2 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid0 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid1 ) );
+        // assert!( GameSolver::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid2 ) );
 
         // Check the registration counters.
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid0), 3);
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid1), 3);
-        assert_eq!(SubtensorModule::get_registrations_this_interval(netuid2), 3);
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid0), 3);
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid1), 3);
+        assert_eq!(GameSolver::get_registrations_this_interval(netuid2), 3);
 
         // Check the hotkeys are expected.
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid0, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid0, 0).unwrap(),
             hotkey2
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid1, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid1, 0).unwrap(),
             hotkey2
         );
         assert_eq!(
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid2, 0).unwrap(),
+            GameSolver::get_hotkey_for_net_and_uid(netuid2, 0).unwrap(),
             hotkey2
         );
     });
@@ -1882,17 +1797,17 @@ fn test_full_pass_through() {
 //         let coldkeys: Vec<U256> = (0..=10).map(|x| U256::from(x)).collect();
 
 //         // Add a connection requirement between the A and B. A requires B.
-//         SubtensorModule::add_connection_requirement(netuid_a, netuid_b, u16::MAX);
-//         SubtensorModule::set_max_registrations_per_block(netuid_a, 10); // Enough for the below tests.
-//         SubtensorModule::set_max_registrations_per_block(netuid_b, 10); // Enough for the below tests.
-//         SubtensorModule::set_max_allowed_uids(netuid_a, 10); // Enough for the below tests.
-//         SubtensorModule::set_max_allowed_uids(netuid_b, 10); // Enough for the below tests.
+//         GameSolver::add_connection_requirement(netuid_a, netuid_b, u16::MAX);
+//         GameSolver::set_max_registrations_per_block(netuid_a, 10); // Enough for the below tests.
+//         GameSolver::set_max_registrations_per_block(netuid_b, 10); // Enough for the below tests.
+//         GameSolver::set_max_allowed_uids(netuid_a, 10); // Enough for the below tests.
+//         GameSolver::set_max_allowed_uids(netuid_b, 10); // Enough for the below tests.
 
 //         // Attempt registration on A fails because the hotkey is not registered on network B.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_a, 0, 3942084, &U256::from(0));
+//             GameSolver::create_work_for_block_number(netuid_a, 0, 3942084, &U256::from(0));
 //         assert_eq!(
-//             SubtensorModule::register(
+//             GameSolver::register(
 //                 <<Test as Config>::RuntimeOrigin>::signed(hotkeys[0]),
 //                 netuid_a,
 //                 0,
@@ -1906,8 +1821,8 @@ fn test_full_pass_through() {
 
 //         // Attempt registration on B passes because there is no exterior requirement.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_b, 0, 5942084, &U256::from(0));
-//         assert_ok!(SubtensorModule::register(
+//             GameSolver::create_work_for_block_number(netuid_b, 0, 5942084, &U256::from(0));
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkeys[0]),
 //             netuid_b,
 //             0,
@@ -1919,8 +1834,8 @@ fn test_full_pass_through() {
 
 //         // Attempt registration on A passes because this key is in the top 100 of keys on network B.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_a, 0, 6942084, &U256::from(0));
-//         assert_ok!(SubtensorModule::register(
+//             GameSolver::create_work_for_block_number(netuid_a, 0, 6942084, &U256::from(0));
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkeys[0]),
 //             netuid_a,
 //             0,
@@ -1932,9 +1847,9 @@ fn test_full_pass_through() {
 
 //         // Lets attempt the key registration on A. Fails because we are not in B.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_a, 0, 634242084, &U256::from(1));
+//             GameSolver::create_work_for_block_number(netuid_a, 0, 634242084, &U256::from(1));
 //         assert_eq!(
-//             SubtensorModule::register(
+//             GameSolver::register(
 //                 <<Test as Config>::RuntimeOrigin>::signed(hotkeys[1]),
 //                 netuid_a,
 //                 0,
@@ -1948,8 +1863,8 @@ fn test_full_pass_through() {
 
 //         // Lets register the next key on B. Passes, np.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_b, 0, 7942084, &U256::from(1));
-//         assert_ok!(SubtensorModule::register(
+//             GameSolver::create_work_for_block_number(netuid_b, 0, 7942084, &U256::from(1));
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkeys[1]),
 //             netuid_b,
 //             0,
@@ -1960,12 +1875,12 @@ fn test_full_pass_through() {
 //         ));
 
 //         // Lets make the connection requirement harder. Top 0th percentile.
-//         SubtensorModule::add_connection_requirement(netuid_a, netuid_b, 0);
+//         GameSolver::add_connection_requirement(netuid_a, netuid_b, 0);
 
 //         // Attempted registration passes because the prunning score for hotkey_1 is the top keys on network B.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_a, 0, 8942084, &U256::from(1));
-//         assert_ok!(SubtensorModule::register(
+//             GameSolver::create_work_for_block_number(netuid_a, 0, 8942084, &U256::from(1));
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkeys[1]),
 //             netuid_a,
 //             0,
@@ -1977,8 +1892,8 @@ fn test_full_pass_through() {
 
 //         // Lets register key 3 with lower prunning score.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_b, 0, 9942084, &U256::from(2));
-//         assert_ok!(SubtensorModule::register(
+//             GameSolver::create_work_for_block_number(netuid_b, 0, 9942084, &U256::from(2));
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkeys[2]),
 //             netuid_b,
 //             0,
@@ -1987,26 +1902,26 @@ fn test_full_pass_through() {
 //             hotkeys[2],
 //             coldkeys[2]
 //         ));
-//         SubtensorModule::set_pruning_score_for_uid(
+//         GameSolver::set_pruning_score_for_uid(
 //             netuid_b,
-//             SubtensorModule::get_uid_for_net_and_hotkey(netuid_b, &hotkeys[2]).unwrap(),
+//             GameSolver::get_uid_for_net_and_hotkey(netuid_b, &hotkeys[2]).unwrap(),
 //             0,
 //         ); // Set prunning score to 0.
-//         SubtensorModule::set_pruning_score_for_uid(
+//         GameSolver::set_pruning_score_for_uid(
 //             netuid_b,
-//             SubtensorModule::get_uid_for_net_and_hotkey(netuid_b, &hotkeys[1]).unwrap(),
+//             GameSolver::get_uid_for_net_and_hotkey(netuid_b, &hotkeys[1]).unwrap(),
 //             0,
 //         ); // Set prunning score to 0.
-//         SubtensorModule::set_pruning_score_for_uid(
+//         GameSolver::set_pruning_score_for_uid(
 //             netuid_b,
-//             SubtensorModule::get_uid_for_net_and_hotkey(netuid_b, &hotkeys[0]).unwrap(),
+//             GameSolver::get_uid_for_net_and_hotkey(netuid_b, &hotkeys[0]).unwrap(),
 //             0,
 //         ); // Set prunning score to 0.
 
 //         // Lets register key 4 with higher prunining score.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_b, 0, 10142084, &U256::from(3));
-//         assert_ok!(SubtensorModule::register(
+//             GameSolver::create_work_for_block_number(netuid_b, 0, 10142084, &U256::from(3));
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkeys[3]),
 //             netuid_b,
 //             0,
@@ -2015,17 +1930,17 @@ fn test_full_pass_through() {
 //             hotkeys[3],
 //             coldkeys[3]
 //         ));
-//         SubtensorModule::set_pruning_score_for_uid(
+//         GameSolver::set_pruning_score_for_uid(
 //             netuid_b,
-//             SubtensorModule::get_uid_for_net_and_hotkey(netuid_b, &hotkeys[3]).unwrap(),
+//             GameSolver::get_uid_for_net_and_hotkey(netuid_b, &hotkeys[3]).unwrap(),
 //             1,
 //         ); // Set prunning score to 1.
 
 //         // Attempted register of key 3 fails because of bad prunning score on B.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_a, 0, 11142084, &U256::from(2));
+//             GameSolver::create_work_for_block_number(netuid_a, 0, 11142084, &U256::from(2));
 //         assert_eq!(
-//             SubtensorModule::register(
+//             GameSolver::register(
 //                 <<Test as Config>::RuntimeOrigin>::signed(hotkeys[2]),
 //                 netuid_a,
 //                 0,
@@ -2039,8 +1954,8 @@ fn test_full_pass_through() {
 
 //         // Attempt to register key 4 passes because of best prunning score on B.
 //         let (nonce, work): (u64, Vec<u8>) =
-//             SubtensorModule::create_work_for_block_number(netuid_b, 0, 12142084, &U256::from(3));
-//         assert_ok!(SubtensorModule::register(
+//             GameSolver::create_work_for_block_number(netuid_b, 0, 12142084, &U256::from(3));
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkeys[3]),
 //             netuid_a,
 //             0,
@@ -2061,17 +1976,13 @@ fn test_registration_origin_hotkey_mismatch() {
         let hotkey_account_id_1: U256 = U256::from(1);
         let hotkey_account_id_2: U256 = U256::from(2);
         let coldkey_account_id: U256 = U256::from(668);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id_1,
-        );
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id_1);
 
         //add network
         add_network(netuid, tempo, 0);
 
-        let result = SubtensorModule::register(
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id_1),
             netuid,
             block_number,
@@ -2095,19 +2006,15 @@ fn test_registration_disabled() {
         let tempo: u16 = 13;
         let hotkey_account_id: U256 = U256::from(1);
         let coldkey_account_id: U256 = U256::from(668);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &hotkey_account_id,
-        );
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &hotkey_account_id);
 
         //add network
         add_network(netuid, tempo, 0);
-        SubtensorModule::set_network_registration_allowed(netuid, false);
-        SubtensorModule::set_network_pow_registration_allowed(netuid, false);
+        GameSolver::set_network_registration_allowed(netuid, false);
+        GameSolver::set_network_pow_registration_allowed(netuid, false);
 
-        let result = SubtensorModule::register(
+        let result = GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -2132,7 +2039,7 @@ fn test_last_update_correctness() {
         let burn_cost = 1000;
         let coldkey_account_id = U256::from(667); // Neighbour of the beast, har har
         //add network
-        SubtensorModule::set_burn(netuid, burn_cost.into());
+        GameSolver::set_burn(netuid, burn_cost.into());
         add_network(netuid, tempo, 0);
 
         let reserve = 1_000_000_000_000;
@@ -2146,9 +2053,9 @@ fn test_last_update_correctness() {
         LastUpdate::<Test>::remove(NetUidStorageIndex::from(netuid));
 
         // Give some $$$ to coldkey
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
         // Subscribe and check extrinsic output
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid,
             hotkey_account_id
@@ -2175,10 +2082,10 @@ fn test_registration_pruning() {
 
         // Allow registrations freely.
         MaxRegistrationsPerBlock::<Test>::insert(netuid, 1024);
-        SubtensorModule::set_target_registrations_per_interval(netuid, u16::MAX);
+        GameSolver::set_target_registrations_per_interval(netuid, u16::MAX);
 
         // Cap the subnet at 3 UIDs so the 4th registration *must* prune.
-        SubtensorModule::set_max_allowed_uids(netuid, 3);
+        GameSolver::set_max_allowed_uids(netuid, 3);
 
         // --- Register three neurons (uids 0, 1, 2).
         let coldkeys = [U256::from(20_001), U256::from(20_002), U256::from(20_003)];
@@ -2189,14 +2096,14 @@ fn test_registration_pruning() {
         }
 
         // Sanity: ensure we got sequential UIDs.
-        let uid0 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkeys[0]).unwrap();
-        let uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkeys[1]).unwrap();
-        let uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkeys[2]).unwrap();
+        let uid0 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkeys[0]).unwrap();
+        let uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkeys[1]).unwrap();
+        let uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkeys[2]).unwrap();
 
         assert_eq!(uid0, 0);
         assert_eq!(uid1, 1);
         assert_eq!(uid2, 2);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 3);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 3);
 
         // --- Craft immunity and tie‑breaking conditions.
 
@@ -2205,7 +2112,7 @@ fn test_registration_pruning() {
         frame_system::Pallet::<Test>::set_block_number(now);
 
         // Immunity lasts 100 blocks.
-        SubtensorModule::set_immunity_period(netuid, 100);
+        GameSolver::set_immunity_period(netuid, 100);
 
         // Registration blocks:
         //  - uid0: now - 150  -> non‑immune
@@ -2216,9 +2123,9 @@ fn test_registration_pruning() {
         BlockAtRegistration::<Test>::insert(netuid, uid2, now - 10);
 
         // Check immunity flags: the 3rd neuron is immune, the first two are not.
-        assert!(!SubtensorModule::get_neuron_is_immune(netuid, uid0));
-        assert!(!SubtensorModule::get_neuron_is_immune(netuid, uid1));
-        assert!(SubtensorModule::get_neuron_is_immune(netuid, uid2));
+        assert!(!GameSolver::get_neuron_is_immune(netuid, uid0));
+        assert!(!GameSolver::get_neuron_is_immune(netuid, uid1));
+        assert!(GameSolver::get_neuron_is_immune(netuid, uid2));
 
         // Emissions:
         //  - uid0: 10
@@ -2235,7 +2142,7 @@ fn test_registration_pruning() {
         });
 
         // Allow pruning of any non‑immune UID (no safety floor).
-        SubtensorModule::set_min_non_immune_uids(netuid, 0);
+        GameSolver::set_min_non_immune_uids(netuid, 0);
 
         // Check that pruning decision respects:
         //  1. Prefer non‑immune over immune.
@@ -2243,7 +2150,7 @@ fn test_registration_pruning() {
         //  3. Then earliest registration block.
         //  4. Then uid (not needed here).
         assert_eq!(
-            SubtensorModule::get_neuron_to_prune(netuid),
+            GameSolver::get_neuron_to_prune(netuid),
             Some(uid1),
             "Expected pruning to choose the oldest non‑immune neuron \
              when emissions tie, even if an immune neuron has lower emission"
@@ -2259,16 +2166,16 @@ fn test_registration_pruning() {
         register_ok_neuron(netuid, new_hotkey, new_coldkey, 0);
 
         // Still capped at 3 UIDs.
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 3);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 3);
 
         // Old uid1 hotkey should be gone.
         assert!(
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkeys[1]).is_err(),
+            GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkeys[1]).is_err(),
             "Hotkey for pruned UID should no longer be registered"
         );
 
         // New hotkey should reuse uid1 (the pruned slot).
-        let new_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &new_hotkey).unwrap();
+        let new_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &new_hotkey).unwrap();
         assert_eq!(
             new_uid, uid1,
             "New registration should reuse the UID selected by get_neuron_to_prune"
@@ -2276,11 +2183,11 @@ fn test_registration_pruning() {
 
         // The other two original neurons (uid0 and uid2) must remain registered.
         assert_eq!(
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkeys[0]).unwrap(),
+            GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkeys[0]).unwrap(),
             uid0
         );
         assert_eq!(
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkeys[2]).unwrap(),
+            GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkeys[2]).unwrap(),
             uid2
         );
     });
@@ -2296,31 +2203,31 @@ fn test_registration_pruning() {
 //         let burn_cost = 1000;
 //         let coldkey_account_id = U256::from(667);
 
-//         SubtensorModule::set_burn(netuid, burn_cost);
+//         GameSolver::set_burn(netuid, burn_cost);
 //         add_network(netuid, tempo, 0);
 
 //         // Give it some $$$ in his coldkey balance
-//         SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10_000_000_000);
+//         GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10_000_000_000);
 
 //         // Subscribe and check extrinsic output
-//         assert_ok!(SubtensorModule::burned_register(
+//         assert_ok!(GameSolver::burned_register(
 //             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //             netuid,
 //             hotkey_account_id
 //         ));
 
 //         let new_hotkey = U256::from(1337);
-//         assert_ok!(SubtensorModule::swap_hotkey(
+//         assert_ok!(GameSolver::swap_hotkey(
 //             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //             hotkey_account_id,
 //             new_hotkey
 //         ));
 //         assert_ne!(
-//             SubtensorModule::get_owning_coldkey_for_hotkey(&hotkey_account_id),
+//             GameSolver::get_owning_coldkey_for_hotkey(&hotkey_account_id),
 //             coldkey_account_id
 //         );
 //         assert_eq!(
-//             SubtensorModule::get_owning_coldkey_for_hotkey(&new_hotkey),
+//             GameSolver::get_owning_coldkey_for_hotkey(&new_hotkey),
 //             coldkey_account_id
 //         );
 //     });
@@ -2337,14 +2244,14 @@ fn test_registration_pruning() {
 //         let coldkey_account_id = U256::from(2);
 //         let not_owner_coldkey = U256::from(3);
 
-//         SubtensorModule::set_burn(netuid, burn_cost);
+//         GameSolver::set_burn(netuid, burn_cost);
 //         add_network(netuid, tempo, 0);
 
 //         // Give it some $$$ in his coldkey balance
-//         SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
+//         GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
 
 //         // Subscribe and check extrinsic output
-//         assert_ok!(SubtensorModule::burned_register(
+//         assert_ok!(GameSolver::burned_register(
 //             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //             netuid,
 //             hotkey_account_id
@@ -2352,7 +2259,7 @@ fn test_registration_pruning() {
 
 //         let new_hotkey = U256::from(4);
 //         assert_err!(
-//             SubtensorModule::swap_hotkey(
+//             GameSolver::swap_hotkey(
 //                 <<Test as Config>::RuntimeOrigin>::signed(not_owner_coldkey),
 //                 hotkey_account_id,
 //                 new_hotkey
@@ -2372,21 +2279,21 @@ fn test_registration_pruning() {
 //         let burn_cost = 1000;
 //         let coldkey_account_id = U256::from(2);
 
-//         SubtensorModule::set_burn(netuid, burn_cost);
+//         GameSolver::set_burn(netuid, burn_cost);
 //         add_network(netuid, tempo, 0);
 
 //         // Give it some $$$ in his coldkey balance
-//         SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
+//         GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
 
 //         // Subscribe and check extrinsic output
-//         assert_ok!(SubtensorModule::burned_register(
+//         assert_ok!(GameSolver::burned_register(
 //             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //             netuid,
 //             hotkey_account_id
 //         ));
 
 //         assert_err!(
-//             SubtensorModule::swap_hotkey(
+//             GameSolver::swap_hotkey(
 //                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //                 hotkey_account_id,
 //                 hotkey_account_id
@@ -2406,28 +2313,28 @@ fn test_registration_pruning() {
 //         let burn_cost = 1000;
 //         let coldkey_account_id = U256::from(2);
 
-//         SubtensorModule::set_burn(netuid, burn_cost);
+//         GameSolver::set_burn(netuid, burn_cost);
 //         add_network(netuid, tempo, 0);
 
 //         // Give it some $$$ in his coldkey balance
-//         SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 100_000_000_000);
+//         GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 100_000_000_000);
 
 //         // Subscribe and check extrinsic output
-//         assert_ok!(SubtensorModule::burned_register(
+//         assert_ok!(GameSolver::burned_register(
 //             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //             netuid,
 //             hotkey_account_id
 //         ));
 
 //         let new_hotkey = U256::from(3);
-//         assert_ok!(SubtensorModule::burned_register(
+//         assert_ok!(GameSolver::burned_register(
 //             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //             netuid,
 //             new_hotkey
 //         ));
 
 //         assert_err!(
-//             SubtensorModule::swap_hotkey(
+//             GameSolver::swap_hotkey(
 //                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //                 hotkey_account_id,
 //                 new_hotkey

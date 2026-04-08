@@ -28,7 +28,7 @@ fn test_register_leased_network_works() {
         // Register the leased network
         let end_block = 500;
         let emissions_share = Percent::from_percent(30);
-        assert_ok!(SubtensorModule::register_leased_network(
+        assert_ok!(GameSolver::register_leased_network(
             RuntimeOrigin::signed(beneficiary),
             emissions_share,
             Some(end_block),
@@ -66,7 +66,7 @@ fn test_register_leased_network_works() {
         );
 
         // Ensure the lease hotkey has 0 take from staking
-        assert_eq!(SubtensorModule::get_hotkey_take(&lease.hotkey), 0);
+        assert_eq!(GameSolver::get_hotkey_take(&lease.hotkey), 0);
 
         // Ensure each contributor and beneficiary has been refunded their share of the leftover cap
         let leftover_cap = cap.saturating_sub(lease.cost);
@@ -76,7 +76,7 @@ fn test_register_leased_network_works() {
             .floor()
             .to_num::<u64>();
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&contributions[0].0),
+            GameSolver::get_coldkey_balance(&contributions[0].0),
             expected_contributor1_refund
         );
 
@@ -85,11 +85,11 @@ fn test_register_leased_network_works() {
             .floor()
             .to_num::<u64>();
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&contributions[1].0),
+            GameSolver::get_coldkey_balance(&contributions[1].0),
             expected_contributor2_refund
         );
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&beneficiary),
+            GameSolver::get_coldkey_balance(&beneficiary),
             leftover_cap - (expected_contributor1_refund + expected_contributor2_refund)
         );
 
@@ -114,7 +114,7 @@ fn test_register_leased_network_fails_if_bad_origin() {
         let emissions_share = Percent::from_percent(30);
 
         assert_err!(
-            SubtensorModule::register_leased_network(
+            GameSolver::register_leased_network(
                 RuntimeOrigin::none(),
                 emissions_share,
                 Some(end_block),
@@ -123,7 +123,7 @@ fn test_register_leased_network_fails_if_bad_origin() {
         );
 
         assert_err!(
-            SubtensorModule::register_leased_network(
+            GameSolver::register_leased_network(
                 RuntimeOrigin::root(),
                 emissions_share,
                 Some(end_block),
@@ -141,7 +141,7 @@ fn test_register_leased_network_fails_if_crowdloan_does_not_exists() {
         let emissions_share = Percent::from_percent(30);
 
         assert_err!(
-            SubtensorModule::register_leased_network(
+            GameSolver::register_leased_network(
                 RuntimeOrigin::signed(beneficiary),
                 emissions_share,
                 Some(end_block),
@@ -172,7 +172,7 @@ fn test_register_lease_network_fails_if_current_crowdloan_id_is_not_set() {
         let emissions_share = Percent::from_percent(30);
 
         assert_err!(
-            SubtensorModule::register_leased_network(
+            GameSolver::register_leased_network(
                 RuntimeOrigin::signed(beneficiary),
                 emissions_share,
                 Some(end_block),
@@ -200,7 +200,7 @@ fn test_register_leased_network_fails_if_origin_is_not_crowdloan_creator() {
         let emissions_share = Percent::from_percent(30);
 
         assert_err!(
-            SubtensorModule::register_leased_network(
+            GameSolver::register_leased_network(
                 RuntimeOrigin::signed(U256::from(2)),
                 emissions_share,
                 Some(end_block),
@@ -227,7 +227,7 @@ fn test_register_lease_network_fails_if_end_block_is_in_the_past() {
         let emissions_share = Percent::from_percent(30);
 
         assert_err!(
-            SubtensorModule::register_leased_network(
+            GameSolver::register_leased_network(
                 RuntimeOrigin::signed(beneficiary),
                 emissions_share,
                 Some(end_block),
@@ -264,10 +264,10 @@ fn test_terminate_lease_works() {
 
         // Create a hotkey for the beneficiary
         let hotkey = U256::from(3);
-        SubtensorModule::create_account_if_non_existent(&beneficiary, &hotkey);
+        GameSolver::create_account_if_non_existent(&beneficiary, &hotkey);
 
         // Terminate the lease
-        assert_ok!(SubtensorModule::terminate_lease(
+        assert_ok!(GameSolver::terminate_lease(
             RuntimeOrigin::signed(beneficiary),
             lease_id,
             hotkey,
@@ -304,12 +304,12 @@ fn test_terminate_lease_fails_if_bad_origin() {
         let hotkey = U256::from(1);
 
         assert_err!(
-            SubtensorModule::terminate_lease(RuntimeOrigin::none(), lease_id, hotkey),
+            GameSolver::terminate_lease(RuntimeOrigin::none(), lease_id, hotkey),
             DispatchError::BadOrigin,
         );
 
         assert_err!(
-            SubtensorModule::terminate_lease(RuntimeOrigin::root(), lease_id, hotkey),
+            GameSolver::terminate_lease(RuntimeOrigin::root(), lease_id, hotkey),
             DispatchError::BadOrigin,
         );
     });
@@ -323,7 +323,7 @@ fn test_terminate_lease_fails_if_lease_does_not_exist() {
         let hotkey = U256::from(2);
 
         assert_err!(
-            SubtensorModule::terminate_lease(RuntimeOrigin::signed(beneficiary), lease_id, hotkey),
+            GameSolver::terminate_lease(RuntimeOrigin::signed(beneficiary), lease_id, hotkey),
             Error::<Test>::LeaseDoesNotExist,
         );
     });
@@ -356,15 +356,11 @@ fn test_terminate_lease_fails_if_origin_is_not_beneficiary() {
 
         // Create a hotkey for the beneficiary
         let hotkey = U256::from(3);
-        SubtensorModule::create_account_if_non_existent(&beneficiary, &hotkey);
+        GameSolver::create_account_if_non_existent(&beneficiary, &hotkey);
 
         // Terminate the lease
         assert_err!(
-            SubtensorModule::terminate_lease(
-                RuntimeOrigin::signed(U256::from(42)),
-                lease_id,
-                hotkey,
-            ),
+            GameSolver::terminate_lease(RuntimeOrigin::signed(U256::from(42)), lease_id, hotkey,),
             Error::<Test>::ExpectedBeneficiaryOrigin,
         );
     });
@@ -389,11 +385,11 @@ fn test_terminate_lease_fails_if_lease_has_no_end_block() {
 
         // Create a hotkey for the beneficiary
         let hotkey = U256::from(3);
-        SubtensorModule::create_account_if_non_existent(&beneficiary, &hotkey);
+        GameSolver::create_account_if_non_existent(&beneficiary, &hotkey);
 
         // Terminate the lease
         assert_err!(
-            SubtensorModule::terminate_lease(
+            GameSolver::terminate_lease(
                 RuntimeOrigin::signed(lease.beneficiary),
                 lease_id,
                 hotkey,
@@ -427,11 +423,11 @@ fn test_terminate_lease_fails_if_lease_has_not_ended() {
 
         // Create a hotkey for the beneficiary
         let hotkey = U256::from(3);
-        SubtensorModule::create_account_if_non_existent(&beneficiary, &hotkey);
+        GameSolver::create_account_if_non_existent(&beneficiary, &hotkey);
 
         // Terminate the lease
         assert_err!(
-            SubtensorModule::terminate_lease(
+            GameSolver::terminate_lease(
                 RuntimeOrigin::signed(lease.beneficiary),
                 lease_id,
                 hotkey,
@@ -468,7 +464,7 @@ fn test_terminate_lease_fails_if_beneficiary_does_not_own_hotkey() {
 
         // Terminate the lease
         assert_err!(
-            SubtensorModule::terminate_lease(
+            GameSolver::terminate_lease(
                 RuntimeOrigin::signed(lease.beneficiary),
                 lease_id,
                 U256::from(42),
@@ -506,19 +502,19 @@ fn test_distribute_lease_network_dividends_multiple_contributors_works() {
         run_to_block(<Test as Config>::LeaseDividendsDistributionInterval::get() as u64);
 
         // Get the initial alpha for the contributors and beneficiary and ensure they are zero
-        let contributor1_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor1_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[0].0,
             lease.netuid,
         );
         assert_eq!(contributor1_alpha_before, AlphaCurrency::ZERO);
-        let contributor2_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor2_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[1].0,
             lease.netuid,
         );
         assert_eq!(contributor2_alpha_before, AlphaCurrency::ZERO);
-        let beneficiary_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let beneficiary_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &beneficiary,
             lease.netuid,
@@ -531,14 +527,14 @@ fn test_distribute_lease_network_dividends_multiple_contributors_works() {
 
         // Distribute the dividends
         let owner_cut_alpha = AlphaCurrency::from(5_000_000_000);
-        SubtensorModule::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
+        GameSolver::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
 
         // Ensure the dividends were distributed correctly relative to their shares
         let distributed_alpha =
             accumulated_dividends + emissions_share.mul_ceil(owner_cut_alpha.to_u64()).into();
         assert_ne!(distributed_alpha, AlphaCurrency::ZERO);
 
-        let contributor1_alpha_delta = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor1_alpha_delta = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[0].0,
             lease.netuid,
@@ -546,7 +542,7 @@ fn test_distribute_lease_network_dividends_multiple_contributors_works() {
         .saturating_sub(contributor1_alpha_before);
         assert_ne!(contributor1_alpha_delta, AlphaCurrency::ZERO);
 
-        let contributor2_alpha_delta = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor2_alpha_delta = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[1].0,
             lease.netuid,
@@ -554,7 +550,7 @@ fn test_distribute_lease_network_dividends_multiple_contributors_works() {
         .saturating_sub(contributor2_alpha_before);
         assert_ne!(contributor2_alpha_delta, AlphaCurrency::ZERO);
 
-        let beneficiary_alpha_delta = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let beneficiary_alpha_delta = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &beneficiary,
             lease.netuid,
@@ -576,7 +572,7 @@ fn test_distribute_lease_network_dividends_multiple_contributors_works() {
         assert_eq!(contributor1_alpha_delta, expected_contributor1_alpha.into());
         assert_eq!(
             System::events()[2].event,
-            RuntimeEvent::SubtensorModule(Event::SubnetLeaseDividendsDistributed {
+            RuntimeEvent::GameSolver(Event::SubnetLeaseDividendsDistributed {
                 lease_id,
                 contributor: contributions[0].0.into(),
                 alpha: expected_contributor1_alpha.into(),
@@ -591,7 +587,7 @@ fn test_distribute_lease_network_dividends_multiple_contributors_works() {
         assert_eq!(contributor2_alpha_delta, expected_contributor2_alpha.into());
         assert_eq!(
             System::events()[5].event,
-            RuntimeEvent::SubtensorModule(Event::SubnetLeaseDividendsDistributed {
+            RuntimeEvent::GameSolver(Event::SubnetLeaseDividendsDistributed {
                 lease_id,
                 contributor: contributions[1].0.into(),
                 alpha: expected_contributor2_alpha.into(),
@@ -604,7 +600,7 @@ fn test_distribute_lease_network_dividends_multiple_contributors_works() {
         assert_eq!(beneficiary_alpha_delta, expected_beneficiary_alpha.into());
         assert_eq!(
             System::events()[8].event,
-            RuntimeEvent::SubtensorModule(Event::SubnetLeaseDividendsDistributed {
+            RuntimeEvent::GameSolver(Event::SubnetLeaseDividendsDistributed {
                 lease_id,
                 contributor: beneficiary.into(),
                 alpha: expected_beneficiary_alpha.into(),
@@ -645,7 +641,7 @@ fn test_distribute_lease_network_dividends_only_beneficiary_works() {
         run_to_block(<Test as Config>::LeaseDividendsDistributionInterval::get() as u64);
 
         // Get the initial alpha for the beneficiary and ensure it is zero
-        let beneficiary_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let beneficiary_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &beneficiary,
             lease.netuid,
@@ -658,20 +654,20 @@ fn test_distribute_lease_network_dividends_only_beneficiary_works() {
 
         // Distribute the dividends
         let owner_cut_alpha = AlphaCurrency::from(5_000_000_000);
-        SubtensorModule::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
+        GameSolver::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
 
         // Ensure the dividends were distributed correctly relative to their shares
         let distributed_alpha =
             accumulated_dividends + emissions_share.mul_ceil(owner_cut_alpha.to_u64()).into();
         assert_ne!(distributed_alpha, AlphaCurrency::ZERO);
-        let beneficiary_alpha_delta = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let beneficiary_alpha_delta = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &beneficiary,
             lease.netuid,
         )
         .saturating_sub(beneficiary_alpha_before);
         assert_eq!(beneficiary_alpha_delta, distributed_alpha.into());
-        assert_last_event::<Test>(RuntimeEvent::SubtensorModule(
+        assert_last_event::<Test>(RuntimeEvent::GameSolver(
             Event::SubnetLeaseDividendsDistributed {
                 lease_id,
                 contributor: beneficiary.into(),
@@ -716,19 +712,19 @@ fn test_distribute_lease_network_dividends_accumulates_if_not_the_correct_block(
         run_to_block(<Test as Config>::LeaseDividendsDistributionInterval::get() as u64 + 1);
 
         // Get the initial alpha for the contributors and beneficiary and ensure they are zero
-        let contributor1_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor1_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[0].0,
             lease.netuid,
         );
         assert_eq!(contributor1_alpha_before, AlphaCurrency::ZERO);
-        let contributor2_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor2_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[1].0,
             lease.netuid,
         );
         assert_eq!(contributor2_alpha_before, AlphaCurrency::ZERO);
-        let beneficiary_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let beneficiary_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &beneficiary,
             lease.netuid,
@@ -741,11 +737,11 @@ fn test_distribute_lease_network_dividends_accumulates_if_not_the_correct_block(
 
         // Distribute the dividends
         let owner_cut_alpha = AlphaCurrency::from(5_000_000_000);
-        SubtensorModule::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
+        GameSolver::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
 
         // Ensure the dividends were not distributed
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &contributions[0].0,
                 lease.netuid
@@ -753,7 +749,7 @@ fn test_distribute_lease_network_dividends_accumulates_if_not_the_correct_block(
             contributor1_alpha_before
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &contributions[1].0,
                 lease.netuid
@@ -761,7 +757,7 @@ fn test_distribute_lease_network_dividends_accumulates_if_not_the_correct_block(
             contributor2_alpha_before
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &beneficiary,
                 lease.netuid
@@ -783,7 +779,7 @@ fn test_distribute_lease_network_dividends_does_nothing_if_lease_does_not_exist(
     new_test_ext(1).execute_with(|| {
         let lease_id = 0;
         let owner_cut_alpha = AlphaCurrency::from(5_000_000);
-        SubtensorModule::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
+        GameSolver::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
     });
 }
 
@@ -816,19 +812,19 @@ fn test_distribute_lease_network_dividends_does_nothing_if_lease_has_ended() {
         run_to_block(end_block);
 
         // Get the initial alpha for the contributors and beneficiary and ensure they are zero
-        let contributor1_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor1_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[0].0,
             lease.netuid,
         );
         assert_eq!(contributor1_alpha_before, AlphaCurrency::ZERO);
-        let contributor2_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor2_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[1].0,
             lease.netuid,
         );
         assert_eq!(contributor2_alpha_before, AlphaCurrency::ZERO);
-        let beneficiary_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let beneficiary_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &beneficiary,
             lease.netuid,
@@ -841,11 +837,11 @@ fn test_distribute_lease_network_dividends_does_nothing_if_lease_has_ended() {
 
         // Try to distribute the dividends
         let owner_cut_alpha = AlphaCurrency::from(5_000_000_000);
-        SubtensorModule::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
+        GameSolver::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
 
         // Ensure the dividends were not distributed
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &contributions[0].0,
                 lease.netuid
@@ -853,7 +849,7 @@ fn test_distribute_lease_network_dividends_does_nothing_if_lease_has_ended() {
             contributor1_alpha_before
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &contributions[1].0,
                 lease.netuid
@@ -861,7 +857,7 @@ fn test_distribute_lease_network_dividends_does_nothing_if_lease_has_ended() {
             contributor2_alpha_before
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &beneficiary,
                 lease.netuid
@@ -902,19 +898,19 @@ fn test_distribute_lease_network_dividends_accumulates_if_amount_is_too_low() {
         );
 
         // Get the initial alpha for the contributors and beneficiary and ensure they are zero
-        let contributor1_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor1_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[0].0,
             lease.netuid,
         );
         assert_eq!(contributor1_alpha_before, AlphaCurrency::ZERO);
-        let contributor2_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor2_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[1].0,
             lease.netuid,
         );
         assert_eq!(contributor2_alpha_before, AlphaCurrency::ZERO);
-        let beneficiary_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let beneficiary_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &beneficiary,
             lease.netuid,
@@ -923,11 +919,11 @@ fn test_distribute_lease_network_dividends_accumulates_if_amount_is_too_low() {
 
         // Try to distribute the dividends
         let owner_cut_alpha = AlphaCurrency::from(5_000);
-        SubtensorModule::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
+        GameSolver::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
 
         // Ensure the dividends were not distributed
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &contributions[0].0,
                 lease.netuid
@@ -935,7 +931,7 @@ fn test_distribute_lease_network_dividends_accumulates_if_amount_is_too_low() {
             contributor1_alpha_before
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &contributions[1].0,
                 lease.netuid
@@ -943,7 +939,7 @@ fn test_distribute_lease_network_dividends_accumulates_if_amount_is_too_low() {
             contributor2_alpha_before
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &beneficiary,
                 lease.netuid
@@ -983,19 +979,19 @@ fn test_distribute_lease_network_dividends_accumulates_if_insufficient_liquidity
             None, // We don't add any liquidity
         );
 
-        let contributor1_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor1_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[0].0,
             lease.netuid,
         );
         assert_eq!(contributor1_alpha_before, AlphaCurrency::ZERO);
-        let contributor2_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let contributor2_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &contributions[1].0,
             lease.netuid,
         );
         assert_eq!(contributor2_alpha_before, AlphaCurrency::ZERO);
-        let beneficiary_alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let beneficiary_alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &lease.hotkey,
             &beneficiary,
             lease.netuid,
@@ -1004,11 +1000,11 @@ fn test_distribute_lease_network_dividends_accumulates_if_insufficient_liquidity
 
         // Try to distribute the dividends
         let owner_cut_alpha = AlphaCurrency::from(5_000_000);
-        SubtensorModule::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
+        GameSolver::distribute_leased_network_dividends(lease_id, owner_cut_alpha);
 
         // Ensure the dividends were not distributed
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &contributions[0].0,
                 lease.netuid
@@ -1016,7 +1012,7 @@ fn test_distribute_lease_network_dividends_accumulates_if_insufficient_liquidity
             contributor1_alpha_before
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &contributions[1].0,
                 lease.netuid
@@ -1024,7 +1020,7 @@ fn test_distribute_lease_network_dividends_accumulates_if_insufficient_liquidity
             contributor2_alpha_before
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &lease.hotkey,
                 &beneficiary,
                 lease.netuid
@@ -1071,7 +1067,7 @@ fn setup_crowdloan(
         pallet_crowdloan::Contributions::<Test>::insert(id, contributor, amount);
     }
 
-    SubtensorModule::add_balance_to_coldkey_account(&funds_account, cap);
+    GameSolver::add_balance_to_coldkey_account(&funds_account, cap);
 
     // Mark the crowdloan as finalizing
     pallet_crowdloan::CurrentCrowdloanId::<Test>::set(Some(0));
@@ -1084,7 +1080,7 @@ fn setup_leased_network(
     tao_to_stake: Option<u64>,
 ) -> (u32, SubnetLeaseOf<Test>) {
     let lease_id = 0;
-    assert_ok!(SubtensorModule::do_register_leased_network(
+    assert_ok!(GameSolver::do_register_leased_network(
         RuntimeOrigin::signed(beneficiary),
         emissions_share,
         end_block,
@@ -1096,8 +1092,8 @@ fn setup_leased_network(
     SubtokenEnabled::<Test>::insert(netuid, true);
 
     if let Some(tao_to_stake) = tao_to_stake {
-        SubtensorModule::add_balance_to_coldkey_account(&lease.coldkey, tao_to_stake);
-        assert_ok!(SubtensorModule::add_stake(
+        GameSolver::add_balance_to_coldkey_account(&lease.coldkey, tao_to_stake);
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(lease.coldkey),
             lease.hotkey,
             netuid,

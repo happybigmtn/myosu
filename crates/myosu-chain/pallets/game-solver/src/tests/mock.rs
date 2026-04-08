@@ -43,7 +43,7 @@ frame_support::construct_runtime!(
         Balances: pallet_balances = 2,
         Timestamp: pallet_timestamp = 3,
         Aura: pallet_aura = 4,
-        SubtensorModule: crate = 5,
+        GameSolver: crate = 5,
         Utility: pallet_utility = 6,
         Scheduler: pallet_scheduler = 7,
         Preimage: pallet_preimage = 8,
@@ -328,8 +328,8 @@ parameter_types! {
 }
 
 impl pallet_subtensor_swap::Config for Test {
-    type SubnetInfo = SubtensorModule;
-    type BalanceOps = SubtensorModule;
+    type SubnetInfo = GameSolver;
+    type BalanceOps = GameSolver;
     type ProtocolId = SwapProtocolId;
     type TaoReserve = TaoCurrencyReserve<Self>;
     type AlphaReserve = AlphaCurrencyReserve<Self>;
@@ -654,11 +654,11 @@ pub(crate) fn step_block(n: u16) {
     for _ in 0..n {
         Scheduler::on_finalize(System::block_number());
         Proxy::on_finalize(System::block_number());
-        SubtensorModule::on_finalize(System::block_number());
+        GameSolver::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
-        SubtensorModule::on_initialize(System::block_number());
+        GameSolver::on_initialize(System::block_number());
         Scheduler::on_initialize(System::block_number());
     }
 }
@@ -672,7 +672,7 @@ pub(crate) fn run_to_block(n: u64) {
 pub(crate) fn run_to_block_ext(n: u64, enable_events: bool) {
     while System::block_number() < n {
         Scheduler::on_finalize(System::block_number());
-        SubtensorModule::on_finalize(System::block_number());
+        GameSolver::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
@@ -682,7 +682,7 @@ pub(crate) fn run_to_block_ext(n: u64, enable_events: bool) {
             });
             System::reset_events();
         }
-        SubtensorModule::on_initialize(System::block_number());
+        GameSolver::on_initialize(System::block_number());
         Scheduler::on_initialize(System::block_number());
     }
 }
@@ -691,11 +691,11 @@ pub(crate) fn run_to_block_ext(n: u64, enable_events: bool) {
 pub(crate) fn next_block_no_epoch(netuid: NetUid) -> u64 {
     // high tempo to skip automatic epochs in on_initialize
     let high_tempo: u16 = u16::MAX - 1;
-    let old_tempo: u16 = SubtensorModule::get_tempo(netuid);
+    let old_tempo: u16 = GameSolver::get_tempo(netuid);
 
-    SubtensorModule::set_tempo(netuid, high_tempo);
+    GameSolver::set_tempo(netuid, high_tempo);
     let new_block = next_block();
-    SubtensorModule::set_tempo(netuid, old_tempo);
+    GameSolver::set_tempo(netuid, old_tempo);
 
     new_block
 }
@@ -704,27 +704,27 @@ pub(crate) fn next_block_no_epoch(netuid: NetUid) -> u64 {
 pub(crate) fn run_to_block_no_epoch(netuid: NetUid, n: u64) {
     // high tempo to skip automatic epochs in on_initialize
     let high_tempo: u16 = u16::MAX - 1;
-    let old_tempo: u16 = SubtensorModule::get_tempo(netuid);
+    let old_tempo: u16 = GameSolver::get_tempo(netuid);
 
-    SubtensorModule::set_tempo(netuid, high_tempo);
+    GameSolver::set_tempo(netuid, high_tempo);
     run_to_block(n);
-    SubtensorModule::set_tempo(netuid, old_tempo);
+    GameSolver::set_tempo(netuid, old_tempo);
 }
 
 #[allow(dead_code)]
 pub(crate) fn step_epochs(count: u16, netuid: NetUid) {
     for _ in 0..count {
-        let blocks_to_next_epoch = SubtensorModule::blocks_until_next_epoch(
+        let blocks_to_next_epoch = GameSolver::blocks_until_next_epoch(
             netuid,
-            SubtensorModule::get_tempo(netuid),
-            SubtensorModule::get_current_block_as_u64(),
+            GameSolver::get_tempo(netuid),
+            GameSolver::get_current_block_as_u64(),
         );
         log::info!("Blocks to next epoch: {blocks_to_next_epoch:?}");
         step_block(blocks_to_next_epoch as u16);
 
-        assert!(SubtensorModule::should_run_epoch(
+        assert!(GameSolver::should_run_epoch(
             netuid,
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         ));
         step_block(1);
     }
@@ -753,14 +753,14 @@ pub fn register_ok_neuron(
 ) {
     #[cfg(feature = "full-runtime")]
     {
-        let block_number: u64 = SubtensorModule::get_current_block_as_u64();
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let block_number: u64 = GameSolver::get_current_block_as_u64();
+        let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             start_nonce,
             &hotkey_account_id,
         );
-        let result = SubtensorModule::register(
+        let result = GameSolver::register(
             <<Test as frame_system::Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -778,9 +778,9 @@ pub fn register_ok_neuron(
     #[cfg(not(feature = "full-runtime"))]
     {
         let _ = start_nonce;
-        let burn_cost = SubtensorModule::get_burn(netuid);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost.into());
-        let result = SubtensorModule::burned_register(
+        let burn_cost = GameSolver::get_burn(netuid);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost.into());
+        let result = GameSolver::burned_register(
             <<Test as frame_system::Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid,
             hotkey_account_id,
@@ -794,38 +794,38 @@ pub fn register_ok_neuron(
 
 #[allow(dead_code)]
 pub fn add_network(netuid: NetUid, tempo: u16, _modality: u16) {
-    SubtensorModule::init_new_network(netuid, tempo);
-    SubtensorModule::set_network_registration_allowed(netuid, true);
-    SubtensorModule::set_network_pow_registration_allowed(netuid, true);
+    GameSolver::init_new_network(netuid, tempo);
+    GameSolver::set_network_registration_allowed(netuid, true);
+    GameSolver::set_network_pow_registration_allowed(netuid, true);
     FirstEmissionBlockNumber::<Test>::insert(netuid, 1);
     SubtokenEnabled::<Test>::insert(netuid, true);
 }
 
 #[allow(dead_code)]
 pub fn add_network_without_emission_block(netuid: NetUid, tempo: u16, _modality: u16) {
-    SubtensorModule::init_new_network(netuid, tempo);
-    SubtensorModule::set_network_registration_allowed(netuid, true);
-    SubtensorModule::set_network_pow_registration_allowed(netuid, true);
+    GameSolver::init_new_network(netuid, tempo);
+    GameSolver::set_network_registration_allowed(netuid, true);
+    GameSolver::set_network_pow_registration_allowed(netuid, true);
 }
 
 #[allow(dead_code)]
 pub fn add_network_disable_subtoken(netuid: NetUid, tempo: u16, _modality: u16) {
-    SubtensorModule::init_new_network(netuid, tempo);
-    SubtensorModule::set_network_registration_allowed(netuid, true);
-    SubtensorModule::set_network_pow_registration_allowed(netuid, true);
+    GameSolver::init_new_network(netuid, tempo);
+    GameSolver::set_network_registration_allowed(netuid, true);
+    GameSolver::set_network_pow_registration_allowed(netuid, true);
     SubtokenEnabled::<Test>::insert(netuid, false);
 }
 
 #[allow(dead_code)]
 pub fn add_dynamic_network(hotkey: &U256, coldkey: &U256) -> NetUid {
-    let netuid = SubtensorModule::get_next_netuid();
-    let lock_cost = SubtensorModule::get_network_lock_cost();
-    SubtensorModule::add_balance_to_coldkey_account(coldkey, lock_cost.into());
+    let netuid = GameSolver::get_next_netuid();
+    let lock_cost = GameSolver::get_network_lock_cost();
+    GameSolver::add_balance_to_coldkey_account(coldkey, lock_cost.into());
     TotalIssuance::<Test>::mutate(|total_issuance| {
         *total_issuance = total_issuance.saturating_add(lock_cost);
     });
 
-    assert_ok!(SubtensorModule::register_network(
+    assert_ok!(GameSolver::register_network(
         RawOrigin::Signed(*coldkey).into(),
         *hotkey
     ));
@@ -838,14 +838,14 @@ pub fn add_dynamic_network(hotkey: &U256, coldkey: &U256) -> NetUid {
 
 #[allow(dead_code)]
 pub fn add_dynamic_network_without_emission_block(hotkey: &U256, coldkey: &U256) -> NetUid {
-    let netuid = SubtensorModule::get_next_netuid();
-    let lock_cost = SubtensorModule::get_network_lock_cost();
-    SubtensorModule::add_balance_to_coldkey_account(coldkey, lock_cost.into());
+    let netuid = GameSolver::get_next_netuid();
+    let lock_cost = GameSolver::get_network_lock_cost();
+    GameSolver::add_balance_to_coldkey_account(coldkey, lock_cost.into());
     TotalIssuance::<Test>::mutate(|total_issuance| {
         *total_issuance = total_issuance.saturating_add(lock_cost);
     });
 
-    assert_ok!(SubtensorModule::register_network(
+    assert_ok!(GameSolver::register_network(
         RawOrigin::Signed(*coldkey).into(),
         *hotkey
     ));
@@ -857,14 +857,14 @@ pub fn add_dynamic_network_without_emission_block(hotkey: &U256, coldkey: &U256)
 #[allow(dead_code)]
 pub fn add_dynamic_network_disable_commit_reveal(hotkey: &U256, coldkey: &U256) -> NetUid {
     let netuid = add_dynamic_network(hotkey, coldkey);
-    SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+    GameSolver::set_commit_reveal_weights_enabled(netuid, false);
     netuid
 }
 
 #[allow(dead_code)]
 pub fn add_network_disable_commit_reveal(netuid: NetUid, tempo: u16, _modality: u16) {
     add_network(netuid, tempo, _modality);
-    SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+    GameSolver::set_commit_reveal_weights_enabled(netuid, false);
 }
 
 // Helper function to set up a neuron with stake
@@ -885,7 +885,7 @@ pub fn wait_set_pending_children_cooldown(netuid: NetUid) {
 pub fn wait_and_set_pending_children(netuid: NetUid) {
     let original_block = System::block_number();
     wait_set_pending_children_cooldown(netuid);
-    SubtensorModule::do_set_pending_children(netuid);
+    GameSolver::do_set_pending_children(netuid);
     System::set_block_number(original_block);
 }
 
@@ -900,7 +900,7 @@ pub fn mock_schedule_children(
     StakeThreshold::<Test>::put(0);
 
     // Set initial parent-child relationship
-    assert_ok!(SubtensorModule::do_schedule_children(
+    assert_ok!(GameSolver::do_schedule_children(
         RuntimeOrigin::signed(*coldkey),
         *parent,
         netuid,
@@ -916,10 +916,10 @@ pub fn mock_set_children(coldkey: &U256, parent: &U256, netuid: NetUid, child_ve
 
 #[allow(dead_code)]
 pub fn mock_set_children_no_epochs(netuid: NetUid, parent: &U256, child_vec: &[(u64, U256)]) {
-    let backup_block = SubtensorModule::get_current_block_as_u64();
+    let backup_block = GameSolver::get_current_block_as_u64();
     PendingChildKeys::<Test>::insert(netuid, parent, (child_vec, 0));
     System::set_block_number(1);
-    SubtensorModule::do_set_pending_children(netuid);
+    GameSolver::do_set_pending_children(netuid);
     System::set_block_number(backup_block);
 }
 
@@ -942,7 +942,7 @@ pub fn increase_stake_on_coldkey_hotkey_account(
     tao_staked: TaoCurrency,
     netuid: NetUid,
 ) {
-    SubtensorModule::stake_into_subnet(
+    GameSolver::stake_into_subnet(
         hotkey,
         coldkey,
         netuid,
@@ -962,7 +962,7 @@ pub fn increase_stake_on_coldkey_hotkey_account(
 #[allow(dead_code)]
 pub fn increase_stake_on_hotkey_account(hotkey: &U256, increment: TaoCurrency, netuid: NetUid) {
     increase_stake_on_coldkey_hotkey_account(
-        &SubtensorModule::get_owning_coldkey_for_hotkey(hotkey),
+        &GameSolver::get_owning_coldkey_for_hotkey(hotkey),
         hotkey,
         increment,
         netuid,
@@ -1054,11 +1054,11 @@ pub fn assert_last_event<T: frame_system::pallet::Config>(
 
 #[allow(dead_code)]
 pub fn commit_dummy(who: U256, netuid: NetUid) {
-    SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+    GameSolver::set_weights_set_rate_limit(netuid, 0);
 
     // any 32‑byte value is fine; hash is never opened
     let hash = sp_core::H256::from_low_u64_be(0xDEAD_BEEF);
-    assert_ok!(SubtensorModule::do_commit_weights(
+    assert_ok!(GameSolver::do_commit_weights(
         RuntimeOrigin::signed(who),
         netuid,
         hash

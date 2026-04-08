@@ -38,7 +38,7 @@ fn test_do_set_child_singular_success() {
         mock_set_children(&coldkey, &hotkey, netuid, &[(proportion, child)]);
 
         // Verify child assignment
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(proportion, child)]);
     });
 }
@@ -56,7 +56,7 @@ fn test_do_set_child_singular_network_does_not_exist() {
 
         // Attempt to set child
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -83,7 +83,7 @@ fn test_do_set_child_singular_invalid_child() {
 
         // Attempt to set child as the same hotkey
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -113,7 +113,7 @@ fn test_do_set_child_singular_non_associated_coldkey() {
 
         // Attempt to set child
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -140,7 +140,7 @@ fn test_do_set_child_singular_root_network() {
 
         // Attempt to set child
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -182,11 +182,11 @@ fn test_do_set_child_singular_old_children_cleanup() {
         mock_set_children(&coldkey, &hotkey, netuid, &[(proportion, new_child)]);
 
         // Verify old child is removed
-        let old_child_parents = SubtensorModule::get_parents(&old_child, netuid);
+        let old_child_parents = GameSolver::get_parents(&old_child, netuid);
         assert!(old_child_parents.is_empty());
 
         // Verify new child assignment
-        let new_child_parents = SubtensorModule::get_parents(&new_child, netuid);
+        let new_child_parents = GameSolver::get_parents(&new_child, netuid);
         assert_eq!(new_child_parents, vec![(proportion, hotkey)]);
     });
 }
@@ -215,11 +215,11 @@ fn test_do_set_child_singular_new_children_assignment() {
         mock_set_children(&coldkey, &hotkey, netuid, &[(proportion, child)]);
 
         // Verify child assignment
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(proportion, child)]);
 
         // Verify parent assignment
-        let parents = SubtensorModule::get_parents(&child, netuid);
+        let parents = GameSolver::get_parents(&child, netuid);
         assert_eq!(parents, vec![(proportion, hotkey)]);
     });
 }
@@ -248,7 +248,7 @@ fn test_do_set_child_singular_proportion_edge_cases() {
         mock_set_children(&coldkey, &hotkey, netuid, &[(min_proportion, child)]);
 
         // Verify child assignment with minimum proportion
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(min_proportion, child)]);
 
         step_rate_limit(&TransactionType::SetChildren, netuid);
@@ -258,7 +258,7 @@ fn test_do_set_child_singular_proportion_edge_cases() {
         mock_set_children(&coldkey, &hotkey, netuid, &[(max_proportion, child)]);
 
         // Verify child assignment with maximum proportion
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(max_proportion, child)]);
     });
 }
@@ -295,14 +295,14 @@ fn test_do_set_child_singular_multiple_children() {
         mock_set_children(&coldkey, &hotkey, netuid, &[(proportion1, child2)]);
 
         // Verify children assignment
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(proportion2, child2)]);
 
         // Verify parent assignment for both children
-        let parents1 = SubtensorModule::get_parents(&child1, netuid);
+        let parents1 = GameSolver::get_parents(&child1, netuid);
         assert!(parents1.is_empty()); // Old child should be removed
 
-        let parents2 = SubtensorModule::get_parents(&child2, netuid);
+        let parents2 = GameSolver::get_parents(&child2, netuid);
         assert_eq!(parents2, vec![(proportion2, hotkey)]);
     });
 }
@@ -322,7 +322,7 @@ fn test_add_singular_child() {
         let hotkey = U256::from(1);
         let coldkey = U256::from(2);
         assert_eq!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -333,7 +333,7 @@ fn test_add_singular_child() {
         add_network(netuid, 1, 0);
         step_rate_limit(&TransactionType::SetChildren, netuid);
         assert_eq!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -341,10 +341,10 @@ fn test_add_singular_child() {
             ),
             Err(Error::<Test>::NonAssociatedColdKey.into())
         );
-        SubtensorModule::create_account_if_non_existent(&coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey, &hotkey);
         step_rate_limit(&TransactionType::SetChildren, netuid);
         assert_eq!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -381,35 +381,35 @@ fn test_get_stake_for_hotkey_on_subnet() {
         // Set parent-child relationship with 100% stake allocation
         mock_set_children(&coldkey1, &parent, netuid, &[(u64::MAX, child)]);
         // Stake 1000 to parent from coldkey1
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey1,
             netuid,
             1000.into(),
         );
         // Stake 1000 to parent from coldkey2
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey2,
             netuid,
             1000.into(),
         );
         // Stake 1000 to child from coldkey1
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &child,
             &coldkey1,
             netuid,
             1000.into(),
         );
         // Stake 1000 to child from coldkey2
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &child,
             &coldkey2,
             netuid,
             1000.into(),
         );
-        let parent_stake = SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent, netuid);
-        let child_stake = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child, netuid);
+        let parent_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&parent, netuid);
+        let child_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&child, netuid);
         // The parent should have 0 stake as it's all allocated to the child
         assert_eq!(parent_stake, 0.into());
         // The child should have its original stake (2000) plus the parent's stake (2000)
@@ -442,16 +442,16 @@ fn test_do_revoke_child_singular_success() {
         // Set child
         mock_set_children(&coldkey, &hotkey, netuid, &[(proportion, child)]);
         // Verify child assignment
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(proportion, child)]);
         step_rate_limit(&TransactionType::SetChildren, netuid);
         // Revoke child
         mock_set_children(&coldkey, &hotkey, netuid, &[]);
         // Verify child removal
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert!(children.is_empty());
         // Verify parent removal
-        let parents = SubtensorModule::get_parents(&child, netuid);
+        let parents = GameSolver::get_parents(&child, netuid);
         assert!(parents.is_empty());
     });
 }
@@ -466,7 +466,7 @@ fn test_do_set_empty_children_network_does_not_exist() {
         let netuid = NetUid::from(999); // Non-existent network
         // Attempt to revoke child
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -496,7 +496,7 @@ fn test_do_revoke_child_singular_non_associated_coldkey() {
 
         // Attempt to revoke child
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -525,7 +525,7 @@ fn test_do_revoke_child_singular_child_not_associated() {
         add_network(netuid, 13, 0);
         // Attempt to revoke child that is not associated
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -567,14 +567,14 @@ fn test_do_schedule_children_multiple_success() {
         );
 
         // Verify children assignment
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(proportion1, child1), (proportion2, child2)]);
 
         // Verify parent assignment for both children
-        let parents1 = SubtensorModule::get_parents(&child1, netuid);
+        let parents1 = GameSolver::get_parents(&child1, netuid);
         assert_eq!(parents1, vec![(proportion1, hotkey)]);
 
-        let parents2 = SubtensorModule::get_parents(&child2, netuid);
+        let parents2 = GameSolver::get_parents(&child2, netuid);
         assert_eq!(parents2, vec![(proportion2, hotkey)]);
     });
 }
@@ -595,7 +595,7 @@ fn test_do_schedule_children_multiple_network_does_not_exist() {
 
         // Attempt to set children
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -626,7 +626,7 @@ fn test_do_schedule_children_multiple_invalid_child() {
 
         // Attempt to set child as the same hotkey
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -658,7 +658,7 @@ fn test_do_schedule_children_multiple_non_associated_coldkey() {
 
         // Attempt to set children
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -689,7 +689,7 @@ fn test_do_schedule_children_multiple_root_network() {
 
         // Attempt to set children
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -737,14 +737,14 @@ fn test_do_schedule_children_multiple_old_children_cleanup() {
         );
 
         // Verify old child is removed
-        let old_child_parents = SubtensorModule::get_parents(&old_child, netuid);
+        let old_child_parents = GameSolver::get_parents(&old_child, netuid);
         assert!(old_child_parents.is_empty());
 
         // Verify new children assignment
-        let new_child1_parents = SubtensorModule::get_parents(&new_child1, netuid);
+        let new_child1_parents = GameSolver::get_parents(&new_child1, netuid);
         assert_eq!(new_child1_parents, vec![(proportion, hotkey)]);
 
-        let new_child2_parents = SubtensorModule::get_parents(&new_child2, netuid);
+        let new_child2_parents = GameSolver::get_parents(&new_child2, netuid);
         assert_eq!(new_child2_parents, vec![(proportion, hotkey)]);
     });
 }
@@ -779,7 +779,7 @@ fn test_do_schedule_children_multiple_proportion_edge_cases() {
         );
 
         // Verify children assignment
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(
             children,
             vec![(min_proportion, child1), (max_proportion, child2)]
@@ -829,20 +829,20 @@ fn test_do_schedule_children_multiple_overwrite_existing() {
         );
 
         // Verify final children assignment
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(
             children,
             vec![(proportion * 2, child2), (proportion * 3, child3)]
         );
 
         // Verify parent assignment for all children
-        let parents1 = SubtensorModule::get_parents(&child1, netuid);
+        let parents1 = GameSolver::get_parents(&child1, netuid);
         assert!(parents1.is_empty());
 
-        let parents2 = SubtensorModule::get_parents(&child2, netuid);
+        let parents2 = GameSolver::get_parents(&child2, netuid);
         assert_eq!(parents2, vec![(proportion * 2, hotkey)]);
 
-        let parents3 = SubtensorModule::get_parents(&child3, netuid);
+        let parents3 = GameSolver::get_parents(&child3, netuid);
         assert_eq!(parents3, vec![(proportion * 3, hotkey)]);
     });
 }
@@ -868,8 +868,8 @@ fn test_childkey_take_functionality() {
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
         // Test default and max childkey take
-        let default_take = SubtensorModule::get_default_childkey_take();
-        let min_take = SubtensorModule::get_min_childkey_take();
+        let default_take = GameSolver::get_default_childkey_take();
+        let min_take = GameSolver::get_min_childkey_take();
         log::info!("Default take: {default_take}, Max take: {min_take}");
 
         // Check if default take and max take are the same
@@ -885,8 +885,8 @@ fn test_childkey_take_functionality() {
         );
 
         // Test setting childkey take
-        let new_take: u16 = SubtensorModule::get_max_childkey_take() / 2; // 50% of max_take
-        assert_ok!(SubtensorModule::set_childkey_take(
+        let new_take: u16 = GameSolver::get_max_childkey_take() / 2; // 50% of max_take
+        assert_ok!(GameSolver::set_childkey_take(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid,
@@ -894,14 +894,14 @@ fn test_childkey_take_functionality() {
         ));
 
         // Verify childkey take was set correctly
-        let stored_take = SubtensorModule::get_childkey_take(&hotkey, netuid);
+        let stored_take = GameSolver::get_childkey_take(&hotkey, netuid);
         log::info!("Stored take: {stored_take}");
         assert_eq!(stored_take, new_take);
 
         // Test setting childkey take outside of allowed range
-        let invalid_take: u16 = SubtensorModule::get_max_childkey_take() + 1;
+        let invalid_take: u16 = GameSolver::get_max_childkey_take() + 1;
         assert_noop!(
-            SubtensorModule::set_childkey_take(
+            GameSolver::set_childkey_take(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -913,7 +913,7 @@ fn test_childkey_take_functionality() {
         // Test setting childkey take with non-associated coldkey
         let non_associated_coldkey = U256::from(999);
         assert_noop!(
-            SubtensorModule::set_childkey_take(
+            GameSolver::set_childkey_take(
                 RuntimeOrigin::signed(non_associated_coldkey),
                 hotkey,
                 netuid,
@@ -945,7 +945,7 @@ fn test_childkey_take_rate_limiting() {
 
         // Set a rate limit for childkey take changes
         let rate_limit: u64 = 100;
-        SubtensorModule::set_tx_childkey_take_rate_limit(rate_limit);
+        GameSolver::set_tx_childkey_take_rate_limit(rate_limit);
 
         log::info!(
             "Set TxChildkeyTakeRateLimit: {:?}",
@@ -954,7 +954,7 @@ fn test_childkey_take_rate_limiting() {
 
         // Helper function to log rate limit information
         let log_rate_limit_info = || {
-            let current_block = SubtensorModule::get_current_block_as_u64();
+            let current_block = GameSolver::get_current_block_as_u64();
             let last_block = TransactionType::SetChildkeyTake.last_block_on_subnet::<Test>(
                 &hotkey,
                 netuid,
@@ -976,7 +976,7 @@ fn test_childkey_take_rate_limiting() {
 
         // First transaction (should succeed)
         log_rate_limit_info();
-        assert_ok!(SubtensorModule::set_childkey_take(
+        assert_ok!(GameSolver::set_childkey_take(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid,
@@ -987,7 +987,7 @@ fn test_childkey_take_rate_limiting() {
         // Second transaction (should fail due to rate limit)
         log_rate_limit_info();
         assert_noop!(
-            SubtensorModule::set_childkey_take(RuntimeOrigin::signed(coldkey), hotkey, netuid, 600),
+            GameSolver::set_childkey_take(RuntimeOrigin::signed(coldkey), hotkey, netuid, 600),
             Error::<Test>::TxChildkeyTakeRateLimitExceeded
         );
         log_rate_limit_info();
@@ -998,7 +998,7 @@ fn test_childkey_take_rate_limiting() {
         // Third transaction (should still fail)
         log_rate_limit_info();
         assert_noop!(
-            SubtensorModule::set_childkey_take(RuntimeOrigin::signed(coldkey), hotkey, netuid, 650),
+            GameSolver::set_childkey_take(RuntimeOrigin::signed(coldkey), hotkey, netuid, 650),
             Error::<Test>::TxChildkeyTakeRateLimitExceeded
         );
         log_rate_limit_info();
@@ -1008,7 +1008,7 @@ fn test_childkey_take_rate_limiting() {
 
         // Fourth transaction (should succeed)
         log_rate_limit_info();
-        assert_ok!(SubtensorModule::set_childkey_take(
+        assert_ok!(GameSolver::set_childkey_take(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid,
@@ -1017,7 +1017,7 @@ fn test_childkey_take_rate_limiting() {
         log_rate_limit_info();
 
         // Verify the final take was set
-        let stored_take = SubtensorModule::get_childkey_take(&hotkey, netuid);
+        let stored_take = GameSolver::get_childkey_take(&hotkey, netuid);
         assert_eq!(stored_take, 700);
     });
 }
@@ -1048,7 +1048,7 @@ fn test_multiple_networks_childkey_take() {
 
             // Set a unique childkey take value for each network
             let take_value = u16::from(netuid.next()) * 100; // Values will be 200, 300, ..., 1000
-            assert_ok!(SubtensorModule::set_childkey_take(
+            assert_ok!(GameSolver::set_childkey_take(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -1056,7 +1056,7 @@ fn test_multiple_networks_childkey_take() {
             ));
 
             // Verify the childkey take was set correctly
-            let stored_take = SubtensorModule::get_childkey_take(&hotkey, netuid);
+            let stored_take = GameSolver::get_childkey_take(&hotkey, netuid);
             assert_eq!(
                 stored_take, take_value,
                 "Childkey take not set correctly for network {netuid}"
@@ -1069,8 +1069,8 @@ fn test_multiple_networks_childkey_take() {
         // Verify all networks have different childkey take values
         for i in 1..NUM_NETWORKS {
             for j in (i + 1)..NUM_NETWORKS {
-                let take_i = SubtensorModule::get_childkey_take(&hotkey, i.into());
-                let take_j = SubtensorModule::get_childkey_take(&hotkey, j.into());
+                let take_i = GameSolver::get_childkey_take(&hotkey, i.into());
+                let take_j = GameSolver::get_childkey_take(&hotkey, j.into());
                 assert_ne!(
                     take_i, take_j,
                     "Childkey take values should be different for networks {i} and {j}"
@@ -1079,19 +1079,15 @@ fn test_multiple_networks_childkey_take() {
         }
 
         // Attempt to set childkey take again (should fail due to rate limit)
-        let result = SubtensorModule::set_childkey_take(
-            RuntimeOrigin::signed(coldkey),
-            hotkey,
-            1.into(),
-            1100,
-        );
+        let result =
+            GameSolver::set_childkey_take(RuntimeOrigin::signed(coldkey), hotkey, 1.into(), 1100);
         assert_noop!(result, Error::<Test>::TxChildkeyTakeRateLimitExceeded);
 
         // Advance blocks to bypass rate limit
-        run_to_block(SubtensorModule::get_tx_childkey_take_rate_limit() + 1);
+        run_to_block(GameSolver::get_tx_childkey_take_rate_limit() + 1);
 
         // Now setting childkey take should succeed
-        assert_ok!(SubtensorModule::set_childkey_take(
+        assert_ok!(GameSolver::set_childkey_take(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             1.into(),
@@ -1099,7 +1095,7 @@ fn test_multiple_networks_childkey_take() {
         ));
 
         // Verify the new take value
-        let new_take = SubtensorModule::get_childkey_take(&hotkey, 1.into());
+        let new_take = GameSolver::get_childkey_take(&hotkey, 1.into());
         assert_eq!(new_take, 1100, "Childkey take not updated after rate limit");
     });
 }
@@ -1125,7 +1121,7 @@ fn test_do_schedule_children_multiple_empty_list() {
         mock_set_children(&coldkey, &hotkey, netuid, &[]);
 
         // Verify children assignment is empty
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert!(children.is_empty());
     });
 }
@@ -1167,14 +1163,14 @@ fn test_do_revoke_children_multiple_success() {
         mock_set_children(&coldkey, &hotkey, netuid, &[]);
 
         // Verify children removal
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert!(children.is_empty());
 
         // Verify parent removal for both children
-        let parents1 = SubtensorModule::get_parents(&child1, netuid);
+        let parents1 = GameSolver::get_parents(&child1, netuid);
         assert!(parents1.is_empty());
 
-        let parents2 = SubtensorModule::get_parents(&child2, netuid);
+        let parents2 = GameSolver::get_parents(&child2, netuid);
         assert!(parents2.is_empty());
     });
 }
@@ -1194,7 +1190,7 @@ fn test_do_revoke_children_multiple_network_does_not_exist() {
         let netuid = NetUid::from(999); // Non-existent network
         // Attempt to revoke children
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -1226,7 +1222,7 @@ fn test_do_revoke_children_multiple_non_associated_coldkey() {
 
         // Attempt to revoke children
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -1283,15 +1279,15 @@ fn test_do_revoke_children_multiple_partial_revocation() {
         );
 
         // Verify children removal
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(proportion, child1), (proportion, child2)]);
 
         // Verify parents.
-        let parents1 = SubtensorModule::get_parents(&child3, netuid);
+        let parents1 = GameSolver::get_parents(&child3, netuid);
         assert!(parents1.is_empty());
-        let parents1 = SubtensorModule::get_parents(&child1, netuid);
+        let parents1 = GameSolver::get_parents(&child1, netuid);
         assert_eq!(parents1, vec![(proportion, hotkey)]);
-        let parents2 = SubtensorModule::get_parents(&child2, netuid);
+        let parents2 = GameSolver::get_parents(&child2, netuid);
         assert_eq!(parents2, vec![(proportion, hotkey)]);
     });
 }
@@ -1326,11 +1322,11 @@ fn test_do_revoke_children_multiple_non_existent_children() {
         mock_set_children(&coldkey, &hotkey, netuid, &[]);
 
         // Verify all children are removed
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert!(children.is_empty());
 
         // Verify parent removal for the existing child
-        let parents1 = SubtensorModule::get_parents(&child1, netuid);
+        let parents1 = GameSolver::get_parents(&child1, netuid);
         assert!(parents1.is_empty());
     });
 }
@@ -1356,7 +1352,7 @@ fn test_do_revoke_children_multiple_empty_list() {
         mock_set_children(&coldkey, &hotkey, netuid, &[]);
 
         // Verify no changes in children
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert!(children.is_empty());
     });
 }
@@ -1409,11 +1405,11 @@ fn test_do_revoke_children_multiple_complex_scenario() {
         );
 
         // Verify remaining children
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(proportion1, child1), (proportion3, child3)]);
 
         // Verify parent removal for child2
-        let parents2 = SubtensorModule::get_parents(&child2, netuid);
+        let parents2 = GameSolver::get_parents(&child2, netuid);
         assert!(parents2.is_empty());
 
         step_rate_limit(&TransactionType::SetChildren, netuid);
@@ -1422,13 +1418,13 @@ fn test_do_revoke_children_multiple_complex_scenario() {
         mock_set_children(&coldkey, &hotkey, netuid, &[]);
 
         // Verify all children are removed
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert!(children.is_empty());
 
         // Verify parent removal for all children
-        let parents1 = SubtensorModule::get_parents(&child1, netuid);
+        let parents1 = GameSolver::get_parents(&child1, netuid);
         assert!(parents1.is_empty());
-        let parents3 = SubtensorModule::get_parents(&child3, netuid);
+        let parents3 = GameSolver::get_parents(&child3, netuid);
         assert!(parents3.is_empty());
     });
 }
@@ -1458,13 +1454,13 @@ fn test_children_stake_values() {
         let proportion3: u64 = u64::MAX / 4;
 
         // Add network and register hotkey
-        SubtensorModule::set_max_registrations_per_block(netuid, 4);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 4);
+        GameSolver::set_max_registrations_per_block(netuid, 4);
+        GameSolver::set_target_registrations_per_interval(netuid, 4);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         register_ok_neuron(netuid, child1, coldkey, 0);
         register_ok_neuron(netuid, child2, coldkey, 0);
         register_ok_neuron(netuid, child3, coldkey, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -1483,26 +1479,26 @@ fn test_children_stake_values() {
         );
 
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&hotkey, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&hotkey, netuid),
             25_000_000_069_849.into()
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&child1, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&child1, netuid),
             24_999_999_976_716.into()
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&child2, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&child2, netuid),
             24_999_999_976_716.into()
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&child3, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&child3, netuid),
             24_999_999_976_716.into()
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&child3, netuid)
-                + SubtensorModule::get_inherited_for_hotkey_on_subnet(&child2, netuid)
-                + SubtensorModule::get_inherited_for_hotkey_on_subnet(&child1, netuid)
-                + SubtensorModule::get_inherited_for_hotkey_on_subnet(&hotkey, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&child3, netuid)
+                + GameSolver::get_inherited_for_hotkey_on_subnet(&child2, netuid)
+                + GameSolver::get_inherited_for_hotkey_on_subnet(&child1, netuid)
+                + GameSolver::get_inherited_for_hotkey_on_subnet(&hotkey, netuid),
             99999999999997.into()
         );
     });
@@ -1534,8 +1530,8 @@ fn test_get_parents_chain() {
 
         // Add network
         add_network(netuid, 13, 0);
-        SubtensorModule::set_max_registrations_per_block(netuid, 1000);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 1000);
+        GameSolver::set_max_registrations_per_block(netuid, 1000);
+        GameSolver::set_target_registrations_per_interval(netuid, 1000);
         log::info!("Network added and parameters set: netuid={netuid}");
 
         // Register all neurons
@@ -1566,7 +1562,7 @@ fn test_get_parents_chain() {
 
         // Test get_parents for each hotkey
         for i in 1..num_keys {
-            let parents = SubtensorModule::get_parents(&hotkeys[i], netuid);
+            let parents = GameSolver::get_parents(&hotkeys[i], netuid);
             log::info!(
                 "Testing get_parents for hotkey {}: {:?}",
                 hotkeys[i],
@@ -1585,7 +1581,7 @@ fn test_get_parents_chain() {
         }
 
         // Test get_parents for the root (should be empty)
-        let root_parents = SubtensorModule::get_parents(&hotkeys[0], netuid);
+        let root_parents = GameSolver::get_parents(&hotkeys[0], netuid);
         log::info!(
             "Testing get_parents for root hotkey {}: {:?}",
             hotkeys[0],
@@ -1600,7 +1596,7 @@ fn test_get_parents_chain() {
         let last_hotkey = hotkeys[num_keys - 1];
         let new_parent = U256::from(num_keys as u64 + 2);
         // Set reg diff back down (adjusted from last block steps)
-        SubtensorModule::set_difficulty(netuid, 1);
+        GameSolver::set_difficulty(netuid, 1);
         register_ok_neuron(netuid, new_parent, coldkey, 99 * 2);
         log::info!(
             "Registered new parent neuron: new_parent={new_parent}, coldkey={coldkey}, netuid={netuid}"
@@ -1620,7 +1616,7 @@ fn test_get_parents_chain() {
             proportion / 2
         );
 
-        let last_hotkey_parents = SubtensorModule::get_parents(&last_hotkey, netuid);
+        let last_hotkey_parents = GameSolver::get_parents(&last_hotkey, netuid);
         log::info!(
             "Testing get_parents for last hotkey {last_hotkey} with multiple parents: {last_hotkey_parents:?}"
         );
@@ -1655,14 +1651,14 @@ fn test_get_stake_for_hotkey_on_subnet_basic() {
 
         add_network(netuid, 1, 0);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
             1000.into(),
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&hotkey, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&hotkey, netuid),
             1000.into()
         );
     });
@@ -1685,13 +1681,13 @@ fn test_get_stake_for_hotkey_on_subnet_multiple_coldkeys() {
         add_network(netuid, 1, 0);
         register_ok_neuron(netuid, hotkey, coldkey1, 0);
 
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey1,
             netuid,
             1000.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey2,
             netuid,
@@ -1699,7 +1695,7 @@ fn test_get_stake_for_hotkey_on_subnet_multiple_coldkeys() {
         );
 
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&hotkey, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&hotkey, netuid),
             3000.into()
         );
     });
@@ -1725,7 +1721,7 @@ fn test_get_stake_for_hotkey_on_subnet_single_parent_child() {
         register_ok_neuron(netuid, parent, coldkey, 0);
         register_ok_neuron(netuid, child, coldkey, 0);
 
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -1735,11 +1731,11 @@ fn test_get_stake_for_hotkey_on_subnet_single_parent_child() {
         mock_set_children_no_epochs(netuid, &parent, &[(u64::MAX, child)]);
 
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&parent, netuid),
             0.into()
         );
         assert_eq!(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&child, netuid),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&child, netuid),
             1_000_000_000.into()
         );
     });
@@ -1769,13 +1765,13 @@ fn test_get_stake_for_hotkey_on_subnet_multiple_parents_single_child() {
         register_ok_neuron(netuid, parent2, coldkey, 0);
         register_ok_neuron(netuid, child, coldkey, 0);
 
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent1,
             &coldkey,
             netuid,
             1000.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent2,
             &coldkey,
             netuid,
@@ -1786,19 +1782,19 @@ fn test_get_stake_for_hotkey_on_subnet_multiple_parents_single_child() {
         mock_set_children_no_epochs(netuid, &parent2, &[(u64::MAX / 2, child)]);
 
         close(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent1, netuid).into(),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&parent1, netuid).into(),
             500,
             10,
             "Incorrect inherited stake for parent1",
         );
         close(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent2, netuid).into(),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&parent2, netuid).into(),
             1000,
             10,
             "Incorrect inherited stake for parent2",
         );
         close(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&child, netuid).into(),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&child, netuid).into(),
             1499,
             10,
             "Incorrect inherited stake for child",
@@ -1831,7 +1827,7 @@ fn test_get_stake_for_hotkey_on_subnet_single_parent_multiple_children() {
         register_ok_neuron(netuid, child2, coldkey, 0);
 
         let total_stake = 3000.into();
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -1844,9 +1840,9 @@ fn test_get_stake_for_hotkey_on_subnet_single_parent_multiple_children() {
             &[(u64::MAX / 3, child1), (u64::MAX / 3, child2)],
         );
 
-        let parent_stake = SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent, netuid);
-        let child1_stake = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child1, netuid);
-        let child2_stake = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child2, netuid);
+        let parent_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&parent, netuid);
+        let child1_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&child1, netuid);
+        let child2_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&child2, netuid);
 
         // Check that the total stake is preserved
         close(
@@ -1898,7 +1894,7 @@ fn test_get_stake_for_hotkey_on_subnet_edge_cases() {
         let network_max_stake = 600_000_000_000_000.into();
 
         // Increase stake to the network max
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -1908,9 +1904,9 @@ fn test_get_stake_for_hotkey_on_subnet_edge_cases() {
         // Test with 0% and 100% stake allocation
         mock_set_children_no_epochs(netuid, &parent, &[(0, child1), (u64::MAX, child2)]);
 
-        let parent_stake = SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent, netuid);
-        let child1_stake = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child1, netuid);
-        let child2_stake = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child2, netuid);
+        let parent_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&parent, netuid);
+        let child1_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&child1, netuid);
+        let child2_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&child2, netuid);
 
         log::info!("Parent stake: {parent_stake}");
         log::info!("Child1 stake: {child1_stake}");
@@ -1958,15 +1954,15 @@ fn test_get_stake_for_hotkey_on_subnet_complex_hierarchy() {
         let coldkey_child2 = U256::from(7);
         let coldkey_grandchild = U256::from(8);
 
-        SubtensorModule::set_max_registrations_per_block(netuid, 1000);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 1000);
+        GameSolver::set_max_registrations_per_block(netuid, 1000);
+        GameSolver::set_target_registrations_per_interval(netuid, 1000);
         register_ok_neuron(netuid, parent, coldkey_parent, 0);
         register_ok_neuron(netuid, child1, coldkey_child1, 0);
         register_ok_neuron(netuid, child2, coldkey_child2, 0);
         register_ok_neuron(netuid, grandchild, coldkey_grandchild, 0);
 
         let total_stake = 1000.into();
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey_parent,
             netuid,
@@ -1976,19 +1972,19 @@ fn test_get_stake_for_hotkey_on_subnet_complex_hierarchy() {
         log::info!("Initial stakes:");
         log::info!(
             "Parent stake: {}",
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent, netuid)
+            GameSolver::get_inherited_for_hotkey_on_subnet(&parent, netuid)
         );
         log::info!(
             "Child1 stake: {}",
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&child1, netuid)
+            GameSolver::get_inherited_for_hotkey_on_subnet(&child1, netuid)
         );
         log::info!(
             "Child2 stake: {}",
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&child2, netuid)
+            GameSolver::get_inherited_for_hotkey_on_subnet(&child2, netuid)
         );
         log::info!(
             "Grandchild stake: {}",
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&grandchild, netuid)
+            GameSolver::get_inherited_for_hotkey_on_subnet(&grandchild, netuid)
         );
 
         // Step 1: Set children for parent
@@ -2001,20 +1997,20 @@ fn test_get_stake_for_hotkey_on_subnet_complex_hierarchy() {
         log::info!("After setting parent's children:");
         log::info!(
             "Parent's children: {:?}",
-            SubtensorModule::get_children(&parent, netuid)
+            GameSolver::get_children(&parent, netuid)
         );
         log::info!(
             "Child1's parents: {:?}",
-            SubtensorModule::get_parents(&child1, netuid)
+            GameSolver::get_parents(&child1, netuid)
         );
         log::info!(
             "Child2's parents: {:?}",
-            SubtensorModule::get_parents(&child2, netuid)
+            GameSolver::get_parents(&child2, netuid)
         );
 
-        let parent_stake_1 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent, netuid);
-        let child1_stake_1 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child1, netuid);
-        let child2_stake_1 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child2, netuid);
+        let parent_stake_1 = GameSolver::get_inherited_for_hotkey_on_subnet(&parent, netuid);
+        let child1_stake_1 = GameSolver::get_inherited_for_hotkey_on_subnet(&child1, netuid);
+        let child2_stake_1 = GameSolver::get_inherited_for_hotkey_on_subnet(&child2, netuid);
 
         log::info!("Parent stake: {parent_stake_1}");
         log::info!("Child1 stake: {child1_stake_1}");
@@ -2044,18 +2040,17 @@ fn test_get_stake_for_hotkey_on_subnet_complex_hierarchy() {
         log::info!("After setting child1's children:");
         log::info!(
             "Child1's children: {:?}",
-            SubtensorModule::get_children(&child1, netuid)
+            GameSolver::get_children(&child1, netuid)
         );
         log::info!(
             "Grandchild's parents: {:?}",
-            SubtensorModule::get_parents(&grandchild, netuid)
+            GameSolver::get_parents(&grandchild, netuid)
         );
 
-        let parent_stake_2 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent, netuid);
-        let child1_stake_2 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child1, netuid);
-        let child2_stake_2 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child2, netuid);
-        let grandchild_stake =
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&grandchild, netuid);
+        let parent_stake_2 = GameSolver::get_inherited_for_hotkey_on_subnet(&parent, netuid);
+        let child1_stake_2 = GameSolver::get_inherited_for_hotkey_on_subnet(&child1, netuid);
+        let child2_stake_2 = GameSolver::get_inherited_for_hotkey_on_subnet(&child2, netuid);
+        let grandchild_stake = GameSolver::get_inherited_for_hotkey_on_subnet(&grandchild, netuid);
 
         log::info!("Parent stake: {parent_stake_2}");
         log::info!("Child1 stake: {child1_stake_2}");
@@ -2094,48 +2089,48 @@ fn test_get_stake_for_hotkey_on_subnet_complex_hierarchy() {
         log::info!("Final parent-child relationships:");
         log::info!(
             "Parent's children: {:?}",
-            SubtensorModule::get_children(&parent, netuid)
+            GameSolver::get_children(&parent, netuid)
         );
         log::info!(
             "Child1's parents: {:?}",
-            SubtensorModule::get_parents(&child1, netuid)
+            GameSolver::get_parents(&child1, netuid)
         );
         log::info!(
             "Child2's parents: {:?}",
-            SubtensorModule::get_parents(&child2, netuid)
+            GameSolver::get_parents(&child2, netuid)
         );
         log::info!(
             "Child1's children: {:?}",
-            SubtensorModule::get_children(&child1, netuid)
+            GameSolver::get_children(&child1, netuid)
         );
         log::info!(
             "Grandchild's parents: {:?}",
-            SubtensorModule::get_parents(&grandchild, netuid)
+            GameSolver::get_parents(&grandchild, netuid)
         );
 
         // Check if the parent-child relationships are correct
         assert_eq!(
-            SubtensorModule::get_children(&parent, netuid),
+            GameSolver::get_children(&parent, netuid),
             vec![(u64::MAX / 2, child1), (u64::MAX / 2, child2)],
             "Parent should have both children"
         );
         assert_eq!(
-            SubtensorModule::get_parents(&child1, netuid),
+            GameSolver::get_parents(&child1, netuid),
             vec![(u64::MAX / 2, parent)],
             "Child1 should have parent as its parent"
         );
         assert_eq!(
-            SubtensorModule::get_parents(&child2, netuid),
+            GameSolver::get_parents(&child2, netuid),
             vec![(u64::MAX / 2, parent)],
             "Child2 should have parent as its parent"
         );
         assert_eq!(
-            SubtensorModule::get_children(&child1, netuid),
+            GameSolver::get_children(&child1, netuid),
             vec![(u64::MAX, grandchild)],
             "Child1 should have grandchild as its child"
         );
         assert_eq!(
-            SubtensorModule::get_parents(&grandchild, netuid),
+            GameSolver::get_parents(&grandchild, netuid),
             vec![(u64::MAX, child1)],
             "Grandchild should have child1 as its parent"
         );
@@ -2162,7 +2157,7 @@ fn test_get_stake_for_hotkey_on_subnet_multiple_networks() {
         register_ok_neuron(netuid1, hotkey, coldkey, 0);
         register_ok_neuron(netuid2, hotkey, coldkey, 0);
 
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid1,
@@ -2170,13 +2165,13 @@ fn test_get_stake_for_hotkey_on_subnet_multiple_networks() {
         );
 
         close(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&hotkey, netuid1).into(),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&hotkey, netuid1).into(),
             1000,
             10,
             "Stake on network 1 incorrect",
         );
         close(
-            SubtensorModule::get_inherited_for_hotkey_on_subnet(&hotkey, netuid2).into(),
+            GameSolver::get_inherited_for_hotkey_on_subnet(&hotkey, netuid2).into(),
             0,
             10,
             "Stake on network 2 incorrect",
@@ -2202,7 +2197,7 @@ fn test_do_set_child_below_min_stake() {
 
         // Attempt to set child
         assert_err!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -2233,7 +2228,7 @@ fn test_do_remove_stake_clears_pending_childkeys() {
         // Add network and register hotkey
         add_network(netuid, 13, 0);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, 10_000_000_000_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, 10_000_000_000_000);
 
         let reserve = 1_000_000_000_000_000;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
@@ -2241,7 +2236,7 @@ fn test_do_remove_stake_clears_pending_childkeys() {
         // Set non-default value for childkey stake threshold
         StakeThreshold::<Test>::set(1_000_000_000_000);
 
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid,
@@ -2249,7 +2244,7 @@ fn test_do_remove_stake_clears_pending_childkeys() {
         ));
 
         let alpha =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &coldkey, netuid);
 
         println!(
             "StakeThreshold::<Test>::get() = {:?}",
@@ -2258,7 +2253,7 @@ fn test_do_remove_stake_clears_pending_childkeys() {
         println!("alpha                         = {alpha:?}");
 
         // Attempt to set child
-        assert_ok!(SubtensorModule::do_schedule_children(
+        assert_ok!(GameSolver::do_schedule_children(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid,
@@ -2272,7 +2267,7 @@ fn test_do_remove_stake_clears_pending_childkeys() {
 
         // Remove stake
         remove_stake_rate_limit_for_tests(&hotkey, &coldkey, netuid);
-        assert_ok!(SubtensorModule::do_remove_stake(
+        assert_ok!(GameSolver::do_remove_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid,
@@ -2309,7 +2304,7 @@ fn test_do_set_child_cooldown_period() {
         register_ok_neuron(netuid, parent, coldkey, 0);
 
         // Set minimum stake for setting children
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -2317,7 +2312,7 @@ fn test_do_set_child_cooldown_period() {
         );
 
         // Schedule parent-child relationship
-        assert_ok!(SubtensorModule::do_schedule_children(
+        assert_ok!(GameSolver::do_schedule_children(
             RuntimeOrigin::signed(coldkey),
             parent,
             netuid,
@@ -2325,7 +2320,7 @@ fn test_do_set_child_cooldown_period() {
         ));
 
         // Ensure the childkeys are not yet applied
-        let children_before = SubtensorModule::get_children(&parent, netuid);
+        let children_before = GameSolver::get_children(&parent, netuid);
         close(
             children_before.len() as u64,
             0,
@@ -2334,7 +2329,7 @@ fn test_do_set_child_cooldown_period() {
         );
 
         wait_and_set_pending_children(netuid);
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -2342,7 +2337,7 @@ fn test_do_set_child_cooldown_period() {
         );
 
         // Verify child assignment
-        let children_after = SubtensorModule::get_children(&parent, netuid);
+        let children_after = GameSolver::get_children(&parent, netuid);
         close(
             children_after.len() as u64,
             1,
@@ -2382,7 +2377,7 @@ fn test_do_set_pending_children_runs_in_epoch() {
         register_ok_neuron(netuid, parent, coldkey, 0);
 
         // Set minimum stake for setting children
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -2390,7 +2385,7 @@ fn test_do_set_pending_children_runs_in_epoch() {
         );
 
         // Schedule parent-child relationship
-        assert_ok!(SubtensorModule::do_schedule_children(
+        assert_ok!(GameSolver::do_schedule_children(
             RuntimeOrigin::signed(coldkey),
             parent,
             netuid,
@@ -2398,7 +2393,7 @@ fn test_do_set_pending_children_runs_in_epoch() {
         ));
 
         // Ensure the childkeys are not yet applied
-        let children_before = SubtensorModule::get_children(&parent, netuid);
+        let children_before = GameSolver::get_children(&parent, netuid);
         close(
             children_before.len() as u64,
             0,
@@ -2409,7 +2404,7 @@ fn test_do_set_pending_children_runs_in_epoch() {
         wait_set_pending_children_cooldown(netuid);
 
         // Verify child assignment
-        let children_after = SubtensorModule::get_children(&parent, netuid);
+        let children_after = GameSolver::get_children(&parent, netuid);
         close(
             children_after.len() as u64,
             1,
@@ -2455,7 +2450,7 @@ fn test_revoke_child_no_min_stake_check() {
         StakeThreshold::<Test>::put(1_000_000_000_000);
 
         let (_, fee) = mock::swap_tao_to_alpha(NetUid::ROOT, StakeThreshold::<Test>::get().into());
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             NetUid::ROOT,
@@ -2463,7 +2458,7 @@ fn test_revoke_child_no_min_stake_check() {
         );
 
         // Schedule parent-child relationship
-        assert_ok!(SubtensorModule::do_schedule_children(
+        assert_ok!(GameSolver::do_schedule_children(
             RuntimeOrigin::signed(coldkey),
             parent,
             netuid,
@@ -2471,11 +2466,11 @@ fn test_revoke_child_no_min_stake_check() {
         ));
 
         // Ensure the childkeys are not yet applied
-        let children_before = SubtensorModule::get_children(&parent, netuid);
+        let children_before = GameSolver::get_children(&parent, netuid);
         assert_eq!(children_before, vec![]);
 
         wait_and_set_pending_children(netuid);
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             NetUid::ROOT,
@@ -2483,14 +2478,14 @@ fn test_revoke_child_no_min_stake_check() {
         );
 
         // Ensure the childkeys are applied
-        let children_after = SubtensorModule::get_children(&parent, netuid);
+        let children_after = GameSolver::get_children(&parent, netuid);
         assert_eq!(children_after, vec![(proportion, child)]);
 
         // Bypass tx rate limit
         TransactionType::SetChildren.set_last_block_on_subnet::<Test>(&parent, netuid, 0);
 
         // Schedule parent-child relationship revokation
-        assert_ok!(SubtensorModule::do_schedule_children(
+        assert_ok!(GameSolver::do_schedule_children(
             RuntimeOrigin::signed(coldkey),
             parent,
             netuid,
@@ -2500,7 +2495,7 @@ fn test_revoke_child_no_min_stake_check() {
         wait_and_set_pending_children(netuid);
 
         // Ensure the childkeys are revoked
-        let children_after = SubtensorModule::get_children(&parent, netuid);
+        let children_after = GameSolver::get_children(&parent, netuid);
         assert_eq!(children_after, vec![]);
     });
 }
@@ -2526,7 +2521,7 @@ fn test_do_set_child_registration_disabled() {
         // Set minimum stake for setting children
         StakeThreshold::<Test>::put(1_000_000_000_000);
         let (_, fee) = mock::swap_tao_to_alpha(netuid, StakeThreshold::<Test>::get().into());
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -2537,7 +2532,7 @@ fn test_do_set_child_registration_disabled() {
         NetworkRegistrationAllowed::<Test>::insert(netuid, false);
 
         // Schedule parent-child relationship
-        assert_ok!(SubtensorModule::do_schedule_children(
+        assert_ok!(GameSolver::do_schedule_children(
             RuntimeOrigin::signed(coldkey),
             parent,
             netuid,
@@ -2545,7 +2540,7 @@ fn test_do_set_child_registration_disabled() {
         ));
 
         wait_and_set_pending_children(netuid);
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey,
             netuid,
@@ -2553,7 +2548,7 @@ fn test_do_set_child_registration_disabled() {
         );
 
         // Ensure the childkeys are applied
-        let children_after = SubtensorModule::get_children(&parent, netuid);
+        let children_after = GameSolver::get_children(&parent, netuid);
         assert_eq!(children_after, vec![(proportion, child)]);
     });
 }
@@ -2587,7 +2582,7 @@ fn test_set_children_rate_limit_fail_then_succeed() {
 
         // Immediate second transaction should fail due to rate limit
         assert_noop!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 hotkey,
                 netuid,
@@ -2597,7 +2592,7 @@ fn test_set_children_rate_limit_fail_then_succeed() {
         );
 
         // Verify first children assignment remains
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(100, child)]);
 
         // Try again after rate limit period has passed
@@ -2614,7 +2609,7 @@ fn test_set_children_rate_limit_fail_then_succeed() {
         mock_set_children(&coldkey, &hotkey, netuid, &[(100, child2)]);
 
         // Verify children assignment has changed
-        let children = SubtensorModule::get_children(&hotkey, netuid);
+        let children = GameSolver::get_children(&hotkey, netuid);
         assert_eq!(children, vec![(100, child2)]);
     });
 }
@@ -2642,29 +2637,29 @@ fn test_childkey_set_weights_single_parent() {
         let stake_to_give_child = 109_999;
 
         // Register parent with minimal stake and child with high stake
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_parent, 1);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_child, stake_to_give_child + 10);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_weight_setter, 1_000_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_parent, 1);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_child, stake_to_give_child + 10);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_weight_setter, 1_000_000);
 
         // Add neurons for parent, child and weight_setter
         register_ok_neuron(netuid, parent, coldkey_parent, 1);
         register_ok_neuron(netuid, child, coldkey_child, 1);
         register_ok_neuron(netuid, weight_setter, coldkey_weight_setter, 1);
 
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey_parent,
             netuid,
             stake_to_give_child.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &weight_setter,
             &coldkey_weight_setter,
             netuid,
             1_000_000.into(),
         );
 
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         // Set parent-child relationship
         mock_set_children_no_epochs(netuid, &parent, &[(u64::MAX, child)]);
@@ -2673,9 +2668,9 @@ fn test_childkey_set_weights_single_parent() {
         let origin = RuntimeOrigin::signed(weight_setter);
         let uids: Vec<u16> = vec![1]; // Only set weight for the child (UID 1)
         let values: Vec<u16> = vec![u16::MAX]; // Use maximum value for u16
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
         ValidatorPermit::<Test>::insert(netuid, vec![true, true, true, true]);
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             origin,
             netuid,
             uids.clone(),
@@ -2684,17 +2679,17 @@ fn test_childkey_set_weights_single_parent() {
         ));
 
         // Set the min stake very high
-        SubtensorModule::set_stake_threshold(stake_to_give_child * 5);
+        GameSolver::set_stake_threshold(stake_to_give_child * 5);
 
         // Check the child has less stake than required
         assert!(
-            SubtensorModule::get_stake_weights_for_hotkey_on_subnet(&child, netuid).0
-                < SubtensorModule::get_stake_threshold()
+            GameSolver::get_stake_weights_for_hotkey_on_subnet(&child, netuid).0
+                < GameSolver::get_stake_threshold()
         );
 
         // Check the child cannot set weights
         assert_noop!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(child),
                 netuid,
                 uids.clone(),
@@ -2704,19 +2699,19 @@ fn test_childkey_set_weights_single_parent() {
             Error::<Test>::NotEnoughStakeToSetWeights
         );
 
-        assert!(!SubtensorModule::check_weights_min_stake(&child, netuid));
+        assert!(!GameSolver::check_weights_min_stake(&child, netuid));
 
         // Set a minimum stake to set weights
-        SubtensorModule::set_stake_threshold(stake_to_give_child - 5);
+        GameSolver::set_stake_threshold(stake_to_give_child - 5);
 
         // Check if the stake for the child is above
         assert!(
-            SubtensorModule::get_stake_weights_for_hotkey_on_subnet(&child, netuid).0
-                >= SubtensorModule::get_stake_threshold()
+            GameSolver::get_stake_weights_for_hotkey_on_subnet(&child, netuid).0
+                >= GameSolver::get_stake_threshold()
         );
 
         // Check the child can set weights
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(child),
             netuid,
             uids,
@@ -2724,7 +2719,7 @@ fn test_childkey_set_weights_single_parent() {
             version_key
         ));
 
-        assert!(SubtensorModule::check_weights_min_stake(&child, netuid));
+        assert!(GameSolver::check_weights_min_stake(&child, netuid));
     });
 }
 
@@ -2746,41 +2741,41 @@ fn test_set_weights_no_parent() {
 
         let stake_to_give_child = 109_999;
 
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, stake_to_give_child + 10);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, stake_to_give_child + 10);
 
         // Is registered
         register_ok_neuron(netuid, hotkey, coldkey, 1);
         // Register a spare key
         register_ok_neuron(netuid, spare_hk, spare_ck, 1);
 
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
             stake_to_give_child.into(),
         );
 
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         // Has stake and no parent
         step_block(7200 + 1);
 
         let uids: Vec<u16> = vec![1]; // Set weights on the other hotkey
         let values: Vec<u16> = vec![u16::MAX]; // Use maximum value for u16
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
 
         // Check the stake weight
         let curr_stake_weight =
-            SubtensorModule::get_stake_weights_for_hotkey_on_subnet(&hotkey, netuid).0;
+            GameSolver::get_stake_weights_for_hotkey_on_subnet(&hotkey, netuid).0;
 
         // Set the min stake very high, above the stake weight of the key
-        SubtensorModule::set_stake_threshold(
+        GameSolver::set_stake_threshold(
             curr_stake_weight
                 .saturating_mul(I64F64::saturating_from_num(5))
                 .saturating_to_num::<u64>(),
         );
 
-        let curr_stake_threshold = SubtensorModule::get_stake_threshold();
+        let curr_stake_threshold = GameSolver::get_stake_threshold();
         assert!(
             curr_stake_weight < curr_stake_threshold,
             "{curr_stake_weight:?} is not less than {curr_stake_threshold:?} "
@@ -2788,7 +2783,7 @@ fn test_set_weights_no_parent() {
 
         // Check the hotkey cannot set weights
         assert_noop!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2798,24 +2793,22 @@ fn test_set_weights_no_parent() {
             Error::<Test>::NotEnoughStakeToSetWeights
         );
 
-        assert!(!SubtensorModule::check_weights_min_stake(&hotkey, netuid));
+        assert!(!GameSolver::check_weights_min_stake(&hotkey, netuid));
 
         // Set a minimum stake to set weights
-        SubtensorModule::set_stake_threshold(
-            (curr_stake_weight - I64F64::from_num(5)).to_num::<u64>(),
-        );
+        GameSolver::set_stake_threshold((curr_stake_weight - I64F64::from_num(5)).to_num::<u64>());
 
         // Check if the stake for the hotkey is above
         let new_stake_weight =
-            SubtensorModule::get_stake_weights_for_hotkey_on_subnet(&hotkey, netuid).0;
-        let new_stake_threshold = SubtensorModule::get_stake_threshold();
+            GameSolver::get_stake_weights_for_hotkey_on_subnet(&hotkey, netuid).0;
+        let new_stake_threshold = GameSolver::get_stake_threshold();
         assert!(
             new_stake_weight >= new_stake_threshold,
             "{new_stake_weight:?} is not greater than or equal to {new_stake_threshold:?} "
         );
 
         // Check the hotkey can set weights
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids,
@@ -2823,7 +2816,7 @@ fn test_set_weights_no_parent() {
             version_key
         ));
 
-        assert!(SubtensorModule::check_weights_min_stake(&hotkey, netuid));
+        assert!(GameSolver::check_weights_min_stake(&hotkey, netuid));
     });
 }
 
@@ -2850,21 +2843,21 @@ fn test_childkey_take_drain() {
 
             // Add network, register hotkeys, and setup network parameters
             add_network(netuid, subnet_tempo, 0);
-            SubtensorModule::set_ck_burn(0);
+            GameSolver::set_ck_burn(0);
             mock::setup_reserves(netuid, (stake * 10_000).into(), (stake * 10_000).into());
             register_ok_neuron(netuid, child_hotkey, child_coldkey, 0);
             register_ok_neuron(netuid, parent_hotkey, parent_coldkey, 1);
             register_ok_neuron(netuid, miner_hotkey, miner_coldkey, 1);
-            SubtensorModule::add_balance_to_coldkey_account(
+            GameSolver::add_balance_to_coldkey_account(
                 &parent_coldkey,
                 stake + ExistentialDeposit::get(),
             );
-            SubtensorModule::add_balance_to_coldkey_account(
+            GameSolver::add_balance_to_coldkey_account(
                 &nominator,
                 stake + ExistentialDeposit::get(),
             );
-            SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-            SubtensorModule::set_max_allowed_validators(netuid, 2);
+            GameSolver::set_weights_set_rate_limit(netuid, 0);
+            GameSolver::set_max_allowed_validators(netuid, 2);
             step_block(subnet_tempo);
             SubnetOwnerCut::<Test>::set(0);
 
@@ -2873,8 +2866,8 @@ fn test_childkey_take_drain() {
 
             // Set 20% childkey take
             let max_take: u16 = 0xFFFF / 5;
-            SubtensorModule::set_max_childkey_take(max_take);
-            assert_ok!(SubtensorModule::set_childkey_take(
+            GameSolver::set_max_childkey_take(max_take);
+            assert_ok!(GameSolver::set_childkey_take(
                 RuntimeOrigin::signed(child_coldkey),
                 child_hotkey,
                 netuid,
@@ -2882,7 +2875,7 @@ fn test_childkey_take_drain() {
             ));
 
             // Set hotkey take for parent
-            SubtensorModule::set_max_delegate_take(*parent_hotkey_take);
+            GameSolver::set_max_delegate_take(*parent_hotkey_take);
             Delegates::<Test>::insert(parent_hotkey, *parent_hotkey_take);
 
             // Set 0% for childkey-as-a-delegate take
@@ -2892,13 +2885,13 @@ fn test_childkey_take_drain() {
             //   Stake from parent
             //   Stake from nominator to childkey
             //   Parent gives 50% of stake to childkey
-            assert_ok!(SubtensorModule::add_stake(
+            assert_ok!(GameSolver::add_stake(
                 RuntimeOrigin::signed(parent_coldkey),
                 parent_hotkey,
                 netuid,
                 stake.into()
             ));
-            assert_ok!(SubtensorModule::add_stake(
+            assert_ok!(GameSolver::add_stake(
                 RuntimeOrigin::signed(nominator),
                 child_hotkey,
                 netuid,
@@ -2917,9 +2910,9 @@ fn test_childkey_take_drain() {
             ValidatorPermit::<Test>::insert(netuid, vec![true, true, false]);
 
             // Run run_coinbase to hit subnet epoch
-            let child_stake_before = SubtensorModule::get_total_stake_for_coldkey(&child_coldkey);
-            let parent_stake_before = SubtensorModule::get_total_stake_for_coldkey(&parent_coldkey);
-            let nominator_stake_before = SubtensorModule::get_total_stake_for_coldkey(&nominator);
+            let child_stake_before = GameSolver::get_total_stake_for_coldkey(&child_coldkey);
+            let parent_stake_before = GameSolver::get_total_stake_for_coldkey(&parent_coldkey);
+            let nominator_stake_before = GameSolver::get_total_stake_for_coldkey(&nominator);
 
             step_block(subnet_tempo);
 
@@ -2933,11 +2926,11 @@ fn test_childkey_take_drain() {
             //   - Parent stake increases by 45% of total emission
             //   - Nominator stake increases by 55% of total emission
             let child_emission =
-                SubtensorModule::get_total_stake_for_coldkey(&child_coldkey) - child_stake_before;
+                GameSolver::get_total_stake_for_coldkey(&child_coldkey) - child_stake_before;
             let parent_emission =
-                SubtensorModule::get_total_stake_for_coldkey(&parent_coldkey) - parent_stake_before;
+                GameSolver::get_total_stake_for_coldkey(&parent_coldkey) - parent_stake_before;
             let nominator_emission =
-                SubtensorModule::get_total_stake_for_coldkey(&nominator) - nominator_stake_before;
+                GameSolver::get_total_stake_for_coldkey(&nominator) - nominator_stake_before;
             let total_emission = child_emission + parent_emission + nominator_emission;
 
             assert_abs_diff_eq!(child_emission, TaoCurrency::ZERO, epsilon = 10.into());
@@ -2970,7 +2963,7 @@ fn test_parent_child_chain_emission() {
         let subnet_owner_coldkey = U256::from(1001);
         let subnet_owner_hotkey = U256::from(1002);
         let netuid = add_dynamic_network(&subnet_owner_hotkey, &subnet_owner_coldkey);
-        SubtensorModule::set_ck_burn(0);
+        GameSolver::set_ck_burn(0);
         Tempo::<Test>::insert(netuid, 1);
 
         // Setup large LPs to prevent slippage
@@ -2978,7 +2971,7 @@ fn test_parent_child_chain_emission() {
         SubnetAlphaIn::<Test>::insert(netuid, AlphaCurrency::from(1_000_000_000_000_000));
 
         // Set owner cut to 0
-        SubtensorModule::set_subnet_owner_cut(0_u16);
+        GameSolver::set_subnet_owner_cut(0_u16);
 
         // Define hotkeys and coldkeys
         let hotkey_a: U256 = U256::from(1);
@@ -2994,9 +2987,9 @@ fn test_parent_child_chain_emission() {
         register_ok_neuron(netuid, hotkey_c, coldkey_c, 0);
 
         // Add initial stakes
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_a, 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_b, 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_c, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_a, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_b, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_c, 1_000);
 
         // Swap to alpha
         let stake_a = 300_000_000_000_u64;
@@ -3004,7 +2997,7 @@ fn test_parent_child_chain_emission() {
         let stake_c = 50_000_000_000_u64;
         let total_tao: I96F32 = I96F32::from_num(stake_a + stake_b + stake_c);
         let total_alpha: I96F32 = I96F32::from_num(
-            SubtensorModule::swap_tao_for_alpha(
+            GameSolver::swap_tao_for_alpha(
                 netuid,
                 total_tao.to_num::<u64>().into(),
                 <Test as Config>::SwapInterface::max_price(),
@@ -3016,7 +3009,7 @@ fn test_parent_child_chain_emission() {
 
         // Set the stakes directly
         // This avoids needing to swap tao to alpha, impacting the initial stake distribution.
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_a,
             &coldkey_a,
             netuid,
@@ -3024,7 +3017,7 @@ fn test_parent_child_chain_emission() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_b,
             &coldkey_b,
             netuid,
@@ -3032,7 +3025,7 @@ fn test_parent_child_chain_emission() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_c,
             &coldkey_c,
             netuid,
@@ -3042,9 +3035,9 @@ fn test_parent_child_chain_emission() {
         );
 
         // Get old stakes
-        let stake_a = SubtensorModule::get_total_stake_for_hotkey(&hotkey_a);
-        let stake_b = SubtensorModule::get_total_stake_for_hotkey(&hotkey_b);
-        let stake_c = SubtensorModule::get_total_stake_for_hotkey(&hotkey_c);
+        let stake_a = GameSolver::get_total_stake_for_hotkey(&hotkey_a);
+        let stake_b = GameSolver::get_total_stake_for_hotkey(&hotkey_b);
+        let stake_c = GameSolver::get_total_stake_for_hotkey(&hotkey_c);
 
         let _total_stake: I96F32 = I96F32::from_num(stake_a + stake_b + stake_c);
 
@@ -3068,9 +3061,9 @@ fn test_parent_child_chain_emission() {
         mock_set_children_no_epochs(netuid, &hotkey_b, &[(u64::MAX / 2, hotkey_c)]);
 
         // Get old stakes after children are scheduled
-        let stake_a_old = SubtensorModule::get_total_stake_for_hotkey(&hotkey_a);
-        let stake_b_old = SubtensorModule::get_total_stake_for_hotkey(&hotkey_b);
-        let stake_c_old = SubtensorModule::get_total_stake_for_hotkey(&hotkey_c);
+        let stake_a_old = GameSolver::get_total_stake_for_hotkey(&hotkey_a);
+        let stake_b_old = GameSolver::get_total_stake_for_hotkey(&hotkey_b);
+        let stake_c_old = GameSolver::get_total_stake_for_hotkey(&hotkey_c);
 
         let total_stake_old: I96F32 =
             I96F32::from_num((stake_a_old + stake_b_old + stake_c_old).to_u64());
@@ -3086,10 +3079,10 @@ fn test_parent_child_chain_emission() {
         ChildkeyTake::<Test>::insert(hotkey_c, netuid, chk_take_u16);
 
         // Set the weight of root TAO to be 0%, so only alpha is effective.
-        SubtensorModule::set_tao_weight(0);
+        GameSolver::set_tao_weight(0);
 
         let emission = U96F32::from_num(
-            SubtensorModule::get_block_emission()
+            GameSolver::get_block_emission()
                 .unwrap_or(TaoCurrency::ZERO)
                 .to_u64(),
         );
@@ -3099,12 +3092,12 @@ fn test_parent_child_chain_emission() {
         PendingServerEmission::<Test>::insert(netuid, AlphaCurrency::ZERO);
 
         // Run epoch with emission value
-        SubtensorModule::run_coinbase(emission);
+        GameSolver::run_coinbase(emission);
 
         // Log new stake
-        let stake_a_new = SubtensorModule::get_total_stake_for_hotkey(&hotkey_a);
-        let stake_b_new = SubtensorModule::get_total_stake_for_hotkey(&hotkey_b);
-        let stake_c_new = SubtensorModule::get_total_stake_for_hotkey(&hotkey_c);
+        let stake_a_new = GameSolver::get_total_stake_for_hotkey(&hotkey_a);
+        let stake_b_new = GameSolver::get_total_stake_for_hotkey(&hotkey_b);
+        let stake_c_new = GameSolver::get_total_stake_for_hotkey(&hotkey_c);
         let total_stake_new = I96F32::from_num((stake_a_new + stake_b_new + stake_c_new).to_u64());
         log::info!("Stake for hotkey A: {stake_a_new:?}");
         log::info!("Stake for hotkey B: {stake_b_new:?}");
@@ -3184,9 +3177,9 @@ fn test_parent_child_chain_epoch() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1);
         add_network(netuid, 1, 0);
-        SubtensorModule::set_ck_burn(0);
+        GameSolver::set_ck_burn(0);
         // Set owner cut to 0
-        SubtensorModule::set_subnet_owner_cut(0_u16);
+        GameSolver::set_subnet_owner_cut(0_u16);
 
         // Define hotkeys and coldkeys
         let hotkey_a: U256 = U256::from(1);
@@ -3202,9 +3195,9 @@ fn test_parent_child_chain_epoch() {
         register_ok_neuron(netuid, hotkey_c, coldkey_c, 0);
 
         // Add initial stakes
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_a, 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_b, 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_c, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_a, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_b, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_c, 1_000);
 
         mock::setup_reserves(netuid, 1_000_000_000_000.into(), 1_000_000_000_000.into());
 
@@ -3215,7 +3208,7 @@ fn test_parent_child_chain_epoch() {
 
         // Set the stakes directly
         // This avoids needing to swap tao to alpha, impacting the initial stake distribution.
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_a,
             &coldkey_a,
             netuid,
@@ -3223,7 +3216,7 @@ fn test_parent_child_chain_epoch() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_b,
             &coldkey_b,
             netuid,
@@ -3231,7 +3224,7 @@ fn test_parent_child_chain_epoch() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_c,
             &coldkey_c,
             netuid,
@@ -3241,9 +3234,9 @@ fn test_parent_child_chain_epoch() {
         );
 
         // Get old stakes
-        let stake_a = SubtensorModule::get_total_stake_for_hotkey(&hotkey_a);
-        let stake_b = SubtensorModule::get_total_stake_for_hotkey(&hotkey_b);
-        let stake_c = SubtensorModule::get_total_stake_for_hotkey(&hotkey_c);
+        let stake_a = GameSolver::get_total_stake_for_hotkey(&hotkey_a);
+        let stake_b = GameSolver::get_total_stake_for_hotkey(&hotkey_b);
+        let stake_c = GameSolver::get_total_stake_for_hotkey(&hotkey_c);
 
         // Assert initial stake is correct
         let rel_stake_a = I96F32::from_num(stake_a) / total_alpha;
@@ -3278,12 +3271,12 @@ fn test_parent_child_chain_epoch() {
         ChildkeyTake::<Test>::insert(hotkey_c, netuid, chk_take_u16);
 
         // Set the weight of root TAO to be 0%, so only alpha is effective.
-        SubtensorModule::set_tao_weight(0);
+        GameSolver::set_tao_weight(0);
 
         let hardcoded_emission = I96F32::from_num(1_000_000); // 1 million (adjust as needed)
 
         let hotkey_emission =
-            SubtensorModule::epoch(netuid, hardcoded_emission.saturating_to_num::<u64>().into());
+            GameSolver::epoch(netuid, hardcoded_emission.saturating_to_num::<u64>().into());
         log::info!("hotkey_emission: {hotkey_emission:?}");
         let total_emission: I96F32 = hotkey_emission
             .iter()
@@ -3329,14 +3322,14 @@ fn test_dividend_distribution_with_children() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1);
         add_network(netuid, 1, 0);
-        SubtensorModule::set_ck_burn(0);
+        GameSolver::set_ck_burn(0);
         mock::setup_reserves(
             netuid,
             1_000_000_000_000_000.into(),
             1_000_000_000_000_000.into(),
         );
         // Set owner cut to 0
-        SubtensorModule::set_subnet_owner_cut(0_u16);
+        GameSolver::set_subnet_owner_cut(0_u16);
 
         // Define hotkeys and coldkeys
         let hotkey_a: U256 = U256::from(1);
@@ -3352,9 +3345,9 @@ fn test_dividend_distribution_with_children() {
         register_ok_neuron(netuid, hotkey_c, coldkey_c, 0);
 
         // Add initial stakes
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_a, 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_b, 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_c, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_a, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_b, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_c, 1_000);
 
         // Swap to alpha
         let total_tao = I96F32::from_num(300_000 + 100_000 + 50_000);
@@ -3363,7 +3356,7 @@ fn test_dividend_distribution_with_children() {
 
         // Set the stakes directly
         // This avoids needing to swap tao to alpha, impacting the initial stake distribution.
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_a,
             &coldkey_a,
             netuid,
@@ -3371,7 +3364,7 @@ fn test_dividend_distribution_with_children() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_b,
             &coldkey_b,
             netuid,
@@ -3379,7 +3372,7 @@ fn test_dividend_distribution_with_children() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_c,
             &coldkey_c,
             netuid,
@@ -3389,9 +3382,9 @@ fn test_dividend_distribution_with_children() {
         );
 
         // Get old stakes
-        let stake_a = SubtensorModule::get_total_stake_for_hotkey(&hotkey_a);
-        let stake_b = SubtensorModule::get_total_stake_for_hotkey(&hotkey_b);
-        let stake_c = SubtensorModule::get_total_stake_for_hotkey(&hotkey_c);
+        let stake_a = GameSolver::get_total_stake_for_hotkey(&hotkey_a);
+        let stake_b = GameSolver::get_total_stake_for_hotkey(&hotkey_b);
+        let stake_c = GameSolver::get_total_stake_for_hotkey(&hotkey_c);
 
         // Assert initial stake is correct
         let rel_stake_a = I96F32::from_num(stake_a) / total_alpha;
@@ -3420,12 +3413,12 @@ fn test_dividend_distribution_with_children() {
         ChildkeyTake::<Test>::insert(hotkey_c, netuid, chk_take_u16);
 
         // Set the weight of root TAO to be 0%, so only alpha is effective.
-        SubtensorModule::set_tao_weight(0);
+        GameSolver::set_tao_weight(0);
 
         let hardcoded_emission: I96F32 = I96F32::from_num(1_000_000); // 1 million (adjust as needed)
 
         let hotkey_emission =
-            SubtensorModule::epoch(netuid, hardcoded_emission.saturating_to_num::<u64>().into());
+            GameSolver::epoch(netuid, hardcoded_emission.saturating_to_num::<u64>().into());
         log::info!("hotkey_emission: {hotkey_emission:?}");
         let total_emission: I96F32 = hotkey_emission
             .iter()
@@ -3456,17 +3449,17 @@ fn test_dividend_distribution_with_children() {
             "C should have pending emission of 1/9 of total emission"
         );
 
-        let dividends_a = SubtensorModule::get_parent_child_dividends_distribution(
+        let dividends_a = GameSolver::get_parent_child_dividends_distribution(
             &hotkey_a,
             netuid,
             hardcoded_emission.saturating_to_num::<u64>().into(),
         );
-        let dividends_b = SubtensorModule::get_parent_child_dividends_distribution(
+        let dividends_b = GameSolver::get_parent_child_dividends_distribution(
             &hotkey_b,
             netuid,
             hardcoded_emission.saturating_to_num::<u64>().into(),
         );
-        let dividends_c = SubtensorModule::get_parent_child_dividends_distribution(
+        let dividends_c = GameSolver::get_parent_child_dividends_distribution(
             &hotkey_c,
             netuid,
             hardcoded_emission.saturating_to_num::<u64>().into(),
@@ -3564,7 +3557,7 @@ fn test_dividend_distribution_with_children() {
 fn test_dynamic_parent_child_relationships() {
     new_test_ext(1).execute_with(|| {
         let netuid = NetUid::from(1);
-        SubtensorModule::set_ck_burn(0);
+        GameSolver::set_ck_burn(0);
         add_network_disable_commit_reveal(netuid, 1, 0);
 
         // Define hotkeys and coldkeys
@@ -3580,15 +3573,15 @@ fn test_dynamic_parent_child_relationships() {
         register_ok_neuron(netuid, child1, coldkey_child1, 0);
         register_ok_neuron(netuid, child2, coldkey_child2, 0);
 
-        let chk_take_1 = SubtensorModule::get_childkey_take(&child1, netuid);
-        let chk_take_2 = SubtensorModule::get_childkey_take(&child2, netuid);
+        let chk_take_1 = GameSolver::get_childkey_take(&child1, netuid);
+        let chk_take_2 = GameSolver::get_childkey_take(&child2, netuid);
         log::info!("child take 1: {chk_take_1:?}");
         log::info!("child take 2: {chk_take_2:?}");
 
         // Add initial stakes
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_parent, 500_000 + 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_child1, 50_000 + 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_child2, 30_000 + 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_parent, 500_000 + 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_child1, 50_000 + 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_child2, 30_000 + 1_000);
 
         let reserve = 1_000_000_000_000;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
@@ -3601,7 +3594,7 @@ fn test_dynamic_parent_child_relationships() {
 
         // Set the stakes directly
         // This avoids needing to swap tao to alpha, impacting the initial stake distribution.
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &parent,
             &coldkey_parent,
             netuid,
@@ -3609,7 +3602,7 @@ fn test_dynamic_parent_child_relationships() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &child1,
             &coldkey_child1,
             netuid,
@@ -3617,7 +3610,7 @@ fn test_dynamic_parent_child_relationships() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &child2,
             &coldkey_child2,
             netuid,
@@ -3627,9 +3620,9 @@ fn test_dynamic_parent_child_relationships() {
         );
 
         // Get old stakes
-        let stake_parent_0 = SubtensorModule::get_stake_for_hotkey_on_subnet(&parent, netuid);
-        let stake_child1_0 = SubtensorModule::get_stake_for_hotkey_on_subnet(&child1, netuid);
-        let stake_child2_0 = SubtensorModule::get_stake_for_hotkey_on_subnet(&child2, netuid);
+        let stake_parent_0 = GameSolver::get_stake_for_hotkey_on_subnet(&parent, netuid);
+        let stake_child1_0 = GameSolver::get_stake_for_hotkey_on_subnet(&child1, netuid);
+        let stake_child2_0 = GameSolver::get_stake_for_hotkey_on_subnet(&child2, netuid);
         log::info!("stake_parent_0: {stake_parent_0:?}");
         log::info!("stake_child1_0: {stake_child1_0:?}");
         log::info!("stake_child2_0: {stake_child2_0:?}");
@@ -3657,12 +3650,12 @@ fn test_dynamic_parent_child_relationships() {
         let origin = RuntimeOrigin::signed(parent);
         let uids: Vec<u16> = vec![0, 1, 2]; // UIDs for parent, child1, child2
         let values: Vec<u16> = vec![65535, 65535, 65535]; // Set equal weights for all hotkeys
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
 
         // Ensure we can set weights without rate limiting
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             origin,
             netuid,
             uids,
@@ -3675,9 +3668,9 @@ fn test_dynamic_parent_child_relationships() {
         step_rate_limit(&TransactionType::SetChildren, netuid);
 
         // Get total stake after first payout
-        let total_stake_1 = SubtensorModule::get_stake_for_hotkey_on_subnet(&parent, netuid)
-            + SubtensorModule::get_stake_for_hotkey_on_subnet(&child1, netuid)
-            + SubtensorModule::get_stake_for_hotkey_on_subnet(&child2, netuid);
+        let total_stake_1 = GameSolver::get_stake_for_hotkey_on_subnet(&parent, netuid)
+            + GameSolver::get_stake_for_hotkey_on_subnet(&child1, netuid)
+            + GameSolver::get_stake_for_hotkey_on_subnet(&child2, netuid);
         log::info!("total_stake_1: {total_stake_1:?}");
 
         // Change parent-child relationships
@@ -3692,18 +3685,18 @@ fn test_dynamic_parent_child_relationships() {
         step_block(11);
 
         // Get total stake after second payout
-        let total_stake_2 = SubtensorModule::get_stake_for_hotkey_on_subnet(&parent, netuid)
-            + SubtensorModule::get_stake_for_hotkey_on_subnet(&child1, netuid)
-            + SubtensorModule::get_stake_for_hotkey_on_subnet(&child2, netuid);
+        let total_stake_2 = GameSolver::get_stake_for_hotkey_on_subnet(&parent, netuid)
+            + GameSolver::get_stake_for_hotkey_on_subnet(&child1, netuid)
+            + GameSolver::get_stake_for_hotkey_on_subnet(&child2, netuid);
         log::info!("total_stake_2: {total_stake_2:?}");
 
         // Check final emission distribution
-        let stake_parent_2 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&parent, netuid);
-        let stake_child1_2 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child1, netuid);
-        let stake_child2_2 = SubtensorModule::get_inherited_for_hotkey_on_subnet(&child2, netuid);
-        let total_parent_stake = SubtensorModule::get_stake_for_hotkey_on_subnet(&parent, netuid);
-        let _total_child1_stake = SubtensorModule::get_stake_for_hotkey_on_subnet(&child1, netuid);
-        let _total_child2_stake = SubtensorModule::get_stake_for_hotkey_on_subnet(&child2, netuid);
+        let stake_parent_2 = GameSolver::get_inherited_for_hotkey_on_subnet(&parent, netuid);
+        let stake_child1_2 = GameSolver::get_inherited_for_hotkey_on_subnet(&child1, netuid);
+        let stake_child2_2 = GameSolver::get_inherited_for_hotkey_on_subnet(&child2, netuid);
+        let total_parent_stake = GameSolver::get_stake_for_hotkey_on_subnet(&parent, netuid);
+        let _total_child1_stake = GameSolver::get_stake_for_hotkey_on_subnet(&child1, netuid);
+        let _total_child2_stake = GameSolver::get_stake_for_hotkey_on_subnet(&child2, netuid);
 
         log::info!("Final stakes:");
         log::info!("Parent stake: {stake_parent_2}");
@@ -3767,7 +3760,7 @@ fn test_dynamic_parent_child_relationships() {
         // Second epoch: 1/3 parent_stake + child2_stake
 
         // Additional checks for parent-child relationships
-        let parent_children: Vec<(u64, U256)> = SubtensorModule::get_children(&parent, netuid);
+        let parent_children: Vec<(u64, U256)> = GameSolver::get_children(&parent, netuid);
         assert_eq!(
             parent_children,
             vec![(u64::MAX / 4, child1), (u64::MAX / 3, child2)],
@@ -3777,7 +3770,7 @@ fn test_dynamic_parent_child_relationships() {
         // child1: 1/4 of parent's stake
         // child2: 1/3 of parent's stake
 
-        let child1_parents: Vec<(u64, U256)> = SubtensorModule::get_parents(&child1, netuid);
+        let child1_parents: Vec<(u64, U256)> = GameSolver::get_parents(&child1, netuid);
         assert_eq!(
             child1_parents,
             vec![(u64::MAX / 4, parent)],
@@ -3786,7 +3779,7 @@ fn test_dynamic_parent_child_relationships() {
         // Child1-parent relationship:
         // parent: 1/4 of child1's stake
 
-        let child2_parents: Vec<(u64, U256)> = SubtensorModule::get_parents(&child2, netuid);
+        let child2_parents: Vec<(u64, U256)> = GameSolver::get_parents(&child2, netuid);
         assert_eq!(
             child2_parents,
             vec![(u64::MAX / 3, parent)],
@@ -3814,7 +3807,7 @@ fn test_do_set_child_as_sn_owner_not_enough_stake() {
         let child_hotkey = U256::from(5);
 
         let threshold = 10_000;
-        SubtensorModule::set_stake_threshold(threshold);
+        GameSolver::set_stake_threshold(threshold);
 
         let proportion: u64 = 1000;
 
@@ -3823,12 +3816,12 @@ fn test_do_set_child_as_sn_owner_not_enough_stake() {
 
         // Verify stake of sn_owner_hotkey is NOT enough
         assert!(
-            SubtensorModule::get_total_stake_for_hotkey(&sn_owner_hotkey)
+            GameSolver::get_total_stake_for_hotkey(&sn_owner_hotkey)
                 < StakeThreshold::<Test>::get().into()
         );
 
         // Verify that we can set child as sn owner, even though sn_owner_hotkey has insufficient stake
-        assert_ok!(SubtensorModule::do_schedule_children(
+        assert_ok!(GameSolver::do_schedule_children(
             RuntimeOrigin::signed(coldkey),
             sn_owner_hotkey,
             netuid,
@@ -3841,13 +3834,13 @@ fn test_do_set_child_as_sn_owner_not_enough_stake() {
 
         // Verify stake of other_sn_owner_hotkey is NOT enough
         assert!(
-            SubtensorModule::get_total_stake_for_hotkey(&other_sn_owner_hotkey)
+            GameSolver::get_total_stake_for_hotkey(&other_sn_owner_hotkey)
                 < StakeThreshold::<Test>::get().into()
         );
 
         // Can't set child as sn owner, because it is not in SubnetOwnerHotkey map
         assert_noop!(
-            SubtensorModule::do_schedule_children(
+            GameSolver::do_schedule_children(
                 RuntimeOrigin::signed(coldkey),
                 other_sn_owner_hotkey,
                 netuid,
@@ -3866,7 +3859,7 @@ fn test_dividend_distribution_with_children_same_coldkey_owner() {
         let netuid = NetUid::from(1);
         add_network(netuid, 1, 0);
         // Set SN owner cut to 0
-        SubtensorModule::set_subnet_owner_cut(0_u16);
+        GameSolver::set_subnet_owner_cut(0_u16);
         mock::setup_reserves(netuid, 1_000_000_000_000.into(), 1_000_000_000_000.into());
 
         // Define hotkeys and coldkeys
@@ -3879,8 +3872,8 @@ fn test_dividend_distribution_with_children_same_coldkey_owner() {
         register_ok_neuron(netuid, hotkey_b, coldkey_a, 0);
 
         // Add initial stakes
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_a, 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_a, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_a, 1_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_a, 1_000);
 
         // Swap to alpha
         let total_tao = 300_000 + 100_000;
@@ -3889,7 +3882,7 @@ fn test_dividend_distribution_with_children_same_coldkey_owner() {
 
         // Set the stakes directly
         // This avoids needing to swap tao to alpha, impacting the initial stake distribution.
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_a,
             &coldkey_a,
             netuid,
@@ -3897,7 +3890,7 @@ fn test_dividend_distribution_with_children_same_coldkey_owner() {
                 .saturating_to_num::<u64>()
                 .into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_b,
             &coldkey_a,
             netuid,
@@ -3907,8 +3900,8 @@ fn test_dividend_distribution_with_children_same_coldkey_owner() {
         );
 
         // Get old stakes
-        let stake_a = SubtensorModule::get_total_stake_for_hotkey(&hotkey_a);
-        let stake_b = SubtensorModule::get_total_stake_for_hotkey(&hotkey_b);
+        let stake_a = GameSolver::get_total_stake_for_hotkey(&hotkey_a);
+        let stake_b = GameSolver::get_total_stake_for_hotkey(&hotkey_b);
 
         // Assert initial stake is correct
         let rel_stake_a = I96F32::from_num(stake_a) / total_alpha;
@@ -3930,12 +3923,12 @@ fn test_dividend_distribution_with_children_same_coldkey_owner() {
         ChildkeyTake::<Test>::insert(hotkey_b, netuid, chk_take_u16);
 
         // Set the weight of root TAO to be 0%, so only alpha is effective.
-        SubtensorModule::set_tao_weight(0);
+        GameSolver::set_tao_weight(0);
 
         let hardcoded_emission: I96F32 = I96F32::from_num(1_000_000); // 1 million (adjust as needed)
 
         let hotkey_emission =
-            SubtensorModule::epoch(netuid, hardcoded_emission.saturating_to_num::<u64>().into());
+            GameSolver::epoch(netuid, hardcoded_emission.saturating_to_num::<u64>().into());
         log::info!("hotkey_emission: {hotkey_emission:?}");
         let total_emission: I96F32 = hotkey_emission
             .iter()
@@ -3961,12 +3954,12 @@ fn test_dividend_distribution_with_children_same_coldkey_owner() {
         );
 
         // Get the distribution of dividends including the Parent/Child relationship.
-        let dividends_a = SubtensorModule::get_parent_child_dividends_distribution(
+        let dividends_a = GameSolver::get_parent_child_dividends_distribution(
             &hotkey_a,
             netuid,
             hardcoded_emission.saturating_to_num::<u64>().into(),
         );
-        let dividends_b = SubtensorModule::get_parent_child_dividends_distribution(
+        let dividends_b = GameSolver::get_parent_child_dividends_distribution(
             &hotkey_b,
             netuid,
             hardcoded_emission.saturating_to_num::<u64>().into(),
@@ -4080,12 +4073,12 @@ fn test_do_set_childkey_take_success() {
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
         // Set childkey take
-        assert_ok!(SubtensorModule::do_set_childkey_take(
+        assert_ok!(GameSolver::do_set_childkey_take(
             coldkey, hotkey, netuid, take
         ));
 
         // Verify the take was set correctly
-        assert_eq!(SubtensorModule::get_childkey_take(&hotkey, netuid), take);
+        assert_eq!(GameSolver::get_childkey_take(&hotkey, netuid), take);
         let tx_type: u16 = TransactionType::SetChildkeyTake.into();
         assert_eq!(
             TransactionKeyLastBlock::<Test>::get((hotkey, netuid, tx_type,)),
@@ -4110,7 +4103,7 @@ fn test_do_set_childkey_take_non_associated_coldkey() {
 
         // Set childkey take
         assert_noop!(
-            SubtensorModule::do_set_childkey_take(coldkey, hotkey2, netuid, take),
+            GameSolver::do_set_childkey_take(coldkey, hotkey2, netuid, take),
             Error::<Test>::NonAssociatedColdKey
         );
     });
@@ -4123,7 +4116,7 @@ fn test_do_set_childkey_take_invalid_take_value() {
         let coldkey = U256::from(1);
         let hotkey = U256::from(2);
         let netuid = NetUid::from(1);
-        let take = SubtensorModule::get_max_childkey_take() + 1;
+        let take = GameSolver::get_max_childkey_take() + 1;
 
         // Add network and register hotkey
         add_network(netuid, 13, 0);
@@ -4131,7 +4124,7 @@ fn test_do_set_childkey_take_invalid_take_value() {
 
         // Set childkey take
         assert_noop!(
-            SubtensorModule::do_set_childkey_take(coldkey, hotkey, netuid, take),
+            GameSolver::do_set_childkey_take(coldkey, hotkey, netuid, take),
             Error::<Test>::InvalidChildkeyTake
         );
     });
@@ -4152,7 +4145,7 @@ fn test_do_set_childkey_take_rate_limit_exceeded() {
         register_ok_neuron(netuid, hotkey, coldkey, 0);
 
         // Set initial childkey take
-        assert_ok!(SubtensorModule::do_set_childkey_take(
+        assert_ok!(GameSolver::do_set_childkey_take(
             coldkey,
             hotkey,
             netuid,
@@ -4161,12 +4154,12 @@ fn test_do_set_childkey_take_rate_limit_exceeded() {
 
         // Try to increase the take value, should hit rate limit
         assert_noop!(
-            SubtensorModule::do_set_childkey_take(coldkey, hotkey, netuid, higher_take),
+            GameSolver::do_set_childkey_take(coldkey, hotkey, netuid, higher_take),
             Error::<Test>::TxChildkeyTakeRateLimitExceeded
         );
 
         // lower take value should be ok
-        assert_ok!(SubtensorModule::do_set_childkey_take(
+        assert_ok!(GameSolver::do_set_childkey_take(
             coldkey, hotkey, netuid, lower_take
         ));
     });

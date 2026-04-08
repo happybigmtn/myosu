@@ -15,7 +15,7 @@ pub fn migrate_remove_total_hotkey_coldkey_stakes_this_interval<T: Config>() -> 
 
     log::info!("Running migration '{migration_name}'");
 
-    let pallet_name = twox_128(b"SubtensorModule");
+    let pallet_name = twox_128(b"GameSolver");
     let storage_name = twox_128(b"TotalHotkeyColdkeyStakesThisInterval");
     let prefix = [pallet_name, storage_name].concat();
 

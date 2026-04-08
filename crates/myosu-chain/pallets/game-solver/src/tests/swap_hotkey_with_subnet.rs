@@ -21,10 +21,10 @@ fn test_swap_owner() {
         let coldkey = U256::from(3);
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
         Owner::<Test>::insert(old_hotkey, coldkey);
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -45,11 +45,11 @@ fn test_swap_owned_hotkeys() {
         let coldkey = U256::from(3);
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         OwnedHotkeys::<Test>::insert(coldkey, vec![old_hotkey]);
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -77,10 +77,10 @@ fn test_swap_total_hotkey_stake() {
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
 
         // Give it some $$$ in his coldkey balance
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         // Add stake
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey),
             old_hotkey,
             netuid,
@@ -89,19 +89,19 @@ fn test_swap_total_hotkey_stake() {
 
         // Check if stake has increased
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&old_hotkey),
+            GameSolver::get_total_stake_for_hotkey(&old_hotkey),
             (amount - fee).into(),
             epsilon = TaoCurrency::from(amount / 100),
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&new_hotkey),
+            GameSolver::get_total_stake_for_hotkey(&new_hotkey),
             TaoCurrency::ZERO,
             epsilon = 1.into(),
         );
 
         // Swap hotkey
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -110,12 +110,12 @@ fn test_swap_total_hotkey_stake() {
 
         // Verify that total hotkey stake swapped
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&old_hotkey),
+            GameSolver::get_total_stake_for_hotkey(&old_hotkey),
             TaoCurrency::ZERO,
             epsilon = 1.into(),
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&new_hotkey),
+            GameSolver::get_total_stake_for_hotkey(&new_hotkey),
             TaoCurrency::from(amount - fee),
             epsilon = TaoCurrency::from(amount / 100),
         );
@@ -131,11 +131,11 @@ fn test_swap_delegates() {
         let coldkey = U256::from(3);
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         Delegates::<Test>::insert(old_hotkey, 100);
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -156,11 +156,11 @@ fn test_swap_subnet_membership() {
         let coldkey = U256::from(3);
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         IsNetworkMember::<Test>::insert(old_hotkey, netuid, true);
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -182,14 +182,14 @@ fn test_swap_uids_and_keys() {
         let coldkey = U256::from(3);
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         IsNetworkMember::<Test>::insert(old_hotkey, netuid, true);
         Uids::<Test>::insert(netuid, old_hotkey, uid);
         Keys::<Test>::insert(netuid, uid, old_hotkey);
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -214,13 +214,13 @@ fn test_swap_prometheus() {
         let prometheus_info = PrometheusInfo::default();
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         IsNetworkMember::<Test>::insert(old_hotkey, netuid, true);
         Prometheus::<Test>::insert(netuid, old_hotkey, prometheus_info.clone());
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -247,13 +247,13 @@ fn test_swap_axons() {
         let axon_info = AxonInfo::default();
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         IsNetworkMember::<Test>::insert(old_hotkey, netuid, true);
         Axons::<Test>::insert(netuid, old_hotkey, axon_info.clone());
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -277,13 +277,13 @@ fn test_swap_certificates() {
         let certificate = NeuronCertificate::try_from(vec![1, 2, 3]).unwrap();
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         IsNetworkMember::<Test>::insert(old_hotkey, netuid, true);
         NeuronCertificates::<Test>::insert(netuid, old_hotkey, certificate.clone());
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -313,7 +313,7 @@ fn test_swap_weight_commits() {
         weight_commits.push_back((H256::from_low_u64_be(100), 200, 1, 1));
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         IsNetworkMember::<Test>::insert(old_hotkey, netuid, true);
         WeightCommits::<Test>::insert(
@@ -323,7 +323,7 @@ fn test_swap_weight_commits() {
         );
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -354,7 +354,7 @@ fn test_swap_loaded_emission() {
         let validator_emission = 1000u64;
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         IsNetworkMember::<Test>::insert(old_hotkey, netuid, true);
         LoadedEmission::<Test>::insert(
@@ -363,7 +363,7 @@ fn test_swap_loaded_emission() {
         );
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -386,13 +386,13 @@ fn test_swap_staking_hotkeys() {
         let new_hotkey = U256::from(2);
         let coldkey = U256::from(3);
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         StakingHotkeys::<Test>::insert(coldkey, vec![old_hotkey]);
         Alpha::<Test>::insert((old_hotkey, coldkey, netuid), U64F64::from_num(100));
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -422,27 +422,27 @@ fn test_swap_hotkey_with_multiple_coldkeys() {
 
         StakingHotkeys::<Test>::insert(coldkey1, vec![old_hotkey]);
         StakingHotkeys::<Test>::insert(coldkey2, vec![old_hotkey]);
-        SubtensorModule::create_account_if_non_existent(&coldkey1, &old_hotkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey1, u64::MAX);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey2, u64::MAX);
+        GameSolver::create_account_if_non_existent(&coldkey1, &old_hotkey);
+        GameSolver::add_balance_to_coldkey_account(&coldkey1, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey2, u64::MAX);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey1),
             old_hotkey,
             netuid,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey2),
             old_hotkey,
             netuid,
             TaoCurrency::from(stake / 2)
         ));
-        let stake1_before = SubtensorModule::get_total_stake_for_coldkey(&coldkey1);
-        let stake2_before = SubtensorModule::get_total_stake_for_coldkey(&coldkey2);
+        let stake1_before = GameSolver::get_total_stake_for_coldkey(&coldkey1);
+        let stake2_before = GameSolver::get_total_stake_for_coldkey(&coldkey2);
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey1),
             &old_hotkey,
             &new_hotkey,
@@ -450,20 +450,20 @@ fn test_swap_hotkey_with_multiple_coldkeys() {
         ));
 
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey1),
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey1),
+            GameSolver::get_total_stake_for_coldkey(&coldkey1),
+            GameSolver::get_total_stake_for_coldkey(&coldkey1),
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey2),
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey2),
+            GameSolver::get_total_stake_for_coldkey(&coldkey2),
+            GameSolver::get_total_stake_for_coldkey(&coldkey2),
         );
 
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey1),
+            GameSolver::get_total_stake_for_coldkey(&coldkey1),
             stake1_before
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey2),
+            GameSolver::get_total_stake_for_coldkey(&coldkey2),
             stake2_before
         );
 
@@ -481,7 +481,7 @@ fn test_swap_hotkey_with_multiple_subnets() {
         let new_hotkey_2 = U256::from(3);
         let coldkey = U256::from(4);
 
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         let netuid1 = add_dynamic_network(&old_hotkey, &coldkey);
         let netuid2 = add_dynamic_network(&old_hotkey, &coldkey);
@@ -490,7 +490,7 @@ fn test_swap_hotkey_with_multiple_subnets() {
         IsNetworkMember::<Test>::insert(old_hotkey, netuid2, true);
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -498,7 +498,7 @@ fn test_swap_hotkey_with_multiple_subnets() {
         ));
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey_2,
@@ -527,22 +527,22 @@ fn test_swap_staking_hotkeys_multiple_coldkeys() {
         let staker5 = U256::from(5);
 
         let stake = 1_000_000_000;
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey1, u64::MAX);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey2, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey1, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey2, u64::MAX);
 
         // Set up initial state
         StakingHotkeys::<Test>::insert(coldkey1, vec![old_hotkey]);
         StakingHotkeys::<Test>::insert(coldkey2, vec![old_hotkey, staker5]);
 
-        SubtensorModule::create_account_if_non_existent(&coldkey1, &old_hotkey);
+        GameSolver::create_account_if_non_existent(&coldkey1, &old_hotkey);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey1),
             old_hotkey,
             netuid,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey2),
             old_hotkey,
             netuid,
@@ -550,7 +550,7 @@ fn test_swap_staking_hotkeys_multiple_coldkeys() {
         ));
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey1),
             &old_hotkey,
             &new_hotkey,
@@ -581,13 +581,13 @@ fn test_swap_hotkey_with_no_stake() {
         let new_hotkey = U256::from(2);
         let coldkey = U256::from(3);
 
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         // Set up initial state with no stake
         Owner::<Test>::insert(old_hotkey, coldkey);
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -624,11 +624,11 @@ fn test_swap_hotkey_with_multiple_coldkeys_and_subnets() {
         register_ok_neuron(netuid2, old_hotkey, coldkey1, 1234);
 
         // Add balance to both coldkeys
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey1, u64::MAX);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey2, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey1, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey2, u64::MAX);
 
         // Stake with coldkey1
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey1),
             old_hotkey,
             netuid1,
@@ -636,30 +636,24 @@ fn test_swap_hotkey_with_multiple_coldkeys_and_subnets() {
         ));
 
         // Stake with coldkey2 also
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey2),
             old_hotkey,
             netuid2,
             stake.into()
         ));
 
-        let ck1_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-            &old_hotkey,
-            &coldkey1,
-            netuid1,
-        );
-        let ck2_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-            &old_hotkey,
-            &coldkey2,
-            netuid2,
-        );
+        let ck1_stake =
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&old_hotkey, &coldkey1, netuid1);
+        let ck2_stake =
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&old_hotkey, &coldkey2, netuid2);
         assert!(!ck1_stake.is_zero());
         assert!(!ck2_stake.is_zero());
-        let total_hk_stake = SubtensorModule::get_total_stake_for_hotkey(&old_hotkey);
+        let total_hk_stake = GameSolver::get_total_stake_for_hotkey(&old_hotkey);
         assert!(!total_hk_stake.is_zero());
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
 
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey1),
             &old_hotkey,
             &new_hotkey,
@@ -667,7 +661,7 @@ fn test_swap_hotkey_with_multiple_coldkeys_and_subnets() {
         ));
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey1),
             &old_hotkey,
             &new_hotkey_2,
@@ -676,27 +670,23 @@ fn test_swap_hotkey_with_multiple_coldkeys_and_subnets() {
 
         // Check ownership transfer
         assert_eq!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&new_hotkey),
+            GameSolver::get_owning_coldkey_for_hotkey(&new_hotkey),
             coldkey1
         );
-        assert!(!SubtensorModule::get_owned_hotkeys(&coldkey2).contains(&new_hotkey));
+        assert!(!GameSolver::get_owned_hotkeys(&coldkey2).contains(&new_hotkey));
         assert_eq!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&new_hotkey_2),
+            GameSolver::get_owning_coldkey_for_hotkey(&new_hotkey_2),
             coldkey1
         );
-        assert!(!SubtensorModule::get_owned_hotkeys(&coldkey2).contains(&new_hotkey_2));
+        assert!(!GameSolver::get_owned_hotkeys(&coldkey2).contains(&new_hotkey_2));
 
         // Check stake transfer
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &new_hotkey,
-                &coldkey1,
-                netuid1
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&new_hotkey, &coldkey1, netuid1),
             ck1_stake
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &new_hotkey_2,
                 &coldkey2,
                 netuid2
@@ -704,48 +694,40 @@ fn test_swap_hotkey_with_multiple_coldkeys_and_subnets() {
             ck2_stake
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &old_hotkey,
-                &coldkey1,
-                netuid1
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&old_hotkey, &coldkey1, netuid1),
             AlphaCurrency::ZERO
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &old_hotkey,
-                &coldkey2,
-                netuid2
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&old_hotkey, &coldkey2, netuid2),
             AlphaCurrency::ZERO
         );
 
         // Check subnet membership transfer
-        assert!(SubtensorModule::is_hotkey_registered_on_network(
+        assert!(GameSolver::is_hotkey_registered_on_network(
             netuid1,
             &new_hotkey
         ));
-        assert!(SubtensorModule::is_hotkey_registered_on_network(
+        assert!(GameSolver::is_hotkey_registered_on_network(
             netuid2,
             &new_hotkey_2
         ));
-        assert!(!SubtensorModule::is_hotkey_registered_on_network(
+        assert!(!GameSolver::is_hotkey_registered_on_network(
             netuid1,
             &old_hotkey
         ));
-        assert!(!SubtensorModule::is_hotkey_registered_on_network(
+        assert!(!GameSolver::is_hotkey_registered_on_network(
             netuid2,
             &old_hotkey
         ));
 
         // Check total stake transfer
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&new_hotkey)
-                + SubtensorModule::get_total_stake_for_hotkey(&new_hotkey_2),
+            GameSolver::get_total_stake_for_hotkey(&new_hotkey)
+                + GameSolver::get_total_stake_for_hotkey(&new_hotkey_2),
             total_hk_stake
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&old_hotkey),
+            GameSolver::get_total_stake_for_hotkey(&old_hotkey),
             TaoCurrency::ZERO
         );
     });
@@ -766,22 +748,22 @@ fn test_swap_hotkey_tx_rate_limit_exceeded() {
         let tx_rate_limit = 1;
 
         // Get the current transaction rate limit
-        let current_tx_rate_limit = SubtensorModule::get_tx_rate_limit();
+        let current_tx_rate_limit = GameSolver::get_tx_rate_limit();
         log::info!("current_tx_rate_limit: {current_tx_rate_limit:?}");
 
         // Set the transaction rate limit
-        SubtensorModule::set_tx_rate_limit(tx_rate_limit);
+        GameSolver::set_tx_rate_limit(tx_rate_limit);
         // assert the rate limit is set to 1000 blocks
-        assert_eq!(SubtensorModule::get_tx_rate_limit(), tx_rate_limit);
+        assert_eq!(GameSolver::get_tx_rate_limit(), tx_rate_limit);
 
         // Setup initial state
         add_network(netuid, tempo, 0);
         register_ok_neuron(netuid, old_hotkey, coldkey, 0);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, swap_cost);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, swap_cost);
 
         // Perform the first swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey_1,
@@ -790,7 +772,7 @@ fn test_swap_hotkey_tx_rate_limit_exceeded() {
 
         // Attempt to perform another swap immediately, which should fail due to rate limit
         assert_err!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 &old_hotkey,
                 &new_hotkey_1,
@@ -802,7 +784,7 @@ fn test_swap_hotkey_tx_rate_limit_exceeded() {
         // move in time past the rate limit
         step_block(1001);
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             &new_hotkey_1,
             &new_hotkey_2,
@@ -826,11 +808,11 @@ fn test_do_swap_hotkey_err_not_owner() {
         // Setup initial state
         add_network(netuid, tempo, 0);
         register_ok_neuron(netuid, old_hotkey, coldkey, 0);
-        SubtensorModule::add_balance_to_coldkey_account(&not_owner_coldkey, swap_cost);
+        GameSolver::add_balance_to_coldkey_account(&not_owner_coldkey, swap_cost);
 
         // Attempt the swap with a non-owner coldkey
         assert_err!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(not_owner_coldkey),
                 &old_hotkey,
                 &new_hotkey,
@@ -850,14 +832,14 @@ fn test_swap_owner_old_hotkey_not_exist() {
         let coldkey = U256::from(3);
 
         let netuid = add_dynamic_network(&new_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         // Ensure old_hotkey does not exist
         assert!(!Owner::<Test>::contains_key(old_hotkey));
 
         // Perform the swap
         assert_err!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 &old_hotkey,
                 &new_hotkey,
@@ -882,7 +864,7 @@ fn test_swap_owner_new_hotkey_already_exists() {
         let another_coldkey = U256::from(4);
 
         let netuid = add_dynamic_network(&new_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         // Initialize Owner for old_hotkey and new_hotkey
         Owner::<Test>::insert(old_hotkey, coldkey);
@@ -891,7 +873,7 @@ fn test_swap_owner_new_hotkey_already_exists() {
         // Perform the swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
         assert_err!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 &old_hotkey,
                 &new_hotkey,
@@ -916,7 +898,7 @@ fn test_swap_stake_success() {
         let subnet_owner_coldkey = U256::from(1001);
         let subnet_owner_hotkey = U256::from(1002);
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
         let amount = 10_000;
         let shares = U64F64::from_num(123456);
 
@@ -933,7 +915,7 @@ fn test_swap_stake_success() {
 
         // Perform the swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -997,13 +979,13 @@ fn test_swap_hotkey_error_cases() {
         // Set up initial state
         Owner::<Test>::insert(old_hotkey, coldkey);
         TotalNetworks::<Test>::put(1);
-        SubtensorModule::set_last_tx_block(&coldkey, 0);
+        GameSolver::set_last_tx_block(&coldkey, 0);
 
         // Test not enough balance
-        let swap_cost = SubtensorModule::get_key_swap_cost();
+        let swap_cost = GameSolver::get_key_swap_cost();
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
         assert_err!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 &old_hotkey,
                 &new_hotkey,
@@ -1012,13 +994,13 @@ fn test_swap_hotkey_error_cases() {
             Error::<Test>::NotEnoughBalanceToPaySwapHotKey
         );
 
-        let initial_balance = SubtensorModule::get_key_swap_cost().to_u64() + 1000;
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, initial_balance);
+        let initial_balance = GameSolver::get_key_swap_cost().to_u64() + 1000;
+        GameSolver::add_balance_to_coldkey_account(&coldkey, initial_balance);
 
         // Test new hotkey same as old
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
         assert_noop!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 &old_hotkey,
                 &old_hotkey,
@@ -1031,7 +1013,7 @@ fn test_swap_hotkey_error_cases() {
         IsNetworkMember::<Test>::insert(new_hotkey, netuid, true);
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
         assert_noop!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 &old_hotkey,
                 &new_hotkey,
@@ -1043,7 +1025,7 @@ fn test_swap_hotkey_error_cases() {
 
         // Test non-associated coldkey
         assert_noop!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(wrong_coldkey),
                 &old_hotkey,
                 &new_hotkey,
@@ -1054,7 +1036,7 @@ fn test_swap_hotkey_error_cases() {
 
         // Run the successful swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1071,7 +1053,7 @@ fn test_swap_child_keys() {
         let new_hotkey = U256::from(2);
         let coldkey = U256::from(3);
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         let children = vec![(100u64, U256::from(4)), (200u64, U256::from(5))];
 
@@ -1080,7 +1062,7 @@ fn test_swap_child_keys() {
 
         // Perform the swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1102,7 +1084,7 @@ fn test_swap_child_keys_self_loop() {
         let coldkey = U256::from(3);
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
         let amount = AlphaCurrency::from(12345);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         // Only for checking
         TotalHotkeyAlpha::<Test>::insert(old_hotkey, netuid, AlphaCurrency::from(amount));
@@ -1115,7 +1097,7 @@ fn test_swap_child_keys_self_loop() {
         // Perform the swap extrinsic
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
         assert_err!(
-            SubtensorModule::swap_hotkey(
+            GameSolver::swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 old_hotkey,
                 new_hotkey,
@@ -1143,7 +1125,7 @@ fn test_swap_parent_keys() {
         let new_hotkey = U256::from(2);
         let coldkey = U256::from(3);
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
         let parents = vec![(100u64, U256::from(4)), (200u64, U256::from(5))];
 
         // Initialize ParentKeys for old_hotkey
@@ -1155,7 +1137,7 @@ fn test_swap_parent_keys() {
 
         // Perform the swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1189,7 +1171,7 @@ fn test_swap_multiple_subnets() {
         let netuid1 = add_dynamic_network(&old_hotkey, &coldkey);
         let netuid2 = add_dynamic_network(&old_hotkey, &coldkey);
 
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         let children1 = vec![(100u64, U256::from(4)), (200u64, U256::from(5))];
         let children2 = vec![(300u64, U256::from(6))];
@@ -1200,7 +1182,7 @@ fn test_swap_multiple_subnets() {
 
         // Perform the swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1208,7 +1190,7 @@ fn test_swap_multiple_subnets() {
         ),);
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey_2,
@@ -1231,7 +1213,7 @@ fn test_swap_complex_parent_child_structure() {
         let new_hotkey = U256::from(2);
         let coldkey = U256::from(3);
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
         let parent1 = U256::from(4);
         let parent2 = U256::from(5);
         let child1 = U256::from(6);
@@ -1257,7 +1239,7 @@ fn test_swap_complex_parent_child_structure() {
 
         // Perform the swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1296,9 +1278,9 @@ fn test_swap_parent_hotkey_childkey_maps() {
         let parent_new = U256::from(5);
 
         let netuid = add_dynamic_network(&parent_old, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &parent_old);
+        GameSolver::create_account_if_non_existent(&coldkey, &parent_old);
 
         // Set child and verify state maps
         mock_set_children(&coldkey, &parent_old, netuid, &[(u64::MAX, child)]);
@@ -1321,7 +1303,7 @@ fn test_swap_parent_hotkey_childkey_maps() {
         // Swap
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &parent_old,
             &parent_new,
@@ -1352,10 +1334,10 @@ fn test_swap_child_hotkey_childkey_maps() {
         let child_old = U256::from(3);
         let child_new = U256::from(4);
         let netuid = add_dynamic_network(&child_old, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
-        SubtensorModule::create_account_if_non_existent(&coldkey, &child_old);
-        SubtensorModule::create_account_if_non_existent(&coldkey, &parent);
+        GameSolver::create_account_if_non_existent(&coldkey, &child_old);
+        GameSolver::create_account_if_non_existent(&coldkey, &parent);
 
         // Set child and verify state maps
         mock_set_children(&coldkey, &parent, netuid, &[(u64::MAX, child_old)]);
@@ -1378,7 +1360,7 @@ fn test_swap_child_hotkey_childkey_maps() {
         // Swap
 
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &child_old,
             &child_new,
@@ -1411,14 +1393,14 @@ fn test_swap_hotkey_is_sn_owner_hotkey() {
 
         // Create dynamic network
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         // Check for SubnetOwnerHotkey
         assert_eq!(SubnetOwnerHotkey::<Test>::get(netuid), old_hotkey);
 
         // Perform the swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1443,18 +1425,18 @@ fn test_swap_hotkey_swap_rate_limits() {
         let child_key_take_block = 8910;
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
 
         // Set the last tx block for the old hotkey
-        SubtensorModule::set_last_tx_block(&old_hotkey, last_tx_block);
+        GameSolver::set_last_tx_block(&old_hotkey, last_tx_block);
         // Set the last delegate take block for the old hotkey
-        SubtensorModule::set_last_tx_block_delegate_take(&old_hotkey, delegate_take_block);
+        GameSolver::set_last_tx_block_delegate_take(&old_hotkey, delegate_take_block);
         // Set last childkey take block for the old hotkey
-        SubtensorModule::set_last_tx_block_childkey(&old_hotkey, child_key_take_block);
+        GameSolver::set_last_tx_block_childkey(&old_hotkey, child_key_take_block);
 
         // Perform the swap
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1462,16 +1444,13 @@ fn test_swap_hotkey_swap_rate_limits() {
         ),);
 
         // Check for new hotkey
+        assert_eq!(GameSolver::get_last_tx_block(&new_hotkey), last_tx_block);
         assert_eq!(
-            SubtensorModule::get_last_tx_block(&new_hotkey),
-            last_tx_block
-        );
-        assert_eq!(
-            SubtensorModule::get_last_tx_block_delegate_take(&new_hotkey),
+            GameSolver::get_last_tx_block_delegate_take(&new_hotkey),
             delegate_take_block
         );
         assert_eq!(
-            SubtensorModule::get_last_tx_block_childkey_take(&new_hotkey),
+            GameSolver::get_last_tx_block_childkey_take(&new_hotkey),
             child_key_take_block
         );
     });
@@ -1485,10 +1464,10 @@ fn test_swap_owner_failed_interval_not_passed() {
         let coldkey = U256::from(3);
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
         Owner::<Test>::insert(old_hotkey, coldkey);
         assert_err!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 &old_hotkey,
                 &new_hotkey,
@@ -1507,11 +1486,11 @@ fn test_swap_owner_check_swap_block_set() {
         let coldkey = U256::from(3);
 
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
         Owner::<Test>::insert(old_hotkey, coldkey);
         let new_block_number = System::block_number() + HotkeySwapOnSubnetInterval::get();
         System::set_block_number(new_block_number);
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1532,11 +1511,11 @@ fn test_swap_owner_check_swap_record_clean_up() {
         let new_hotkey = U256::from(2);
         let coldkey = U256::from(3);
         let netuid = add_dynamic_network(&old_hotkey, &coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, u64::MAX);
         Owner::<Test>::insert(old_hotkey, coldkey);
         let new_block_number = System::block_number() + HotkeySwapOnSubnetInterval::get();
         System::set_block_number(new_block_number);
-        assert_ok!(SubtensorModule::do_swap_hotkey(
+        assert_ok!(GameSolver::do_swap_hotkey(
             RuntimeOrigin::signed(coldkey),
             &old_hotkey,
             &new_hotkey,
@@ -1570,14 +1549,14 @@ fn test_swap_hotkey_registered_on_other_subnet() {
         Owner::<Test>::insert(old_hotkey, coldkey);
         TotalNetworks::<Test>::put(1);
 
-        let initial_balance = SubtensorModule::get_key_swap_cost().to_u64() + 1000;
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, initial_balance);
+        let initial_balance = GameSolver::get_key_swap_cost().to_u64() + 1000;
+        GameSolver::add_balance_to_coldkey_account(&coldkey, initial_balance);
 
         // Test new hotkey already registered on other subnet
         IsNetworkMember::<Test>::insert(new_hotkey, other_netuid, true);
         System::set_block_number(System::block_number() + HotkeySwapOnSubnetInterval::get());
         assert_noop!(
-            SubtensorModule::do_swap_hotkey(
+            GameSolver::do_swap_hotkey(
                 RuntimeOrigin::signed(coldkey),
                 &old_hotkey,
                 &new_hotkey,

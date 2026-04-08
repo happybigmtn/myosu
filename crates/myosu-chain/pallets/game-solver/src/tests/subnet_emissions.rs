@@ -28,7 +28,7 @@ fn inplace_pow_normalize_all_zero_inputs_no_panic_and_unchanged() {
 
     let before = m.clone();
     // p = 1.0 (doesn't matter here)
-    SubtensorModule::inplace_pow_normalize(&mut m, u64f64(1.0));
+    GameSolver::inplace_pow_normalize(&mut m, u64f64(1.0));
 
     // Expect unchanged (sum becomes 0 → safe_div handles, or branch skips)
     for (k, v_before) in before {
@@ -52,7 +52,7 @@ fn inplace_pow_normalize_tiny_values_no_panic() {
     m.insert(NetUid::from(12), u64f64(3e-9));
 
     let before = m.clone();
-    SubtensorModule::inplace_pow_normalize(&mut m, u64f64(2.0)); // p = 2
+    GameSolver::inplace_pow_normalize(&mut m, u64f64(2.0)); // p = 2
 
     let sum = (1 + 4 + 9) as f64;
     for (k, v_before) in before {
@@ -76,7 +76,7 @@ fn inplace_pow_normalize_large_values_no_overflow_and_sum_to_one() {
     m.insert(NetUid::from(2), u64f64(5e9));
     m.insert(NetUid::from(3), u64f64(1e10));
 
-    SubtensorModule::inplace_pow_normalize(&mut m, u64f64(2.0)); // p = 2
+    GameSolver::inplace_pow_normalize(&mut m, u64f64(2.0)); // p = 2
 
     // Sum ≈ 1
     let sum: f64 = m.values().map(|v| v.to_num::<f64>()).sum();
@@ -103,7 +103,7 @@ fn inplace_pow_normalize_regular_case_relative_proportions_preserved() {
     m.insert(NetUid::from(8), u64f64(3.0));
     m.insert(NetUid::from(9), u64f64(5.0));
 
-    SubtensorModule::inplace_pow_normalize(&mut m, u64f64(1.0)); // p = 1
+    GameSolver::inplace_pow_normalize(&mut m, u64f64(1.0)); // p = 1
 
     let a = m.get(&NetUid::from(7)).copied().unwrap().to_num::<f64>();
     let b = m.get(&NetUid::from(8)).copied().unwrap().to_num::<f64>();
@@ -130,7 +130,7 @@ fn inplace_pow_normalize_fractional_exponent() {
             m.insert(NetUid::from(8), u64f64(3.0));
             m.insert(NetUid::from(9), u64f64(5.0));
 
-            SubtensorModule::inplace_pow_normalize(&mut m, u64f64(p));
+            GameSolver::inplace_pow_normalize(&mut m, u64f64(p));
 
             let a = m.get(&NetUid::from(7)).copied().unwrap().to_num::<f64>();
             let b = m.get(&NetUid::from(8)).copied().unwrap().to_num::<f64>();
@@ -172,7 +172,7 @@ fn inplace_pow_normalize_fractional_exponent() {
 //         SubnetEmaTaoFlow::<Test>::insert(n3, (block_num, i64f64(6_000.0)));
 
 //         let subnets = vec![n1, n2, n3];
-//         let shares = SubtensorModule::get_shares(&subnets);
+//         let shares = GameSolver::get_shares(&subnets);
 
 //         // Sum ≈ 1
 //         let sum: f64 = shares.values().map(|v| v.to_num::<f64>()).sum();
@@ -218,7 +218,7 @@ fn inplace_pow_normalize_fractional_exponent() {
 //         SubnetEmaTaoFlow::<Test>::insert(n2, (block_num, i64f64(2e-9)));
 
 //         let subnets = vec![n1, n2];
-//         let shares = SubtensorModule::get_shares(&subnets);
+//         let shares = GameSolver::get_shares(&subnets);
 
 //         let sum: f64 = shares.values().map(|v| v.to_num::<f64>()).sum();
 //         assert_abs_diff_eq!(sum, 1.0_f64, epsilon = 1e-8);
@@ -260,7 +260,7 @@ fn inplace_pow_normalize_fractional_exponent() {
 //         SubnetEmaTaoFlow::<Test>::insert(n2, (block_num, i64f64(1.8e12)));
 
 //         let subnets = vec![n1, n2];
-//         let shares = SubtensorModule::get_shares(&subnets);
+//         let shares = GameSolver::get_shares(&subnets);
 
 //         let sum: f64 = shares.values().map(|v| v.to_num::<f64>()).sum();
 //         assert_abs_diff_eq!(sum, 1.0_f64, epsilon = 1e-9);
@@ -319,7 +319,7 @@ fn seed_price_and_flow(n1: NetUid, n2: NetUid, price1: f64, price2: f64, flow1: 
 //         SubnetEmaTaoFlow::<Test>::insert(n1, (now, i64f64(-100.0)));
 //         SubnetEmaTaoFlow::<Test>::insert(n2, (now, i64f64(500.0)));
 
-//         let shares = SubtensorModule::get_shares(&[n1, n2]);
+//         let shares = GameSolver::get_shares(&[n1, n2]);
 //         let s1 = shares.get(&n1).unwrap().to_num::<f64>();
 //         let s2 = shares.get(&n2).unwrap().to_num::<f64>();
 
@@ -359,7 +359,7 @@ fn seed_price_and_flow(n1: NetUid, n2: NetUid, price1: f64, price2: f64, flow1: 
 //         SubnetEmaTaoFlow::<Test>::insert(n1, (now, i64f64(-100.0)));
 //         SubnetEmaTaoFlow::<Test>::insert(n2, (now, i64f64(-200.0)));
 
-//         let shares = SubtensorModule::get_shares(&[n1, n2]);
+//         let shares = GameSolver::get_shares(&[n1, n2]);
 //         let s1 = shares.get(&n1).unwrap().to_num::<f64>();
 //         let s2 = shares.get(&n2).unwrap().to_num::<f64>();
 
@@ -395,7 +395,7 @@ fn seed_price_and_flow(n1: NetUid, n2: NetUid, price1: f64, price2: f64, flow1: 
 //         SubnetEmaTaoFlow::<Test>::insert(n1, (now, i64f64(1000.0)));
 //         SubnetEmaTaoFlow::<Test>::insert(n2, (now, i64f64(2000.0)));
 
-//         let shares = SubtensorModule::get_shares(&[n1, n2]);
+//         let shares = GameSolver::get_shares(&[n1, n2]);
 //         let s1 = shares.get(&n1).unwrap().to_num::<f64>();
 //         let s2 = shares.get(&n2).unwrap().to_num::<f64>();
 
@@ -434,7 +434,7 @@ fn seed_price_and_flow(n1: NetUid, n2: NetUid, price1: f64, price2: f64, flow1: 
 //                 SubnetEmaTaoFlow::<Test>::insert(n1, (now, i64f64(flow1)));
 //                 SubnetEmaTaoFlow::<Test>::insert(n2, (now, i64f64(flow2)));
 
-//                 let shares = SubtensorModule::get_shares(&[n1, n2]);
+//                 let shares = GameSolver::get_shares(&[n1, n2]);
 //                 let s1 = shares.get(&n1).unwrap().to_num::<f64>();
 //                 let s2 = shares.get(&n2).unwrap().to_num::<f64>();
 
@@ -477,7 +477,7 @@ fn seed_price_and_flow(n1: NetUid, n2: NetUid, price1: f64, price2: f64, flow1: 
 //         SubnetEmaTaoFlow::<Test>::insert(n2, (now, i64f64(-300.0)));
 //         SubnetEmaTaoFlow::<Test>::insert(n3, (now, i64f64(-400.0)));
 
-//         let shares = SubtensorModule::get_shares(&[n1, n2, n3]);
+//         let shares = GameSolver::get_shares(&[n1, n2, n3]);
 //         let s1 = shares.get(&n1).unwrap().to_num::<f64>();
 //         let s2 = shares.get(&n2).unwrap().to_num::<f64>();
 //         let s3 = shares.get(&n3).unwrap().to_num::<f64>();

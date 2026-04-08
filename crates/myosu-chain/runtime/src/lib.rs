@@ -26,10 +26,10 @@ use frame_support::{
     genesis_builder_helper::{build_state, get_preset},
     traits::Contains,
 };
+use pallet_game_solver::CommitmentsInterface;
+use pallet_game_solver::macros::config::GetCommitments;
+use pallet_game_solver::rpc_info::neuron_info::NeuronInfoLite;
 use pallet_grandpa::{AuthorityId as GrandpaId, fg_primitives};
-use pallet_subtensor::CommitmentsInterface;
-use pallet_subtensor::macros::config::GetCommitments;
-use pallet_subtensor::rpc_info::neuron_info::NeuronInfoLite;
 #[cfg(feature = "full-runtime")]
 use pallet_subtensor_proxy as pallet_proxy;
 use pallet_subtensor_utility as pallet_utility;
@@ -207,8 +207,8 @@ mod stage0_noop_swap_tests {
         let tao = TaoCurrency::from(123_456_u64);
         let alpha = AlphaCurrency::from(654_321_u64);
 
-        let tao_to_alpha = pallet_subtensor::GetAlphaForTao::<Runtime>::with_amount(tao);
-        let alpha_to_tao = pallet_subtensor::GetTaoForAlpha::<Runtime>::with_amount(alpha);
+        let tao_to_alpha = pallet_game_solver::GetAlphaForTao::<Runtime>::with_amount(tao);
+        let alpha_to_tao = pallet_game_solver::GetTaoForAlpha::<Runtime>::with_amount(alpha);
 
         let tao_to_alpha_result = <Stage0NoopSwap as SwapHandler>::swap(
             netuid,
@@ -277,7 +277,7 @@ mod stage0_noop_swap_tests {
         let netuid = NetUid::from(13);
 
         assert_eq!(
-            SubtensorModule::get_stake_fee(
+            GameSolver::get_stake_fee(
                 Some((hotkey_a.clone(), netuid)),
                 coldkey_a.clone(),
                 Some((hotkey_a.clone(), netuid)),
@@ -287,7 +287,7 @@ mod stage0_noop_swap_tests {
             0_u64
         );
         assert_eq!(
-            SubtensorModule::get_stake_fee(
+            GameSolver::get_stake_fee(
                 None,
                 coldkey_a.clone(),
                 Some((hotkey_a, netuid)),
@@ -297,7 +297,7 @@ mod stage0_noop_swap_tests {
             0_u64
         );
         assert_eq!(
-            SubtensorModule::get_stake_fee(
+            GameSolver::get_stake_fee(
                 Some((hotkey_b, NetUid::ROOT)),
                 coldkey_b,
                 None,
@@ -318,9 +318,9 @@ where
 }
 
 // Subtensor module
+pub use pallet_game_solver;
 #[cfg(feature = "full-runtime")]
 pub use pallet_scheduler;
-pub use pallet_subtensor;
 
 // Method used to calculate the fee of an extrinsic
 pub const fn deposit(items: u32, bytes: u32) -> Balance {
@@ -480,7 +480,7 @@ impl frame_system::Config for Runtime {
     type PostInherents = ();
     type PostTransactions = ();
     type ExtensionsWeightInfo = frame_system::SubstrateExtensionsWeight<Runtime>;
-    type DispatchGuard = pallet_subtensor::CheckColdkeySwap<Runtime>;
+    type DispatchGuard = pallet_game_solver::CheckColdkeySwap<Runtime>;
 }
 
 // SEC-001: This pallet provides weak randomness derived from block hashes.
@@ -575,9 +575,9 @@ impl Contains<RuntimeCall> for SafeModeWhitelistedCalls {
                 | RuntimeCall::System(_)
                 | RuntimeCall::SafeMode(_)
                 | RuntimeCall::Timestamp(_)
-                | RuntimeCall::SubtensorModule(
-                    pallet_subtensor::Call::set_weights { .. }
-                        | pallet_subtensor::Call::serve_axon { .. }
+                | RuntimeCall::GameSolver(
+                    pallet_game_solver::Call::set_weights { .. }
+                        | pallet_game_solver::Call::serve_axon { .. }
                 )
         )
     }
@@ -724,46 +724,42 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
             ProxyType::NonTransfer => !matches!(
                 c,
                 RuntimeCall::Balances(..)
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::transfer_stake { .. })
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::schedule_swap_coldkey { .. }
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::transfer_stake { .. })
+                    | RuntimeCall::GameSolver(
+                        pallet_game_solver::Call::schedule_swap_coldkey { .. }
                     )
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_coldkey { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::swap_coldkey { .. })
             ),
             ProxyType::NonFungible => !matches!(
                 c,
                 RuntimeCall::Balances(..)
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::add_stake { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::add_stake_limit { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake { .. })
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::remove_stake_limit { .. }
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::add_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::add_stake_limit { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake_limit { .. })
+                    | RuntimeCall::GameSolver(
+                        pallet_game_solver::Call::remove_stake_full_limit { .. }
                     )
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::remove_stake_full_limit { .. }
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::unstake_all { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::unstake_all_alpha { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::swap_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::swap_stake_limit { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::move_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::transfer_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::burned_register { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::root_register { .. })
+                    | RuntimeCall::GameSolver(
+                        pallet_game_solver::Call::schedule_swap_coldkey { .. }
                     )
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::unstake_all { .. })
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::unstake_all_alpha { .. }
-                    )
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_stake { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_stake_limit { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::move_stake { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::transfer_stake { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::burned_register { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::root_register { .. })
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::schedule_swap_coldkey { .. }
-                    )
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_coldkey { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_hotkey { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::swap_coldkey { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::swap_hotkey { .. })
             ),
             ProxyType::Transfer => matches!(
                 c,
                 RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive { .. })
                     | RuntimeCall::Balances(pallet_balances::Call::transfer_allow_death { .. })
                     | RuntimeCall::Balances(pallet_balances::Call::transfer_all { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::transfer_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::transfer_stake { .. })
             ),
             ProxyType::SmallTransfer => match c {
                 RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive {
@@ -773,7 +769,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
                     value,
                     ..
                 }) => *value < SMALL_TRANSFER_LIMIT,
-                RuntimeCall::SubtensorModule(pallet_subtensor::Call::transfer_stake {
+                RuntimeCall::GameSolver(pallet_game_solver::Call::transfer_stake {
                     alpha_amount,
                     ..
                 }) => *alpha_amount < SMALL_TRANSFER_LIMIT.into(),
@@ -783,12 +779,10 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
                 matches!(
                     c,
                     RuntimeCall::AdminUtils(..)
-                        | RuntimeCall::SubtensorModule(
-                            pallet_subtensor::Call::set_subnet_identity { .. }
+                        | RuntimeCall::GameSolver(
+                            pallet_game_solver::Call::set_subnet_identity { .. }
                         )
-                        | RuntimeCall::SubtensorModule(
-                            pallet_subtensor::Call::update_symbol { .. }
-                        )
+                        | RuntimeCall::GameSolver(pallet_game_solver::Call::update_symbol { .. })
                 ) && !matches!(
                     c,
                     RuntimeCall::AdminUtils(
@@ -798,9 +792,9 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
             }
             ProxyType::NonCritical => !matches!(
                 c,
-                RuntimeCall::SubtensorModule(pallet_subtensor::Call::dissolve_network { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::root_register { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::burned_register { .. })
+                RuntimeCall::GameSolver(pallet_game_solver::Call::dissolve_network { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::root_register { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::burned_register { .. })
                     | RuntimeCall::Sudo(..)
             ),
             ProxyType::Triumvirate => false, // deprecated
@@ -808,38 +802,30 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
             ProxyType::Governance => false,  // deprecated
             ProxyType::Staking => matches!(
                 c,
-                RuntimeCall::SubtensorModule(pallet_subtensor::Call::add_stake { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::unstake_all { .. })
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::unstake_all_alpha { .. }
+                RuntimeCall::GameSolver(pallet_game_solver::Call::add_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::unstake_all { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::unstake_all_alpha { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::swap_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::swap_stake_limit { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::move_stake { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::add_stake_limit { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake_limit { .. })
+                    | RuntimeCall::GameSolver(
+                        pallet_game_solver::Call::remove_stake_full_limit { .. }
                     )
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_stake { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_stake_limit { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::move_stake { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::add_stake_limit { .. })
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::remove_stake_limit { .. }
-                    )
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::remove_stake_full_limit { .. }
-                    )
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::set_root_claim_type { .. }
-                    )
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::set_root_claim_type { .. })
             ),
             ProxyType::Registration => matches!(
                 c,
-                RuntimeCall::SubtensorModule(pallet_subtensor::Call::burned_register { .. })
-                    | RuntimeCall::SubtensorModule(pallet_subtensor::Call::register { .. })
+                RuntimeCall::GameSolver(pallet_game_solver::Call::burned_register { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::register { .. })
             ),
             ProxyType::RootWeights => false, // deprecated
             ProxyType::ChildKeys => matches!(
                 c,
-                RuntimeCall::SubtensorModule(pallet_subtensor::Call::set_children { .. })
-                    | RuntimeCall::SubtensorModule(
-                        pallet_subtensor::Call::set_childkey_take { .. }
-                    )
+                RuntimeCall::GameSolver(pallet_game_solver::Call::set_children { .. })
+                    | RuntimeCall::GameSolver(pallet_game_solver::Call::set_childkey_take { .. })
             ),
             ProxyType::SudoUncheckedSetCode => match c {
                 RuntimeCall::Sudo(pallet_sudo::Call::sudo_unchecked_weight { call, weight: _ }) => {
@@ -854,11 +840,11 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
             },
             ProxyType::SwapHotkey => matches!(
                 c,
-                RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_hotkey { .. })
+                RuntimeCall::GameSolver(pallet_game_solver::Call::swap_hotkey { .. })
             ),
             ProxyType::SubnetLeaseBeneficiary => matches!(
                 c,
-                RuntimeCall::SubtensorModule(pallet_subtensor::Call::start_call { .. })
+                RuntimeCall::GameSolver(pallet_game_solver::Call::start_call { .. })
                     | RuntimeCall::AdminUtils(
                         pallet_admin_utils::Call::sudo_set_serving_rate_limit { .. }
                     )
@@ -916,7 +902,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
             ),
             ProxyType::RootClaim => matches!(
                 c,
-                RuntimeCall::SubtensorModule(pallet_subtensor::Call::claim_root { .. })
+                RuntimeCall::GameSolver(pallet_game_solver::Call::claim_root { .. })
             ),
         }
     }
@@ -954,7 +940,7 @@ impl pallet_proxy::Config for Runtime {
 #[cfg(feature = "full-runtime")]
 pub struct Proxier;
 #[cfg(feature = "full-runtime")]
-impl pallet_subtensor::ProxyInterface<AccountId> for Proxier {
+impl pallet_game_solver::ProxyInterface<AccountId> for Proxier {
     fn add_lease_beneficiary_proxy(lease: &AccountId, beneficiary: &AccountId) -> DispatchResult {
         pallet_proxy::Pallet::<Runtime>::add_proxy_delegate(
             lease,
@@ -1130,7 +1116,7 @@ parameter_types! {
     pub const EvmKeyAssociateRateLimit: u64 = EVM_KEY_ASSOCIATE_RATELIMIT;
 }
 
-impl pallet_subtensor::Config for Runtime {
+impl pallet_game_solver::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
     type Currency = Balances;
@@ -1247,7 +1233,7 @@ construct_runtime!(
         Grandpa: pallet_grandpa = 4,
         Balances: pallet_balances = 5,
         TransactionPayment: pallet_transaction_payment = 6,
-        SubtensorModule: pallet_subtensor = 7,
+        GameSolver: pallet_game_solver = 7,
         // pallet_collective::<Instance1> (triumvirate) was 8
         // pallet_membership::<Instance1> (triumvirate members) was 9
         // pallet_membership::<Instance2> (senate members) was 10
@@ -1272,7 +1258,7 @@ construct_runtime!(
         Grandpa: pallet_grandpa = 4,
         Balances: pallet_balances = 5,
         TransactionPayment: pallet_transaction_payment = 6,
-        SubtensorModule: pallet_subtensor = 7,
+        GameSolver: pallet_game_solver = 7,
         // pallet_collective::<Instance1> (triumvirate) was 8
         // pallet_membership::<Instance1> (triumvirate members) was 9
         // pallet_membership::<Instance2> (senate members) was 10
@@ -1303,7 +1289,7 @@ pub type TransactionExtensions = (
 type Migrations = (
     // Leave this migration in the runtime, so every runtime upgrade tiny rounding errors (fractions of fractions
     // of a cent) are cleaned up. These tiny rounding errors occur due to floating point coversion.
-    pallet_subtensor::migrations::migrate_init_total_issuance::initialise_total_issuance::Migration<
+    pallet_game_solver::migrations::migrate_init_total_issuance::initialise_total_issuance::Migration<
         Runtime,
     >,
 );
@@ -1336,7 +1322,7 @@ mod benches {
         [pallet_balances, Balances]
         [pallet_timestamp, Timestamp]
         [pallet_admin_utils, AdminUtils]
-        [pallet_subtensor, SubtensorModule]
+        [pallet_game_solver, GameSolver]
     );
 }
 
@@ -1370,7 +1356,7 @@ fn generate_genesis_json() -> Vec<u8> {
       "sudo": {
         "key": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
       },
-      "subtensorModule": {
+      "gameSolver": {
         "balancesIssuance": 0,
         "stakes": []
       }
@@ -1650,9 +1636,9 @@ impl_runtime_apis! {
         }
     }
 
-    impl subtensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block> for Runtime {
+    impl game_solver_rpc_runtime_api::NeuronInfoRuntimeApi<Block> for Runtime {
         fn get_neurons_lite(netuid: NetUid) -> Vec<NeuronInfoLite<AccountId32>> {
-            SubtensorModule::get_neurons_lite(netuid)
+            GameSolver::get_neurons_lite(netuid)
         }
     }
 

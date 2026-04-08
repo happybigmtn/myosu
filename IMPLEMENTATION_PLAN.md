@@ -10,29 +10,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 1: Reduce and Clean
 
-- [ ] `DEBT-003` Pallet naming normalization
-
-  Spec: `specs/070426-technical-debt-surface.md`
-  Why now: Every code reference uses `pallet_subtensor::` via Cargo alias. New contributors searching for `pallet_subtensor` will no longer find the dead pallet (after DEBT-002) but will still be confused by the naming mismatch. Since myosu has no deployed chain state, renaming the `construct_runtime!` entry is safe for fresh genesis.
-  Codebase evidence: `crates/myosu-chain/runtime/Cargo.toml:248` defines `pallet_subtensor = { package = "pallet-game-solver" }`. `construct_runtime!` at `runtime/src/lib.rs:1250,1275` uses `SubtensorModule: pallet_subtensor = 7`. All imports in runtime, node, admin-utils use `pallet_subtensor::`. The relocated RPC/runtime-API crates (from DEBT-001) still use `subtensor-custom-*` package names.
-  Owns: (1) Change runtime Cargo.toml alias from `pallet_subtensor` to `pallet_game_solver`. (2) Change `construct_runtime!` entry to `GameSolver: pallet_game_solver = 7`. (3) Update all `use pallet_subtensor::` and `pallet_subtensor::` references in runtime, node, runtime-common, admin-utils, chain-client. (4) Rename relocated RPC crate packages from `subtensor-custom-rpc*` to `game-solver-rpc*`. (5) Update workspace Cargo.toml workspace dependency entries.
-  Integration touchpoints: Every file that imports `pallet_subtensor` — runtime `lib.rs`, `check_nonce.rs`, `sudo_wrapper.rs`, `transaction_payment_wrapper.rs`, node `rpc.rs`, `service.rs`, `command.rs`, `chain_spec/*.rs`, admin-utils pallet, chain-client, runtime-common.
-  Scope boundary: Rename identifiers and package names only. Do not change pallet logic, storage layout, or runtime behavior. The pallet index (7) stays the same.
-  Acceptance criteria: (1) `grep -rn "pallet_subtensor" crates/myosu-chain/` returns only comments explaining the rename, not active code. (2) `grep -rn "SubtensorModule" crates/myosu-chain/` returns zero results (replaced by `GameSolver`). (3) `SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime -p myosu-chain` succeeds. (4) `cargo test -p pallet-game-solver --quiet -- stage_0` passes. (5) `SKIP_WASM_BUILD=1 cargo run -p myosu-chain --quiet -- build-spec --chain devnet --raw > /dev/null` succeeds.
-  Verification:
-  ```bash
-  grep -rn "pallet_subtensor" crates/myosu-chain/runtime/src/ crates/myosu-chain/node/src/ | grep -v "^.*:.*//.*pallet_subtensor"
-  # Must return zero results
-  SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime -p myosu-chain
-  cargo test -p pallet-game-solver --quiet -- stage_0
-  SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
-  SKIP_WASM_BUILD=1 cargo run -p myosu-chain --quiet -- build-spec --chain devnet --raw > /dev/null
-  ```
-  Required tests: Existing tests pass. Chain spec builds correctly. No new tests (renaming only).
-  Dependencies: DEBT-001, DEBT-002.
-  Estimated scope: M
-  Completion signal: One pallet, one name, zero ambiguity.
-
 - [ ] `DEBT-004` Inherited migration file cleanup
 
   Spec: `specs/070426-technical-debt-surface.md`

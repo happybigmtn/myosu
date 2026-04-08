@@ -267,7 +267,7 @@ fn test_remove_stake_completely_fees_alpha() {
         );
 
         // Simulate stake removal to get how much TAO should we get for unstaked Alpha
-        let unstake_amount = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let unstake_amount = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -277,14 +277,14 @@ fn test_remove_stake_completely_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Remove stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_unstaked: unstake_amount,
@@ -302,7 +302,7 @@ fn test_remove_stake_completely_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -331,7 +331,7 @@ fn test_remove_stake_not_enough_balance_for_fees() {
         );
 
         // Simulate stake removal to get how much TAO should we get for unstaked Alpha
-        let current_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let current_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -339,14 +339,14 @@ fn test_remove_stake_not_enough_balance_for_fees() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // For-set Alpha balance to low
         let new_current_stake = AlphaCurrency::from(1_000);
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -354,7 +354,7 @@ fn test_remove_stake_not_enough_balance_for_fees() {
         );
 
         // Remove stake
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_unstaked: new_current_stake,
@@ -398,7 +398,7 @@ fn test_remove_stake_edge_alpha() {
         );
 
         // Simulate stake removal to get how much TAO should we get for unstaked Alpha
-        let current_stake = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let current_stake = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -406,14 +406,14 @@ fn test_remove_stake_edge_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // For-set Alpha balance to low, but enough to pay tx fees at the current Alpha price
         let new_current_stake = AlphaCurrency::from(1_000_000);
-        SubtensorModule::decrease_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::decrease_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -421,7 +421,7 @@ fn test_remove_stake_edge_alpha() {
         );
 
         // Remove stake
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_unstaked: new_current_stake,
@@ -476,19 +476,19 @@ fn test_remove_stake_failing_transaction_tao_fees() {
             &sn.hotkeys[0],
             stake_amount,
         );
-        SubtensorModule::add_balance_to_coldkey_account(&sn.coldkey, TAO);
+        GameSolver::add_balance_to_coldkey_account(&sn.coldkey, TAO);
 
         // Make unstaking fail by reducing liquidity to critical
         SubnetTAO::<Test>::insert(sn.subnets[0].netuid, TaoCurrency::from(1));
 
         // Remove stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_unstaked: unstake_amount,
@@ -506,7 +506,7 @@ fn test_remove_stake_failing_transaction_tao_fees() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -542,19 +542,19 @@ fn test_remove_stake_failing_transaction_alpha_fees() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Remove stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_unstaked: unstake_amount,
@@ -572,7 +572,7 @@ fn test_remove_stake_failing_transaction_alpha_fees() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -609,19 +609,19 @@ fn test_remove_stake_limit_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Remove stake limit
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake_limit {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::remove_stake_limit {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_unstaked: unstake_amount,
@@ -641,7 +641,7 @@ fn test_remove_stake_limit_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -670,13 +670,13 @@ fn test_unstake_all_fees_alpha() {
 
         // Root stake
         add_network(NetUid::from(0), 10);
-        pallet_subtensor::SubtokenEnabled::<Test>::insert(NetUid::from(0), true);
+        pallet_game_solver::SubtokenEnabled::<Test>::insert(NetUid::from(0), true);
         setup_stake(0.into(), &coldkey, &sn.hotkeys[0], stake_amount);
 
         // Simulate stake removal to get how much TAO should we get for unstaked Alpha
         let mut expected_unstaked_tao = 0;
         for i in 0..10 {
-            let unstake_amount = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            let unstake_amount = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &sn.hotkeys[0],
                 &coldkey,
                 sn.subnets[i].netuid,
@@ -688,14 +688,14 @@ fn test_unstake_all_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Unstake all
         let balance_before = Balances::free_balance(sn.coldkey);
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::unstake_all {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::unstake_all {
             hotkey: sn.hotkeys[0],
         });
 
@@ -719,7 +719,7 @@ fn test_unstake_all_fees_alpha() {
 
         // Check that all subnets got unstaked
         for i in 0..10 {
-            let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &sn.hotkeys[0],
                 &sn.coldkey,
                 sn.subnets[i].netuid,
@@ -744,7 +744,7 @@ fn test_unstake_all_alpha_fees_alpha() {
         // Simulate stake removal to get how much TAO should we get for unstaked Alpha
         let mut expected_unstaked_tao = 0;
         for i in 0..10 {
-            let unstake_amount = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            let unstake_amount = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &sn.hotkeys[0],
                 &coldkey,
                 sn.subnets[i].netuid,
@@ -756,14 +756,14 @@ fn test_unstake_all_alpha_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Unstake all
         let balance_before = Balances::free_balance(sn.coldkey);
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::unstake_all_alpha {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::unstake_all_alpha {
             hotkey: sn.hotkeys[0],
         });
 
@@ -787,7 +787,7 @@ fn test_unstake_all_alpha_fees_alpha() {
 
         // Check that all subnets got unstaked
         for i in 0..10 {
-            let alpha_after = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            let alpha_after = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &sn.hotkeys[0],
                 &sn.coldkey,
                 sn.subnets[i].netuid,
@@ -814,19 +814,19 @@ fn test_move_stake_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Move stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::move_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::move_stake {
             origin_hotkey: sn.hotkeys[0],
             destination_hotkey: sn.hotkeys[1],
             origin_netuid: sn.subnets[0].netuid,
@@ -846,14 +846,14 @@ fn test_move_stake_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after_0 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_0 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
 
         // Ensure stake was moved
-        let alpha_after_1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_1 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[1],
             &sn.coldkey,
             sn.subnets[1].netuid,
@@ -887,19 +887,19 @@ fn test_transfer_stake_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Transfer stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::transfer_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::transfer_stake {
             destination_coldkey,
             hotkey: sn.hotkeys[0],
             origin_netuid: sn.subnets[0].netuid,
@@ -919,14 +919,14 @@ fn test_transfer_stake_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after_0 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_0 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
 
         // Ensure stake was transferred
-        let alpha_after_1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_1 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &destination_coldkey,
             sn.subnets[1].netuid,
@@ -959,19 +959,19 @@ fn test_swap_stake_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Swap stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::swap_stake {
             hotkey: sn.hotkeys[0],
             origin_netuid: sn.subnets[0].netuid,
             destination_netuid: sn.subnets[1].netuid,
@@ -990,14 +990,14 @@ fn test_swap_stake_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after_0 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_0 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
 
         // Ensure stake was transferred
-        let alpha_after_1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_1 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[1].netuid,
@@ -1030,19 +1030,19 @@ fn test_swap_stake_limit_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Swap stake limit
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::swap_stake_limit {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::swap_stake_limit {
             hotkey: sn.hotkeys[0],
             origin_netuid: sn.subnets[0].netuid,
             destination_netuid: sn.subnets[1].netuid,
@@ -1063,14 +1063,14 @@ fn test_swap_stake_limit_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after_0 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_0 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
 
         // Ensure stake was transferred
-        let alpha_after_1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_1 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[1].netuid,
@@ -1103,19 +1103,19 @@ fn test_burn_alpha_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Burn alpha
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::burn_alpha {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::burn_alpha {
             hotkey: sn.hotkeys[0],
             amount: alpha_amount,
             netuid: sn.subnets[0].netuid,
@@ -1133,7 +1133,7 @@ fn test_burn_alpha_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after_0 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_0 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -1165,19 +1165,19 @@ fn test_recycle_alpha_fees_alpha() {
 
         // Forse-set signer balance to ED
         let current_balance = Balances::free_balance(sn.coldkey);
-        let _ = SubtensorModule::remove_balance_from_coldkey_account(
+        let _ = GameSolver::remove_balance_from_coldkey_account(
             &sn.coldkey,
             current_balance - ExistentialDeposit::get(),
         );
 
         // Recycle alpha
         let balance_before = Balances::free_balance(sn.coldkey);
-        let alpha_before = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_before = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
         );
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::recycle_alpha {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::recycle_alpha {
             hotkey: sn.hotkeys[0],
             amount: alpha_amount,
             netuid: sn.subnets[0].netuid,
@@ -1195,7 +1195,7 @@ fn test_recycle_alpha_fees_alpha() {
         ));
 
         let final_balance = Balances::free_balance(sn.coldkey);
-        let alpha_after_0 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha_after_0 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &sn.hotkeys[0],
             &sn.coldkey,
             sn.subnets[0].netuid,
@@ -1227,12 +1227,12 @@ fn test_add_stake_fees_go_to_block_builder() {
         // Simulate add stake to get the expected TAO fee
         let (_, swap_fee) = mock::swap_tao_to_alpha(sn.subnets[0].netuid, stake_amount.into());
 
-        SubtensorModule::add_balance_to_coldkey_account(&sn.coldkey, stake_amount * 10_u64);
+        GameSolver::add_balance_to_coldkey_account(&sn.coldkey, stake_amount * 10_u64);
         remove_stake_rate_limit_for_tests(&sn.hotkeys[0], &sn.coldkey, sn.subnets[0].netuid);
 
         // Stake
         let balance_before = Balances::free_balance(sn.coldkey);
-        let call = RuntimeCall::SubtensorModule(pallet_subtensor::Call::add_stake {
+        let call = RuntimeCall::GameSolver(pallet_game_solver::Call::add_stake {
             hotkey: sn.hotkeys[0],
             netuid: sn.subnets[0].netuid,
             amount_staked: stake_amount.into(),

@@ -30,7 +30,7 @@ fn test_do_start_call_ok() {
         let block_number = System::block_number() + StartCallDelay::<Test>::get();
         System::set_block_number(block_number);
 
-        assert_ok!(SubtensorModule::start_call(
+        assert_ok!(GameSolver::start_call(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid
         ));
@@ -48,7 +48,7 @@ fn test_do_start_call_fail_with_not_existed_subnet() {
         let netuid = NetUid::from(1);
         let coldkey_account_id = U256::from(0);
         assert_noop!(
-            SubtensorModule::start_call(
+            GameSolver::start_call(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
                 netuid
             ),
@@ -66,11 +66,11 @@ fn test_do_start_call_fail_not_owner() {
         let wrong_owner_account_id = U256::from(2);
         let burn_cost = TaoCurrency::from(1000);
         //add network
-        SubtensorModule::set_burn(netuid, burn_cost);
+        GameSolver::set_burn(netuid, burn_cost);
         add_network_without_emission_block(netuid, tempo, 0);
         mock::setup_reserves(netuid, 1_000_000_000.into(), 1_000_000_000.into());
         // Give it some $$$ in his coldkey balance
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
 
         add_network_without_emission_block(netuid, tempo, 0);
 
@@ -79,7 +79,7 @@ fn test_do_start_call_fail_not_owner() {
         System::set_block_number(System::block_number() + StartCallDelay::<Test>::get());
 
         assert_noop!(
-            SubtensorModule::start_call(
+            GameSolver::start_call(
                 <<Test as Config>::RuntimeOrigin>::signed(wrong_owner_account_id),
                 netuid
             ),
@@ -96,17 +96,17 @@ fn test_do_start_call_can_start_now() {
         let coldkey_account_id = U256::from(0);
         let burn_cost = TaoCurrency::from(1000);
         //add network
-        SubtensorModule::set_burn(netuid, burn_cost);
+        GameSolver::set_burn(netuid, burn_cost);
         add_network_without_emission_block(netuid, tempo, 0);
         mock::setup_reserves(netuid, 1_000_000_000.into(), 1_000_000_000.into());
         // Give it some $$$ in his coldkey balance
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
 
         add_network_without_emission_block(netuid, tempo, 0);
 
         assert_eq!(SubnetOwner::<Test>::get(netuid), coldkey_account_id);
 
-        assert_ok!(SubtensorModule::start_call(
+        assert_ok!(GameSolver::start_call(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid
         ));
@@ -122,17 +122,17 @@ fn test_do_start_call_fail_for_set_again() {
         let hotkey_account_id = U256::from(1);
         let burn_cost = TaoCurrency::from(1000);
 
-        SubtensorModule::set_burn(netuid, burn_cost);
+        GameSolver::set_burn(netuid, burn_cost);
         add_network_without_emission_block(netuid, tempo, 0);
         assert_eq!(FirstEmissionBlockNumber::<Test>::get(netuid), None);
 
         mock::setup_reserves(netuid, 1_000_000_000.into(), 1_000_000_000.into());
 
         // Give it some $$$ in his coldkey balance
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10000);
 
         // Subscribe and check extrinsic output
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid,
             hotkey_account_id
@@ -143,13 +143,13 @@ fn test_do_start_call_fail_for_set_again() {
         let block_number = System::block_number() + StartCallDelay::<Test>::get();
         System::set_block_number(block_number);
 
-        assert_ok!(SubtensorModule::start_call(
+        assert_ok!(GameSolver::start_call(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid
         ));
 
         assert_noop!(
-            SubtensorModule::start_call(
+            GameSolver::start_call(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
                 netuid
             ),
@@ -174,7 +174,7 @@ fn test_do_start_call_ok_with_same_block_number_after_coinbase() {
         let block_number = System::block_number() + StartCallDelay::<Test>::get();
         System::set_block_number(block_number);
 
-        assert_ok!(SubtensorModule::start_call(
+        assert_ok!(GameSolver::start_call(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid
         ));
@@ -199,20 +199,20 @@ fn test_register_network_min_burn_at_default() {
     new_test_ext(1).execute_with(|| {
         let sn_owner_coldkey = U256::from(0);
         let sn_owner_hotkey = U256::from(1);
-        let cost = SubtensorModule::get_network_lock_cost();
+        let cost = GameSolver::get_network_lock_cost();
 
         // Give coldkey enough for lock
-        SubtensorModule::add_balance_to_coldkey_account(&sn_owner_coldkey, cost.into());
+        GameSolver::add_balance_to_coldkey_account(&sn_owner_coldkey, cost.into());
 
         // Register network
-        assert_ok!(SubtensorModule::register_network(
+        assert_ok!(GameSolver::register_network(
             <<Test as Config>::RuntimeOrigin>::signed(sn_owner_coldkey),
             sn_owner_hotkey
         ));
 
         // Get netuid of the new network
         let netuid = match last_event() {
-            RuntimeEvent::SubtensorModule(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
+            RuntimeEvent::GameSolver(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
             _ => panic!("Expected NetworkAdded event"),
         };
 
@@ -228,20 +228,20 @@ fn test_register_network_min_burn_at_default() {
 #[test]
 fn test_register_network_use_symbol_for_subnet_if_available() {
     new_test_ext(1).execute_with(|| {
-        SubtensorModule::set_max_subnets(SYMBOLS.len() as u16);
+        GameSolver::set_max_subnets(SYMBOLS.len() as u16);
         for i in 0..(SYMBOLS.len() - 1) {
             let coldkey = U256::from(1_000_000 + i);
             let hotkey = U256::from(2_000_000 + i);
-            let cost = SubtensorModule::get_network_lock_cost();
-            SubtensorModule::add_balance_to_coldkey_account(&coldkey, cost.into());
+            let cost = GameSolver::get_network_lock_cost();
+            GameSolver::add_balance_to_coldkey_account(&coldkey, cost.into());
 
-            assert_ok!(SubtensorModule::register_network(
+            assert_ok!(GameSolver::register_network(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey),
                 hotkey
             ));
 
             let netuid = match last_event() {
-                RuntimeEvent::SubtensorModule(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
+                RuntimeEvent::GameSolver(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
                 _ => panic!("Expected NetworkAdded event"),
             };
 
@@ -263,16 +263,16 @@ fn test_register_network_use_next_available_symbol_if_symbol_for_subnet_is_taken
         for i in 0..50 {
             let coldkey = U256::from(1_000_000 + i);
             let hotkey = U256::from(2_000_000 + i);
-            let cost = SubtensorModule::get_network_lock_cost();
-            SubtensorModule::add_balance_to_coldkey_account(&coldkey, cost.into());
+            let cost = GameSolver::get_network_lock_cost();
+            GameSolver::add_balance_to_coldkey_account(&coldkey, cost.into());
 
-            assert_ok!(SubtensorModule::register_network(
+            assert_ok!(GameSolver::register_network(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey),
                 hotkey
             ));
 
             let netuid = match last_event() {
-                RuntimeEvent::SubtensorModule(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
+                RuntimeEvent::GameSolver(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
                 _ => panic!("Expected NetworkAdded event"),
             };
 
@@ -291,17 +291,17 @@ fn test_register_network_use_next_available_symbol_if_symbol_for_subnet_is_taken
         // Register a new network
         let coldkey = U256::from(1_000_000 + 50);
         let hotkey = U256::from(2_000_000 + 50);
-        let cost = SubtensorModule::get_network_lock_cost();
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, cost.into());
+        let cost = GameSolver::get_network_lock_cost();
+        GameSolver::add_balance_to_coldkey_account(&coldkey, cost.into());
 
-        assert_ok!(SubtensorModule::register_network(
+        assert_ok!(GameSolver::register_network(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             hotkey
         ));
 
         // Get netuid of the new network
         let netuid = match last_event() {
-            RuntimeEvent::SubtensorModule(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
+            RuntimeEvent::GameSolver(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
             _ => panic!("Expected NetworkAdded event"),
         };
 
@@ -315,14 +315,14 @@ fn test_register_network_use_next_available_symbol_if_symbol_for_subnet_is_taken
 fn test_register_network_use_default_symbol_if_all_symbols_are_taken() {
     new_test_ext(1).execute_with(|| {
         // Register networks until we have exhausted all symbols
-        SubtensorModule::set_max_subnets(SYMBOLS.len() as u16);
+        GameSolver::set_max_subnets(SYMBOLS.len() as u16);
         for i in 0..(SYMBOLS.len() - 1) {
             let coldkey = U256::from(1_000_000 + i);
             let hotkey = U256::from(2_000_000 + i);
-            let cost = SubtensorModule::get_network_lock_cost();
-            SubtensorModule::add_balance_to_coldkey_account(&coldkey, cost.into());
+            let cost = GameSolver::get_network_lock_cost();
+            GameSolver::add_balance_to_coldkey_account(&coldkey, cost.into());
 
-            assert_ok!(SubtensorModule::register_network(
+            assert_ok!(GameSolver::register_network(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey),
                 hotkey
             ));
@@ -331,17 +331,17 @@ fn test_register_network_use_default_symbol_if_all_symbols_are_taken() {
         // Register a new network
         let coldkey = U256::from(1_000_000 + 50);
         let hotkey = U256::from(2_000_000 + 50);
-        let cost = SubtensorModule::get_network_lock_cost();
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, cost.into());
+        let cost = GameSolver::get_network_lock_cost();
+        GameSolver::add_balance_to_coldkey_account(&coldkey, cost.into());
 
-        assert_ok!(SubtensorModule::register_network(
+        assert_ok!(GameSolver::register_network(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             hotkey
         ));
 
         // Get netuid of the new network
         let netuid = match last_event() {
-            RuntimeEvent::SubtensorModule(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
+            RuntimeEvent::GameSolver(Event::<Test>::NetworkAdded(netuid, _)) => netuid,
             _ => panic!("Expected NetworkAdded event"),
         };
         assert_eq!(netuid, NetUid::from(SYMBOLS.len() as u16));
@@ -368,7 +368,7 @@ fn test_subtoken_enable() {
         let block_number = System::block_number() + StartCallDelay::<Test>::get();
         System::set_block_number(block_number);
 
-        assert_ok!(SubtensorModule::start_call(
+        assert_ok!(GameSolver::start_call(
             <<Test as Config>::RuntimeOrigin>::signed(account),
             netuid
         ));
@@ -411,10 +411,10 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         register_ok_neuron(netuid, hotkey_account_2_id, coldkey_account_id, 0);
         register_ok_neuron(netuid2, hotkey_account_2_id, coldkey_account_id, 100);
 
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 10_000);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 10_000);
 
         // Give some stake
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_account_id,
             &coldkey_account_id,
             netuid,
@@ -423,7 +423,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
 
         // all trading extrinsic should be rejected.
         assert_noop!(
-            SubtensorModule::add_stake(
+            GameSolver::add_stake(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 netuid,
@@ -433,7 +433,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         );
 
         assert_noop!(
-            SubtensorModule::add_stake_limit(
+            GameSolver::add_stake_limit(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 netuid,
@@ -446,13 +446,13 @@ fn test_subtoken_enable_reject_trading_before_enable() {
 
         // For unstake_all the result is Ok, but the
         // operation is not performed.
-        assert_ok!(SubtensorModule::unstake_all(
+        assert_ok!(GameSolver::unstake_all(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id
         ));
         // Check that the stake is still the same
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey_account_id,
                 &coldkey_account_id,
                 netuid
@@ -462,7 +462,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
 
         // For unstake_all_alpha, the result is AmountTooLow because no re-staking happens.
         assert_noop!(
-            SubtensorModule::unstake_all_alpha(
+            GameSolver::unstake_all_alpha(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id
             ),
@@ -470,7 +470,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         );
         // Check that the stake is still the same
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey_account_id,
                 &coldkey_account_id,
                 netuid
@@ -478,7 +478,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
             stake_bal
         );
 
-        SubtensorModule::remove_stake_limit(
+        GameSolver::remove_stake_limit(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,
@@ -489,7 +489,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         .unwrap();
 
         assert_noop!(
-            SubtensorModule::remove_stake(
+            GameSolver::remove_stake(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 netuid,
@@ -499,7 +499,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         );
 
         assert_noop!(
-            SubtensorModule::recycle_alpha(
+            GameSolver::recycle_alpha(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 amount.into(),
@@ -509,7 +509,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         );
 
         assert_noop!(
-            SubtensorModule::burn_alpha(
+            GameSolver::burn_alpha(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 amount.into(),
@@ -519,7 +519,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         );
 
         assert_noop!(
-            SubtensorModule::move_stake(
+            GameSolver::move_stake(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 hotkey_account_2_id,
@@ -531,7 +531,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         );
 
         assert_noop!(
-            SubtensorModule::transfer_stake(
+            GameSolver::transfer_stake(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 hotkey_account_2_id,
@@ -543,7 +543,7 @@ fn test_subtoken_enable_reject_trading_before_enable() {
         );
 
         assert_noop!(
-            SubtensorModule::swap_stake(
+            GameSolver::swap_stake(
                 RuntimeOrigin::signed(coldkey_account_id),
                 hotkey_account_id,
                 netuid,
@@ -584,34 +584,31 @@ fn test_subtoken_enable_trading_ok_with_enable() {
         register_ok_neuron(netuid, hotkey_account_2_id, coldkey_account_id, 0);
         register_ok_neuron(netuid2, hotkey_account_2_id, coldkey_account_id, 100);
 
-        SubtensorModule::add_balance_to_coldkey_account(
-            &coldkey_account_id,
-            stake_amount.to_u64() * 10,
-        );
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, stake_amount.to_u64() * 10);
 
         // all trading extrinsic should be possible now that subtoken is enabled.
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,
             stake_amount
         ));
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid2,
             stake_amount
         ));
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_2_id,
             netuid,
             stake_amount
         ));
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_2_id,
             netuid2,
@@ -620,28 +617,28 @@ fn test_subtoken_enable_trading_ok_with_enable() {
 
         remove_stake_rate_limit_for_tests(&hotkey_account_id, &coldkey_account_id, netuid);
 
-        assert_ok!(SubtensorModule::remove_stake(
+        assert_ok!(GameSolver::remove_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,
             unstake_amount
         ));
 
-        assert_ok!(SubtensorModule::recycle_alpha(
+        assert_ok!(GameSolver::recycle_alpha(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             unstake_amount,
             netuid
         ));
 
-        assert_ok!(SubtensorModule::burn_alpha(
+        assert_ok!(GameSolver::burn_alpha(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             unstake_amount,
             netuid
         ));
 
-        assert_ok!(SubtensorModule::move_stake(
+        assert_ok!(GameSolver::move_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             hotkey_account_2_id,
@@ -652,7 +649,7 @@ fn test_subtoken_enable_trading_ok_with_enable() {
 
         remove_stake_rate_limit_for_tests(&hotkey_account_2_id, &coldkey_account_id, netuid);
 
-        assert_ok!(SubtensorModule::transfer_stake(
+        assert_ok!(GameSolver::transfer_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             hotkey_account_2_id,
@@ -661,7 +658,7 @@ fn test_subtoken_enable_trading_ok_with_enable() {
             unstake_amount,
         ));
 
-        assert_ok!(SubtensorModule::swap_stake(
+        assert_ok!(GameSolver::swap_stake(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
             netuid,
@@ -669,7 +666,7 @@ fn test_subtoken_enable_trading_ok_with_enable() {
             unstake_amount,
         ));
 
-        assert_ok!(SubtensorModule::unstake_all_alpha(
+        assert_ok!(GameSolver::unstake_all_alpha(
             RuntimeOrigin::signed(coldkey_account_id),
             hotkey_account_id,
         ));
@@ -689,24 +686,24 @@ fn test_subtoken_enable_ok_for_burn_register_before_enable() {
 
         let burn_cost = TaoCurrency::from(1000);
         // Set the burn cost
-        SubtensorModule::set_burn(netuid, burn_cost);
+        GameSolver::set_burn(netuid, burn_cost);
         // Add the networks with subtoken disabled
         add_network_disable_subtoken(netuid, 10, 0);
         add_network_disable_subtoken(netuid2, 10, 0);
         // Give enough to burned register
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &coldkey_account_id,
             burn_cost.to_u64() * 2 + 5_000,
         );
 
         // Should be possible to burned register before enable is activated
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid,
             hotkey_account_id
         ));
 
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid2,
             hotkey_account_2_id
@@ -804,7 +801,7 @@ fn test_update_symbol_works_as_root_if_symbol_exists_and_available() {
         // only one network so we can set any symbol, except the root symbol
         for i in 1..SYMBOLS.len() {
             let symbol = SYMBOLS.get(i).unwrap().to_vec();
-            assert_ok!(SubtensorModule::update_symbol(
+            assert_ok!(GameSolver::update_symbol(
                 <Test as Config>::RuntimeOrigin::root(),
                 netuid,
                 symbol.clone()
@@ -828,7 +825,7 @@ fn test_update_symbol_works_as_subnet_owner_if_symbol_exists_and_available() {
         for i in 1..SYMBOLS.len() {
             let symbol = SYMBOLS.get(i).unwrap().to_vec();
 
-            assert_ok!(SubtensorModule::update_symbol(
+            assert_ok!(GameSolver::update_symbol(
                 <Test as Config>::RuntimeOrigin::signed(coldkey),
                 netuid,
                 symbol.clone()
@@ -849,7 +846,7 @@ fn test_update_symbol_fails_if_symbol_doesnt_exist() {
         SubnetOwner::<Test>::insert(netuid, coldkey);
 
         assert_err!(
-            SubtensorModule::update_symbol(
+            GameSolver::update_symbol(
                 <Test as Config>::RuntimeOrigin::signed(coldkey),
                 netuid,
                 b"TEST".to_vec()
@@ -872,14 +869,14 @@ fn test_update_symbol_fails_if_symbol_already_in_use() {
         add_network(netuid2, 10, 0);
         SubnetOwner::<Test>::insert(netuid2, coldkey2);
 
-        assert_ok!(SubtensorModule::update_symbol(
+        assert_ok!(GameSolver::update_symbol(
             <Test as Config>::RuntimeOrigin::signed(coldkey),
             netuid,
             SYMBOLS.get(42).unwrap().to_vec()
         ));
 
         assert_err!(
-            SubtensorModule::update_symbol(
+            GameSolver::update_symbol(
                 <Test as Config>::RuntimeOrigin::signed(coldkey2),
                 netuid2,
                 SYMBOLS.get(42).unwrap().to_vec()

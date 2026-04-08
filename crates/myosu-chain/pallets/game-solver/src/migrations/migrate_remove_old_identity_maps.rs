@@ -23,9 +23,9 @@ pub fn migrate_remove_old_identity_maps<T: Config>() -> Weight {
     // ------------------------------
     // Step 1: Remove Map entries
     // ------------------------------
-    remove_prefix::<T>("SubtensorModule", "Identities", &mut weight);
-    remove_prefix::<T>("SubtensorModule", "SubnetIdentities", &mut weight);
-    remove_prefix::<T>("SubtensorModule", "SubnetIdentitiesV2", &mut weight);
+    remove_prefix::<T>("GameSolver", "Identities", &mut weight);
+    remove_prefix::<T>("GameSolver", "SubnetIdentities", &mut weight);
+    remove_prefix::<T>("GameSolver", "SubnetIdentitiesV2", &mut weight);
 
     // ------------------------------
     // Step 2: Mark Migration as Completed

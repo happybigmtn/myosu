@@ -11,7 +11,7 @@ use frame_support::{
 use frame_system::{
     self as system, EnsureRoot, RawOrigin, limits, offchain::CreateTransactionBase,
 };
-pub use pallet_game_solver as pallet_subtensor;
+pub use pallet_game_solver;
 pub use pallet_game_solver::*;
 pub use sp_core::U256;
 use sp_core::{ConstU64, H256};
@@ -62,7 +62,7 @@ pub type GameSolverEvent = pallet_game_solver::Event<Test>;
 pub type SubtensorEvent = GameSolverEvent;
 
 #[allow(dead_code)]
-pub type SubtensorModule = GameSolver;
+pub type GameSolver = GameSolver;
 
 #[allow(dead_code)]
 pub type BalanceCall = pallet_balances::Call<Test>;
@@ -99,7 +99,7 @@ pub type UncheckedExtrinsic = TestXt<RuntimeCall, TransactionExtensions>;
 
 impl RuntimeCall {
     #[allow(non_snake_case)]
-    pub fn SubtensorModule(call: pallet_game_solver::Call<Test>) -> Self {
+    pub fn GameSolver(call: pallet_game_solver::Call<Test>) -> Self {
         Self::GameSolver(call)
     }
 }

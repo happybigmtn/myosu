@@ -26,7 +26,7 @@ pub fn migrate_remove_stake_map<T: Config>() -> Weight {
     // ------------------------------
 
     let mut stake_prefix = Vec::new();
-    stake_prefix.extend_from_slice(&twox_128("SubtensorModule".as_bytes()));
+    stake_prefix.extend_from_slice(&twox_128("GameSolver".as_bytes()));
     stake_prefix.extend_from_slice(&twox_128("Stake".as_bytes()));
 
     let removal_results = clear_prefix(&stake_prefix, Some(u32::MAX));

@@ -5158,6 +5158,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "game-solver-rpc"
+version = "0.0.2"
+dependencies = [
+ "game-solver-rpc-runtime-api",
+ "jsonrpsee",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "subtensor-runtime-common",
+]
+
+[[package]]
+name = "game-solver-rpc-runtime-api"
+version = "0.0.2"
+dependencies = [
+ "pallet-game-solver",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+ "subtensor-runtime-common",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7682,6 +7706,8 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "futures",
+ "game-solver-rpc",
+ "game-solver-rpc-runtime-api",
  "hex",
  "jsonrpsee",
  "log",
@@ -7747,8 +7773,6 @@ dependencies = [
  "substrate-fixed",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
- "subtensor-custom-rpc",
- "subtensor-custom-rpc-runtime-api",
  "subtensor-macros",
  "subtensor-runtime-common",
  "tokio",
@@ -7787,6 +7811,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "game-solver-rpc-runtime-api",
  "log",
  "pallet-admin-utils",
  "pallet-aura",
@@ -7825,7 +7850,6 @@ dependencies = [
  "sp-version",
  "substrate-fixed",
  "substrate-wasm-builder",
- "subtensor-custom-rpc-runtime-api",
  "subtensor-macros",
  "subtensor-runtime-common",
  "subtensor-swap-interface",
@@ -17407,30 +17431,6 @@ dependencies = [
  "toml 0.8.23",
  "walkdir",
  "wasm-opt",
-]
-
-[[package]]
-name = "subtensor-custom-rpc"
-version = "0.0.2"
-dependencies = [
- "jsonrpsee",
- "parity-scale-codec",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
- "subtensor-custom-rpc-runtime-api",
- "subtensor-runtime-common",
-]
-
-[[package]]
-name = "subtensor-custom-rpc-runtime-api"
-version = "0.0.2"
-dependencies = [
- "pallet-game-solver",
- "parity-scale-codec",
- "sp-api",
- "sp-runtime",
- "subtensor-runtime-common",
 ]
 
 [[package]]

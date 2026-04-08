@@ -1,5 +1,5 @@
 [package]
-name = "subtensor-custom-rpc"
+name = "game-solver-rpc"
 version = "0.0.2"
 edition.workspace = true
 authors = ['Cameron Fairchild <https://github.com/camfairchild>']
@@ -22,7 +22,7 @@ sp-runtime.workspace = true
 
 # local packages
 subtensor-runtime-common.workspace = true
-subtensor-custom-rpc-runtime-api.workspace = true
+game-solver-rpc-runtime-api.workspace = true
 
 [features]
 default = ["std"]
@@ -30,7 +30,7 @@ std = [
 	"codec/std",
 	"sp-api/std",
 	"sp-runtime/std",
-	"subtensor-custom-rpc-runtime-api/std",
+	"game-solver-rpc-runtime-api/std",
 	"subtensor-runtime-common/std",
 ]
 pow-faucet = []

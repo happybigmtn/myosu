@@ -46,7 +46,7 @@ pub fn migrate_coldkey_swap_scheduled_to_announcements<T: Config>() -> Weight {
     );
 
     // Remove ColdkeySwapScheduleDuration and ColdkeySwapRescheduleDuration
-    let pallet_name = twox_128(b"SubtensorModule");
+    let pallet_name = twox_128(b"GameSolver");
     let storage_name1 = twox_128(b"ColdkeySwapScheduleDuration");
     let storage_name2 = twox_128(b"ColdkeySwapRescheduleDuration");
     clear(&[pallet_name, storage_name1].concat());

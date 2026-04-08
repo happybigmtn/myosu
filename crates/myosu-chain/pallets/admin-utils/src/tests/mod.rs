@@ -5,13 +5,13 @@ use frame_support::{
     traits::Hooks,
 };
 use frame_system::Config;
-use pallet_game_solver as pallet_subtensor;
-use pallet_subtensor::{
+use pallet_game_solver;
+use pallet_game_solver::{
     Error as SubtensorError, MaxRegistrationsPerBlock, Rank, SubnetOwner,
     TargetRegistrationsPerInterval, Tempo, WeightsVersionKeyRateLimit, *,
 };
-// use pallet_subtensor::{migrations, Event};
-use pallet_subtensor::{
+// use pallet_game_solver::{migrations, Event};
+use pallet_game_solver::{
     Event, subnets::mechanism::MAX_MECHANISM_COUNT_PER_SUBNET,
     utils::rate_limiting::TransactionType,
 };
@@ -30,7 +30,7 @@ pub(crate) mod mock;
 fn test_sudo_set_default_take() {
     new_test_ext().execute_with(|| {
         let to_be_set: u16 = 10;
-        let init_value: u16 = SubtensorModule::get_default_delegate_take();
+        let init_value: u16 = GameSolver::get_default_delegate_take();
         assert_eq!(
             AdminUtils::sudo_set_default_take(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(0)),
@@ -38,12 +38,12 @@ fn test_sudo_set_default_take() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        assert_eq!(SubtensorModule::get_default_delegate_take(), init_value);
+        assert_eq!(GameSolver::get_default_delegate_take(), init_value);
         assert_ok!(AdminUtils::sudo_set_default_take(
             <<Test as Config>::RuntimeOrigin>::root(),
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_default_delegate_take(), to_be_set);
+        assert_eq!(GameSolver::get_default_delegate_take(), to_be_set);
     });
 }
 
@@ -52,7 +52,7 @@ fn test_sudo_set_serving_rate_limit() {
     new_test_ext().execute_with(|| {
         let netuid = NetUid::from(3);
         let to_be_set: u64 = 10;
-        let init_value: u64 = SubtensorModule::get_serving_rate_limit(netuid);
+        let init_value: u64 = GameSolver::get_serving_rate_limit(netuid);
         assert_eq!(
             AdminUtils::sudo_set_serving_rate_limit(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -61,13 +61,13 @@ fn test_sudo_set_serving_rate_limit() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        assert_eq!(SubtensorModule::get_serving_rate_limit(netuid), init_value);
+        assert_eq!(GameSolver::get_serving_rate_limit(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_serving_rate_limit(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_serving_rate_limit(netuid), to_be_set);
+        assert_eq!(GameSolver::get_serving_rate_limit(netuid), to_be_set);
     });
 }
 
@@ -77,7 +77,7 @@ fn test_sudo_set_min_difficulty() {
         let netuid = NetUid::from(1);
         let to_be_set: u64 = 10;
         add_network(netuid, 10);
-        let init_value: u64 = SubtensorModule::get_min_difficulty(netuid);
+        let init_value: u64 = GameSolver::get_min_difficulty(netuid);
         assert_eq!(
             AdminUtils::sudo_set_min_difficulty(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -94,13 +94,13 @@ fn test_sudo_set_min_difficulty() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_min_difficulty(netuid), init_value);
+        assert_eq!(GameSolver::get_min_difficulty(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_min_difficulty(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_min_difficulty(netuid), to_be_set);
+        assert_eq!(GameSolver::get_min_difficulty(netuid), to_be_set);
     });
 }
 
@@ -110,7 +110,7 @@ fn test_sudo_set_max_difficulty() {
         let netuid = NetUid::from(1);
         let to_be_set: u64 = 10;
         add_network(netuid, 10);
-        let init_value: u64 = SubtensorModule::get_max_difficulty(netuid);
+        let init_value: u64 = GameSolver::get_max_difficulty(netuid);
         assert_eq!(
             AdminUtils::sudo_set_max_difficulty(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -127,13 +127,13 @@ fn test_sudo_set_max_difficulty() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_max_difficulty(netuid), init_value);
+        assert_eq!(GameSolver::get_max_difficulty(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_max_difficulty(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_max_difficulty(netuid), to_be_set);
+        assert_eq!(GameSolver::get_max_difficulty(netuid), to_be_set);
     });
 }
 
@@ -143,7 +143,7 @@ fn test_sudo_set_weights_version_key() {
         let netuid = NetUid::from(1);
         let to_be_set: u64 = 10;
         add_network(netuid, 10);
-        let init_value: u64 = SubtensorModule::get_weights_version_key(netuid);
+        let init_value: u64 = GameSolver::get_weights_version_key(netuid);
         assert_eq!(
             AdminUtils::sudo_set_weights_version_key(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -160,13 +160,13 @@ fn test_sudo_set_weights_version_key() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_weights_version_key(netuid), init_value);
+        assert_eq!(GameSolver::get_weights_version_key(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_weights_version_key(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_weights_version_key(netuid), to_be_set);
+        assert_eq!(GameSolver::get_weights_version_key(netuid), to_be_set);
     });
 }
 
@@ -191,7 +191,7 @@ fn test_sudo_set_weights_version_key_rate_limit() {
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_weights_version_key(netuid), to_be_set);
+        assert_eq!(GameSolver::get_weights_version_key(netuid), to_be_set);
 
         // Try to set again with
         // Assert rate limit not passed
@@ -207,7 +207,7 @@ fn test_sudo_set_weights_version_key_rate_limit() {
                 netuid,
                 to_be_set + 1
             ),
-            pallet_subtensor::Error::<Test>::TxRateLimitExceeded
+            pallet_game_solver::Error::<Test>::TxRateLimitExceeded
         );
 
         // Wait for rate limit to pass
@@ -223,10 +223,7 @@ fn test_sudo_set_weights_version_key_rate_limit() {
             netuid,
             to_be_set + 1
         ));
-        assert_eq!(
-            SubtensorModule::get_weights_version_key(netuid),
-            to_be_set + 1
-        );
+        assert_eq!(GameSolver::get_weights_version_key(netuid), to_be_set + 1);
     });
 }
 
@@ -254,7 +251,7 @@ fn test_sudo_set_weights_version_key_rate_limit_root() {
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_weights_version_key(netuid), to_be_set);
+        assert_eq!(GameSolver::get_weights_version_key(netuid), to_be_set);
 
         // Try transaction
         assert_ok!(AdminUtils::sudo_set_weights_version_key(
@@ -262,10 +259,7 @@ fn test_sudo_set_weights_version_key_rate_limit_root() {
             netuid,
             to_be_set + 1
         ));
-        assert_eq!(
-            SubtensorModule::get_weights_version_key(netuid),
-            to_be_set + 1
-        );
+        assert_eq!(GameSolver::get_weights_version_key(netuid), to_be_set + 1);
     });
 }
 
@@ -275,7 +269,7 @@ fn test_sudo_set_weights_set_rate_limit() {
         let netuid = NetUid::from(1);
         let to_be_set: u64 = 10;
         add_network(netuid, 10);
-        let init_value: u64 = SubtensorModule::get_weights_set_rate_limit(netuid);
+        let init_value: u64 = GameSolver::get_weights_set_rate_limit(netuid);
         assert_eq!(
             AdminUtils::sudo_set_weights_set_rate_limit(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -292,19 +286,13 @@ fn test_sudo_set_weights_set_rate_limit() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(
-            SubtensorModule::get_weights_set_rate_limit(netuid),
-            init_value
-        );
+        assert_eq!(GameSolver::get_weights_set_rate_limit(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_weights_set_rate_limit(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(
-            SubtensorModule::get_weights_set_rate_limit(netuid),
-            to_be_set
-        );
+        assert_eq!(GameSolver::get_weights_set_rate_limit(netuid), to_be_set);
     });
 }
 
@@ -314,7 +302,7 @@ fn test_sudo_set_adjustment_interval() {
         let netuid = NetUid::from(1);
         let to_be_set: u16 = 10;
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_adjustment_interval(netuid);
+        let init_value: u16 = GameSolver::get_adjustment_interval(netuid);
         assert_eq!(
             AdminUtils::sudo_set_adjustment_interval(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -331,13 +319,13 @@ fn test_sudo_set_adjustment_interval() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_adjustment_interval(netuid), init_value);
+        assert_eq!(GameSolver::get_adjustment_interval(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_adjustment_interval(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_adjustment_interval(netuid), to_be_set);
+        assert_eq!(GameSolver::get_adjustment_interval(netuid), to_be_set);
     });
 }
 
@@ -347,7 +335,7 @@ fn test_sudo_set_adjustment_alpha() {
         let netuid = NetUid::from(1);
         let to_be_set: u64 = 10;
         add_network(netuid, 10);
-        let init_value: u64 = SubtensorModule::get_adjustment_alpha(netuid);
+        let init_value: u64 = GameSolver::get_adjustment_alpha(netuid);
         assert_eq!(
             AdminUtils::sudo_set_adjustment_alpha(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -364,13 +352,13 @@ fn test_sudo_set_adjustment_alpha() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_adjustment_alpha(netuid), init_value);
+        assert_eq!(GameSolver::get_adjustment_alpha(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_adjustment_alpha(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_adjustment_alpha(netuid), to_be_set);
+        assert_eq!(GameSolver::get_adjustment_alpha(netuid), to_be_set);
     });
 }
 
@@ -378,7 +366,7 @@ fn test_sudo_set_adjustment_alpha() {
 fn test_sudo_subnet_owner_cut() {
     new_test_ext().execute_with(|| {
         let to_be_set: u16 = 10;
-        let init_value: u16 = SubtensorModule::get_subnet_owner_cut();
+        let init_value: u16 = GameSolver::get_subnet_owner_cut();
         assert_eq!(
             AdminUtils::sudo_set_subnet_owner_cut(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(0)),
@@ -386,12 +374,12 @@ fn test_sudo_subnet_owner_cut() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        assert_eq!(SubtensorModule::get_subnet_owner_cut(), init_value);
+        assert_eq!(GameSolver::get_subnet_owner_cut(), init_value);
         assert_ok!(AdminUtils::sudo_set_subnet_owner_cut(
             <<Test as Config>::RuntimeOrigin>::root(),
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_subnet_owner_cut(), to_be_set);
+        assert_eq!(GameSolver::get_subnet_owner_cut(), to_be_set);
     });
 }
 
@@ -410,7 +398,7 @@ fn test_sudo_set_issuance() {
             <<Test as Config>::RuntimeOrigin>::root(),
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_total_issuance(), to_be_set);
+        assert_eq!(GameSolver::get_total_issuance(), to_be_set);
     });
 }
 
@@ -420,7 +408,7 @@ fn test_sudo_set_immunity_period() {
         let netuid = NetUid::from(1);
         let to_be_set: u16 = 10;
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_immunity_period(netuid);
+        let init_value: u16 = GameSolver::get_immunity_period(netuid);
         assert_eq!(
             AdminUtils::sudo_set_immunity_period(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -437,13 +425,13 @@ fn test_sudo_set_immunity_period() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_immunity_period(netuid), init_value);
+        assert_eq!(GameSolver::get_immunity_period(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_immunity_period(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_immunity_period(netuid), to_be_set);
+        assert_eq!(GameSolver::get_immunity_period(netuid), to_be_set);
     });
 }
 
@@ -453,7 +441,7 @@ fn test_sudo_set_min_allowed_weights() {
         let netuid = NetUid::from(1);
         let to_be_set: u16 = 10;
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_min_allowed_weights(netuid);
+        let init_value: u16 = GameSolver::get_min_allowed_weights(netuid);
         assert_eq!(
             AdminUtils::sudo_set_min_allowed_weights(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -470,13 +458,13 @@ fn test_sudo_set_min_allowed_weights() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_min_allowed_weights(netuid), init_value);
+        assert_eq!(GameSolver::get_min_allowed_weights(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_min_allowed_weights(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_min_allowed_weights(netuid), to_be_set);
+        assert_eq!(GameSolver::get_min_allowed_weights(netuid), to_be_set);
     });
 }
 
@@ -519,7 +507,7 @@ fn test_sudo_set_max_allowed_uids() {
             AdminUtils::sudo_set_max_allowed_uids(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                SubtensorModule::get_min_allowed_uids(netuid) - 1
+                GameSolver::get_min_allowed_uids(netuid) - 1
             ),
             Error::<Test>::MaxAllowedUidsLessThanMinAllowedUids
         );
@@ -529,7 +517,7 @@ fn test_sudo_set_max_allowed_uids() {
             AdminUtils::sudo_set_max_allowed_uids(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                SubtensorModule::get_subnetwork_n(netuid) - 1
+                GameSolver::get_subnetwork_n(netuid) - 1
             ),
             Error::<Test>::MaxAllowedUIdsLessThanCurrentUIds
         );
@@ -564,29 +552,29 @@ fn test_sudo_set_max_allowed_uids() {
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_max_allowed_uids(netuid), to_be_set);
+        assert_eq!(GameSolver::get_max_allowed_uids(netuid), to_be_set);
 
         // Exact current case
         assert_ok!(AdminUtils::sudo_set_max_allowed_uids(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
-            SubtensorModule::get_subnetwork_n(netuid)
+            GameSolver::get_subnetwork_n(netuid)
         ));
         assert_eq!(
-            SubtensorModule::get_max_allowed_uids(netuid),
-            SubtensorModule::get_subnetwork_n(netuid)
+            GameSolver::get_max_allowed_uids(netuid),
+            GameSolver::get_subnetwork_n(netuid)
         );
 
         // Lower bound case
-        SubtensorModule::set_min_allowed_uids(netuid, SubtensorModule::get_subnetwork_n(netuid));
+        GameSolver::set_min_allowed_uids(netuid, GameSolver::get_subnetwork_n(netuid));
         assert_ok!(AdminUtils::sudo_set_max_allowed_uids(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
-            SubtensorModule::get_min_allowed_uids(netuid)
+            GameSolver::get_min_allowed_uids(netuid)
         ));
         assert_eq!(
-            SubtensorModule::get_max_allowed_uids(netuid),
-            SubtensorModule::get_min_allowed_uids(netuid)
+            GameSolver::get_max_allowed_uids(netuid),
+            GameSolver::get_min_allowed_uids(netuid)
         );
 
         // Upper bound case
@@ -596,7 +584,7 @@ fn test_sudo_set_max_allowed_uids() {
             DefaultMaxAllowedUids::<Test>::get(),
         ));
         assert_eq!(
-            SubtensorModule::get_max_allowed_uids(netuid),
+            GameSolver::get_max_allowed_uids(netuid),
             DefaultMaxAllowedUids::<Test>::get()
         );
     });
@@ -608,7 +596,7 @@ fn test_sudo_set_kappa() {
         let netuid = NetUid::from(1);
         let to_be_set: u16 = 10;
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_kappa(netuid);
+        let init_value: u16 = GameSolver::get_kappa(netuid);
         assert_eq!(
             AdminUtils::sudo_set_kappa(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -625,13 +613,13 @@ fn test_sudo_set_kappa() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_kappa(netuid), init_value);
+        assert_eq!(GameSolver::get_kappa(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_kappa(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_kappa(netuid), to_be_set);
+        assert_eq!(GameSolver::get_kappa(netuid), to_be_set);
     });
 }
 
@@ -641,7 +629,7 @@ fn test_sudo_set_rho() {
         let netuid = NetUid::from(1);
         let to_be_set: u16 = 10;
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_rho(netuid);
+        let init_value: u16 = GameSolver::get_rho(netuid);
         assert_eq!(
             AdminUtils::sudo_set_rho(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -658,13 +646,13 @@ fn test_sudo_set_rho() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_rho(netuid), init_value);
+        assert_eq!(GameSolver::get_rho(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_rho(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_rho(netuid), to_be_set);
+        assert_eq!(GameSolver::get_rho(netuid), to_be_set);
     });
 }
 
@@ -672,9 +660,9 @@ fn test_sudo_set_rho() {
 fn test_sudo_set_activity_cutoff() {
     new_test_ext().execute_with(|| {
         let netuid = NetUid::from(1);
-        let to_be_set: u16 = pallet_subtensor::MinActivityCutoff::<Test>::get();
+        let to_be_set: u16 = pallet_game_solver::MinActivityCutoff::<Test>::get();
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_activity_cutoff(netuid);
+        let init_value: u16 = GameSolver::get_activity_cutoff(netuid);
         assert_eq!(
             AdminUtils::sudo_set_activity_cutoff(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -691,13 +679,13 @@ fn test_sudo_set_activity_cutoff() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_activity_cutoff(netuid), init_value);
+        assert_eq!(GameSolver::get_activity_cutoff(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_activity_cutoff(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_activity_cutoff(netuid), to_be_set);
+        assert_eq!(GameSolver::get_activity_cutoff(netuid), to_be_set);
     });
 }
 
@@ -707,7 +695,7 @@ fn test_sudo_set_target_registrations_per_interval() {
         let netuid = NetUid::from(1);
         let to_be_set: u16 = 10;
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_target_registrations_per_interval(netuid);
+        let init_value: u16 = GameSolver::get_target_registrations_per_interval(netuid);
         assert_eq!(
             AdminUtils::sudo_set_target_registrations_per_interval(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -725,7 +713,7 @@ fn test_sudo_set_target_registrations_per_interval() {
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
         assert_eq!(
-            SubtensorModule::get_target_registrations_per_interval(netuid),
+            GameSolver::get_target_registrations_per_interval(netuid),
             init_value
         );
         assert_ok!(AdminUtils::sudo_set_target_registrations_per_interval(
@@ -734,7 +722,7 @@ fn test_sudo_set_target_registrations_per_interval() {
             to_be_set
         ));
         assert_eq!(
-            SubtensorModule::get_target_registrations_per_interval(netuid),
+            GameSolver::get_target_registrations_per_interval(netuid),
             to_be_set
         );
     });
@@ -746,7 +734,7 @@ fn test_sudo_set_difficulty() {
         let netuid = NetUid::from(1);
         let to_be_set: u64 = 10;
         add_network(netuid, 10);
-        let init_value: u64 = SubtensorModule::get_difficulty_as_u64(netuid);
+        let init_value: u64 = GameSolver::get_difficulty_as_u64(netuid);
         assert_eq!(
             AdminUtils::sudo_set_difficulty(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -763,16 +751,16 @@ fn test_sudo_set_difficulty() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_difficulty_as_u64(netuid), init_value);
+        assert_eq!(GameSolver::get_difficulty_as_u64(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_difficulty(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_difficulty_as_u64(netuid), to_be_set);
+        assert_eq!(GameSolver::get_difficulty_as_u64(netuid), to_be_set);
 
         // Test that SN owner can't set difficulty
-        pallet_subtensor::SubnetOwner::<Test>::insert(netuid, U256::from(1));
+        pallet_game_solver::SubnetOwner::<Test>::insert(netuid, U256::from(1));
         assert_eq!(
             AdminUtils::sudo_set_difficulty(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -781,7 +769,7 @@ fn test_sudo_set_difficulty() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        assert_eq!(SubtensorModule::get_difficulty_as_u64(netuid), to_be_set); // no change
+        assert_eq!(GameSolver::get_difficulty_as_u64(netuid), to_be_set); // no change
     });
 }
 
@@ -791,7 +779,7 @@ fn test_sudo_set_max_allowed_validators() {
         let netuid = NetUid::from(1);
         let to_be_set: u16 = 10;
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_max_allowed_validators(netuid);
+        let init_value: u16 = GameSolver::get_max_allowed_validators(netuid);
         assert_eq!(
             AdminUtils::sudo_set_max_allowed_validators(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -808,19 +796,13 @@ fn test_sudo_set_max_allowed_validators() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(
-            SubtensorModule::get_max_allowed_validators(netuid),
-            init_value
-        );
+        assert_eq!(GameSolver::get_max_allowed_validators(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_max_allowed_validators(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(
-            SubtensorModule::get_max_allowed_validators(netuid),
-            to_be_set
-        );
+        assert_eq!(GameSolver::get_max_allowed_validators(netuid), to_be_set);
     });
 }
 
@@ -828,7 +810,7 @@ fn test_sudo_set_max_allowed_validators() {
 fn test_sudo_set_stake_threshold() {
     new_test_ext().execute_with(|| {
         let to_be_set: u64 = 10;
-        let init_value: u64 = SubtensorModule::get_stake_threshold();
+        let init_value: u64 = GameSolver::get_stake_threshold();
         assert_eq!(
             AdminUtils::sudo_set_stake_threshold(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -836,12 +818,12 @@ fn test_sudo_set_stake_threshold() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        assert_eq!(SubtensorModule::get_stake_threshold(), init_value);
+        assert_eq!(GameSolver::get_stake_threshold(), init_value);
         assert_ok!(AdminUtils::sudo_set_stake_threshold(
             <<Test as Config>::RuntimeOrigin>::root(),
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_stake_threshold(), to_be_set);
+        assert_eq!(GameSolver::get_stake_threshold(), to_be_set);
     });
 }
 
@@ -851,7 +833,7 @@ fn test_sudo_set_bonds_moving_average() {
         let netuid = NetUid::from(1);
         let to_be_set: u64 = 10;
         add_network(netuid, 10);
-        let init_value: u64 = SubtensorModule::get_bonds_moving_average(netuid.into());
+        let init_value: u64 = GameSolver::get_bonds_moving_average(netuid.into());
         assert_eq!(
             AdminUtils::sudo_set_bonds_moving_average(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -869,7 +851,7 @@ fn test_sudo_set_bonds_moving_average() {
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
         assert_eq!(
-            SubtensorModule::get_bonds_moving_average(netuid.into()),
+            GameSolver::get_bonds_moving_average(netuid.into()),
             init_value
         );
         assert_ok!(AdminUtils::sudo_set_bonds_moving_average(
@@ -878,7 +860,7 @@ fn test_sudo_set_bonds_moving_average() {
             to_be_set
         ));
         assert_eq!(
-            SubtensorModule::get_bonds_moving_average(netuid.into()),
+            GameSolver::get_bonds_moving_average(netuid.into()),
             to_be_set
         );
     });
@@ -890,7 +872,7 @@ fn test_sudo_set_bonds_penalty() {
         let netuid = NetUid::from(1);
         let to_be_set: u16 = 10;
         add_network(netuid, 10);
-        let init_value: u16 = SubtensorModule::get_bonds_penalty(netuid);
+        let init_value: u16 = GameSolver::get_bonds_penalty(netuid);
         assert_eq!(
             AdminUtils::sudo_set_bonds_penalty(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -907,13 +889,13 @@ fn test_sudo_set_bonds_penalty() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_bonds_penalty(netuid), init_value);
+        assert_eq!(GameSolver::get_bonds_penalty(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_bonds_penalty(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_bonds_penalty(netuid), to_be_set);
+        assert_eq!(GameSolver::get_bonds_penalty(netuid), to_be_set);
     });
 }
 
@@ -923,7 +905,7 @@ fn test_sudo_set_rao_recycled() {
         let netuid = NetUid::from(1);
         let to_be_set = TaoCurrency::from(10);
         add_network(netuid, 10);
-        let init_value = SubtensorModule::get_rao_recycled(netuid);
+        let init_value = GameSolver::get_rao_recycled(netuid);
 
         // Need to run from genesis block
         run_to_block(1);
@@ -944,14 +926,14 @@ fn test_sudo_set_rao_recycled() {
             ),
             Err(Error::<Test>::SubnetDoesNotExist.into())
         );
-        assert_eq!(SubtensorModule::get_rao_recycled(netuid), init_value);
+        assert_eq!(GameSolver::get_rao_recycled(netuid), init_value);
 
         // Verify no events emitted matching the expected event
         assert_eq!(
             System::events()
                 .iter()
                 .filter(|r| r.event
-                    == RuntimeEvent::SubtensorModule(Event::RAORecycledForRegistrationSet(
+                    == RuntimeEvent::GameSolver(Event::RAORecycledForRegistrationSet(
                         netuid, to_be_set
                     )))
                 .count(),
@@ -963,7 +945,7 @@ fn test_sudo_set_rao_recycled() {
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_rao_recycled(netuid), to_be_set);
+        assert_eq!(GameSolver::get_rao_recycled(netuid), to_be_set);
 
         // Verify event emitted with correct values
         assert_eq!(
@@ -974,7 +956,7 @@ fn test_sudo_set_rao_recycled() {
                     System::events().to_vec()
                 ))
                 .event,
-            RuntimeEvent::SubtensorModule(Event::RAORecycledForRegistrationSet(netuid, to_be_set))
+            RuntimeEvent::GameSolver(Event::RAORecycledForRegistrationSet(netuid, to_be_set))
         );
     });
 }
@@ -986,7 +968,7 @@ fn test_sudo_set_network_lock_reduction_interval() {
         let to_be_set: u64 = 7200;
         add_network(netuid, 10);
 
-        let init_value: u64 = SubtensorModule::get_lock_reduction_interval();
+        let init_value: u64 = GameSolver::get_lock_reduction_interval();
         assert_eq!(
             AdminUtils::sudo_set_lock_reduction_interval(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -994,12 +976,12 @@ fn test_sudo_set_network_lock_reduction_interval() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        assert_eq!(SubtensorModule::get_lock_reduction_interval(), init_value);
+        assert_eq!(GameSolver::get_lock_reduction_interval(), init_value);
         assert_ok!(AdminUtils::sudo_set_lock_reduction_interval(
             <<Test as Config>::RuntimeOrigin>::root(),
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_lock_reduction_interval(), to_be_set);
+        assert_eq!(GameSolver::get_lock_reduction_interval(), to_be_set);
     });
 }
 
@@ -1010,7 +992,7 @@ fn test_sudo_set_network_pow_registration_allowed() {
         let to_be_set: bool = true;
         add_network(netuid, 10);
 
-        let init_value: bool = SubtensorModule::get_network_pow_registration_allowed(netuid);
+        let init_value: bool = GameSolver::get_network_pow_registration_allowed(netuid);
         assert_eq!(
             AdminUtils::sudo_set_network_pow_registration_allowed(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -1020,7 +1002,7 @@ fn test_sudo_set_network_pow_registration_allowed() {
             Err(DispatchError::BadOrigin)
         );
         assert_eq!(
-            SubtensorModule::get_network_pow_registration_allowed(netuid),
+            GameSolver::get_network_pow_registration_allowed(netuid),
             init_value
         );
         assert_ok!(AdminUtils::sudo_set_network_pow_registration_allowed(
@@ -1029,7 +1011,7 @@ fn test_sudo_set_network_pow_registration_allowed() {
             to_be_set
         ));
         assert_eq!(
-            SubtensorModule::get_network_pow_registration_allowed(netuid),
+            GameSolver::get_network_pow_registration_allowed(netuid),
             to_be_set
         );
     });
@@ -1041,7 +1023,7 @@ mod sudo_set_nominator_min_required_stake {
     #[test]
     fn can_only_be_called_by_admin() {
         new_test_ext().execute_with(|| {
-            let to_be_set = SubtensorModule::get_nominator_min_required_stake() + 5;
+            let to_be_set = GameSolver::get_nominator_min_required_stake() + 5;
             assert_eq!(
                 AdminUtils::sudo_set_nominator_min_required_stake(
                     <<Test as Config>::RuntimeOrigin>::signed(U256::from(0)),
@@ -1059,9 +1041,9 @@ mod sudo_set_nominator_min_required_stake {
                 <<Test as Config>::RuntimeOrigin>::root(),
                 10
             ));
-            let default_min_stake = pallet_subtensor::DefaultMinStake::<Test>::get();
+            let default_min_stake = pallet_game_solver::DefaultMinStake::<Test>::get();
             assert_eq!(
-                SubtensorModule::get_nominator_min_required_stake(),
+                GameSolver::get_nominator_min_required_stake(),
                 10 * default_min_stake.to_u64() / 1_000_000
             );
 
@@ -1070,7 +1052,7 @@ mod sudo_set_nominator_min_required_stake {
                 5
             ));
             assert_eq!(
-                SubtensorModule::get_nominator_min_required_stake(),
+                GameSolver::get_nominator_min_required_stake(),
                 5 * default_min_stake.to_u64() / 1_000_000
             );
         });
@@ -1079,14 +1061,14 @@ mod sudo_set_nominator_min_required_stake {
     #[test]
     fn sets_a_higher_value() {
         new_test_ext().execute_with(|| {
-            let to_be_set = SubtensorModule::get_nominator_min_required_stake() + 5;
-            let default_min_stake = pallet_subtensor::DefaultMinStake::<Test>::get();
+            let to_be_set = GameSolver::get_nominator_min_required_stake() + 5;
+            let default_min_stake = pallet_game_solver::DefaultMinStake::<Test>::get();
             assert_ok!(AdminUtils::sudo_set_nominator_min_required_stake(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 to_be_set
             ));
             assert_eq!(
-                SubtensorModule::get_nominator_min_required_stake(),
+                GameSolver::get_nominator_min_required_stake(),
                 to_be_set * default_min_stake.to_u64() / 1_000_000
             );
         });
@@ -1097,7 +1079,7 @@ mod sudo_set_nominator_min_required_stake {
 fn test_sudo_set_tx_delegate_take_rate_limit() {
     new_test_ext().execute_with(|| {
         let to_be_set: u64 = 10;
-        let init_value: u64 = SubtensorModule::get_tx_delegate_take_rate_limit();
+        let init_value: u64 = GameSolver::get_tx_delegate_take_rate_limit();
         assert_eq!(
             AdminUtils::sudo_set_tx_delegate_take_rate_limit(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -1105,18 +1087,12 @@ fn test_sudo_set_tx_delegate_take_rate_limit() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        assert_eq!(
-            SubtensorModule::get_tx_delegate_take_rate_limit(),
-            init_value
-        );
+        assert_eq!(GameSolver::get_tx_delegate_take_rate_limit(), init_value);
         assert_ok!(AdminUtils::sudo_set_tx_delegate_take_rate_limit(
             <<Test as Config>::RuntimeOrigin>::root(),
             to_be_set
         ));
-        assert_eq!(
-            SubtensorModule::get_tx_delegate_take_rate_limit(),
-            to_be_set
-        );
+        assert_eq!(GameSolver::get_tx_delegate_take_rate_limit(), to_be_set);
     });
 }
 
@@ -1124,7 +1100,7 @@ fn test_sudo_set_tx_delegate_take_rate_limit() {
 fn test_sudo_set_min_delegate_take() {
     new_test_ext().execute_with(|| {
         let to_be_set = u16::MAX / 100;
-        let init_value = SubtensorModule::get_min_delegate_take();
+        let init_value = GameSolver::get_min_delegate_take();
         assert_eq!(
             AdminUtils::sudo_set_min_delegate_take(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -1132,12 +1108,12 @@ fn test_sudo_set_min_delegate_take() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        assert_eq!(SubtensorModule::get_min_delegate_take(), init_value);
+        assert_eq!(GameSolver::get_min_delegate_take(), init_value);
         assert_ok!(AdminUtils::sudo_set_min_delegate_take(
             <<Test as Config>::RuntimeOrigin>::root(),
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_min_delegate_take(), to_be_set);
+        assert_eq!(GameSolver::get_min_delegate_take(), to_be_set);
     });
 }
 
@@ -1148,7 +1124,7 @@ fn test_sudo_set_commit_reveal_weights_enabled() {
         add_network(netuid, 10);
 
         let to_be_set: bool = false;
-        let init_value: bool = SubtensorModule::get_commit_reveal_weights_enabled(netuid);
+        let init_value: bool = GameSolver::get_commit_reveal_weights_enabled(netuid);
 
         assert_ok!(AdminUtils::sudo_set_commit_reveal_weights_enabled(
             <<Test as Config>::RuntimeOrigin>::root(),
@@ -1158,7 +1134,7 @@ fn test_sudo_set_commit_reveal_weights_enabled() {
 
         assert!(init_value != to_be_set);
         assert_eq!(
-            SubtensorModule::get_commit_reveal_weights_enabled(netuid),
+            GameSolver::get_commit_reveal_weights_enabled(netuid),
             to_be_set
         );
     });
@@ -1169,7 +1145,7 @@ fn test_sudo_set_liquid_alpha_enabled() {
     new_test_ext().execute_with(|| {
         let netuid = NetUid::from(1);
         let enabled: bool = true;
-        assert_eq!(!enabled, SubtensorModule::get_liquid_alpha_enabled(netuid));
+        assert_eq!(!enabled, GameSolver::get_liquid_alpha_enabled(netuid));
 
         assert_ok!(AdminUtils::sudo_set_liquid_alpha_enabled(
             <<Test as Config>::RuntimeOrigin>::root(),
@@ -1177,7 +1153,7 @@ fn test_sudo_set_liquid_alpha_enabled() {
             enabled
         ));
 
-        assert_eq!(enabled, SubtensorModule::get_liquid_alpha_enabled(netuid));
+        assert_eq!(enabled, GameSolver::get_liquid_alpha_enabled(netuid));
     });
 }
 
@@ -1187,7 +1163,7 @@ fn test_sudo_set_alpha_sigmoid_steepness() {
         let netuid = NetUid::from(1);
         let to_be_set: i16 = 5000;
         add_network(netuid, 10);
-        let init_value = SubtensorModule::get_alpha_sigmoid_steepness(netuid);
+        let init_value = GameSolver::get_alpha_sigmoid_steepness(netuid);
         assert_eq!(
             AdminUtils::sudo_set_alpha_sigmoid_steepness(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -1206,7 +1182,7 @@ fn test_sudo_set_alpha_sigmoid_steepness() {
         );
 
         let owner = U256::from(10);
-        pallet_subtensor::SubnetOwner::<Test>::insert(netuid, owner);
+        pallet_game_solver::SubnetOwner::<Test>::insert(netuid, owner);
         assert_eq!(
             AdminUtils::sudo_set_alpha_sigmoid_steepness(
                 <<Test as Config>::RuntimeOrigin>::signed(owner),
@@ -1215,28 +1191,19 @@ fn test_sudo_set_alpha_sigmoid_steepness() {
             ),
             Err(Error::<Test>::NegativeSigmoidSteepness.into())
         );
-        assert_eq!(
-            SubtensorModule::get_alpha_sigmoid_steepness(netuid),
-            init_value
-        );
+        assert_eq!(GameSolver::get_alpha_sigmoid_steepness(netuid), init_value);
         assert_ok!(AdminUtils::sudo_set_alpha_sigmoid_steepness(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        assert_eq!(
-            SubtensorModule::get_alpha_sigmoid_steepness(netuid),
-            to_be_set
-        );
+        assert_eq!(GameSolver::get_alpha_sigmoid_steepness(netuid), to_be_set);
         assert_ok!(AdminUtils::sudo_set_alpha_sigmoid_steepness(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             -to_be_set
         ));
-        assert_eq!(
-            SubtensorModule::get_alpha_sigmoid_steepness(netuid),
-            -to_be_set
-        );
+        assert_eq!(GameSolver::get_alpha_sigmoid_steepness(netuid), -to_be_set);
     });
 }
 
@@ -1271,12 +1238,12 @@ fn test_sudo_get_set_alpha() {
         let signer = <<Test as Config>::RuntimeOrigin>::signed(coldkey);
 
         // Enable Liquid Alpha and setup
-        SubtensorModule::set_liquid_alpha_enabled(netuid, true);
-        pallet_subtensor::migrations::migrate_create_root_network::migrate_create_root_network::<
+        GameSolver::set_liquid_alpha_enabled(netuid, true);
+        pallet_game_solver::migrations::migrate_create_root_network::migrate_create_root_network::<
             Test,
         >();
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, 1_000_000_000_000_000);
-        assert_ok!(SubtensorModule::root_register(signer.clone(), hotkey,));
+        GameSolver::add_balance_to_coldkey_account(&coldkey, 1_000_000_000_000_000);
+        assert_ok!(GameSolver::root_register(signer.clone(), hotkey,));
 
         // Should fail as signer does not own the subnet
         assert_err!(
@@ -1284,7 +1251,7 @@ fn test_sudo_get_set_alpha() {
             DispatchError::BadOrigin
         );
 
-        assert_ok!(SubtensorModule::register_network(signer.clone(), hotkey));
+        assert_ok!(GameSolver::register_network(signer.clone(), hotkey));
 
         assert_ok!(AdminUtils::sudo_set_alpha_values(
             signer.clone(),
@@ -1293,7 +1260,7 @@ fn test_sudo_get_set_alpha() {
             alpha_high
         ));
         let (grabbed_alpha_low, grabbed_alpha_high): (u16, u16) =
-            SubtensorModule::get_alpha_values(netuid);
+            GameSolver::get_alpha_values(netuid);
 
         log::info!("alpha_low: {grabbed_alpha_low:?} alpha_high: {grabbed_alpha_high:?}");
         assert_eq!(grabbed_alpha_low, alpha_low);
@@ -1308,7 +1275,7 @@ fn test_sudo_get_set_alpha() {
         let alpha_low_decimal = unnormalize_u16_to_float(alpha_low);
         let alpha_high_decimal = unnormalize_u16_to_float(alpha_high);
 
-        let (alpha_low_32, alpha_high_32) = SubtensorModule::get_alpha_values_32(netuid);
+        let (alpha_low_32, alpha_high_32) = GameSolver::get_alpha_values_32(netuid);
 
         let tolerance: f32 = 1e-6; // 0.000001
 
@@ -1327,13 +1294,13 @@ fn test_sudo_get_set_alpha() {
         );
 
         // 1. Liquid alpha disabled
-        SubtensorModule::set_liquid_alpha_enabled(netuid, false);
+        GameSolver::set_liquid_alpha_enabled(netuid, false);
         assert_err!(
             AdminUtils::sudo_set_alpha_values(signer.clone(), netuid, alpha_low, alpha_high),
             SubtensorError::<Test>::LiquidAlphaDisabled
         );
         // Correct scenario after error
-        SubtensorModule::set_liquid_alpha_enabled(netuid, true); // Re-enable for further tests
+        GameSolver::set_liquid_alpha_enabled(netuid, true); // Re-enable for further tests
         assert_ok!(AdminUtils::sudo_set_alpha_values(
             signer.clone(),
             netuid,
@@ -1421,7 +1388,7 @@ fn test_sudo_set_coldkey_swap_announcement_delay() {
 
         // Assert: Check if the delay was actually set
         assert_eq!(
-            pallet_subtensor::ColdkeySwapAnnouncementDelay::<Test>::get(),
+            pallet_game_solver::ColdkeySwapAnnouncementDelay::<Test>::get(),
             new_delay
         );
 
@@ -1457,7 +1424,7 @@ fn test_sudo_set_coldkey_swap_reannouncement_delay() {
 
         // Assert: Check if the delay was actually set
         assert_eq!(
-            pallet_subtensor::ColdkeySwapReannouncementDelay::<Test>::get(),
+            pallet_game_solver::ColdkeySwapReannouncementDelay::<Test>::get(),
             new_delay
         );
 
@@ -1493,7 +1460,7 @@ fn test_sudo_set_dissolve_network_schedule_duration() {
 
         // Assert: Check if the duration was actually set
         assert_eq!(
-            pallet_subtensor::DissolveNetworkScheduleDuration::<Test>::get(),
+            pallet_game_solver::DissolveNetworkScheduleDuration::<Test>::get(),
             new_duration
         );
 
@@ -1521,11 +1488,11 @@ fn sudo_set_commit_reveal_weights_interval() {
                 netuid,
                 too_high
             ),
-            pallet_subtensor::Error::<Test>::RevealPeriodTooLarge
+            pallet_game_solver::Error::<Test>::RevealPeriodTooLarge
         );
 
         let to_be_set = 55;
-        let init_value = SubtensorModule::get_reveal_period(netuid);
+        let init_value = GameSolver::get_reveal_period(netuid);
 
         assert_ok!(AdminUtils::sudo_set_commit_reveal_weights_interval(
             <<Test as Config>::RuntimeOrigin>::root(),
@@ -1534,7 +1501,7 @@ fn sudo_set_commit_reveal_weights_interval() {
         ));
 
         assert!(init_value != to_be_set);
-        assert_eq!(SubtensorModule::get_reveal_period(netuid), to_be_set);
+        assert_eq!(GameSolver::get_reveal_period(netuid), to_be_set);
     });
 }
 
@@ -1635,7 +1602,7 @@ fn test_sudo_toggle_evm_precompile() {
 fn test_sudo_root_sets_subnet_moving_alpha() {
     new_test_ext().execute_with(|| {
         let alpha: I96F32 = I96F32::saturating_from_num(0.5);
-        let initial = pallet_subtensor::SubnetMovingAlpha::<Test>::get();
+        let initial = pallet_game_solver::SubnetMovingAlpha::<Test>::get();
         assert!(initial != alpha);
 
         assert_ok!(AdminUtils::sudo_set_subnet_moving_alpha(
@@ -1643,7 +1610,7 @@ fn test_sudo_root_sets_subnet_moving_alpha() {
             alpha
         ));
 
-        assert_eq!(pallet_subtensor::SubnetMovingAlpha::<Test>::get(), alpha);
+        assert_eq!(pallet_game_solver::SubnetMovingAlpha::<Test>::get(), alpha);
     });
 }
 
@@ -1674,37 +1641,37 @@ fn test_sets_a_lower_value_clears_small_nominations() {
         // Register a neuron
         register_ok_neuron(netuid, hotkey, owner_coldkey, 0);
 
-        let default_min_stake = pallet_subtensor::DefaultMinStake::<Test>::get();
+        let default_min_stake = pallet_game_solver::DefaultMinStake::<Test>::get();
         assert_ok!(AdminUtils::sudo_set_nominator_min_required_stake(
             RuntimeOrigin::root(),
             initial_nominator_min_required_stake
         ));
         assert_eq!(
-            SubtensorModule::get_nominator_min_required_stake(),
+            GameSolver::get_nominator_min_required_stake(),
             initial_nominator_min_required_stake * default_min_stake.to_u64() / 1_000_000
         );
 
         // Stake to the hotkey as staker_coldkey
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &staker_coldkey,
             netuid,
             to_stake.into(),
         );
 
-        let default_min_stake = pallet_subtensor::DefaultMinStake::<Test>::get();
+        let default_min_stake = pallet_game_solver::DefaultMinStake::<Test>::get();
         assert_ok!(AdminUtils::sudo_set_nominator_min_required_stake(
             RuntimeOrigin::root(),
             nominator_min_required_stake_0
         ));
         assert_eq!(
-            SubtensorModule::get_nominator_min_required_stake(),
+            GameSolver::get_nominator_min_required_stake(),
             nominator_min_required_stake_0 * default_min_stake.to_u64() / 1_000_000
         );
 
         // Check this nomination is not cleared
         assert!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &staker_coldkey,
                 netuid
@@ -1716,13 +1683,13 @@ fn test_sets_a_lower_value_clears_small_nominations() {
             nominator_min_required_stake_1
         ));
         assert_eq!(
-            SubtensorModule::get_nominator_min_required_stake(),
+            GameSolver::get_nominator_min_required_stake(),
             nominator_min_required_stake_1 * default_min_stake.to_u64() / 1_000_000
         );
 
         // Check this nomination is cleared
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &staker_coldkey,
                 netuid
@@ -1745,10 +1712,10 @@ fn test_sets_a_lower_value_clears_small_nominations() {
 //         let root = RuntimeOrigin::root();
 //         let random_account = RuntimeOrigin::signed(U256::from(123456));
 
-//         pallet_subtensor::SubnetOwner::<Test>::insert(netuid, coldkey);
-//         pallet_subtensor::SubnetOwnerHotkey::<Test>::insert(netuid, hotkey);
+//         pallet_game_solver::SubnetOwner::<Test>::insert(netuid, coldkey);
+//         pallet_game_solver::SubnetOwnerHotkey::<Test>::insert(netuid, hotkey);
 //         assert_eq!(
-//             pallet_subtensor::SubnetOwnerHotkey::<Test>::get(netuid),
+//             pallet_game_solver::SubnetOwnerHotkey::<Test>::get(netuid),
 //             hotkey
 //         );
 
@@ -1759,7 +1726,7 @@ fn test_sets_a_lower_value_clears_small_nominations() {
 //         ));
 
 //         assert_eq!(
-//             pallet_subtensor::SubnetOwnerHotkey::<Test>::get(netuid),
+//             pallet_game_solver::SubnetOwnerHotkey::<Test>::get(netuid),
 //             new_hotkey
 //         );
 
@@ -1783,7 +1750,7 @@ fn test_sudo_set_ema_halving() {
         let to_be_set: u64 = 10;
         add_network(netuid, 10);
 
-        let value_before: u64 = pallet_subtensor::EMAPriceHalvingBlocks::<Test>::get(netuid);
+        let value_before: u64 = pallet_game_solver::EMAPriceHalvingBlocks::<Test>::get(netuid);
         assert_eq!(
             AdminUtils::sudo_set_ema_price_halving_period(
                 <<Test as Config>::RuntimeOrigin>::signed(U256::from(1)),
@@ -1792,11 +1759,11 @@ fn test_sudo_set_ema_halving() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        let value_after_0: u64 = pallet_subtensor::EMAPriceHalvingBlocks::<Test>::get(netuid);
+        let value_after_0: u64 = pallet_game_solver::EMAPriceHalvingBlocks::<Test>::get(netuid);
         assert_eq!(value_after_0, value_before);
 
         let owner = U256::from(10);
-        pallet_subtensor::SubnetOwner::<Test>::insert(netuid, owner);
+        pallet_game_solver::SubnetOwner::<Test>::insert(netuid, owner);
         assert_eq!(
             AdminUtils::sudo_set_ema_price_halving_period(
                 <<Test as Config>::RuntimeOrigin>::signed(owner),
@@ -1805,14 +1772,14 @@ fn test_sudo_set_ema_halving() {
             ),
             Err(DispatchError::BadOrigin)
         );
-        let value_after_1: u64 = pallet_subtensor::EMAPriceHalvingBlocks::<Test>::get(netuid);
+        let value_after_1: u64 = pallet_game_solver::EMAPriceHalvingBlocks::<Test>::get(netuid);
         assert_eq!(value_after_1, value_before);
         assert_ok!(AdminUtils::sudo_set_ema_price_halving_period(
             <<Test as Config>::RuntimeOrigin>::root(),
             netuid,
             to_be_set
         ));
-        let value_after_2: u64 = pallet_subtensor::EMAPriceHalvingBlocks::<Test>::get(netuid);
+        let value_after_2: u64 = pallet_game_solver::EMAPriceHalvingBlocks::<Test>::get(netuid);
         assert_eq!(value_after_2, to_be_set);
     });
 }
@@ -1827,7 +1794,7 @@ fn test_set_sn_owner_hotkey_owner() {
         add_network(netuid, 10);
 
         let owner = U256::from(10);
-        pallet_subtensor::SubnetOwner::<Test>::insert(netuid, owner);
+        pallet_game_solver::SubnetOwner::<Test>::insert(netuid, owner);
 
         // Non-owner and non-root cannot set the sn owner hotkey
         assert_eq!(
@@ -1847,7 +1814,7 @@ fn test_set_sn_owner_hotkey_owner() {
         ));
 
         // Check the value
-        let actual_hotkey = pallet_subtensor::SubnetOwnerHotkey::<Test>::get(netuid);
+        let actual_hotkey = pallet_game_solver::SubnetOwnerHotkey::<Test>::get(netuid);
         assert_eq!(actual_hotkey, hotkey);
 
         // Cannot set again (rate limited)
@@ -1857,7 +1824,7 @@ fn test_set_sn_owner_hotkey_owner() {
                 netuid,
                 hotkey
             ),
-            pallet_subtensor::Error::<Test>::TxRateLimitExceeded
+            pallet_game_solver::Error::<Test>::TxRateLimitExceeded
         );
     });
 }
@@ -1871,7 +1838,7 @@ fn test_set_sn_owner_hotkey_root() {
         add_network(netuid, 10);
 
         let owner = U256::from(10);
-        pallet_subtensor::SubnetOwner::<Test>::insert(netuid, owner);
+        pallet_game_solver::SubnetOwner::<Test>::insert(netuid, owner);
 
         // Root can set the hotkey
         assert_ok!(AdminUtils::sudo_set_sn_owner_hotkey(
@@ -1881,7 +1848,7 @@ fn test_set_sn_owner_hotkey_root() {
         ));
 
         // Check the value
-        let actual_hotkey = pallet_subtensor::SubnetOwnerHotkey::<Test>::get(netuid);
+        let actual_hotkey = pallet_game_solver::SubnetOwnerHotkey::<Test>::get(netuid);
         assert_eq!(actual_hotkey, hotkey);
     });
 }
@@ -1893,7 +1860,7 @@ fn test_sudo_set_bonds_reset_enabled() {
         let to_be_set: bool = true;
         let sn_owner = U256::from(1);
         add_network(netuid, 10);
-        let init_value: bool = SubtensorModule::get_bonds_reset(netuid);
+        let init_value: bool = GameSolver::get_bonds_reset(netuid);
 
         assert_eq!(
             AdminUtils::sudo_set_bonds_reset_enabled(
@@ -1909,17 +1876,17 @@ fn test_sudo_set_bonds_reset_enabled() {
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_bonds_reset(netuid), to_be_set);
-        assert_ne!(SubtensorModule::get_bonds_reset(netuid), init_value);
+        assert_eq!(GameSolver::get_bonds_reset(netuid), to_be_set);
+        assert_ne!(GameSolver::get_bonds_reset(netuid), init_value);
 
-        pallet_subtensor::SubnetOwner::<Test>::insert(netuid, sn_owner);
+        pallet_game_solver::SubnetOwner::<Test>::insert(netuid, sn_owner);
 
         assert_ok!(AdminUtils::sudo_set_bonds_reset_enabled(
             <<Test as Config>::RuntimeOrigin>::signed(sn_owner),
             netuid,
             !to_be_set
         ));
-        assert_eq!(SubtensorModule::get_bonds_reset(netuid), !to_be_set);
+        assert_eq!(GameSolver::get_bonds_reset(netuid), !to_be_set);
     });
 }
 
@@ -1930,7 +1897,7 @@ fn test_sudo_set_yuma3_enabled() {
         let to_be_set: bool = true;
         let sn_owner = U256::from(1);
         add_network(netuid, 10);
-        let init_value: bool = SubtensorModule::get_yuma3_enabled(netuid);
+        let init_value: bool = GameSolver::get_yuma3_enabled(netuid);
 
         assert_eq!(
             AdminUtils::sudo_set_yuma3_enabled(
@@ -1946,17 +1913,17 @@ fn test_sudo_set_yuma3_enabled() {
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_yuma3_enabled(netuid), to_be_set);
-        assert_ne!(SubtensorModule::get_yuma3_enabled(netuid), init_value);
+        assert_eq!(GameSolver::get_yuma3_enabled(netuid), to_be_set);
+        assert_ne!(GameSolver::get_yuma3_enabled(netuid), init_value);
 
-        pallet_subtensor::SubnetOwner::<Test>::insert(netuid, sn_owner);
+        pallet_game_solver::SubnetOwner::<Test>::insert(netuid, sn_owner);
 
         assert_ok!(AdminUtils::sudo_set_yuma3_enabled(
             <<Test as Config>::RuntimeOrigin>::signed(sn_owner),
             netuid,
             !to_be_set
         ));
-        assert_eq!(SubtensorModule::get_yuma3_enabled(netuid), !to_be_set);
+        assert_eq!(GameSolver::get_yuma3_enabled(netuid), !to_be_set);
     });
 }
 
@@ -1966,17 +1933,14 @@ fn test_sudo_set_commit_reveal_version() {
         add_network(NetUid::from(1), 10);
 
         let to_be_set: u16 = 5;
-        let fixed_value: u16 = SubtensorModule::get_commit_reveal_weights_version();
+        let fixed_value: u16 = GameSolver::get_commit_reveal_weights_version();
 
         assert_ok!(AdminUtils::sudo_set_commit_reveal_version(
             <<Test as Config>::RuntimeOrigin>::root(),
             to_be_set
         ));
 
-        assert_eq!(
-            SubtensorModule::get_commit_reveal_weights_version(),
-            fixed_value
-        );
+        assert_eq!(GameSolver::get_commit_reveal_weights_version(), fixed_value);
     });
 }
 
@@ -1996,7 +1960,7 @@ fn test_sudo_set_admin_freeze_window_and_rate() {
             <<Test as Config>::RuntimeOrigin>::root(),
             7
         ));
-        assert_eq!(pallet_subtensor::AdminFreezeWindow::<Test>::get(), 7);
+        assert_eq!(pallet_game_solver::AdminFreezeWindow::<Test>::get(), 7);
 
         // Owner hyperparam tempos setter
         assert_eq!(
@@ -2010,7 +1974,10 @@ fn test_sudo_set_admin_freeze_window_and_rate() {
             <<Test as Config>::RuntimeOrigin>::root(),
             5
         ));
-        assert_eq!(pallet_subtensor::OwnerHyperparamRateLimit::<Test>::get(), 5);
+        assert_eq!(
+            pallet_game_solver::OwnerHyperparamRateLimit::<Test>::get(),
+            5
+        );
     });
 }
 
@@ -2060,7 +2027,7 @@ fn test_sudo_set_min_burn() {
         let netuid = NetUid::from(1);
         let to_be_set = TaoCurrency::from(1_000_000);
         add_network(netuid, 10);
-        let init_value = SubtensorModule::get_min_burn(netuid);
+        let init_value = GameSolver::get_min_burn(netuid);
 
         // Simple case
         assert_ok!(AdminUtils::sudo_set_min_burn(
@@ -2068,8 +2035,8 @@ fn test_sudo_set_min_burn() {
             netuid,
             TaoCurrency::from(to_be_set)
         ));
-        assert_ne!(SubtensorModule::get_min_burn(netuid), init_value);
-        assert_eq!(SubtensorModule::get_min_burn(netuid), to_be_set);
+        assert_ne!(GameSolver::get_min_burn(netuid), init_value);
+        assert_eq!(GameSolver::get_min_burn(netuid), to_be_set);
 
         // Unknown subnet
         assert_err!(
@@ -2096,7 +2063,7 @@ fn test_sudo_set_min_burn() {
             AdminUtils::sudo_set_min_burn(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                <Test as pallet_subtensor::Config>::MinBurnUpperBound::get() + 1.into()
+                <Test as pallet_game_solver::Config>::MinBurnUpperBound::get() + 1.into()
             ),
             Error::<Test>::ValueNotInBounds
         );
@@ -2106,7 +2073,7 @@ fn test_sudo_set_min_burn() {
             AdminUtils::sudo_set_min_burn(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                SubtensorModule::get_max_burn(netuid) + 1.into()
+                GameSolver::get_max_burn(netuid) + 1.into()
             ),
             Error::<Test>::ValueNotInBounds
         );
@@ -2123,7 +2090,7 @@ fn test_owner_hyperparam_update_rate_limit_enforced() {
         SubnetOwner::<Test>::insert(netuid, owner);
 
         // Set tempo to 1 so owner hyperparam RL = 2 tempos = 2 blocks
-        SubtensorModule::set_tempo(netuid, 1);
+        GameSolver::set_tempo(netuid, 1);
         // Disable admin freeze window to avoid blocking on small tempo
         assert_ok!(AdminUtils::sudo_set_admin_freeze_window(
             <<Test as Config>::RuntimeOrigin>::root(),
@@ -2147,7 +2114,7 @@ fn test_owner_hyperparam_update_rate_limit_enforced() {
         );
 
         // Advance less than limit still fails
-        run_to_block(SubtensorModule::get_current_block_as_u64() + 1);
+        run_to_block(GameSolver::get_current_block_as_u64() + 1);
         assert_noop!(
             AdminUtils::sudo_set_commit_reveal_weights_interval(
                 <<Test as Config>::RuntimeOrigin>::signed(owner),
@@ -2158,7 +2125,7 @@ fn test_owner_hyperparam_update_rate_limit_enforced() {
         );
 
         // Advance one more block to pass the limit; should succeed
-        run_to_block(SubtensorModule::get_current_block_as_u64() + 1);
+        run_to_block(GameSolver::get_current_block_as_u64() + 1);
         assert_ok!(AdminUtils::sudo_set_commit_reveal_weights_interval(
             <<Test as Config>::RuntimeOrigin>::signed(owner),
             netuid,
@@ -2178,7 +2145,7 @@ fn test_hyperparam_rate_limit_enforced_by_tempo() {
         SubnetOwner::<Test>::insert(netuid, owner);
 
         // Set tempo to 1 so RL = 2 blocks
-        SubtensorModule::set_tempo(netuid, 1);
+        GameSolver::set_tempo(netuid, 1);
         // Disable admin freeze window to avoid blocking on small tempo
         assert_ok!(AdminUtils::sudo_set_admin_freeze_window(
             <<Test as Config>::RuntimeOrigin>::root(),
@@ -2203,7 +2170,7 @@ fn test_hyperparam_rate_limit_enforced_by_tempo() {
         );
 
         // Advance 2 blocks (2 tempos with tempo=1) then succeed
-        run_to_block(SubtensorModule::get_current_block_as_u64() + 2);
+        run_to_block(GameSolver::get_current_block_as_u64() + 2);
         assert_ok!(AdminUtils::sudo_set_commit_reveal_weights_interval(
             <<Test as Config>::RuntimeOrigin>::signed(owner),
             netuid,
@@ -2226,7 +2193,7 @@ fn test_owner_hyperparam_rate_limit_independent_per_param() {
         SubnetOwner::<Test>::insert(netuid, owner);
 
         // Use small tempo to make RL short and deterministic (2 blocks when tempo=1)
-        SubtensorModule::set_tempo(netuid, 1);
+        GameSolver::set_tempo(netuid, 1);
         // Disable admin freeze window so it doesn't interfere with small tempo
         assert_ok!(AdminUtils::sudo_set_admin_freeze_window(
             <<Test as Config>::RuntimeOrigin>::root(),
@@ -2274,7 +2241,7 @@ fn test_owner_hyperparam_rate_limit_independent_per_param() {
         );
 
         // Advance enough blocks to pass the RL window (2 blocks when tempo=1 and default epochs=2)
-        run_to_block(SubtensorModule::get_current_block_as_u64() + 2);
+        run_to_block(GameSolver::get_current_block_as_u64() + 2);
 
         // Now both hyperparameters can be updated again
         assert_ok!(AdminUtils::sudo_set_commit_reveal_weights_interval(
@@ -2296,7 +2263,7 @@ fn test_sudo_set_max_burn() {
         let netuid = NetUid::from(1);
         let to_be_set = TaoCurrency::from(100_000_001);
         add_network(netuid, 10);
-        let init_value = SubtensorModule::get_max_burn(netuid);
+        let init_value = GameSolver::get_max_burn(netuid);
 
         // Simple case
         assert_ok!(AdminUtils::sudo_set_max_burn(
@@ -2304,8 +2271,8 @@ fn test_sudo_set_max_burn() {
             netuid,
             TaoCurrency::from(to_be_set)
         ));
-        assert_ne!(SubtensorModule::get_max_burn(netuid), init_value);
-        assert_eq!(SubtensorModule::get_max_burn(netuid), to_be_set);
+        assert_ne!(GameSolver::get_max_burn(netuid), init_value);
+        assert_eq!(GameSolver::get_max_burn(netuid), to_be_set);
 
         // Unknown subnet
         assert_err!(
@@ -2332,7 +2299,7 @@ fn test_sudo_set_max_burn() {
             AdminUtils::sudo_set_max_burn(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                <Test as pallet_subtensor::Config>::MaxBurnLowerBound::get() - 1.into()
+                <Test as pallet_game_solver::Config>::MaxBurnLowerBound::get() - 1.into()
             ),
             Error::<Test>::ValueNotInBounds
         );
@@ -2342,7 +2309,7 @@ fn test_sudo_set_max_burn() {
             AdminUtils::sudo_set_max_burn(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                SubtensorModule::get_min_burn(netuid) - 1.into()
+                GameSolver::get_min_burn(netuid) - 1.into()
             ),
             Error::<Test>::ValueNotInBounds
         );
@@ -2372,11 +2339,11 @@ fn test_sudo_set_mechanism_count() {
         );
         assert_noop!(
             AdminUtils::sudo_set_mechanism_count(RuntimeOrigin::root(), netuid, ss_count_bad),
-            pallet_subtensor::Error::<Test>::InvalidValue
+            pallet_game_solver::Error::<Test>::InvalidValue
         );
         assert_noop!(
             AdminUtils::sudo_set_mechanism_count(RuntimeOrigin::root(), netuid, ss_count_ok),
-            pallet_subtensor::Error::<Test>::TooManyUIDsPerMechanism
+            pallet_game_solver::Error::<Test>::TooManyUIDsPerMechanism
         );
 
         // Reduce max UIDs to 128
@@ -2423,7 +2390,7 @@ fn test_sudo_set_mechanism_count_and_emissions() {
                 netuid,
                 Some(vec![0xFFFF / 5 * 2, 0xFFFF / 5 * 2, 0xFFFF / 5])
             ),
-            pallet_subtensor::Error::<Test>::InvalidValue
+            pallet_game_solver::Error::<Test>::InvalidValue
         );
 
         // Cannot set emission split with wrong total of entries
@@ -2434,7 +2401,7 @@ fn test_sudo_set_mechanism_count_and_emissions() {
                 netuid,
                 Some(vec![0xFFFF / 5 * 4, 0xFFFF / 5 - 1])
             ),
-            pallet_subtensor::Error::<Test>::InvalidValue
+            pallet_game_solver::Error::<Test>::InvalidValue
         );
 
         // Can set good split ok
@@ -2453,7 +2420,7 @@ fn test_sudo_set_mechanism_count_and_emissions() {
                 netuid,
                 Some(vec![0xFFFF / 5 * 4, 0xFFFF / 5])
             ),
-            pallet_subtensor::Error::<Test>::TxRateLimitExceeded
+            pallet_game_solver::Error::<Test>::TxRateLimitExceeded
         );
     });
 }
@@ -2520,8 +2487,7 @@ fn test_trim_to_max_allowed_uids() {
         Active::<Test>::insert(netuid, bool_values);
 
         for mecid in 0..mechanism_count.into() {
-            let netuid_index =
-                SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(mecid));
+            let netuid_index = GameSolver::get_mechanism_storage_index(netuid, MechId::from(mecid));
             Incentive::<Test>::insert(netuid_index, values.clone());
             LastUpdate::<Test>::insert(netuid_index, u64_values.clone());
         }
@@ -2578,7 +2544,7 @@ fn test_trim_to_max_allowed_uids() {
 
             for mecid in 0..mechanism_count.into() {
                 let netuid_index =
-                    SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(mecid));
+                    GameSolver::get_mechanism_storage_index(netuid, MechId::from(mecid));
                 Weights::<Test>::insert(netuid_index, uid, weights.clone());
                 Bonds::<Test>::insert(netuid_index, uid, bonds.clone());
             }
@@ -2625,8 +2591,7 @@ fn test_trim_to_max_allowed_uids() {
         assert_eq!(StakeWeight::<Test>::get(netuid), expected_values);
 
         for mecid in 0..mechanism_count.into() {
-            let netuid_index =
-                SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(mecid));
+            let netuid_index = GameSolver::get_mechanism_storage_index(netuid, MechId::from(mecid));
             assert_eq!(Incentive::<Test>::get(netuid_index), expected_values);
             assert_eq!(LastUpdate::<Test>::get(netuid_index), expected_u64_values);
         }
@@ -2638,7 +2603,7 @@ fn test_trim_to_max_allowed_uids() {
             assert!(!AssociatedEvmAddress::<Test>::contains_key(netuid, uid));
             for mecid in 0..mechanism_count.into() {
                 let netuid_index =
-                    SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(mecid));
+                    GameSolver::get_mechanism_storage_index(netuid, MechId::from(mecid));
                 assert!(!Weights::<Test>::contains_key(netuid_index, uid));
                 assert!(!Bonds::<Test>::contains_key(netuid_index, uid));
             }
@@ -2673,7 +2638,7 @@ fn test_trim_to_max_allowed_uids() {
         for uid in 0..new_max_n {
             for mecid in 0..mechanism_count.into() {
                 let netuid_index =
-                    SubtensorModule::get_mechanism_storage_index(netuid, MechId::from(mecid));
+                    GameSolver::get_mechanism_storage_index(netuid, MechId::from(mecid));
                 assert!(
                     Weights::<Test>::get(netuid_index, uid)
                         .iter()
@@ -2716,7 +2681,7 @@ fn test_trim_to_max_allowed_uids() {
                 NetUid::from(42),
                 new_max_n
             ),
-            pallet_subtensor::Error::<Test>::SubnetNotExists
+            pallet_game_solver::Error::<Test>::SubnetNotExists
         );
 
         // New max n less than lower bound
@@ -2726,7 +2691,7 @@ fn test_trim_to_max_allowed_uids() {
                 netuid,
                 2
             ),
-            pallet_subtensor::Error::<Test>::InvalidValue
+            pallet_game_solver::Error::<Test>::InvalidValue
         );
 
         // New max n greater than upper bound
@@ -2734,9 +2699,9 @@ fn test_trim_to_max_allowed_uids() {
             AdminUtils::sudo_trim_to_max_allowed_uids(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                SubtensorModule::get_max_allowed_uids(netuid) + 1
+                GameSolver::get_max_allowed_uids(netuid) + 1
             ),
-            pallet_subtensor::Error::<Test>::InvalidValue
+            pallet_game_solver::Error::<Test>::InvalidValue
         );
     });
 }
@@ -2789,7 +2754,7 @@ fn test_trim_to_max_allowed_uids_too_many_immune() {
                 netuid,
                 4
             ),
-            pallet_subtensor::Error::<Test>::TrimmingWouldExceedMaxImmunePercentage
+            pallet_game_solver::Error::<Test>::TrimmingWouldExceedMaxImmunePercentage
         );
 
         // Try to trim to 3 UIDs - this should also fail because 4/3 > 80% immune (>= 80%)
@@ -2799,7 +2764,7 @@ fn test_trim_to_max_allowed_uids_too_many_immune() {
                 netuid,
                 3
             ),
-            pallet_subtensor::Error::<Test>::TrimmingWouldExceedMaxImmunePercentage
+            pallet_game_solver::Error::<Test>::TrimmingWouldExceedMaxImmunePercentage
         );
 
         // Now test a scenario where trimming should succeed
@@ -2827,7 +2792,7 @@ fn test_trim_to_max_allowed_uids_too_many_immune() {
                 netuid,
                 1
             ),
-            pallet_subtensor::Error::<Test>::InvalidValue
+            pallet_game_solver::Error::<Test>::InvalidValue
         );
     });
 }
@@ -2852,7 +2817,7 @@ fn test_sudo_set_min_allowed_uids() {
             netuid,
             to_be_set
         ));
-        assert_eq!(SubtensorModule::get_min_allowed_uids(netuid), to_be_set);
+        assert_eq!(GameSolver::get_min_allowed_uids(netuid), to_be_set);
 
         // Non root
         assert_err!(
@@ -2879,7 +2844,7 @@ fn test_sudo_set_min_allowed_uids() {
             AdminUtils::sudo_set_min_allowed_uids(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                SubtensorModule::get_max_allowed_uids(netuid) + 1
+                GameSolver::get_max_allowed_uids(netuid) + 1
             ),
             Error::<Test>::MinAllowedUidsGreaterThanMaxAllowedUids
         );
@@ -2889,7 +2854,7 @@ fn test_sudo_set_min_allowed_uids() {
             AdminUtils::sudo_set_min_allowed_uids(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 netuid,
-                SubtensorModule::get_subnetwork_n(netuid) + 1
+                GameSolver::get_subnetwork_n(netuid) + 1
             ),
             Error::<Test>::MinAllowedUidsGreaterThanCurrentUids
         );
@@ -2911,7 +2876,7 @@ fn test_sudo_set_max_mechanism_count() {
                 <<Test as Config>::RuntimeOrigin>::root(),
                 MechId::from(0)
             ),
-            pallet_subtensor::Error::<Test>::InvalidValue
+            pallet_game_solver::Error::<Test>::InvalidValue
         );
 
         // Over max bound fails
@@ -2920,7 +2885,7 @@ fn test_sudo_set_max_mechanism_count() {
                 <<Test as Config>::RuntimeOrigin>::root(),
                 MechId::from(MAX_MECHANISM_COUNT_PER_SUBNET + 1)
             ),
-            pallet_subtensor::Error::<Test>::InvalidValue
+            pallet_game_solver::Error::<Test>::InvalidValue
         );
     });
 }
@@ -2932,7 +2897,7 @@ fn test_sudo_set_min_non_immune_uids() {
         add_network(netuid, 10);
 
         let to_be_set: u16 = 12;
-        let init_value: u16 = SubtensorModule::get_min_non_immune_uids(netuid);
+        let init_value: u16 = GameSolver::get_min_non_immune_uids(netuid);
 
         assert_ok!(AdminUtils::sudo_set_min_non_immune_uids(
             <<Test as Config>::RuntimeOrigin>::root(),
@@ -2941,7 +2906,7 @@ fn test_sudo_set_min_non_immune_uids() {
         ));
 
         assert!(init_value != to_be_set);
-        assert_eq!(SubtensorModule::get_min_non_immune_uids(netuid), to_be_set);
+        assert_eq!(GameSolver::get_min_non_immune_uids(netuid), to_be_set);
     });
 }
 
@@ -2954,7 +2919,7 @@ fn test_sudo_set_start_call_delay_permissions_and_zero_delay() {
         let non_root_account = U256::from(1);
 
         // Get initial delay value (should be non-zero)
-        let initial_delay = pallet_subtensor::StartCallDelay::<Test>::get();
+        let initial_delay = pallet_game_solver::StartCallDelay::<Test>::get();
         assert_eq!(initial_delay, 0);
 
         // Test 1: Non-root account should fail to set delay
@@ -2969,25 +2934,25 @@ fn test_sudo_set_start_call_delay_permissions_and_zero_delay() {
         // Test 2: Create a subnet
         add_network(netuid, tempo);
         assert_eq!(
-            pallet_subtensor::FirstEmissionBlockNumber::<Test>::get(netuid),
+            pallet_game_solver::FirstEmissionBlockNumber::<Test>::get(netuid),
             None,
             "Emission block should not be set yet"
         );
         assert_eq!(
-            pallet_subtensor::SubnetOwner::<Test>::get(netuid),
+            pallet_game_solver::SubnetOwner::<Test>::get(netuid),
             coldkey_account_id,
             "Default owner should be account 0"
         );
 
         // Test 3: Can successfully start the subnet immediately
-        assert_ok!(pallet_subtensor::Pallet::<Test>::start_call(
+        assert_ok!(pallet_game_solver::Pallet::<Test>::start_call(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             netuid
         ));
 
         // Verify emission has been set
         assert!(
-            pallet_subtensor::FirstEmissionBlockNumber::<Test>::get(netuid).is_some(),
+            pallet_game_solver::FirstEmissionBlockNumber::<Test>::get(netuid).is_some(),
             "Emission should be set"
         );
 
@@ -2997,39 +2962,39 @@ fn test_sudo_set_start_call_delay_permissions_and_zero_delay() {
             0
         ));
         assert_eq!(
-            pallet_subtensor::StartCallDelay::<Test>::get(),
+            pallet_game_solver::StartCallDelay::<Test>::get(),
             0,
             "Delay should now be zero"
         );
 
         // Verify event was emitted
-        frame_system::Pallet::<Test>::assert_last_event(RuntimeEvent::SubtensorModule(
-            pallet_subtensor::Event::StartCallDelaySet(0),
+        frame_system::Pallet::<Test>::assert_last_event(RuntimeEvent::GameSolver(
+            pallet_game_solver::Event::StartCallDelaySet(0),
         ));
 
         // Test 5: Try to start the subnet again - should be FAILED (first emission block already set)
         let current_block = frame_system::Pallet::<Test>::block_number();
         assert_err!(
-            pallet_subtensor::Pallet::<Test>::start_call(
+            pallet_game_solver::Pallet::<Test>::start_call(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
                 netuid
             ),
-            pallet_subtensor::Error::<Test>::FirstEmissionBlockNumberAlreadySet
+            pallet_game_solver::Error::<Test>::FirstEmissionBlockNumberAlreadySet
         );
 
         assert_eq!(
-            pallet_subtensor::FirstEmissionBlockNumber::<Test>::get(netuid),
+            pallet_game_solver::FirstEmissionBlockNumber::<Test>::get(netuid),
             Some(current_block + 1),
             "Emission should start at next block"
         );
 
         // Test 6: Try to start it a third time - should FAIL (already started)
         assert_err!(
-            pallet_subtensor::Pallet::<Test>::start_call(
+            pallet_game_solver::Pallet::<Test>::start_call(
                 <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
                 netuid
             ),
-            pallet_subtensor::Error::<Test>::FirstEmissionBlockNumberAlreadySet
+            pallet_game_solver::Error::<Test>::FirstEmissionBlockNumberAlreadySet
         );
     });
 }

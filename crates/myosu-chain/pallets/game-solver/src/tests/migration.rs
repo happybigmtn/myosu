@@ -69,15 +69,15 @@ fn test_migration_transfer_nets_to_foundation() {
         // Create subnet 11
         add_network(11.into(), 1, 0);
 
-        log::info!("{:?}", SubtensorModule::get_subnet_owner(1.into()));
-        //assert_eq!(SubtensorModule::<Test>::get_subnet_owner(1), );
+        log::info!("{:?}", GameSolver::get_subnet_owner(1.into()));
+        //assert_eq!(GameSolver::<Test>::get_subnet_owner(1), );
 
         // Run the migration to transfer ownership
         let hex =
             hex_literal::hex!["feabaafee293d3b76dae304e2f9d885f77d2b17adab9e17e921b321eccd61c77"];
         crate::migrations::migrate_transfer_ownership_to_foundation::migrate_transfer_ownership_to_foundation::<Test>(hex);
 
-        log::info!("new owner: {:?}", SubtensorModule::get_subnet_owner(1.into()));
+        log::info!("new owner: {:?}", GameSolver::get_subnet_owner(1.into()));
     })
 }
 
@@ -86,12 +86,12 @@ fn test_migration_delete_subnet_3() {
     new_test_ext(1).execute_with(|| {
         // Create subnet 3
         add_network(3.into(), 1, 0);
-        assert!(SubtensorModule::if_subnet_exist(3.into()));
+        assert!(GameSolver::if_subnet_exist(3.into()));
 
         // Run the migration to transfer ownership
         crate::migrations::migrate_delete_subnet_3::migrate_delete_subnet_3::<Test>();
 
-        assert!(!SubtensorModule::if_subnet_exist(3.into()));
+        assert!(!GameSolver::if_subnet_exist(3.into()));
     })
 }
 
@@ -100,12 +100,12 @@ fn test_migration_delete_subnet_21() {
     new_test_ext(1).execute_with(|| {
         // Create subnet 21
         add_network(21.into(), 1, 0);
-        assert!(SubtensorModule::if_subnet_exist(21.into()));
+        assert!(GameSolver::if_subnet_exist(21.into()));
 
         // Run the migration to transfer ownership
         crate::migrations::migrate_delete_subnet_21::migrate_delete_subnet_21::<Test>();
 
-        assert!(!SubtensorModule::if_subnet_exist(21.into()));
+        assert!(!GameSolver::if_subnet_exist(21.into()));
     })
 }
 
@@ -117,7 +117,7 @@ fn test_migrate_commit_reveal_2() {
         // ------------------------------
         const MIGRATION_NAME: &str = "migrate_commit_reveal_2_v2";
 
-        let pallet_prefix = twox_128("SubtensorModule".as_bytes());
+        let pallet_prefix = twox_128("GameSolver".as_bytes());
         let storage_prefix_interval = twox_128("WeightCommitRevealInterval".as_bytes());
         let storage_prefix_commits = twox_128("WeightCommits".as_bytes());
 
@@ -290,44 +290,44 @@ fn test_migrate_commit_reveal_2() {
 
 //         // Assert stake balances for hotkey1 and coldkey1 on netuid_0
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+//             GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
 //                 &hotkey1, &coldkey1, netuid_0
 //             ),
 //             stake_amount
 //         );
 //         // Assert stake balances for hotkey1 and coldkey2 on netuid_0
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+//             GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
 //                 &hotkey1, &coldkey2, netuid_0
 //             ),
 //             stake_amount
 //         );
 //         // Assert stake balances for hotkey2 and coldkey2 on netuid_0
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+//             GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
 //                 &hotkey2, &coldkey2, netuid_0
 //             ),
 //             stake_amount
 //         );
 //         // Assert stake balances for hotkey2 and coldkey3 on netuid_0
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+//             GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
 //                 &hotkey2, &coldkey3, netuid_0
 //             ),
 //             stake_amount
 //         );
 //         // Assert total stake for hotkey1 on netuid_0
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_on_subnet(&hotkey1, netuid_0),
+//             GameSolver::get_stake_for_hotkey_on_subnet(&hotkey1, netuid_0),
 //             2 * stake_amount
 //         );
 //         // Assert total stake for hotkey2 on netuid_0
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_on_subnet(&hotkey2, netuid_0),
+//             GameSolver::get_stake_for_hotkey_on_subnet(&hotkey2, netuid_0),
 //             2 * stake_amount
 //         );
 //         // Increase stake for hotkey1 and coldkey1 on netuid_0
-//         SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+//         GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
 //             &hotkey1,
 //             &coldkey1,
 //             netuid_0,
@@ -335,18 +335,18 @@ fn test_migrate_commit_reveal_2() {
 //         );
 //         // Assert updated stake for hotkey1 and coldkey1 on netuid_0
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+//             GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
 //                 &hotkey1, &coldkey1, netuid_0
 //             ),
 //             2 * stake_amount
 //         );
 //         // Assert updated total stake for hotkey1 on netuid_0
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_on_subnet(&hotkey1, netuid_0),
+//             GameSolver::get_stake_for_hotkey_on_subnet(&hotkey1, netuid_0),
 //             3 * stake_amount
 //         );
 //         // Increase stake for hotkey1 and coldkey1 on netuid_1
-//         SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+//         GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
 //             &hotkey1,
 //             &coldkey1,
 //             netuid_1,
@@ -354,20 +354,20 @@ fn test_migrate_commit_reveal_2() {
 //         );
 //         // Assert updated stake for hotkey1 and coldkey1 on netuid_1
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+//             GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
 //                 &hotkey1, &coldkey1, netuid_1
 //             ),
 //             stake_amount
 //         );
 //         // Assert updated total stake for hotkey1 on netuid_1
 //         assert_eq!(
-//             SubtensorModule::get_stake_for_hotkey_on_subnet(&hotkey1, netuid_1),
+//             GameSolver::get_stake_for_hotkey_on_subnet(&hotkey1, netuid_1),
 //             stake_amount
 //         );
 
 //         // Run the coinbase
 //         let emission: u64 = 1_000_000_000;
-//         SubtensorModule::run_coinbase(I96F32::from_num(emission));
+//         GameSolver::run_coinbase(I96F32::from_num(emission));
 //         close(
 //             SubnetTaoInEmission::<Test>::get(netuid_1),
 //             emission / 6,
@@ -594,7 +594,7 @@ fn test_migrate_remove_total_hotkey_coldkey_stakes_this_interval() {
     new_test_ext(1).execute_with(|| {
         const MIGRATION_NAME: &str = "migrate_remove_total_hotkey_coldkey_stakes_this_interval";
 
-        let pallet_name = twox_128(b"SubtensorModule");
+        let pallet_name = twox_128(b"GameSolver");
         let storage_name = twox_128(b"TotalHotkeyColdkeyStakesThisInterval");
         let prefix = [pallet_name, storage_name].concat();
 
@@ -626,7 +626,7 @@ fn test_migrate_remove_total_hotkey_coldkey_stakes_this_interval() {
 }
 fn test_migrate_remove_last_hotkey_coldkey_emission_on_netuid() {
     const MIGRATION_NAME: &str = "migrate_remove_last_hotkey_coldkey_emission_on_netuid";
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "LastHotkeyColdkeyEmissionOnNetuid";
     let migration =  crate::migrations::migrate_orphaned_storage_items::remove_last_hotkey_coldkey_emission_on_netuid::<Test>;
 
@@ -641,7 +641,7 @@ fn test_migrate_remove_last_hotkey_coldkey_emission_on_netuid() {
 #[test]
 fn test_migrate_remove_subnet_alpha_emission_sell() {
     const MIGRATION_NAME: &str = "migrate_remove_subnet_alpha_emission_sell";
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "SubnetAlphaEmissionSell";
     let migration =
         crate::migrations::migrate_orphaned_storage_items::remove_subnet_alpha_emission_sell::<Test>;
@@ -658,7 +658,7 @@ fn test_migrate_remove_subnet_alpha_emission_sell() {
 #[test]
 fn test_migrate_remove_neurons_to_prune_at_next_epoch() {
     const MIGRATION_NAME: &str = "migrate_remove_neurons_to_prune_at_next_epoch";
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "NeuronsToPruneAtNextEpoch";
     let migration =
         crate::migrations::migrate_orphaned_storage_items::remove_neurons_to_prune_at_next_epoch::<
@@ -677,7 +677,7 @@ fn test_migrate_remove_neurons_to_prune_at_next_epoch() {
 #[test]
 fn test_migrate_remove_total_stake_at_dynamic() {
     const MIGRATION_NAME: &str = "migrate_remove_total_stake_at_dynamic";
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "TotalStakeAtDynamic";
     let migration =
         crate::migrations::migrate_orphaned_storage_items::remove_total_stake_at_dynamic::<Test>;
@@ -694,7 +694,7 @@ fn test_migrate_remove_total_stake_at_dynamic() {
 #[test]
 fn test_migrate_remove_subnet_name() {
     const MIGRATION_NAME: &str = "migrate_remove_subnet_name";
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "SubnetName";
     let migration = crate::migrations::migrate_orphaned_storage_items::remove_subnet_name::<Test>;
 
@@ -710,7 +710,7 @@ fn test_migrate_remove_subnet_name() {
 #[test]
 fn test_migrate_remove_network_min_allowed_uids() {
     const MIGRATION_NAME: &str = "migrate_remove_network_min_allowed_uids";
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "NetworkMinAllowedUids";
     let migration =
         crate::migrations::migrate_orphaned_storage_items::remove_network_min_allowed_uids::<Test>;
@@ -721,7 +721,7 @@ fn test_migrate_remove_network_min_allowed_uids() {
 #[test]
 fn test_migrate_remove_dynamic_block() {
     const MIGRATION_NAME: &str = "migrate_remove_dynamic_block";
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "DynamicBlock";
     let migration = crate::migrations::migrate_orphaned_storage_items::remove_dynamic_block::<Test>;
 
@@ -835,7 +835,7 @@ fn test_migrate_network_last_registered() {
         // ------------------------------
         const MIGRATION_NAME: &str = "migrate_network_last_registered";
 
-        let pallet_name = "SubtensorModule";
+        let pallet_name = "GameSolver";
         let storage_name = "NetworkLastRegistered";
         let pallet_name_hash = twox_128(pallet_name.as_bytes());
         let storage_name_hash = twox_128(storage_name.as_bytes());
@@ -872,10 +872,7 @@ fn test_migrate_network_last_registered() {
         // Step 3: Verify Migration Effects
         // ------------------------------
 
-        assert_eq!(
-            SubtensorModule::get_network_last_lock_block(),
-            original_value
-        );
+        assert_eq!(GameSolver::get_network_last_lock_block(), original_value);
         assert_eq!(
             get_raw(&full_key),
             None,
@@ -920,10 +917,7 @@ fn test_migrate_last_block_tx() {
         // Step 3: Verify Migration Effects
         // ------------------------------
 
-        assert_eq!(
-            SubtensorModule::get_last_tx_block(&test_account),
-            original_value
-        );
+        assert_eq!(GameSolver::get_last_tx_block(&test_account), original_value);
         assert!(
             !LastTxBlock::<Test>::contains_key(test_account),
             "RateLimit storage should have been cleared"
@@ -968,7 +962,7 @@ fn test_migrate_last_tx_block_childkey_take() {
         // ------------------------------
 
         assert_eq!(
-            SubtensorModule::get_last_tx_block_childkey_take(&test_account),
+            GameSolver::get_last_tx_block_childkey_take(&test_account),
             original_value
         );
         assert!(
@@ -1015,7 +1009,7 @@ fn test_migrate_last_tx_block_delegate_take() {
         // ------------------------------
 
         assert_eq!(
-            SubtensorModule::get_last_tx_block_delegate_take(&test_account),
+            GameSolver::get_last_tx_block_delegate_take(&test_account),
             original_value
         );
         assert!(
@@ -1032,18 +1026,18 @@ fn test_migrate_rate_limit_keys() {
     new_test_ext(1).execute_with(|| {
         const MIGRATION_NAME: &[u8] = b"migrate_rate_limit_keys";
         let prefix = {
-            let pallet_prefix = twox_128("SubtensorModule".as_bytes());
+            let pallet_prefix = twox_128("GameSolver".as_bytes());
             let storage_prefix = twox_128("LastRateLimitedBlock".as_bytes());
             [pallet_prefix, storage_prefix].concat()
         };
 
         // Seed new-format entries that must survive the migration untouched.
         let new_last_account = U256::from(10);
-        SubtensorModule::set_last_tx_block(&new_last_account, 555);
+        GameSolver::set_last_tx_block(&new_last_account, 555);
         let new_child_account = U256::from(11);
-        SubtensorModule::set_last_tx_block_childkey(&new_child_account, 777);
+        GameSolver::set_last_tx_block_childkey(&new_child_account, 777);
         let new_delegate_account = U256::from(12);
-        SubtensorModule::set_last_tx_block_delegate_take(&new_delegate_account, 888);
+        GameSolver::set_last_tx_block_delegate_take(&new_delegate_account, 888);
 
         // Legacy NetworkLastRegistered entry (index 1)
         let mut legacy_network_key = prefix.clone();
@@ -1085,7 +1079,7 @@ fn test_migrate_rate_limit_keys() {
 
         // Legacy entries were migrated and cleared.
         assert_eq!(
-            SubtensorModule::get_network_last_lock_block(),
+            GameSolver::get_network_last_lock_block(),
             111u64,
             "Network last lock block should match migrated value"
         );
@@ -1095,7 +1089,7 @@ fn test_migrate_rate_limit_keys() {
         );
 
         assert_eq!(
-            SubtensorModule::get_last_tx_block(&new_last_account),
+            GameSolver::get_last_tx_block(&new_last_account),
             666u64,
             "LastTxBlock should reflect the merged legacy value"
         );
@@ -1105,7 +1099,7 @@ fn test_migrate_rate_limit_keys() {
         );
 
         assert_eq!(
-            SubtensorModule::get_last_tx_block_childkey_take(&legacy_child_account),
+            GameSolver::get_last_tx_block_childkey_take(&legacy_child_account),
             333u64,
             "Child key take block should be migrated"
         );
@@ -1115,7 +1109,7 @@ fn test_migrate_rate_limit_keys() {
         );
 
         assert_eq!(
-            SubtensorModule::get_last_tx_block_delegate_take(&legacy_delegate_account),
+            GameSolver::get_last_tx_block_delegate_take(&legacy_delegate_account),
             444u64,
             "Delegate take block should be migrated"
         );
@@ -1126,12 +1120,12 @@ fn test_migrate_rate_limit_keys() {
 
         // New-format entries remain untouched.
         assert_eq!(
-            SubtensorModule::get_last_tx_block_childkey_take(&new_child_account),
+            GameSolver::get_last_tx_block_childkey_take(&new_child_account),
             777u64,
             "Existing child take entry should be preserved"
         );
         assert_eq!(
-            SubtensorModule::get_last_tx_block_delegate_take(&new_delegate_account),
+            GameSolver::get_last_tx_block_delegate_take(&new_delegate_account),
             888u64,
             "Existing delegate take entry should be preserved"
         );
@@ -1266,19 +1260,19 @@ fn test_migrate_subnet_symbols() {
         // Shift some symbols
         TokenSymbol::<Test>::insert(
             NetUid::from(21),
-            SubtensorModule::get_symbol_for_subnet(NetUid::from(142)),
+            GameSolver::get_symbol_for_subnet(NetUid::from(142)),
         );
         TokenSymbol::<Test>::insert(
             NetUid::from(42),
-            SubtensorModule::get_symbol_for_subnet(NetUid::from(184)),
+            GameSolver::get_symbol_for_subnet(NetUid::from(184)),
         );
         TokenSymbol::<Test>::insert(
             NetUid::from(83),
-            SubtensorModule::get_symbol_for_subnet(NetUid::from(242)),
+            GameSolver::get_symbol_for_subnet(NetUid::from(242)),
         );
         TokenSymbol::<Test>::insert(
             NetUid::from(99),
-            SubtensorModule::get_symbol_for_subnet(NetUid::from(284)),
+            GameSolver::get_symbol_for_subnet(NetUid::from(284)),
         );
 
         // Run the migration
@@ -1287,19 +1281,19 @@ fn test_migrate_subnet_symbols() {
         // Check that the symbols have been corrected
         assert_eq!(
             TokenSymbol::<Test>::get(NetUid::from(21)),
-            SubtensorModule::get_symbol_for_subnet(NetUid::from(21))
+            GameSolver::get_symbol_for_subnet(NetUid::from(21))
         );
         assert_eq!(
             TokenSymbol::<Test>::get(NetUid::from(42)),
-            SubtensorModule::get_symbol_for_subnet(NetUid::from(42))
+            GameSolver::get_symbol_for_subnet(NetUid::from(42))
         );
         assert_eq!(
             TokenSymbol::<Test>::get(NetUid::from(83)),
-            SubtensorModule::get_symbol_for_subnet(NetUid::from(83))
+            GameSolver::get_symbol_for_subnet(NetUid::from(83))
         );
         assert_eq!(
             TokenSymbol::<Test>::get(NetUid::from(99)),
-            SubtensorModule::get_symbol_for_subnet(NetUid::from(99))
+            GameSolver::get_symbol_for_subnet(NetUid::from(99))
         );
 
         assert!(!weight.is_zero(), "Migration weight should be non-zero");
@@ -1316,16 +1310,14 @@ fn test_migrate_set_registration_enable() {
         for netuid in netuids.iter() {
             add_network(*netuid, 1, 0);
             // Set registration to false to simulate the need for migration
-            SubtensorModule::set_network_registration_allowed(*netuid, false);
-            SubtensorModule::set_network_pow_registration_allowed(*netuid, false);
+            GameSolver::set_network_registration_allowed(*netuid, false);
+            GameSolver::set_network_pow_registration_allowed(*netuid, false);
         }
 
         // Sanity check: registration is disabled before migration
         for netuid in netuids.iter() {
-            assert!(!SubtensorModule::get_network_registration_allowed(*netuid));
-            assert!(!SubtensorModule::get_network_pow_registration_allowed(
-                *netuid
-            ));
+            assert!(!GameSolver::get_network_registration_allowed(*netuid));
+            assert!(!GameSolver::get_network_pow_registration_allowed(*netuid));
         }
 
         // Run the migration
@@ -1336,10 +1328,8 @@ fn test_migrate_set_registration_enable() {
 
         // After migration, regular registration should be enabled for all subnets except root
         for netuid in netuids.iter() {
-            assert!(SubtensorModule::get_network_registration_allowed(*netuid));
-            assert!(!SubtensorModule::get_network_pow_registration_allowed(
-                *netuid
-            ));
+            assert!(GameSolver::get_network_registration_allowed(*netuid));
+            assert!(!GameSolver::get_network_pow_registration_allowed(*netuid));
         }
 
         // Migration should be marked as run
@@ -1641,10 +1631,7 @@ fn test_migrate_commit_reveal_settings_values_access() {
         crate::migrations::migrate_commit_reveal_settings::migrate_commit_reveal_settings::<Test>();
 
         // Test that we can access the values using the pallet functions
-        assert_eq!(
-            SubtensorModule::get_reveal_period(NetUid::from(netuid)),
-            1u64
-        );
+        assert_eq!(GameSolver::get_reveal_period(NetUid::from(netuid)), 1u64);
 
         // Test direct storage access
         assert_eq!(RevealPeriodEpochs::<Test>::get(NetUid::from(netuid)), 1u64);
@@ -1666,7 +1653,7 @@ fn test_migrate_auto_stake_destination() {
 			NetworksAdded::<Test>::insert(*netuid, true);
 		}
 
-        let pallet_prefix = twox_128("SubtensorModule".as_bytes());
+        let pallet_prefix = twox_128("GameSolver".as_bytes());
         let storage_prefix = twox_128("AutoStakeDestination".as_bytes());
 
         // Create test accounts
@@ -1879,7 +1866,7 @@ fn test_migrate_remove_network_modality() {
         // ------------------------------
         // We need to manually create storage entries that would exist for NetworkModality
         // Since NetworkModality was a StorageMap<_, Identity, NetUid, u16>, we simulate this
-        let pallet_prefix = twox_128("SubtensorModule".as_bytes());
+        let pallet_prefix = twox_128("GameSolver".as_bytes());
         let storage_prefix = twox_128("NetworkModality".as_bytes());
 
         // Create NetworkModality entries for each network
@@ -2399,7 +2386,7 @@ fn test_migrate_kappa_map_to_default() {
 #[test]
 fn test_migrate_remove_tao_dividends() {
     const MIGRATION_NAME: &str = "migrate_remove_tao_dividends";
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "TaoDividendsPerSubnet";
     let migration =
         crate::migrations::migrate_remove_tao_dividends::migrate_remove_tao_dividends::<Test>;
@@ -2604,8 +2591,8 @@ fn do_setup_unactive_sn() -> (Vec<NetUid>, Vec<NetUid>) {
         // give balance to the coldkey
         let coldkey_account_id = U256::from(1111);
         let hotkey_account_id = U256::from(1111);
-        let burn_cost = SubtensorModule::get_burn(*netuid);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost.into());
+        let burn_cost = GameSolver::get_burn(*netuid);
+        GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, burn_cost.into());
         TotalIssuance::<Test>::mutate(|total_issuance| {
             let updated_total = u64::from(*total_issuance)
                 .checked_add(u64::from(burn_cost))
@@ -2614,7 +2601,7 @@ fn do_setup_unactive_sn() -> (Vec<NetUid>, Vec<NetUid>) {
         });
 
         // register the neuron
-        assert_ok!(SubtensorModule::burned_register(
+        assert_ok!(GameSolver::burned_register(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
             *netuid,
             hotkey_account_id
@@ -2881,7 +2868,7 @@ fn test_migrate_remove_old_identity_maps() {
 
     const MIGRATION_NAME: &str = "migrate_remove_old_identity_maps";
 
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
 
     test_remove_storage_item(MIGRATION_NAME, pallet_name, "Identities", migration, 100);
 

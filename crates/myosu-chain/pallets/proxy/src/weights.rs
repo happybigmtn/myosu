@@ -73,8 +73,8 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Proof: `Proxy::Proxies` (`max_values`: None, `max_size`: Some(789), added: 3264, mode: `MaxEncodedLen`)
 	/// Storage: `SafeMode::EnteredUntil` (r:1 w:0)
 	/// Proof: `SafeMode::EnteredUntil` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-	/// Storage: `SubtensorModule::ColdkeySwapAnnouncements` (r:1 w:0)
-	/// Proof: `SubtensorModule::ColdkeySwapAnnouncements` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `GameSolver::ColdkeySwapAnnouncements` (r:1 w:0)
+	/// Proof: `GameSolver::ColdkeySwapAnnouncements` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `Proxy::LastCallResult` (r:0 w:1)
 	/// Proof: `Proxy::LastCallResult` (`max_values`: None, `max_size`: Some(47), added: 2522, mode: `MaxEncodedLen`)
 	/// The range of component `p` is `[1, 19]`.
@@ -98,8 +98,8 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(104), added: 2579, mode: `MaxEncodedLen`)
 	/// Storage: `SafeMode::EnteredUntil` (r:1 w:0)
 	/// Proof: `SafeMode::EnteredUntil` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-	/// Storage: `SubtensorModule::ColdkeySwapAnnouncements` (r:1 w:0)
-	/// Proof: `SubtensorModule::ColdkeySwapAnnouncements` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `GameSolver::ColdkeySwapAnnouncements` (r:1 w:0)
+	/// Proof: `GameSolver::ColdkeySwapAnnouncements` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `Proxy::LastCallResult` (r:0 w:1)
 	/// Proof: `Proxy::LastCallResult` (`max_values`: None, `max_size`: Some(47), added: 2522, mode: `MaxEncodedLen`)
 	/// The range of component `a` is `[0, 74]`.
@@ -289,8 +289,8 @@ impl WeightInfo for () {
 	/// Proof: `Proxy::Proxies` (`max_values`: None, `max_size`: Some(789), added: 3264, mode: `MaxEncodedLen`)
 	/// Storage: `SafeMode::EnteredUntil` (r:1 w:0)
 	/// Proof: `SafeMode::EnteredUntil` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-	/// Storage: `SubtensorModule::ColdkeySwapAnnouncements` (r:1 w:0)
-	/// Proof: `SubtensorModule::ColdkeySwapAnnouncements` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `GameSolver::ColdkeySwapAnnouncements` (r:1 w:0)
+	/// Proof: `GameSolver::ColdkeySwapAnnouncements` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `Proxy::LastCallResult` (r:0 w:1)
 	/// Proof: `Proxy::LastCallResult` (`max_values`: None, `max_size`: Some(47), added: 2522, mode: `MaxEncodedLen`)
 	/// The range of component `p` is `[1, 19]`.
@@ -314,8 +314,8 @@ impl WeightInfo for () {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(104), added: 2579, mode: `MaxEncodedLen`)
 	/// Storage: `SafeMode::EnteredUntil` (r:1 w:0)
 	/// Proof: `SafeMode::EnteredUntil` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-	/// Storage: `SubtensorModule::ColdkeySwapAnnouncements` (r:1 w:0)
-	/// Proof: `SubtensorModule::ColdkeySwapAnnouncements` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `GameSolver::ColdkeySwapAnnouncements` (r:1 w:0)
+	/// Proof: `GameSolver::ColdkeySwapAnnouncements` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `Proxy::LastCallResult` (r:0 w:1)
 	/// Proof: `Proxy::LastCallResult` (`max_values`: None, `max_size`: Some(47), added: 2522, mode: `MaxEncodedLen`)
 	/// The range of component `a` is `[0, 74]`.

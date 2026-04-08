@@ -83,7 +83,7 @@ pub(super) fn genesis_patch(
         sp_consensus_grandpa::AuthorityId,
     )>,
     endowed_accounts: Vec<(AccountId, u128)>,
-    subtensor_module: Option<serde_json::Value>,
+    game_solver: Option<serde_json::Value>,
 ) -> serde_json::Value {
     let mut genesis = serde_json::json!({
         "aura": {
@@ -103,11 +103,11 @@ pub(super) fn genesis_patch(
         }
     });
 
-    if let Some(subtensor_module) = subtensor_module {
+    if let Some(game_solver) = game_solver {
         genesis
             .as_object_mut()
             .expect("genesis patch must stay as an object")
-            .insert("subtensorModule".into(), subtensor_module);
+            .insert("gameSolver".into(), game_solver);
     }
 
     genesis

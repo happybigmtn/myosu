@@ -16,7 +16,7 @@ pub fn migrate_obsolete_rate_limiting_last_blocks_storage<T: Config>() -> Weight
 
 pub fn migrate_network_last_registered<T: Config>() -> Weight {
     let migration_name = b"migrate_network_last_registered".to_vec();
-    let pallet_name = "SubtensorModule";
+    let pallet_name = "GameSolver";
     let storage_name = "NetworkLastRegistered";
 
     migrate_value::<T, _>(migration_name, pallet_name, storage_name, |limit| {

@@ -26,7 +26,7 @@ pub fn migrate_commit_reveal_2<T: Config>() -> Weight {
     // ------------------------------
 
     let mut weight_commit_reveal_interval_prefix = Vec::new();
-    weight_commit_reveal_interval_prefix.extend_from_slice(&twox_128("SubtensorModule".as_bytes()));
+    weight_commit_reveal_interval_prefix.extend_from_slice(&twox_128("GameSolver".as_bytes()));
     weight_commit_reveal_interval_prefix
         .extend_from_slice(&twox_128("WeightCommitRevealInterval".as_bytes()));
 
@@ -49,7 +49,7 @@ pub fn migrate_commit_reveal_2<T: Config>() -> Weight {
     // ------------------------------
 
     let mut weight_commits_prefix = Vec::new();
-    weight_commits_prefix.extend_from_slice(&twox_128("SubtensorModule".as_bytes()));
+    weight_commits_prefix.extend_from_slice(&twox_128("GameSolver".as_bytes()));
     weight_commits_prefix.extend_from_slice(&twox_128("WeightCommits".as_bytes()));
 
     let removal_results_commits = clear_prefix(&weight_commits_prefix, Some(u32::MAX));

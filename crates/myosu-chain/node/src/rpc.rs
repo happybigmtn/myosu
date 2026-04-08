@@ -47,10 +47,10 @@ where
         > + 'static,
 {
     let build_started_at = Instant::now();
+    use game_solver_rpc::{GameSolverApiServer, GameSolverRpc};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
     use sc_consensus_manual_seal::rpc::{ManualSeal, ManualSealApiServer};
     use substrate_frame_rpc_system::{System, SystemApiServer};
-    use subtensor_custom_rpc::{SubtensorCustom, SubtensorCustomApiServer};
 
     let mut module = RpcModule::new(());
     let FullDeps {
@@ -60,8 +60,8 @@ where
     } = deps;
     let manual_seal_enabled = command_sink.is_some();
 
-    // Custom RPC methods for Paratensor
-    module.merge(SubtensorCustom::new(client.clone()).into_rpc())?;
+    // Custom RPC methods for the game-solver pallet.
+    module.merge(GameSolverRpc::new(client.clone()).into_rpc())?;
 
     module.merge(System::new(client.clone(), pool.clone()).into_rpc())?;
     module.merge(TransactionPayment::new(client.clone()).into_rpc())?;

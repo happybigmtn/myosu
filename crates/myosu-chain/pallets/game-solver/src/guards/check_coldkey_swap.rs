@@ -90,23 +90,23 @@ mod tests {
     fn forbidden_calls() -> Vec<RuntimeCall> {
         vec![
             RuntimeCall::System(SystemCall::remark { remark: vec![] }),
-            RuntimeCall::SubtensorModule(crate::Call::add_stake {
+            RuntimeCall::GameSolver(crate::Call::add_stake {
                 hotkey: U256::from(1),
                 netuid: 1u16.into(),
                 amount_staked: 1_000u64.into(),
             }),
-            RuntimeCall::SubtensorModule(crate::Call::remove_stake {
+            RuntimeCall::GameSolver(crate::Call::remove_stake {
                 hotkey: U256::from(1),
                 netuid: 1u16.into(),
                 amount_unstaked: 1_000u64.into(),
             }),
-            RuntimeCall::SubtensorModule(crate::Call::set_weights {
+            RuntimeCall::GameSolver(crate::Call::set_weights {
                 netuid: 1u16.into(),
                 dests: vec![],
                 weights: vec![],
                 version_key: 0,
             }),
-            RuntimeCall::SubtensorModule(crate::Call::register_network {
+            RuntimeCall::GameSolver(crate::Call::register_network {
                 hotkey: U256::from(1),
             }),
         ]
@@ -115,13 +115,13 @@ mod tests {
     /// Calls that should be allowed through the guard during an active (undisputed) swap.
     fn authorized_calls() -> Vec<RuntimeCall> {
         vec![
-            RuntimeCall::SubtensorModule(crate::Call::announce_coldkey_swap {
+            RuntimeCall::GameSolver(crate::Call::announce_coldkey_swap {
                 new_coldkey_hash: HashingOf::<Test>::hash_of(&U256::from(99)),
             }),
-            RuntimeCall::SubtensorModule(crate::Call::swap_coldkey_announced {
+            RuntimeCall::GameSolver(crate::Call::swap_coldkey_announced {
                 new_coldkey: U256::from(42),
             }),
-            RuntimeCall::SubtensorModule(crate::Call::dispute_coldkey_swap {}),
+            RuntimeCall::GameSolver(crate::Call::dispute_coldkey_swap {}),
         ]
     }
 
@@ -232,8 +232,8 @@ mod tests {
             ColdkeySwapAnnouncements::<Test>::insert(real, (now, hash));
 
             // Give delegate enough balance for proxy deposit
-            SubtensorModule::add_balance_to_coldkey_account(&real, 1_000_000_000);
-            SubtensorModule::add_balance_to_coldkey_account(&delegate, 1_000_000_000);
+            GameSolver::add_balance_to_coldkey_account(&real, 1_000_000_000);
+            GameSolver::add_balance_to_coldkey_account(&delegate, 1_000_000_000);
 
             // Register proxy: delegate can act on behalf of real
             assert_ok!(Proxy::add_proxy(
@@ -271,9 +271,9 @@ mod tests {
             let hash = HashingOf::<Test>::hash_of(&U256::from(42));
             ColdkeySwapAnnouncements::<Test>::insert(real, (now, hash));
 
-            SubtensorModule::add_balance_to_coldkey_account(&real, 1_000_000_000);
-            SubtensorModule::add_balance_to_coldkey_account(&delegate1, 1_000_000_000);
-            SubtensorModule::add_balance_to_coldkey_account(&delegate2, 1_000_000_000);
+            GameSolver::add_balance_to_coldkey_account(&real, 1_000_000_000);
+            GameSolver::add_balance_to_coldkey_account(&delegate1, 1_000_000_000);
+            GameSolver::add_balance_to_coldkey_account(&delegate2, 1_000_000_000);
 
             // delegate1 can proxy for real, delegate2 can proxy for delegate1
             assert_ok!(Proxy::add_proxy(

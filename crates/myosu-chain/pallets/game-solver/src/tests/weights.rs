@@ -49,7 +49,7 @@ fn test_set_weights_dispatch_info_ok() {
         let weights = vec![1, 1];
         let netuid = NetUid::from(1);
         let version_key: u64 = 0;
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::set_weights {
+        let call = RuntimeCall::GameSolver(SubtensorCall::set_weights {
             netuid,
             dests,
             weights,
@@ -76,7 +76,7 @@ fn test_commit_weights_dispatch_info_ok() {
         let commit_hash: H256 =
             BlakeTwo256::hash_of(&(hotkey, netuid, dests, weights, salt, version_key));
 
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::commit_weights {
+        let call = RuntimeCall::GameSolver(SubtensorCall::commit_weights {
             netuid,
             commit_hash,
         });
@@ -108,7 +108,7 @@ fn test_commit_weights_validate() {
         let commit_hash: H256 =
             BlakeTwo256::hash_of(&(hotkey, netuid, dests, weights, salt, version_key));
 
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::commit_weights {
+        let call = RuntimeCall::GameSolver(SubtensorCall::commit_weights {
             netuid,
             commit_hash,
         });
@@ -116,10 +116,10 @@ fn test_commit_weights_validate() {
         // Create netuid
         add_network(netuid, 1, 0);
         // Register the hotkey
-        SubtensorModule::append_neuron(netuid, &hotkey, 0);
+        GameSolver::append_neuron(netuid, &hotkey, 0);
         crate::Owner::<Test>::insert(hotkey, coldkey);
 
-        SubtensorModule::add_balance_to_coldkey_account(&hotkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&hotkey, u64::MAX);
 
         let min_stake = 500_000_000_000;
         let reserve = min_stake * 1000;
@@ -127,16 +127,16 @@ fn test_commit_weights_validate() {
 
         // Stake some TAO and read what get_total_stake_for_hotkey it gets
         // It will be a different value due to the slippage
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
             min_stake.into()
         ));
-        let min_stake_with_slippage = SubtensorModule::get_total_stake_for_hotkey(&hotkey);
+        let min_stake_with_slippage = GameSolver::get_total_stake_for_hotkey(&hotkey);
 
         // Set the minimum stake above what hotkey has
-        SubtensorModule::set_stake_threshold(min_stake_with_slippage.to_u64() + 1);
+        GameSolver::set_stake_threshold(min_stake_with_slippage.to_u64() + 1);
 
         // Submit to the signed extension validate function
         let info = DispatchInfoOf::<<Test as frame_system::Config>::RuntimeCall>::default();
@@ -159,7 +159,7 @@ fn test_commit_weights_validate() {
         );
 
         // Set the minimum stake equal to what hotkey has
-        SubtensorModule::set_stake_threshold(min_stake_with_slippage.into());
+        GameSolver::set_stake_threshold(min_stake_with_slippage.into());
 
         // Submit to the signed extension validate function
         let result_min_stake = extension.validate(
@@ -175,7 +175,7 @@ fn test_commit_weights_validate() {
         assert_ok!(result_min_stake);
 
         // Try with more stake than minimum
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
@@ -183,7 +183,7 @@ fn test_commit_weights_validate() {
         ));
 
         // Verify stake is more than minimum
-        assert!(SubtensorModule::get_total_stake_for_hotkey(&hotkey) > min_stake_with_slippage);
+        assert!(GameSolver::get_total_stake_for_hotkey(&hotkey) > min_stake_with_slippage);
 
         let result_more_stake = extension.validate(
             RawOrigin::Signed(who).into(),
@@ -209,7 +209,7 @@ fn test_reveal_weights_dispatch_info_ok() {
         let salt: Vec<u16> = vec![1, 2, 3, 4, 5, 6, 7, 8];
         let version_key: u64 = 0;
 
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::reveal_weights {
+        let call = RuntimeCall::GameSolver(SubtensorCall::reveal_weights {
             netuid,
             uids: dests,
             values: weights,
@@ -237,7 +237,7 @@ fn test_set_weights_validate() {
 
         let who = hotkey; // The hotkey signs this transaction
 
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::set_weights {
+        let call = RuntimeCall::GameSolver(SubtensorCall::set_weights {
             netuid,
             dests: vec![1, 1],
             weights: vec![1, 1],
@@ -248,18 +248,18 @@ fn test_set_weights_validate() {
         add_network(netuid, 1, 0);
         mock::setup_reserves(netuid, 1_000_000_000_000.into(), 1_000_000_000_000.into());
         // Register the hotkey
-        SubtensorModule::append_neuron(netuid, &hotkey, 0);
+        GameSolver::append_neuron(netuid, &hotkey, 0);
         crate::Owner::<Test>::insert(hotkey, coldkey);
 
-        SubtensorModule::add_balance_to_coldkey_account(&hotkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&hotkey, u64::MAX);
 
         let min_stake = TaoCurrency::from(500_000_000_000);
 
         // Set the minimum stake
-        SubtensorModule::set_stake_threshold(min_stake.into());
+        GameSolver::set_stake_threshold(min_stake.into());
 
         // Verify stake is less than minimum
-        assert!(SubtensorModule::get_total_stake_for_hotkey(&hotkey) < min_stake);
+        assert!(GameSolver::get_total_stake_for_hotkey(&hotkey) < min_stake);
         let info: DispatchInfo =
             DispatchInfoOf::<<Test as frame_system::Config>::RuntimeCall>::default();
 
@@ -283,16 +283,16 @@ fn test_set_weights_validate() {
         // Increase the stake and make it to be equal to the minimum threshold
         let fee =
             <Test as pallet::Config>::SwapInterface::approx_fee_amount(netuid.into(), min_stake);
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
             min_stake + fee
         ));
-        let min_stake_with_slippage = SubtensorModule::get_total_stake_for_hotkey(&hotkey);
+        let min_stake_with_slippage = GameSolver::get_total_stake_for_hotkey(&hotkey);
 
         // Set the minimum stake to what the hotkey has
-        SubtensorModule::set_stake_threshold(min_stake_with_slippage.into());
+        GameSolver::set_stake_threshold(min_stake_with_slippage.into());
 
         // Submit to the signed extension validate function
         let result_min_stake = extension.validate(
@@ -330,7 +330,7 @@ fn test_reveal_weights_validate() {
 
         let who = hotkey; // The hotkey signs this transaction
 
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::reveal_weights {
+        let call = RuntimeCall::GameSolver(SubtensorCall::reveal_weights {
             netuid,
             uids: dests.clone(),
             values: weights.clone(),
@@ -338,7 +338,7 @@ fn test_reveal_weights_validate() {
             version_key,
         });
 
-        let commit_hash: H256 = SubtensorModule::get_commit_hash(
+        let commit_hash: H256 = GameSolver::get_commit_hash(
             &who,
             NetUidStorageIndex::from(netuid),
             &dests,
@@ -346,25 +346,25 @@ fn test_reveal_weights_validate() {
             &salt,
             version_key,
         );
-        let commit_block = SubtensorModule::get_current_block_as_u64();
+        let commit_block = GameSolver::get_current_block_as_u64();
         let (first_reveal_block, last_reveal_block) =
-            SubtensorModule::get_reveal_blocks(netuid, commit_block);
+            GameSolver::get_reveal_blocks(netuid, commit_block);
 
         // Create netuid
         add_network(netuid, tempo, 0);
         // Register the hotkey
-        SubtensorModule::append_neuron(netuid, &hotkey, 0);
-        SubtensorModule::append_neuron(netuid, &hotkey2, 0);
+        GameSolver::append_neuron(netuid, &hotkey, 0);
+        GameSolver::append_neuron(netuid, &hotkey2, 0);
         crate::Owner::<Test>::insert(hotkey, coldkey);
         crate::Owner::<Test>::insert(hotkey2, coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&hotkey, u64::MAX);
+        GameSolver::add_balance_to_coldkey_account(&hotkey, u64::MAX);
 
         let min_stake = TaoCurrency::from(500_000_000_000);
         // Set the minimum stake
-        SubtensorModule::set_stake_threshold(min_stake.into());
+        GameSolver::set_stake_threshold(min_stake.into());
 
         // Verify stake is less than minimum
-        assert!(SubtensorModule::get_total_stake_for_hotkey(&hotkey) < min_stake);
+        assert!(GameSolver::get_total_stake_for_hotkey(&hotkey) < min_stake);
         let info: DispatchInfo =
             DispatchInfoOf::<<Test as frame_system::Config>::RuntimeCall>::default();
 
@@ -387,7 +387,7 @@ fn test_reveal_weights_validate() {
         );
 
         // Increase the stake to be equal to the minimum
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
@@ -395,10 +395,7 @@ fn test_reveal_weights_validate() {
         ));
 
         // Verify stake is equal to minimum
-        assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey),
-            min_stake
-        );
+        assert_eq!(GameSolver::get_total_stake_for_hotkey(&hotkey), min_stake);
 
         // Try to reveal weights without a commit
         let result_no_commit = extension.validate(
@@ -459,7 +456,7 @@ fn test_reveal_weights_validate() {
         assert_ok!(result_valid_stake);
 
         // Try with more stake than minimum
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
@@ -467,7 +464,7 @@ fn test_reveal_weights_validate() {
         ));
 
         // Verify stake is more than minimum
-        assert!(SubtensorModule::get_total_stake_for_hotkey(&hotkey) > min_stake);
+        assert!(GameSolver::get_total_stake_for_hotkey(&hotkey) > min_stake);
 
         let result_more_stake = extension.validate(
             RawOrigin::Signed(who).into(),
@@ -525,7 +522,7 @@ fn test_batch_reveal_weights_validate() {
         let version_keys: Vec<u64> = vec![0, 0];
 
         // Create the batch reveal call
-        let call = RuntimeCall::SubtensorModule(SubtensorCall::batch_reveal_weights {
+        let call = RuntimeCall::GameSolver(SubtensorCall::batch_reveal_weights {
             netuid,
             uids_list: uids_list.clone(),
             values_list: values_list.clone(),
@@ -536,23 +533,23 @@ fn test_batch_reveal_weights_validate() {
         // Create netuid
         add_network(netuid, tempo, 0);
         // Register the hotkeys
-        SubtensorModule::append_neuron(netuid, &hotkey, 0);
-        SubtensorModule::append_neuron(netuid, &hotkey2, 0);
+        GameSolver::append_neuron(netuid, &hotkey, 0);
+        GameSolver::append_neuron(netuid, &hotkey2, 0);
         crate::Owner::<Test>::insert(hotkey, coldkey);
         crate::Owner::<Test>::insert(hotkey2, coldkey);
-        SubtensorModule::add_balance_to_coldkey_account(&hotkey, u64::MAX);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&hotkey, u64::MAX);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         let min_stake = TaoCurrency::from(500_000_000_000);
         // Set the minimum stake
-        SubtensorModule::set_stake_threshold(min_stake.into());
+        GameSolver::set_stake_threshold(min_stake.into());
 
         let info: DispatchInfo =
             DispatchInfoOf::<<Test as frame_system::Config>::RuntimeCall>::default();
         let extension = SubtensorTransactionExtension::<Test>::new();
 
         // Test 1: StakeAmountTooLow - Verify stake is less than minimum
-        assert!(SubtensorModule::get_total_stake_for_hotkey(&hotkey) < min_stake);
+        assert!(GameSolver::get_total_stake_for_hotkey(&hotkey) < min_stake);
 
         let result_no_stake = extension.validate(
             RawOrigin::Signed(who).into(),
@@ -570,7 +567,7 @@ fn test_batch_reveal_weights_validate() {
         );
 
         // Increase the stake to be equal to the minimum
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
@@ -578,17 +575,16 @@ fn test_batch_reveal_weights_validate() {
         ));
 
         // Verify stake is now sufficient
-        assert!(SubtensorModule::get_total_stake_for_hotkey(&hotkey) >= min_stake);
+        assert!(GameSolver::get_total_stake_for_hotkey(&hotkey) >= min_stake);
 
         // Test 2: InputLengthsUnequal - Test unequal input lengths
-        let call_unequal_lengths =
-            RuntimeCall::SubtensorModule(SubtensorCall::batch_reveal_weights {
-                netuid,
-                uids_list: vec![vec![0, 1], vec![1, 0], vec![2, 3]], // Extra element
-                values_list: values_list.clone(),
-                salts_list: salts_list.clone(),
-                version_keys: version_keys.clone(),
-            });
+        let call_unequal_lengths = RuntimeCall::GameSolver(SubtensorCall::batch_reveal_weights {
+            netuid,
+            uids_list: vec![vec![0, 1], vec![1, 0], vec![2, 3]], // Extra element
+            values_list: values_list.clone(),
+            salts_list: salts_list.clone(),
+            version_keys: version_keys.clone(),
+        });
 
         let result_unequal_lengths = extension.validate(
             RawOrigin::Signed(who).into(),
@@ -610,7 +606,7 @@ fn test_batch_reveal_weights_validate() {
         // We'll test the actual error in the direct function call below
 
         // Test 3: CommitNotFound - Try to reveal without any commits
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -639,14 +635,14 @@ fn test_batch_reveal_weights_validate() {
 
         // Commit weights for each hash
         for commit_hash in &commit_hashes {
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 *commit_hash
             ));
         }
 
-        let commit_block = SubtensorModule::get_current_block_as_u64();
+        let commit_block = GameSolver::get_current_block_as_u64();
 
         // Test 5: CommitBlockNotInRevealRange - Try to reveal too early
         let result_too_early = extension.validate(
@@ -705,10 +701,10 @@ fn test_set_weights_is_root_error() {
         let weights = vec![1];
         let version_key: u64 = 0;
         let hotkey = U256::from(1);
-        SubtensorModule::set_commit_reveal_weights_enabled(NetUid::ROOT, false);
+        GameSolver::set_commit_reveal_weights_enabled(NetUid::ROOT, false);
 
         assert_err!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey),
                 NetUid::ROOT,
                 uids.clone(),
@@ -729,8 +725,8 @@ fn test_weights_err_no_validator_permit() {
         let netuid = NetUid::from(1);
         let tempo: u16 = 13;
         add_network_disable_commit_reveal(netuid, tempo, 0);
-        SubtensorModule::set_min_allowed_weights(netuid, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, 3);
+        GameSolver::set_min_allowed_weights(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, 3);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
         register_ok_neuron(netuid, U256::from(1), U256::from(1), 65555);
         register_ok_neuron(netuid, U256::from(2), U256::from(2), 75555);
@@ -738,7 +734,7 @@ fn test_weights_err_no_validator_permit() {
         let weights_keys: Vec<u16> = vec![1, 2];
         let weight_values: Vec<u16> = vec![1, 2];
 
-        let result = SubtensorModule::set_weights(
+        let result = GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey_account_id),
             netuid,
             weights_keys,
@@ -749,11 +745,10 @@ fn test_weights_err_no_validator_permit() {
 
         let weights_keys: Vec<u16> = vec![1, 2];
         let weight_values: Vec<u16> = vec![1, 2];
-        let neuron_uid: u16 =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
-                .expect("Not registered.");
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid, true);
-        let result = SubtensorModule::set_weights(
+        let neuron_uid: u16 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
+            .expect("Not registered.");
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid, true);
+        let result = GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey_account_id),
             netuid,
             weights_keys,
@@ -777,31 +772,31 @@ fn test_set_stake_threshold_failed() {
 
         add_network_disable_commit_reveal(netuid, 1, 0);
         register_ok_neuron(netuid, hotkey, coldkey, 2143124);
-        SubtensorModule::set_stake_threshold(20_000_000_000_000);
-        SubtensorModule::add_balance_to_coldkey_account(&hotkey, u64::MAX);
+        GameSolver::set_stake_threshold(20_000_000_000_000);
+        GameSolver::add_balance_to_coldkey_account(&hotkey, u64::MAX);
 
         // Check the signed extension function.
-        assert_eq!(SubtensorModule::get_stake_threshold(), 20_000_000_000_000);
-        assert!(!SubtensorModule::check_weights_min_stake(&hotkey, netuid));
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_eq!(GameSolver::get_stake_threshold(), 20_000_000_000_000);
+        assert!(!GameSolver::check_weights_min_stake(&hotkey, netuid));
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
             19_000_000_000_000.into()
         ));
-        assert!(!SubtensorModule::check_weights_min_stake(&hotkey, netuid));
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert!(!GameSolver::check_weights_min_stake(&hotkey, netuid));
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
             20_000_000_000_000.into()
         ));
-        assert!(SubtensorModule::check_weights_min_stake(&hotkey, netuid));
+        assert!(GameSolver::check_weights_min_stake(&hotkey, netuid));
 
         // Check that it fails at the pallet level.
-        SubtensorModule::set_stake_threshold(100_000_000_000_000);
+        GameSolver::set_stake_threshold(100_000_000_000_000);
         assert_eq!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 dests.clone(),
@@ -811,13 +806,13 @@ fn test_set_stake_threshold_failed() {
             Err(Error::<Test>::NotEnoughStakeToSetWeights.into())
         );
         // Now passes
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(hotkey),
             hotkey,
             netuid,
             100_000_000_000_000.into()
         ));
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             dests.clone(),
@@ -844,14 +839,14 @@ fn test_weights_version_key() {
 
         let weights_keys: Vec<u16> = vec![0];
         let weight_values: Vec<u16> = vec![1];
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid0,
             weights_keys.clone(),
             weight_values.clone(),
             0
         ));
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid1,
             weights_keys.clone(),
@@ -862,18 +857,18 @@ fn test_weights_version_key() {
         // Set version keys.
         let key0: u64 = 12312;
         let key1: u64 = 20313;
-        SubtensorModule::set_weights_version_key(netuid0, key0);
-        SubtensorModule::set_weights_version_key(netuid1, key1);
+        GameSolver::set_weights_version_key(netuid0, key0);
+        GameSolver::set_weights_version_key(netuid1, key1);
 
         // Setting works with version key.
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid0,
             weights_keys.clone(),
             weight_values.clone(),
             key0
         ));
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid1,
             weights_keys.clone(),
@@ -882,7 +877,7 @@ fn test_weights_version_key() {
         ));
 
         // validator:20313 >= network:12312 (accepted: validator newer)
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid0,
             weights_keys.clone(),
@@ -893,7 +888,7 @@ fn test_weights_version_key() {
         // Setting fails with incorrect keys.
         // validator:12312 < network:20313 (rejected: validator not updated)
         assert_eq!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid1,
                 weights_keys.clone(),
@@ -914,32 +909,31 @@ fn test_weights_err_setting_weights_too_fast() {
         let netuid = NetUid::from(1);
         let tempo: u16 = 13;
         add_network_disable_commit_reveal(netuid, tempo, 0);
-        SubtensorModule::set_min_allowed_weights(netuid, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, 3);
+        GameSolver::set_min_allowed_weights(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, 3);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
         register_ok_neuron(netuid, U256::from(1), U256::from(1), 65555);
         register_ok_neuron(netuid, U256::from(2), U256::from(2), 75555);
 
-        let neuron_uid: u16 =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
-                .expect("Not registered.");
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(66), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        let neuron_uid: u16 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
+            .expect("Not registered.");
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(66), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_account_id,
             &(U256::from(66)),
             netuid,
             1.into(),
         );
-        SubtensorModule::set_weights_set_rate_limit(netuid, 10);
-        assert_eq!(SubtensorModule::get_weights_set_rate_limit(netuid), 10);
+        GameSolver::set_weights_set_rate_limit(netuid, 10);
+        assert_eq!(GameSolver::get_weights_set_rate_limit(netuid), 10);
 
         let weights_keys: Vec<u16> = vec![1, 2];
         let weight_values: Vec<u16> = vec![1, 2];
 
         // Note that LastUpdate has default 0 for new uids, but if they have actually set weights on block 0
         // then they are allowed to set weights again once more without a wait restriction, to accommodate the default.
-        let result = SubtensorModule::set_weights(
+        let result = GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey_account_id),
             netuid,
             weights_keys.clone(),
@@ -950,7 +944,7 @@ fn test_weights_err_setting_weights_too_fast() {
         run_to_block(1);
 
         for i in 1..100 {
-            let result = SubtensorModule::set_weights(
+            let result = GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey_account_id),
                 netuid,
                 weights_keys.clone(),
@@ -978,10 +972,9 @@ fn test_weights_err_weights_vec_not_equal_size() {
         let salt: Vec<u16> = vec![1, 2, 3, 4, 5, 6, 7, 8];
         add_network(netuid, tempo, 0);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
-        let neuron_uid: u16 =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
-                .expect("Not registered.");
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid, true);
+        let neuron_uid: u16 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
+            .expect("Not registered.");
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid, true);
         let weights_keys: Vec<u16> = vec![1, 2, 3, 4, 5, 6];
         let weight_values: Vec<u16> = vec![1, 2, 3, 4, 5]; // Uneven sizes
         let result = commit_reveal_set_weights(
@@ -1007,18 +1000,17 @@ fn test_weights_err_has_duplicate_ids() {
         let salt: Vec<u16> = vec![1, 2, 3, 4, 5, 6, 7, 8];
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_max_allowed_uids(netuid, 100); // Allow many registrations per block.
-        SubtensorModule::set_max_registrations_per_block(netuid, 100); // Allow many registrations per block.
-        SubtensorModule::set_target_registrations_per_interval(netuid, 100); // Allow many registrations per block.
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_max_allowed_uids(netuid, 100); // Allow many registrations per block.
+        GameSolver::set_max_registrations_per_block(netuid, 100); // Allow many registrations per block.
+        GameSolver::set_target_registrations_per_interval(netuid, 100); // Allow many registrations per block.
         // uid 0
         register_ok_neuron(netuid, hotkey_account_id, U256::from(77), 0);
-        let neuron_uid: u16 =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
-                .expect("Not registered.");
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(77), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        let neuron_uid: u16 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
+            .expect("Not registered.");
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(77), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_account_id,
             &(U256::from(77)),
             netuid,
@@ -1027,20 +1019,17 @@ fn test_weights_err_has_duplicate_ids() {
 
         // uid 1
         register_ok_neuron(netuid, U256::from(1), U256::from(1), 100_000);
-        SubtensorModule::get_uid_for_net_and_hotkey(netuid, &U256::from(1))
-            .expect("Not registered.");
+        GameSolver::get_uid_for_net_and_hotkey(netuid, &U256::from(1)).expect("Not registered.");
 
         // uid 2
         register_ok_neuron(netuid, U256::from(2), U256::from(1), 200_000);
-        SubtensorModule::get_uid_for_net_and_hotkey(netuid, &U256::from(2))
-            .expect("Not registered.");
+        GameSolver::get_uid_for_net_and_hotkey(netuid, &U256::from(2)).expect("Not registered.");
 
         // uid 3
         register_ok_neuron(netuid, U256::from(3), U256::from(1), 300_000);
-        SubtensorModule::get_uid_for_net_and_hotkey(netuid, &U256::from(3))
-            .expect("Not registered.");
+        GameSolver::get_uid_for_net_and_hotkey(netuid, &U256::from(3)).expect("Not registered.");
 
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 4);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 4);
 
         let weights_keys: Vec<u16> = vec![1, 1, 1]; // Contains duplicates
         let weight_values: Vec<u16> = vec![1, 2, 3];
@@ -1065,8 +1054,8 @@ fn test_no_signature() {
     new_test_ext(0).execute_with(|| {
         let uids: Vec<u16> = vec![];
         let values: Vec<u16> = vec![];
-        SubtensorModule::set_commit_reveal_weights_enabled(1.into(), false);
-        let result = SubtensorModule::set_weights(RuntimeOrigin::none(), 1.into(), uids, values, 0);
+        GameSolver::set_commit_reveal_weights_enabled(1.into(), false);
+        let result = GameSolver::set_weights(RuntimeOrigin::none(), 1.into(), uids, values, 0);
         assert_eq!(result, Err(DispatchError::BadOrigin));
     });
 }
@@ -1083,8 +1072,7 @@ fn test_set_weights_err_not_active() {
 
         // Register one neuron. Should have uid 0
         register_ok_neuron(netuid, U256::from(666), U256::from(2), 100000);
-        SubtensorModule::get_uid_for_net_and_hotkey(netuid, &U256::from(666))
-            .expect("Not registered.");
+        GameSolver::get_uid_for_net_and_hotkey(netuid, &U256::from(666)).expect("Not registered.");
 
         let weights_keys: Vec<u16> = vec![0]; // Uid 0 is valid.
         let weight_values: Vec<u16> = vec![1];
@@ -1115,13 +1103,12 @@ fn test_set_weights_err_invalid_uid() {
         let salt: Vec<u16> = vec![1, 2, 3, 4, 5, 6, 7, 8];
         add_network(netuid, tempo, 0);
         register_ok_neuron(netuid, hotkey_account_id, U256::from(66), 0);
-        let neuron_uid: u16 =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
-                .expect("Not registered.");
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(66), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        let neuron_uid: u16 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id)
+            .expect("Not registered.");
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(66), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey_account_id,
             &(U256::from(66)),
             netuid,
@@ -1153,11 +1140,11 @@ fn test_set_weight_not_enough_values() {
         add_network_disable_commit_reveal(netuid, tempo, 0);
 
         register_ok_neuron(netuid, account_id, U256::from(2), 100000);
-        let neuron_uid: u16 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &U256::from(1))
+        let neuron_uid: u16 = GameSolver::get_uid_for_net_and_hotkey(netuid, &U256::from(1))
             .expect("Not registered.");
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(2), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(2), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &account_id,
             &(U256::from(2)),
             netuid,
@@ -1165,12 +1152,12 @@ fn test_set_weight_not_enough_values() {
         );
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300000);
-        SubtensorModule::set_min_allowed_weights(netuid, 2);
+        GameSolver::set_min_allowed_weights(netuid, 2);
 
         // Should fail because we are only setting a single value and its not the self weight.
         let weight_keys: Vec<u16> = vec![1]; // not weight.
         let weight_values: Vec<u16> = vec![88]; // random value.
-        let result = SubtensorModule::set_weights(
+        let result = GameSolver::set_weights(
             RuntimeOrigin::signed(account_id),
             1.into(),
             weight_keys,
@@ -1182,7 +1169,7 @@ fn test_set_weight_not_enough_values() {
         // Shouldnt fail because we setting a single value but it is the self weight.
         let weight_keys: Vec<u16> = vec![0]; // self weight.
         let weight_values: Vec<u16> = vec![88]; // random value.
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(account_id),
             1.into(),
             weight_keys,
@@ -1193,7 +1180,7 @@ fn test_set_weight_not_enough_values() {
         // Should pass because we are setting enough values.
         let weight_keys: Vec<u16> = vec![0, 1]; // self weight.
         let weight_values: Vec<u16> = vec![10, 10]; // random value.
-        SubtensorModule::set_min_allowed_weights(netuid, 1);
+        GameSolver::set_min_allowed_weights(netuid, 1);
         assert_ok!(commit_reveal_set_weights(
             account_id,
             1.into(),
@@ -1215,16 +1202,16 @@ fn test_set_weight_too_many_uids() {
         add_network_disable_commit_reveal(netuid, tempo, 0);
 
         register_ok_neuron(1.into(), U256::from(1), U256::from(2), 100_000);
-        let neuron_uid: u16 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &U256::from(1))
+        let neuron_uid: u16 = GameSolver::get_uid_for_net_and_hotkey(netuid, &U256::from(1))
             .expect("Not registered.");
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid, true);
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid, true);
 
         register_ok_neuron(1.into(), U256::from(3), U256::from(4), 300_000);
-        SubtensorModule::set_min_allowed_weights(1.into(), 2);
+        GameSolver::set_min_allowed_weights(1.into(), 2);
         // Should fail because we are setting more weights than there are neurons.
         let weight_keys: Vec<u16> = vec![0, 1, 2, 3, 4]; // more uids than neurons in subnet.
         let weight_values: Vec<u16> = vec![88, 102, 303, 1212, 11]; // random value.
-        let result = SubtensorModule::set_weights(
+        let result = GameSolver::set_weights(
             RuntimeOrigin::signed(U256::from(1)),
             1.into(),
             weight_keys,
@@ -1239,7 +1226,7 @@ fn test_set_weight_too_many_uids() {
         // Shouldnt fail because we are setting less weights than there are neurons.
         let weight_keys: Vec<u16> = vec![0, 1]; // Only on neurons that exist.
         let weight_values: Vec<u16> = vec![10, 10]; // random value.
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(U256::from(1)),
             1.into(),
             weight_keys,
@@ -1260,12 +1247,12 @@ fn test_set_weights_sum_larger_than_u16_max() {
         add_network(netuid, tempo, 0);
 
         register_ok_neuron(1.into(), U256::from(1), U256::from(2), 100_000);
-        let neuron_uid: u16 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &U256::from(1))
+        let neuron_uid: u16 = GameSolver::get_uid_for_net_and_hotkey(netuid, &U256::from(1))
             .expect("Not registered.");
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(2), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(2), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(2)),
             netuid,
@@ -1273,7 +1260,7 @@ fn test_set_weights_sum_larger_than_u16_max() {
         );
 
         register_ok_neuron(1.into(), U256::from(3), U256::from(4), 300_000);
-        SubtensorModule::set_min_allowed_weights(1.into(), 2);
+        GameSolver::set_min_allowed_weights(1.into(), 2);
 
         // Shouldn't fail because we are setting the right number of weights.
         let weight_keys: Vec<u16> = vec![0, 1];
@@ -1286,7 +1273,7 @@ fn test_set_weights_sum_larger_than_u16_max() {
         assert_ok!(result);
 
         // Get max-upscaled unnormalized weights.
-        let all_weights: Vec<Vec<I32F32>> = SubtensorModule::get_weights(netuid.into());
+        let all_weights: Vec<Vec<I32F32>> = GameSolver::get_weights(netuid.into());
         let weights_set: &[I32F32] = &all_weights[neuron_uid as usize];
         assert_eq!(weights_set[0], I32F32::from_num(u16::MAX));
         assert_eq!(weights_set[1], I32F32::from_num(u16::MAX));
@@ -1303,14 +1290,14 @@ fn test_check_length_allows_singleton() {
         let max_allowed: u16 = 1;
         let min_allowed_weights = max_allowed;
 
-        SubtensorModule::set_min_allowed_weights(netuid, min_allowed_weights);
+        GameSolver::set_min_allowed_weights(netuid, min_allowed_weights);
 
         let uids: Vec<u16> = Vec::from_iter((0..max_allowed).map(|id| id + 1));
         let uid: u16 = uids[0];
         let weights: Vec<u16> = Vec::from_iter((0..max_allowed).map(|id| id + 1));
 
         let expected = true;
-        let result = SubtensorModule::check_length(netuid, uid, &uids, &weights);
+        let result = GameSolver::check_length(netuid, uid, &uids, &weights);
 
         assert_eq!(expected, result, "Failed get expected result");
     });
@@ -1326,14 +1313,14 @@ fn test_check_length_weights_length_exceeds_min_allowed() {
         let max_allowed: u16 = 3;
         let min_allowed_weights = max_allowed;
 
-        SubtensorModule::set_min_allowed_weights(netuid, min_allowed_weights);
+        GameSolver::set_min_allowed_weights(netuid, min_allowed_weights);
 
         let uids: Vec<u16> = Vec::from_iter((0..max_allowed).map(|id| id + 1));
         let uid: u16 = uids[0];
         let weights: Vec<u16> = Vec::from_iter((0..max_allowed).map(|id| id + 1));
 
         let expected = true;
-        let result = SubtensorModule::check_length(netuid, uid, &uids, &weights);
+        let result = GameSolver::check_length(netuid, uid, &uids, &weights);
 
         assert_eq!(expected, result, "Failed get expected result");
     });
@@ -1349,8 +1336,8 @@ fn test_check_length_to_few_weights() {
         let min_allowed_weights = 3;
 
         add_network(netuid, 1, 0);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 100);
-        SubtensorModule::set_max_registrations_per_block(netuid, 100);
+        GameSolver::set_target_registrations_per_interval(netuid, 100);
+        GameSolver::set_max_registrations_per_block(netuid, 100);
         // register morw than min allowed
         register_ok_neuron(1.into(), U256::from(1), U256::from(1), 300_000);
         register_ok_neuron(1.into(), U256::from(2), U256::from(2), 300_001);
@@ -1359,14 +1346,14 @@ fn test_check_length_to_few_weights() {
         register_ok_neuron(1.into(), U256::from(5), U256::from(5), 300_004);
         register_ok_neuron(1.into(), U256::from(6), U256::from(6), 300_005);
         register_ok_neuron(1.into(), U256::from(7), U256::from(7), 300_006);
-        SubtensorModule::set_min_allowed_weights(netuid, min_allowed_weights);
+        GameSolver::set_min_allowed_weights(netuid, min_allowed_weights);
 
         let uids: Vec<u16> = Vec::from_iter((0..2).map(|id| id + 1));
         let weights: Vec<u16> = Vec::from_iter((0..2).map(|id| id + 1));
         let uid: u16 = uids[0];
 
         let expected = false;
-        let result = SubtensorModule::check_length(netuid, uid, &uids, &weights);
+        let result = GameSolver::check_length(netuid, uid, &uids, &weights);
 
         assert_eq!(expected, result, "Failed get expected result");
     });
@@ -1382,7 +1369,7 @@ fn test_normalize_weights_does_not_mutate_when_sum_is_zero() {
         let weights: Vec<u16> = Vec::from_iter((0..max_allowed).map(|_| 0));
 
         let expected = weights.clone();
-        let result = SubtensorModule::normalize_weights(weights);
+        let result = GameSolver::normalize_weights(weights);
 
         assert_eq!(
             expected, result,
@@ -1401,7 +1388,7 @@ fn test_normalize_weights_does_not_mutate_when_sum_not_zero() {
         let weights: Vec<u16> = Vec::from_iter(0..max_allowed);
 
         let expected = weights.clone();
-        let result = SubtensorModule::normalize_weights(weights);
+        let result = GameSolver::normalize_weights(weights);
 
         assert_eq!(expected.len(), result.len(), "Length of weights changed?!");
     });
@@ -1420,7 +1407,7 @@ fn test_max_weight_limited_allow_self_weights_to_exceed_max_weight_limit() {
         let weights: Vec<u16> = vec![0];
 
         let expected = true;
-        let result = SubtensorModule::max_weight_limited(netuid, uid, &uids, &weights);
+        let result = GameSolver::max_weight_limited(netuid, uid, &uids, &weights);
 
         assert_eq!(
             expected, result,
@@ -1442,7 +1429,7 @@ fn test_max_weight_limited_when_weight_limit_is_u16_max() {
         let weights: Vec<u16> = Vec::from_iter((0..max_allowed).map(|_id| u16::MAX));
 
         let expected = true;
-        let result = SubtensorModule::max_weight_limited(netuid, uid, &uids, &weights);
+        let result = GameSolver::max_weight_limited(netuid, uid, &uids, &weights);
 
         assert_eq!(
             expected, result,
@@ -1454,14 +1441,8 @@ fn test_max_weight_limited_when_weight_limit_is_u16_max() {
 #[test]
 fn test_get_max_weight_limit_is_constant() {
     new_test_ext(0).execute_with(|| {
-        assert_eq!(
-            SubtensorModule::get_max_weight_limit(NetUid::from(1)),
-            u16::MAX
-        );
-        assert_eq!(
-            SubtensorModule::get_max_weight_limit(NetUid::ROOT),
-            u16::MAX
-        );
+        assert_eq!(GameSolver::get_max_weight_limit(NetUid::from(1)), u16::MAX);
+        assert_eq!(GameSolver::get_max_weight_limit(NetUid::ROOT), u16::MAX);
     });
 }
 
@@ -1477,7 +1458,7 @@ fn test_is_self_weight_weights_length_not_one() {
         let weights: Vec<u16> = Vec::from_iter((0..max_allowed).map(|id| id + 1));
 
         let expected = false;
-        let result = SubtensorModule::is_self_weight(uid, &uids, &weights);
+        let result = GameSolver::is_self_weight(uid, &uids, &weights);
 
         assert_eq!(
             expected, result,
@@ -1498,7 +1479,7 @@ fn test_is_self_weight_uid_not_in_uids() {
         let weights: Vec<u16> = vec![0];
 
         let expected = false;
-        let result = SubtensorModule::is_self_weight(uid, &uids, &weights);
+        let result = GameSolver::is_self_weight(uid, &uids, &weights);
 
         assert_eq!(
             expected, result,
@@ -1520,7 +1501,7 @@ fn test_is_self_weight_uid_in_uids() {
         let weights: Vec<u16> = vec![0];
 
         let expected = true;
-        let result = SubtensorModule::is_self_weight(uid, &uids, &weights);
+        let result = GameSolver::is_self_weight(uid, &uids, &weights);
 
         assert_eq!(
             expected, result,
@@ -1547,15 +1528,15 @@ fn test_check_len_uids_within_allowed_within_network_pool() {
         register_ok_neuron(netuid, U256::from(1), U256::from(1), 0);
         register_ok_neuron(netuid, U256::from(3), U256::from(3), 65555);
         register_ok_neuron(netuid, U256::from(5), U256::from(5), 75555);
-        let max_allowed: u16 = SubtensorModule::get_subnetwork_n(netuid);
+        let max_allowed: u16 = GameSolver::get_subnetwork_n(netuid);
 
-        SubtensorModule::set_max_allowed_uids(netuid, max_allowed);
-        SubtensorModule::set_max_registrations_per_block(netuid, max_registrations_per_block);
+        GameSolver::set_max_allowed_uids(netuid, max_allowed);
+        GameSolver::set_max_registrations_per_block(netuid, max_registrations_per_block);
 
         let uids: Vec<u16> = Vec::from_iter(0..max_allowed);
 
         let expected = true;
-        let result = SubtensorModule::check_len_uids_within_allowed(netuid, &uids);
+        let result = GameSolver::check_len_uids_within_allowed(netuid, &uids);
         assert_eq!(
             expected, result,
             "netuid network length and uids length incompatible"
@@ -1580,15 +1561,15 @@ fn test_check_len_uids_within_allowed_not_within_network_pool() {
         register_ok_neuron(netuid, U256::from(1), U256::from(1), 0);
         register_ok_neuron(netuid, U256::from(3), U256::from(3), 65555);
         register_ok_neuron(netuid, U256::from(5), U256::from(5), 75555);
-        let max_allowed: u16 = SubtensorModule::get_subnetwork_n(netuid);
+        let max_allowed: u16 = GameSolver::get_subnetwork_n(netuid);
 
-        SubtensorModule::set_max_allowed_uids(netuid, max_allowed);
-        SubtensorModule::set_max_registrations_per_block(netuid, max_registrations_per_block);
+        GameSolver::set_max_allowed_uids(netuid, max_allowed);
+        GameSolver::set_max_registrations_per_block(netuid, max_registrations_per_block);
 
         let uids: Vec<u16> = Vec::from_iter(0..(max_allowed + 1));
 
         let expected = false;
-        let result = SubtensorModule::check_len_uids_within_allowed(netuid, &uids);
+        let result = GameSolver::check_len_uids_within_allowed(netuid, &uids);
         assert_eq!(
             expected, result,
             "Failed to detect incompatible uids for network"
@@ -1609,10 +1590,10 @@ fn test_set_weights_commit_reveal_enabled_error() {
         let version_key: u64 = 0;
         let hotkey = U256::from(1);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         assert_err!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -1622,9 +1603,9 @@ fn test_set_weights_commit_reveal_enabled_error() {
             Error::<Test>::CommitRevealEnabled
         );
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
 
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids,
@@ -1662,13 +1643,13 @@ fn test_reveal_weights_when_commit_reveal_disabled() {
         // Register neurons and set up configurations
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
 
         // Enable commit-reveal and commit
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::commit_weights(
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -1677,11 +1658,11 @@ fn test_reveal_weights_when_commit_reveal_disabled() {
         step_epochs(1, netuid);
 
         // Disable commit-reveal before reveal
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
 
         // Attempt to reveal, should fail with CommitRevealDisabled
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids,
@@ -1722,20 +1703,20 @@ fn test_commit_reveal_weights_ok() {
         // Register neurons and set up configurations
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -1743,7 +1724,7 @@ fn test_commit_reveal_weights_ok() {
         );
 
         // Commit at block 0
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -1752,7 +1733,7 @@ fn test_commit_reveal_weights_ok() {
         step_epochs(1, netuid);
 
         // Reveal in the next epoch
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids,
@@ -1790,20 +1771,20 @@ fn test_commit_reveal_tempo_interval() {
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -1811,7 +1792,7 @@ fn test_commit_reveal_tempo_interval() {
         );
 
         // Commit at block 0
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -1819,7 +1800,7 @@ fn test_commit_reveal_tempo_interval() {
 
         // Attempt to reveal in the same epoch, should fail
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -1832,7 +1813,7 @@ fn test_commit_reveal_tempo_interval() {
 
         step_epochs(1, netuid);
 
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -1844,7 +1825,7 @@ fn test_commit_reveal_tempo_interval() {
         step_block(6);
 
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -1855,7 +1836,7 @@ fn test_commit_reveal_tempo_interval() {
             Error::<Test>::NoWeightsCommitFound
         );
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -1865,7 +1846,7 @@ fn test_commit_reveal_tempo_interval() {
         step_epochs(2, netuid);
 
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -1876,7 +1857,7 @@ fn test_commit_reveal_tempo_interval() {
             Error::<Test>::ExpiredWeightCommit
         );
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -1885,7 +1866,7 @@ fn test_commit_reveal_tempo_interval() {
         step_block(50);
 
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -1898,7 +1879,7 @@ fn test_commit_reveal_tempo_interval() {
 
         step_epochs(1, netuid);
 
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids,
@@ -1926,26 +1907,26 @@ fn test_commit_reveal_hash() {
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
             1.into(),
         );
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         let commit_hash: H256 = BlakeTwo256::hash_of(&(
             hotkey,
@@ -1956,7 +1937,7 @@ fn test_commit_reveal_hash() {
             version_key,
         ));
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -1966,7 +1947,7 @@ fn test_commit_reveal_hash() {
 
         // Attempt to reveal with incorrect data, should fail
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 vec![0, 2],
@@ -1978,7 +1959,7 @@ fn test_commit_reveal_hash() {
         );
 
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -1990,7 +1971,7 @@ fn test_commit_reveal_hash() {
         );
 
         // Correct reveal, should succeed
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids,
@@ -2026,19 +2007,19 @@ fn test_commit_reveal_disabled_or_enabled() {
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -2046,19 +2027,19 @@ fn test_commit_reveal_disabled_or_enabled() {
         );
 
         // Disable commit/reveal
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
 
         // Attempt to commit, should fail
         assert_err!(
-            SubtensorModule::commit_weights(RuntimeOrigin::signed(hotkey), netuid, commit_hash),
+            GameSolver::commit_weights(RuntimeOrigin::signed(hotkey), netuid, commit_hash),
             Error::<Test>::CommitRevealDisabled
         );
 
         // Enable commit/reveal
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         // Commit should now succeed
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -2067,7 +2048,7 @@ fn test_commit_reveal_disabled_or_enabled() {
         step_epochs(1, netuid);
 
         // Reveal should succeed
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids,
@@ -2103,19 +2084,19 @@ fn test_toggle_commit_reveal_weights_and_set_weights() {
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -2123,10 +2104,10 @@ fn test_toggle_commit_reveal_weights_and_set_weights() {
         );
 
         // Enable commit/reveal
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         // Commit at block 0
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -2135,7 +2116,7 @@ fn test_toggle_commit_reveal_weights_and_set_weights() {
         step_epochs(1, netuid);
 
         // Reveal in the next epoch
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2145,13 +2126,13 @@ fn test_toggle_commit_reveal_weights_and_set_weights() {
         ));
 
         // Disable commit/reveal
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
 
         // Advance to allow setting weights (due to rate limit)
         step_block(5);
 
         // Set weights directly
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids,
@@ -2188,53 +2169,53 @@ fn test_tempo_change_during_commit_reveal_process() {
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
             1.into(),
         );
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
         ));
         log::info!(
             "Commit successful at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         step_block(9);
         log::info!(
             "Advanced to block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         let tempo_before_next_reveal: u16 = 200;
         log::info!("Changing tempo to {tempo_before_next_reveal}");
-        SubtensorModule::set_tempo(netuid, tempo_before_next_reveal);
+        GameSolver::set_tempo(netuid, tempo_before_next_reveal);
 
         step_epochs(1, netuid);
         log::info!(
             "Advanced to block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2244,30 +2225,30 @@ fn test_tempo_change_during_commit_reveal_process() {
         ));
         log::info!(
             "Revealed at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
         ));
         log::info!(
             "Commit successful at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         let tempo: u16 = 150;
         log::info!("Changing tempo to {tempo}");
-        SubtensorModule::set_tempo(netuid, tempo);
+        GameSolver::set_tempo(netuid, tempo);
 
         step_epochs(1, netuid);
         log::info!(
             "Advanced to block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2277,34 +2258,34 @@ fn test_tempo_change_during_commit_reveal_process() {
         ));
         log::info!(
             "Revealed at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         let tempo: u16 = 1050;
         log::info!("Changing tempo to {tempo}");
-        SubtensorModule::set_tempo(netuid, tempo);
+        GameSolver::set_tempo(netuid, tempo);
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
         ));
         log::info!(
             "Commit successful at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         let tempo: u16 = 805;
         log::info!("Changing tempo to {tempo}");
-        SubtensorModule::set_tempo(netuid, tempo);
+        GameSolver::set_tempo(netuid, tempo);
 
         step_epochs(1, netuid);
         log::info!(
             "Advanced to block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2314,7 +2295,7 @@ fn test_tempo_change_during_commit_reveal_process() {
         ));
         log::info!(
             "Revealed at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
     });
 }
@@ -2337,20 +2318,20 @@ fn test_commit_reveal_multiple_commits() {
         // Setup the network and neurons
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -2370,7 +2351,7 @@ fn test_commit_reveal_multiple_commits() {
                 version_key,
             ));
             commit_info.push((commit_hash, salt_i));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
@@ -2388,7 +2369,7 @@ fn test_commit_reveal_multiple_commits() {
             version_key,
         ));
         assert_err!(
-            SubtensorModule::commit_weights(RuntimeOrigin::signed(hotkey), netuid, commit_hash_11),
+            GameSolver::commit_weights(RuntimeOrigin::signed(hotkey), netuid, commit_hash_11),
             Error::<Test>::TooManyUnrevealedCommits
         );
 
@@ -2398,7 +2379,7 @@ fn test_commit_reveal_multiple_commits() {
 
         // Try to reveal the second commit first
         let (_commit_hash_2, salt_2) = &commit_info[1];
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2415,7 +2396,7 @@ fn test_commit_reveal_multiple_commits() {
 
         // 4. Reveal the last commit next
         let (_commit_hash_10, salt_10) = &commit_info[9];
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2430,7 +2411,7 @@ fn test_commit_reveal_multiple_commits() {
         assert!(remaining_commits.is_none()); // All commits removed
 
         // After revealing all commits, attempt to commit again should now succeed
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_11
@@ -2447,7 +2428,7 @@ fn test_commit_reveal_multiple_commits() {
             salt_12.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_12
@@ -2458,7 +2439,7 @@ fn test_commit_reveal_multiple_commits() {
 
         // Attempt to reveal the expired commit, should fail
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2479,7 +2460,7 @@ fn test_commit_reveal_multiple_commits() {
             salt_13.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_13
@@ -2487,7 +2468,7 @@ fn test_commit_reveal_multiple_commits() {
 
         step_epochs(1, netuid);
 
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2507,7 +2488,7 @@ fn test_commit_reveal_multiple_commits() {
             salt_14.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_14
@@ -2518,7 +2499,7 @@ fn test_commit_reveal_multiple_commits() {
 
         // Attempt to reveal, should fail
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2540,7 +2521,7 @@ fn test_commit_reveal_multiple_commits() {
             salt_15.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_15
@@ -2548,7 +2529,7 @@ fn test_commit_reveal_multiple_commits() {
 
         // Attempt to reveal immediately, should fail
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2562,7 +2543,7 @@ fn test_commit_reveal_multiple_commits() {
         step_epochs(1, netuid);
 
         // Now reveal should succeed
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2582,7 +2563,7 @@ fn test_commit_reveal_multiple_commits() {
             salt_16.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_16
@@ -2593,7 +2574,7 @@ fn test_commit_reveal_multiple_commits() {
         // Attempt to reveal with incorrect salt
         let wrong_salt: Vec<u16> = vec![99; 8];
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2605,7 +2586,7 @@ fn test_commit_reveal_multiple_commits() {
         );
 
         // Reveal with correct data should succeed
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2616,7 +2597,7 @@ fn test_commit_reveal_multiple_commits() {
 
         // 9. Test that attempting to reveal when there are no commits fails
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2637,7 +2618,7 @@ fn test_commit_reveal_multiple_commits() {
             salt_a.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_a
@@ -2652,7 +2633,7 @@ fn test_commit_reveal_multiple_commits() {
             salt_b.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_b
@@ -2661,7 +2642,7 @@ fn test_commit_reveal_multiple_commits() {
         step_epochs(1, netuid);
 
         // Reveal the second commit first, should now succeed
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2677,7 +2658,7 @@ fn test_commit_reveal_multiple_commits() {
 
         // Attempting to reveal the first commit should fail as it was removed
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids,
@@ -2698,7 +2679,7 @@ fn commit_reveal_set_weights(
     salt: Vec<u16>,
     version_key: u64,
 ) -> DispatchResult {
-    SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+    GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
     let commit_hash: H256 = BlakeTwo256::hash_of(&(
         hotkey,
@@ -2709,11 +2690,11 @@ fn commit_reveal_set_weights(
         version_key,
     ));
 
-    SubtensorModule::commit_weights(RuntimeOrigin::signed(hotkey), netuid, commit_hash)?;
+    GameSolver::commit_weights(RuntimeOrigin::signed(hotkey), netuid, commit_hash)?;
 
     step_epochs(1, netuid);
 
-    SubtensorModule::reveal_weights(
+    GameSolver::reveal_weights(
         RuntimeOrigin::signed(hotkey),
         netuid,
         uids,
@@ -2739,24 +2720,24 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         // Register neurons
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -2776,7 +2757,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
                 version_key,
             ));
             commit_info.push((commit_hash, salt));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
@@ -2798,7 +2779,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
                 version_key,
             ));
             commit_info.push((commit_hash, salt));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
@@ -2816,7 +2797,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
             version_key,
         ));
         assert_err!(
-            SubtensorModule::commit_weights(RuntimeOrigin::signed(hotkey), netuid, commit_hash_11),
+            GameSolver::commit_weights(RuntimeOrigin::signed(hotkey), netuid, commit_hash_11),
             Error::<Test>::TooManyUnrevealedCommits
         );
 
@@ -2824,7 +2805,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
         step_epochs(1, netuid); // Now at epoch 2
 
         // 5. Attempt to commit again; should succeed after expired commits are removed
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_11
@@ -2840,7 +2821,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
         // Previous commit removed expired commits
         let (_, expired_salt) = &commit_info[0];
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2855,7 +2836,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
         for (_, salt) in commit_info.iter().skip(5).take(5) {
             let salt = salt.clone();
 
-            assert_ok!(SubtensorModule::reveal_weights(
+            assert_ok!(GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2869,7 +2850,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
         step_epochs(1, netuid);
 
         // 10. Reveal the new commit from epoch 2
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -2884,7 +2865,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
 
         // 11. Attempt to reveal again, should fail with NoWeightsCommitFound
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -2905,7 +2886,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
             salt_12.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash_12
@@ -2914,7 +2895,7 @@ fn test_expired_commits_handling_in_commit_and_reveal() {
         // Advance to next epoch (epoch 4) and reveal
         step_epochs(1, netuid);
 
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids,
@@ -2939,23 +2920,23 @@ fn test_reveal_at_exact_epoch() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -2965,7 +2946,7 @@ fn test_reveal_at_exact_epoch() {
         let reveal_periods: Vec<u64> = vec![1, 2, 7, 40, 86, 100];
 
         for &reveal_period in &reveal_periods {
-            assert_ok!(SubtensorModule::set_reveal_period(netuid, reveal_period));
+            assert_ok!(GameSolver::set_reveal_period(netuid, reveal_period));
 
             let salt: Vec<u16> = vec![42; 8];
             let commit_hash: H256 = BlakeTwo256::hash_of(&(
@@ -2976,15 +2957,15 @@ fn test_reveal_at_exact_epoch() {
                 salt.clone(),
                 version_key,
             ));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
             ));
 
             // Retrieve commit information
-            let commit_block = SubtensorModule::get_current_block_as_u64();
-            let commit_epoch = SubtensorModule::get_epoch_index(netuid, commit_block);
+            let commit_block = GameSolver::get_current_block_as_u64();
+            let commit_epoch = GameSolver::get_epoch_index(netuid, commit_block);
             let reveal_epoch = commit_epoch.saturating_add(reveal_period);
 
             // Attempt to reveal before the allowed epoch
@@ -2996,7 +2977,7 @@ fn test_reveal_at_exact_epoch() {
 
                 // Attempt to reveal too early
                 assert_err!(
-                    SubtensorModule::reveal_weights(
+                    GameSolver::reveal_weights(
                         RuntimeOrigin::signed(hotkey),
                         netuid,
                         uids.clone(),
@@ -3009,16 +2990,14 @@ fn test_reveal_at_exact_epoch() {
             }
 
             // Advance to the exact reveal epoch
-            let current_epoch = SubtensorModule::get_epoch_index(
-                netuid,
-                SubtensorModule::get_current_block_as_u64(),
-            );
+            let current_epoch =
+                GameSolver::get_epoch_index(netuid, GameSolver::get_current_block_as_u64());
             if current_epoch < reveal_epoch {
                 step_epochs((reveal_epoch - current_epoch) as u16, netuid);
             }
 
             // Reveal at the exact allowed epoch
-            assert_ok!(SubtensorModule::reveal_weights(
+            assert_ok!(GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -3028,7 +3007,7 @@ fn test_reveal_at_exact_epoch() {
             ));
 
             assert_err!(
-                SubtensorModule::reveal_weights(
+                GameSolver::reveal_weights(
                     RuntimeOrigin::signed(hotkey),
                     netuid,
                     uids.clone(),
@@ -3048,7 +3027,7 @@ fn test_reveal_at_exact_epoch() {
                 new_salt.clone(),
                 version_key,
             ));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 new_commit_hash
@@ -3059,7 +3038,7 @@ fn test_reveal_at_exact_epoch() {
 
             // Attempt to reveal after the allowed epoch
             assert_err!(
-                SubtensorModule::reveal_weights(
+                GameSolver::reveal_weights(
                     RuntimeOrigin::signed(hotkey),
                     netuid,
                     uids.clone(),
@@ -3101,25 +3080,25 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
         let initial_tempo: u16 = 100;
         let initial_reveal_period: u64 = 1;
         add_network(netuid, initial_tempo, 0);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, initial_reveal_period));
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, initial_reveal_period));
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -3127,32 +3106,32 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
         );
 
         // Step 1: Commit weights
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
         ));
         log::info!(
             "Commit successful at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         // Retrieve commit block and epoch
-        let commit_block = SubtensorModule::get_current_block_as_u64();
-        let commit_epoch = SubtensorModule::get_epoch_index(netuid, commit_block);
+        let commit_block = GameSolver::get_current_block_as_u64();
+        let commit_epoch = GameSolver::get_epoch_index(netuid, commit_block);
 
         // Step 2: Change tempo and reveal period after commit
         let new_tempo: u16 = 50;
         let new_reveal_period: u64 = 2;
-        SubtensorModule::set_tempo(netuid, new_tempo);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, new_reveal_period));
+        GameSolver::set_tempo(netuid, new_tempo);
+        assert_ok!(GameSolver::set_reveal_period(netuid, new_reveal_period));
         log::info!(
             "Changed tempo to {new_tempo} and reveal period to {new_reveal_period}"
         );
 
         // Step 3: Advance blocks to reach the reveal epoch according to new tempo and reveal period
-        let current_block = SubtensorModule::get_current_block_as_u64();
-        let current_epoch = SubtensorModule::get_epoch_index(netuid, current_block);
+        let current_block = GameSolver::get_current_block_as_u64();
+        let current_epoch = GameSolver::get_epoch_index(netuid, current_block);
         let reveal_epoch = commit_epoch.saturating_add(new_reveal_period);
 
         // Advance to one epoch before reveal epoch
@@ -3163,7 +3142,7 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
 
         // Attempt to reveal too early
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -3175,14 +3154,14 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
         );
         log::info!(
             "Attempted to reveal too early at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         // Advance to reveal epoch
         step_epochs(1, netuid);
 
         // Attempt to reveal at the correct epoch
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -3192,14 +3171,14 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
         ));
         log::info!(
             "Revealed weights at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         // Step 4: Change tempo and reveal period again after reveal
         let new_tempo_after_reveal: u16 = 200;
         let new_reveal_period_after_reveal: u64 = 1;
-        SubtensorModule::set_tempo(netuid, new_tempo_after_reveal);
-        assert_ok!(SubtensorModule::set_reveal_period(
+        GameSolver::set_tempo(netuid, new_tempo_after_reveal);
+        assert_ok!(GameSolver::set_reveal_period(
             netuid,
             new_reveal_period_after_reveal
         ));
@@ -3215,31 +3194,31 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
             new_salt.clone(),
             version_key,
         ));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             new_commit_hash
         ));
         log::info!(
             "Commit successful at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         // Retrieve new commit block and epoch
-        let new_commit_block = SubtensorModule::get_current_block_as_u64();
-        let new_commit_epoch = SubtensorModule::get_epoch_index(netuid, new_commit_block);
+        let new_commit_block = GameSolver::get_current_block_as_u64();
+        let new_commit_epoch = GameSolver::get_epoch_index(netuid, new_commit_block);
         let new_reveal_epoch = new_commit_epoch.saturating_add(new_reveal_period_after_reveal);
 
         // Advance to reveal epoch
-        let current_block = SubtensorModule::get_current_block_as_u64();
-        let current_epoch = SubtensorModule::get_epoch_index(netuid, current_block);
+        let current_block = GameSolver::get_current_block_as_u64();
+        let current_epoch = GameSolver::get_epoch_index(netuid, current_block);
         if current_epoch < new_reveal_epoch {
             let epochs_to_advance = new_reveal_epoch - current_epoch;
             step_epochs(epochs_to_advance as u16, netuid);
         }
 
         // Attempt to reveal at the correct epoch
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -3249,7 +3228,7 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
         ));
         log::info!(
             "Revealed weights at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
 
         // Step 6: Attempt to reveal after the allowed epoch (commit expires)
@@ -3259,7 +3238,7 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
 
         // Attempt to reveal again (should fail due to expired commit)
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -3271,7 +3250,7 @@ fn test_tempo_and_reveal_period_change_during_commit_reveal_process() {
         );
         log::info!(
             "Attempted to reveal after expiration at block {}",
-            SubtensorModule::get_current_block_as_u64()
+            GameSolver::get_current_block_as_u64()
         );
     });
 }
@@ -3290,23 +3269,23 @@ fn test_commit_reveal_order_enforcement() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -3326,7 +3305,7 @@ fn test_commit_reveal_order_enforcement() {
                 version_key,
             ));
             commit_info.push((commit_hash, salt));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
@@ -3337,7 +3316,7 @@ fn test_commit_reveal_order_enforcement() {
 
         // Attempt to reveal B first (index 1), should now succeed
         let (_commit_hash_b, salt_b) = &commit_info[1];
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -3354,7 +3333,7 @@ fn test_commit_reveal_order_enforcement() {
 
         // Attempt to reveal C (index 2), should succeed
         let (_commit_hash_c, salt_c) = &commit_info[2];
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -3366,7 +3345,7 @@ fn test_commit_reveal_order_enforcement() {
         // Attempting to reveal A (index 0) should fail as it's been removed
         let (_commit_hash_a, salt_a) = &commit_info[0];
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids,
@@ -3393,18 +3372,18 @@ fn test_reveal_at_exact_block() {
         System::set_block_number(0);
         add_network_disable_commit_reveal(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
 
         let reveal_periods: Vec<u64> = vec![1, 2, 5, 19, 21, 30, 77];
 
         for &reveal_period in &reveal_periods {
-            assert_ok!(SubtensorModule::set_reveal_period(netuid, reveal_period));
+            assert_ok!(GameSolver::set_reveal_period(netuid, reveal_period));
 
             // Step 1: Commit weights
             let salt: Vec<u16> = vec![42 + (reveal_period % 100) as u16; 8];
@@ -3416,14 +3395,14 @@ fn test_reveal_at_exact_block() {
                 salt.clone(),
                 version_key,
             ));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
             ));
 
-            let commit_block = SubtensorModule::get_current_block_as_u64();
-            let commit_epoch = SubtensorModule::get_epoch_index(netuid, commit_block);
+            let commit_block = GameSolver::get_current_block_as_u64();
+            let commit_epoch = GameSolver::get_epoch_index(netuid, commit_block);
             let reveal_epoch = commit_epoch.saturating_add(reveal_period);
 
             // Calculate the block number where the reveal epoch starts
@@ -3434,7 +3413,7 @@ fn test_reveal_at_exact_block() {
                 .saturating_sub(netuid_plus_one);
 
             // Attempt to reveal before the reveal epoch starts
-            let current_block = SubtensorModule::get_current_block_as_u64();
+            let current_block = GameSolver::get_current_block_as_u64();
             if current_block < reveal_epoch_start_block {
                 // Advance to one block before the reveal epoch starts
                 let blocks_to_advance = reveal_epoch_start_block - current_block;
@@ -3446,7 +3425,7 @@ fn test_reveal_at_exact_block() {
 
                 // Attempt to reveal too early
                 assert_err!(
-                    SubtensorModule::reveal_weights(
+                    GameSolver::reveal_weights(
                         RuntimeOrigin::signed(hotkey),
                         netuid,
                         uids.clone(),
@@ -3465,7 +3444,7 @@ fn test_reveal_at_exact_block() {
             }
 
             // Reveal at the exact allowed block
-            assert_ok!(SubtensorModule::reveal_weights(
+            assert_ok!(GameSolver::reveal_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 uids.clone(),
@@ -3476,7 +3455,7 @@ fn test_reveal_at_exact_block() {
 
             // Attempt to reveal again; should fail with NoWeightsCommitFound
             assert_err!(
-                SubtensorModule::reveal_weights(
+                GameSolver::reveal_weights(
                     RuntimeOrigin::signed(hotkey),
                     netuid,
                     uids.clone(),
@@ -3497,20 +3476,20 @@ fn test_reveal_at_exact_block() {
                 new_salt.clone(),
                 version_key,
             ));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 new_commit_hash
             ));
 
             // Advance blocks to after the commit expires
-            let commit_block = SubtensorModule::get_current_block_as_u64();
-            let commit_epoch = SubtensorModule::get_epoch_index(netuid, commit_block);
+            let commit_block = GameSolver::get_current_block_as_u64();
+            let commit_epoch = GameSolver::get_epoch_index(netuid, commit_block);
             let reveal_epoch = commit_epoch.saturating_add(reveal_period);
             let expiration_epoch = reveal_epoch.saturating_add(1);
             let expiration_epoch_start_block = expiration_epoch * tempo_plus_one - netuid_plus_one;
 
-            let current_block = SubtensorModule::get_current_block_as_u64();
+            let current_block = GameSolver::get_current_block_as_u64();
             if current_block < expiration_epoch_start_block {
                 // Advance to the block where the commit expires
                 System::set_block_number(expiration_epoch_start_block);
@@ -3518,7 +3497,7 @@ fn test_reveal_at_exact_block() {
 
             // Attempt to reveal after the commit has expired
             assert_err!(
-                SubtensorModule::reveal_weights(
+                GameSolver::reveal_weights(
                     RuntimeOrigin::signed(hotkey),
                     netuid,
                     uids.clone(),
@@ -3549,23 +3528,23 @@ fn test_successful_batch_reveal() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -3585,7 +3564,7 @@ fn test_successful_batch_reveal() {
                 version_keys[i],
             ));
             commit_info.push((commit_hash, salt));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
@@ -3598,7 +3577,7 @@ fn test_successful_batch_reveal() {
         let salts_list: Vec<Vec<u16>> = commit_info.iter().map(|(_, salt)| salt.clone()).collect();
 
         // 3. Perform batch reveal
-        assert_ok!(SubtensorModule::do_batch_reveal_weights(
+        assert_ok!(GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -3627,23 +3606,23 @@ fn test_batch_reveal_with_expired_commits() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -3663,7 +3642,7 @@ fn test_batch_reveal_with_expired_commits() {
             version_keys[0],
         ));
         commit_info.push((commit_hash0, salt0));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash0
@@ -3684,7 +3663,7 @@ fn test_batch_reveal_with_expired_commits() {
                 version_keys[i],
             ));
             commit_info.push((commit_hash, salt));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
@@ -3698,7 +3677,7 @@ fn test_batch_reveal_with_expired_commits() {
         let salts_list: Vec<Vec<u16>> = commit_info.iter().map(|(_, salt)| salt.clone()).collect();
 
         // 4. Perform batch reveal
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -3719,7 +3698,7 @@ fn test_batch_reveal_with_expired_commits() {
         let valid_salts_list = salts_list[1..].to_vec();
         let valid_version_keys = version_keys[1..].to_vec();
 
-        assert_ok!(SubtensorModule::do_batch_reveal_weights(
+        assert_ok!(GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             valid_uids_list,
@@ -3745,7 +3724,7 @@ fn test_batch_reveal_with_invalid_input_lengths() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         // Base data for valid inputs
         let uids_list: Vec<Vec<u16>> = vec![vec![0, 1], vec![1, 0]];
@@ -3757,7 +3736,7 @@ fn test_batch_reveal_with_invalid_input_lengths() {
 
         // Case 1: uids_list has an extra element
         let uids_list_case = vec![vec![0, 1], vec![1, 0], vec![2, 3]];
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list_case.clone(),
@@ -3769,7 +3748,7 @@ fn test_batch_reveal_with_invalid_input_lengths() {
 
         // Case 2: weight_values_list has an extra element
         let weight_values_list_case = vec![vec![10, 20], vec![30, 40], vec![50, 60]];
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -3781,7 +3760,7 @@ fn test_batch_reveal_with_invalid_input_lengths() {
 
         // Case 3: salts_list has an extra element
         let salts_list_case = vec![vec![0u16; 8], vec![1u16; 8], vec![2u16; 8]];
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -3793,7 +3772,7 @@ fn test_batch_reveal_with_invalid_input_lengths() {
 
         // Case 4: version_keys has an extra element
         let version_keys_case = vec![0, 0, 0];
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -3808,7 +3787,7 @@ fn test_batch_reveal_with_invalid_input_lengths() {
         let weight_values_list_case = vec![vec![10, 20], vec![30, 40]];
         let salts_list_case = vec![vec![0u16; 8]];
         let version_keys_case = vec![0, 0, 0];
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list_case,
@@ -3819,7 +3798,7 @@ fn test_batch_reveal_with_invalid_input_lengths() {
         assert_err!(result, Error::<Test>::InputLengthsUnequal);
 
         // Case 6: Valid input lengths (should not return an error)
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -3847,10 +3826,10 @@ fn test_batch_reveal_with_no_commits() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         // 1. Attempt to perform batch reveal without any commits
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list,
@@ -3876,13 +3855,13 @@ fn test_batch_reveal_before_reveal_period() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
 
         // 1. Commit multiple times in the same epoch
         let mut commit_info = Vec::new();
@@ -3897,7 +3876,7 @@ fn test_batch_reveal_before_reveal_period() {
                 version_keys[i],
             ));
             commit_info.push((commit_hash, salt));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
@@ -3908,7 +3887,7 @@ fn test_batch_reveal_before_reveal_period() {
         let salts_list: Vec<Vec<u16>> = commit_info.iter().map(|(_, salt)| salt.clone()).collect();
 
         // 3. Attempt to reveal before reveal period
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -3934,13 +3913,13 @@ fn test_batch_reveal_after_commits_expired() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
 
         let mut commit_info = Vec::new();
 
@@ -3955,7 +3934,7 @@ fn test_batch_reveal_after_commits_expired() {
             version_keys[0],
         ));
         commit_info.push((commit_hash0, salt0));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash0
@@ -3975,7 +3954,7 @@ fn test_batch_reveal_after_commits_expired() {
             version_keys[1],
         ));
         commit_info.push((commit_hash1, salt1));
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash1
@@ -3988,7 +3967,7 @@ fn test_batch_reveal_after_commits_expired() {
         let salts_list: Vec<Vec<u16>> = commit_info.iter().map(|(_, salt)| salt.clone()).collect();
 
         // 4. Attempt to reveal after commits have expired
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list.clone(),
@@ -4015,10 +3994,10 @@ fn test_batch_reveal_when_commit_reveal_disabled() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
 
         // 1. Attempt to perform batch reveal when commit-reveal is disabled
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list,
@@ -4044,23 +4023,23 @@ fn test_batch_reveal_with_out_of_order_commits() {
         System::set_block_number(0);
         add_network(netuid, tempo, 0);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -4080,7 +4059,7 @@ fn test_batch_reveal_with_out_of_order_commits() {
                 version_keys[i],
             ));
             commit_info.push((commit_hash, salt));
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_hash
@@ -4108,7 +4087,7 @@ fn test_batch_reveal_with_out_of_order_commits() {
         ];
 
         // 3. Attempt batch reveal of A and C out of order
-        let result = SubtensorModule::do_batch_reveal_weights(
+        let result = GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids_list_out_of_order,
@@ -4126,7 +4105,7 @@ fn test_batch_reveal_with_out_of_order_commits() {
         let remaining_weights = weight_values_list[1].clone();
         let remaining_version_key = version_keys[1];
 
-        assert_ok!(SubtensorModule::do_batch_reveal_weights(
+        assert_ok!(GameSolver::do_batch_reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             vec![remaining_uids],
@@ -4155,17 +4134,17 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
 
         // ==== Setup Network ====
         add_network(netuid, initial_tempo, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, initial_reveal_period));
-        SubtensorModule::set_max_registrations_per_block(netuid, u16::MAX);
-        SubtensorModule::set_target_registrations_per_interval(netuid, u16::MAX);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        assert_ok!(GameSolver::set_reveal_period(netuid, initial_reveal_period));
+        GameSolver::set_max_registrations_per_block(netuid, u16::MAX);
+        GameSolver::set_target_registrations_per_interval(netuid, u16::MAX);
 
         // ==== Register Validators ====
         for uid in 0..5 {
             let validator_id = U256::from(100 + uid as u64);
             register_ok_neuron(netuid, validator_id, U256::from(200 + uid as u64), 300_000);
-            SubtensorModule::set_validator_permit_for_uid(netuid, uid, true);
+            GameSolver::set_validator_permit_for_uid(netuid, uid, true);
         }
 
         // ==== Register Hotkeys ====
@@ -4220,7 +4199,7 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
                     commits.push((commit_hash, salt.clone(), uids.clone(), values.clone(), version_key));
                 }
 
-            assert_ok!(SubtensorModule::commit_weights(
+            assert_ok!(GameSolver::commit_weights(
                     RuntimeOrigin::signed(*hotkey),
                 netuid,
                     commit_hash
@@ -4236,7 +4215,7 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
 
                     let (_commit_hash, salt, uids, values, version_key) = commits.first().expect("expected a value");
 
-                    let reveal_result = SubtensorModule::reveal_weights(
+                    let reveal_result = GameSolver::reveal_weights(
                         RuntimeOrigin::signed(*hotkey),
                         netuid,
                         uids.clone(),
@@ -4267,8 +4246,8 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
         }
 
         // ==== Modify Network Parameters During Commits ====
-        SubtensorModule::set_tempo(netuid, 150);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 7));
+        GameSolver::set_tempo(netuid, 150);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 7));
         log::info!("Changed tempo to 150 and reveal_period to 7 during commits.");
 
         step_epochs(3, netuid);
@@ -4280,7 +4259,7 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
                     let (_commit_hash, salt, uids, values, version_key) = &commits[0];
 
                     // Attempt to reveal
-                    let reveal_result = SubtensorModule::reveal_weights(
+                    let reveal_result = GameSolver::reveal_weights(
                         RuntimeOrigin::signed(*hotkey),
                         netuid,
                         uids.clone(),
@@ -4313,8 +4292,8 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
         }
 
         // ==== Change Network Parameters Again ====
-        SubtensorModule::set_tempo(netuid, 200);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 10));
+        GameSolver::set_tempo(netuid, 200);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 10));
         log::info!("Changed tempo to 200 and reveal_period to 10 after initial reveals.");
 
         step_epochs(10, netuid);
@@ -4322,7 +4301,7 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
         // ==== Final Reveal Attempts ====
         for (hotkey, commits) in commit_info_map.iter_mut() {
             for (_commit_hash, salt, uids, values, version_key) in commits.iter() {
-                let reveal_result = SubtensorModule::reveal_weights(
+                let reveal_result = GameSolver::reveal_weights(
                     RuntimeOrigin::signed(*hotkey),
             netuid,
                     uids.clone(),
@@ -4353,7 +4332,7 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
                     version_key,
                 ));
 
-                assert_ok!(SubtensorModule::commit_weights(
+                assert_ok!(GameSolver::commit_weights(
                     RuntimeOrigin::signed(*hotkey),
                     netuid,
                     commit_hash
@@ -4371,7 +4350,7 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
             ));
 
             assert_err!(
-                SubtensorModule::commit_weights(
+                GameSolver::commit_weights(
                     RuntimeOrigin::signed(*hotkey),
                     netuid,
                     commit_hash
@@ -4386,7 +4365,7 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
         if let Some(commits) = commit_info_map.get(&target_hotkey)
             && let Some((_commit_hash, salt, uids, values, version_key)) = commits.first() {
                 assert_err!(
-                    SubtensorModule::reveal_weights(
+                    GameSolver::reveal_weights(
                         RuntimeOrigin::signed(unauthorized_hotkey),
                         netuid,
                         uids.clone(),
@@ -4400,7 +4379,7 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
 
         let non_committing_hotkey: <Test as frame_system::Config>::AccountId = U256::from(9999);
         assert_err!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(non_committing_hotkey),
                 netuid,
                 vec![0, 1],
@@ -4411,8 +4390,8 @@ fn test_highly_concurrent_commits_and_reveals_with_multiple_hotkeys() {
             Error::<Test>::NoWeightsCommitFound
         );
 
-        assert_eq!(SubtensorModule::get_reveal_period(netuid), 10);
-        assert_eq!(SubtensorModule::get_tempo(netuid), 200);
+        assert_eq!(GameSolver::get_reveal_period(netuid), 10);
+        assert_eq!(GameSolver::get_tempo(netuid), 200);
     })
 }
 
@@ -4448,20 +4427,20 @@ fn test_get_reveal_blocks() {
         // **5. Register Neurons and Configure the Network**
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -4469,14 +4448,14 @@ fn test_get_reveal_blocks() {
         );
 
         // **6. Commit Weights at Block 0**
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
         ));
 
         // **7. Retrieve the Reveal Blocks Using `get_reveal_blocks`**
-        let (first_reveal_block, last_reveal_block) = SubtensorModule::get_reveal_blocks(netuid, 0);
+        let (first_reveal_block, last_reveal_block) = GameSolver::get_reveal_blocks(netuid, 0);
 
         // **8. Assert Correct Calculation of Reveal Blocks**
         // With tempo=5, netuid=1, reveal_period=1:
@@ -4489,7 +4468,7 @@ fn test_get_reveal_blocks() {
 
         // **9. Attempt to Reveal Before `first_reveal_block` (Block 3)**
         step_block(3); // Advance to block 3
-        let result = SubtensorModule::reveal_weights(
+        let result = GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -4501,7 +4480,7 @@ fn test_get_reveal_blocks() {
 
         // **10. Advance to `first_reveal_block` (Block 4)**
         step_block(1); // Advance to block 4
-        let result = SubtensorModule::reveal_weights(
+        let result = GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -4512,7 +4491,7 @@ fn test_get_reveal_blocks() {
         assert_ok!(result);
 
         // **11. Attempt to Reveal Again at Block 4 (Should Fail)**
-        let result = SubtensorModule::reveal_weights(
+        let result = GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -4526,7 +4505,7 @@ fn test_get_reveal_blocks() {
         step_block(6); // Advance from block 4 to block 10
 
         // **13. Attempt to Reveal at Block 10 (Should Fail)**
-        let result = SubtensorModule::reveal_weights(
+        let result = GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -4537,7 +4516,7 @@ fn test_get_reveal_blocks() {
         assert_err!(result, Error::<Test>::NoWeightsCommitFound);
 
         // **14. Attempt to Reveal Outside of Any Reveal Window (No Commit)**
-        let result = SubtensorModule::reveal_weights(
+        let result = GameSolver::reveal_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             uids.clone(),
@@ -4582,20 +4561,20 @@ fn test_commit_weights_rate_limit() {
 
         register_ok_neuron(netuid, U256::from(3), U256::from(4), 300_000);
         register_ok_neuron(netuid, U256::from(1), U256::from(2), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 10); // Rate limit is 10 blocks
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, 1, true);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(0), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(1), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 10); // Rate limit is 10 blocks
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 1, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(0), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(1), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(0)),
             &(U256::from(0)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &(U256::from(1)),
             &(U256::from(1)),
             netuid,
@@ -4603,10 +4582,10 @@ fn test_commit_weights_rate_limit() {
         );
 
         let neuron_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey).expect("expected uid");
-        SubtensorModule::set_last_update_for_uid(NetUidStorageIndex::from(netuid), neuron_uid, 0);
+            GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey).expect("expected uid");
+        GameSolver::set_last_update_for_uid(NetUidStorageIndex::from(netuid), neuron_uid, 0);
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_hash
@@ -4622,30 +4601,30 @@ fn test_commit_weights_rate_limit() {
             version_key,
         ));
         assert_err!(
-            SubtensorModule::commit_weights(RuntimeOrigin::signed(hotkey), netuid, new_commit_hash),
+            GameSolver::commit_weights(RuntimeOrigin::signed(hotkey), netuid, new_commit_hash),
             Error::<Test>::CommittingWeightsTooFast
         );
 
         step_block(5);
         assert_err!(
-            SubtensorModule::commit_weights(RuntimeOrigin::signed(hotkey), netuid, new_commit_hash),
+            GameSolver::commit_weights(RuntimeOrigin::signed(hotkey), netuid, new_commit_hash),
             Error::<Test>::CommittingWeightsTooFast
         );
 
         step_block(5); // Current block is now 21
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             new_commit_hash
         ));
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
         let weights_keys: Vec<u16> = vec![0];
         let weight_values: Vec<u16> = vec![1];
 
         assert_err!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 weights_keys.clone(),
@@ -4657,7 +4636,7 @@ fn test_commit_weights_rate_limit() {
 
         step_block(10);
 
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             weights_keys.clone(),
@@ -4666,7 +4645,7 @@ fn test_commit_weights_rate_limit() {
         ));
 
         assert_err!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 weights_keys.clone(),
@@ -4679,7 +4658,7 @@ fn test_commit_weights_rate_limit() {
         step_block(5);
 
         assert_err!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 weights_keys.clone(),
@@ -4691,7 +4670,7 @@ fn test_commit_weights_rate_limit() {
 
         step_block(5);
 
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             weights_keys.clone(),
@@ -4763,34 +4742,34 @@ fn test_reveal_crv3_commits_success() {
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey1, U256::from(3), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(4), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
 
-        let neuron_uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1)
+        let neuron_uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1)
             .expect("Failed to get neuron UID for hotkey1");
-        let neuron_uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey2)
+        let neuron_uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey2)
             .expect("Failed to get neuron UID for hotkey2");
 
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid1, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid2, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(3), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(4), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid1, true);
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid2, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(3), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(4), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &(U256::from(3)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &(U256::from(4)),
             netuid,
             1.into(),
         );
 
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
 
         let payload = WeightsTlockPayload {
             hotkey: hotkey1.encode(),
@@ -4838,12 +4817,12 @@ fn test_reveal_crv3_commits_success() {
             "Commit bytes now contain {commit_bytes:#?}"
         );
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey1),
             netuid,
             commit_bytes.clone().try_into().expect("Failed to convert commit bytes into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         let sig_bytes = hex::decode("b44679b9a59af2ec876b1a6b1ad52ea9b1615fc3982b19576350f93447cb1125e342b73a8dd2bacbe47e4b6b63ed5e39")
@@ -4861,7 +4840,7 @@ fn test_reveal_crv3_commits_success() {
         // Step epochs to run the epoch via the blockstep
         step_epochs(3, netuid);
 
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse.get(neuron_uid1 as usize).cloned().unwrap_or_default();
 
         assert!(
@@ -4916,19 +4895,19 @@ fn test_reveal_crv3_commits_cannot_reveal_after_reveal_epoch() {
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey1, U256::from(3), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(4), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
 
-        let neuron_uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1)
+        let neuron_uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1)
             .expect("Failed to get neuron UID for hotkey1");
-        let neuron_uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey2)
+        let neuron_uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey2)
             .expect("Failed to get neuron UID for hotkey2");
 
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid1, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid2, true);
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid1, true);
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid2, true);
 
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
 
         let payload = WeightsTlockPayload {
             hotkey: hotkey1.encode(),
@@ -4967,7 +4946,7 @@ fn test_reveal_crv3_commits_cannot_reveal_after_reveal_epoch() {
         ct.serialize_compressed(&mut commit_bytes)
             .expect("Failed to serialize commit");
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey1),
             netuid,
             commit_bytes
@@ -4975,7 +4954,7 @@ fn test_reveal_crv3_commits_cannot_reveal_after_reveal_epoch() {
                 .try_into()
                 .expect("Failed to convert commit bytes into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         // Do NOT insert the pulse at this time; this simulates the missing pulse during the reveal epoch
@@ -4983,7 +4962,7 @@ fn test_reveal_crv3_commits_cannot_reveal_after_reveal_epoch() {
         step_epochs(3, netuid);
 
         // Verify that weights are not set
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse
             .get(neuron_uid1 as usize)
             .cloned()
@@ -5015,10 +4994,10 @@ fn test_reveal_crv3_commits_cannot_reveal_after_reveal_epoch() {
         step_epochs(1, netuid);
 
         // Attempt to reveal commits after the reveal epoch has passed
-        assert_ok!(SubtensorModule::reveal_crv3_commits_for_subnet(netuid));
+        assert_ok!(GameSolver::reveal_crv3_commits_for_subnet(netuid));
 
         // Verify that the weights for the neuron have not been set
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse
             .get(neuron_uid1 as usize)
             .cloned()
@@ -5042,10 +5021,10 @@ fn test_do_commit_crv3_weights_success() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_data
@@ -5053,11 +5032,10 @@ fn test_do_commit_crv3_weights_success() {
                 .try_into()
                 .expect("Failed to convert commit data into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
-        let cur_epoch =
-            SubtensorModule::get_epoch_index(netuid, SubtensorModule::get_current_block_as_u64());
+        let cur_epoch = GameSolver::get_epoch_index(netuid, GameSolver::get_current_block_as_u64());
         let commits =
             TimelockedWeightCommits::<Test>::get(NetUidStorageIndex::from(netuid), cur_epoch);
         assert_eq!(commits.len(), 1);
@@ -5078,18 +5056,18 @@ fn test_do_commit_crv3_weights_disabled() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
 
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
         assert_err!(
-            SubtensorModule::do_commit_timelocked_weights(
+            GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_data
                     .try_into()
                     .expect("Failed to convert commit data into bounded vector"),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::CommitRevealDisabled
         );
@@ -5108,18 +5086,18 @@ fn test_do_commit_crv3_weights_hotkey_not_registered() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         assert_err!(
-            SubtensorModule::do_commit_timelocked_weights(
+            GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(unregistered_hotkey),
                 netuid,
                 commit_data
                     .try_into()
                     .expect("Failed to convert commit data into bounded vector"),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::HotKeyNotRegisteredInSubNet
         );
@@ -5138,13 +5116,13 @@ fn test_do_commit_crv3_weights_committing_too_fast() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 5);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 5);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
         let neuron_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey).expect("Expected uid");
-        SubtensorModule::set_last_update_for_uid(NetUidStorageIndex::from(netuid), neuron_uid, 0);
+            GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey).expect("Expected uid");
+        GameSolver::set_last_update_for_uid(NetUidStorageIndex::from(netuid), neuron_uid, 0);
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_data_1
@@ -5152,11 +5130,11 @@ fn test_do_commit_crv3_weights_committing_too_fast() {
                 .try_into()
                 .expect("Failed to convert commit data into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         assert_err!(
-            SubtensorModule::do_commit_timelocked_weights(
+            GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_data_2
@@ -5164,7 +5142,7 @@ fn test_do_commit_crv3_weights_committing_too_fast() {
                     .try_into()
                     .expect("Failed to convert commit data into bounded vector"),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::CommittingWeightsTooFast
         );
@@ -5172,7 +5150,7 @@ fn test_do_commit_crv3_weights_committing_too_fast() {
         step_block(2);
 
         assert_err!(
-            SubtensorModule::do_commit_timelocked_weights(
+            GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_data_2
@@ -5180,21 +5158,21 @@ fn test_do_commit_crv3_weights_committing_too_fast() {
                     .try_into()
                     .expect("Failed to convert commit data into bounded vector"),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::CommittingWeightsTooFast
         );
 
         step_block(3);
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_data_2
                 .try_into()
                 .expect("Failed to convert commit data into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
     });
 }
@@ -5211,8 +5189,8 @@ fn test_do_commit_crv3_weights_too_many_unrevealed_commits() {
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey1, U256::from(2), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(3), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         // Hotkey1 submits 10 commits successfully
         for i in 0..10 {
@@ -5221,12 +5199,12 @@ fn test_do_commit_crv3_weights_too_many_unrevealed_commits() {
                 .try_into()
                 .expect("Failed to convert commit data into bounded vector");
 
-            assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+            assert_ok!(GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(hotkey1),
                 netuid,
                 bounded_commit_data,
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ));
         }
 
@@ -5237,12 +5215,12 @@ fn test_do_commit_crv3_weights_too_many_unrevealed_commits() {
             .expect("Failed to convert new commit data into bounded vector");
 
         assert_err!(
-            SubtensorModule::do_commit_timelocked_weights(
+            GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(hotkey1),
                 netuid,
                 bounded_new_commit_data,
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::TooManyUnrevealedCommits
         );
@@ -5253,12 +5231,12 @@ fn test_do_commit_crv3_weights_too_many_unrevealed_commits() {
             .try_into()
             .expect("Failed to convert commit data into bounded vector");
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey2),
             netuid,
             bounded_commit_data_hotkey2,
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         // Hotkey2 can submit up to 10 commits
@@ -5268,12 +5246,12 @@ fn test_do_commit_crv3_weights_too_many_unrevealed_commits() {
                 .try_into()
                 .expect("Failed to convert commit data into bounded vector");
 
-            assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+            assert_ok!(GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(hotkey2),
                 netuid,
                 bounded_commit_data,
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ));
         }
 
@@ -5284,12 +5262,12 @@ fn test_do_commit_crv3_weights_too_many_unrevealed_commits() {
             .expect("Failed to convert new commit data into bounded vector");
 
         assert_err!(
-            SubtensorModule::do_commit_timelocked_weights(
+            GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(hotkey2),
                 netuid,
                 bounded_new_commit_data,
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ),
             Error::<Test>::TooManyUnrevealedCommits
         );
@@ -5300,12 +5278,12 @@ fn test_do_commit_crv3_weights_too_many_unrevealed_commits() {
         let bounded_new_commit_data = new_commit_data
             .try_into()
             .expect("Failed to convert new commit data into bounded vector");
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey1),
             netuid,
             bounded_new_commit_data,
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
     });
 }
@@ -5320,8 +5298,8 @@ fn test_reveal_crv3_commits_decryption_failure() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
         let commit_bytes: Vec<u8> = vec![0xff; 100];
         let bounded_commit_bytes = commit_bytes
@@ -5329,12 +5307,12 @@ fn test_reveal_crv3_commits_decryption_failure() {
             .try_into()
             .expect("Failed to convert commit bytes into bounded vector");
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             bounded_commit_bytes,
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         step_epochs(1, netuid);
@@ -5352,11 +5330,11 @@ fn test_reveal_crv3_commits_decryption_failure() {
             },
         );
 
-        assert_ok!(SubtensorModule::reveal_crv3_commits_for_subnet(netuid));
+        assert_ok!(GameSolver::reveal_crv3_commits_for_subnet(netuid));
 
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey)
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey)
             .expect("Failed to get neuron UID for hotkey") as usize;
-        let weights_matrix = SubtensorModule::get_weights(netuid.into());
+        let weights_matrix = GameSolver::get_weights(netuid.into());
         let weights = weights_matrix.get(neuron_uid).cloned().unwrap_or_default();
         assert!(weights.iter().all(|&w| w == I32F32::from_num(0)));
     });
@@ -5374,14 +5352,14 @@ fn test_reveal_crv3_commits_multiple_commits_some_fail_some_succeed() {
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey1, U256::from(3), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(4), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 1));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 1));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         // Prepare a valid payload for hotkey1
-        let neuron_uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1)
+        let neuron_uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1)
             .expect("Failed to get neuron UID for hotkey1");
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
         let valid_payload = WeightsTlockPayload {
             hotkey: hotkey1.encode(),
             values: vec![10],
@@ -5436,19 +5414,19 @@ fn test_reveal_crv3_commits_multiple_commits_some_fail_some_succeed() {
             .expect("Failed to serialize invalid commit");
 
         // Insert both commits
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey1),
             netuid,
             commit_bytes_valid.try_into().expect("Failed to convert valid commit data"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey2),
             netuid,
             commit_bytes_invalid.try_into().expect("Failed to convert invalid commit data"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         // Insert the pulse
@@ -5467,9 +5445,9 @@ fn test_reveal_crv3_commits_multiple_commits_some_fail_some_succeed() {
         step_epochs(1, netuid);
 
         // Verify that weights are set for hotkey1
-        let neuron_uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1)
+        let neuron_uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1)
             .expect("Failed to get neuron UID for hotkey1") as usize;
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights1 = weights_sparse.get(neuron_uid1).cloned().unwrap_or_default();
         assert!(
             !weights1.is_empty(),
@@ -5477,7 +5455,7 @@ fn test_reveal_crv3_commits_multiple_commits_some_fail_some_succeed() {
         );
 
         // Verify that weights are not set for hotkey2
-        let neuron_uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey2)
+        let neuron_uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey2)
             .expect("Failed to get neuron UID for hotkey2") as usize;
         let weights2 = weights_sparse.get(neuron_uid2).cloned().unwrap_or_default();
         assert!(
@@ -5497,12 +5475,12 @@ fn test_reveal_crv3_commits_do_set_weights_failure() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         // Prepare payload with mismatched uids and values lengths
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
         let payload = WeightsTlockPayload {
             hotkey: hotkey.encode(),
             values: vec![10, 20], // Length 2
@@ -5539,12 +5517,12 @@ fn test_reveal_crv3_commits_do_set_weights_failure() {
         ct.serialize_compressed(&mut commit_bytes)
             .expect("Failed to serialize commit");
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_bytes.try_into().expect("Failed to convert commit data into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         let sig_bytes = hex::decode("b44679b9a59af2ec876b1a6b1ad52ea9b1615fc3982b19576350f93447cb1125e342b73a8dd2bacbe47e4b6b63ed5e39")
@@ -5562,9 +5540,9 @@ fn test_reveal_crv3_commits_do_set_weights_failure() {
         step_epochs(3, netuid);
 
         // Verify that weights are not set due to `do_set_weights` failure
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey)
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey)
             .expect("Failed to get neuron UID for hotkey") as usize;
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse.get(neuron_uid).cloned().unwrap_or_default();
         assert!(
             weights.is_empty(),
@@ -5583,9 +5561,9 @@ fn test_reveal_crv3_commits_payload_decoding_failure() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         let invalid_payload = vec![0u8; 10]; // Not a valid encoding of WeightsTlockPayload
 
@@ -5617,12 +5595,12 @@ fn test_reveal_crv3_commits_payload_decoding_failure() {
         ct.serialize_compressed(&mut commit_bytes)
             .expect("Failed to serialize commit");
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_bytes.try_into().expect("Failed to convert commit data into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         let sig_bytes = hex::decode("b44679b9a59af2ec876b1a6b1ad52ea9b1615fc3982b19576350f93447cb1125e342b73a8dd2bacbe47e4b6b63ed5e39")
@@ -5640,9 +5618,9 @@ fn test_reveal_crv3_commits_payload_decoding_failure() {
         step_epochs(3, netuid);
 
         // Verify that weights are not set
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey)
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey)
             .expect("Failed to get neuron UID for hotkey") as usize;
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse.get(neuron_uid).cloned().unwrap_or_default();
         assert!(
             weights.is_empty(),
@@ -5661,11 +5639,11 @@ fn test_reveal_crv3_commits_signature_deserialization_failure() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
         let payload = WeightsTlockPayload {
             hotkey: hotkey.encode(),
             values: vec![10, 20],
@@ -5702,12 +5680,12 @@ fn test_reveal_crv3_commits_signature_deserialization_failure() {
         ct.serialize_compressed(&mut commit_bytes)
             .expect("Failed to serialize commit");
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_bytes.try_into().expect("Failed to convert commit data into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         pallet_drand::Pulses::<Test>::insert(
@@ -5722,9 +5700,9 @@ fn test_reveal_crv3_commits_signature_deserialization_failure() {
         step_epochs(3, netuid);
 
         // Verify that weights are not set
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey)
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey)
             .expect("Failed to get neuron UID for hotkey") as usize;
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse.get(neuron_uid).cloned().unwrap_or_default();
         assert!(
             weights.is_empty(),
@@ -5743,8 +5721,8 @@ fn test_do_commit_crv3_weights_commit_size_exceeds_limit() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         let max_commit_size = MAX_CRV3_COMMIT_SIZE_BYTES as usize;
         let commit_data_exceeding: Vec<u8> = vec![0u8; max_commit_size + 1]; // Exceeds max size
@@ -5767,12 +5745,12 @@ fn test_do_commit_crv3_weights_commit_size_exceeds_limit() {
         .expect("Failed to create BoundedVec with data at max size");
 
         // Now call the function with valid data at max size
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             bounded_commit_data,
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
     });
 }
@@ -5784,12 +5762,12 @@ fn test_reveal_crv3_commits_with_empty_commit_queue() {
         let netuid = NetUid::from(1);
 
         add_network(netuid, 5, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         step_epochs(2, netuid);
 
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         assert!(
             weights_sparse.is_empty(),
             "Weights should be empty as there were no commits to reveal"
@@ -5807,14 +5785,14 @@ fn test_reveal_crv3_commits_with_incorrect_identity_message() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 1));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 1));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         // Prepare a valid payload but use incorrect identity message during encryption
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey)
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey)
             .expect("Failed to get neuron UID for hotkey");
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
         let payload = WeightsTlockPayload {
             hotkey: hotkey.encode(),
             values: vec![10],
@@ -5852,12 +5830,12 @@ fn test_reveal_crv3_commits_with_incorrect_identity_message() {
         ct.serialize_compressed(&mut commit_bytes)
             .expect("Failed to serialize commit");
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_bytes.try_into().expect("Failed to convert commit data into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         let sig_bytes = hex::decode("b44679b9a59af2ec876b1a6b1ad52ea9b1615fc3982b19576350f93447cb1125e342b73a8dd2bacbe47e4b6b63ed5e39")
@@ -5876,7 +5854,7 @@ fn test_reveal_crv3_commits_with_incorrect_identity_message() {
 
         // Verify that weights are not set due to decryption failure
         let neuron_uid = neuron_uid as usize;
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse.get(neuron_uid).cloned().unwrap_or_default();
         assert!(
             weights.is_empty(),
@@ -5895,25 +5873,24 @@ fn test_multiple_commits_by_same_hotkey_within_limit() {
 
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 1));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 1));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         for i in 0..10 {
             let commit_data: Vec<u8> = vec![i; 5];
-            assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+            assert_ok!(GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(hotkey),
                 netuid,
                 commit_data
                     .try_into()
                     .expect("Failed to convert commit data into bounded vector"),
                 reveal_round + i as u64,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ));
         }
 
-        let cur_epoch =
-            SubtensorModule::get_epoch_index(netuid, SubtensorModule::get_current_block_as_u64());
+        let cur_epoch = GameSolver::get_epoch_index(netuid, GameSolver::get_current_block_as_u64());
         let commits =
             TimelockedWeightCommits::<Test>::get(NetUidStorageIndex::from(netuid), cur_epoch);
         assert_eq!(
@@ -5934,15 +5911,15 @@ fn test_reveal_crv3_commits_removes_past_epoch_commits() {
 
         add_network(netuid, /*tempo*/ 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(2), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 1)); // reveal_period = 1 epoch
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 1)); // reveal_period = 1 epoch
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
         // ---------------------------------------------------------------------
         // Put dummy commits into the two epochs immediately *before* current.
         // ---------------------------------------------------------------------
-        let cur_block = SubtensorModule::get_current_block_as_u64();
-        let cur_epoch = SubtensorModule::get_epoch_index(netuid, cur_block);
+        let cur_block = GameSolver::get_current_block_as_u64();
+        let cur_epoch = GameSolver::get_epoch_index(netuid, cur_block);
         let past_epoch = cur_epoch.saturating_sub(2); // definitely < reveal_epoch
         let reveal_epoch = cur_epoch.saturating_sub(1); // == cur_epoch - reveal_period
 
@@ -5972,7 +5949,7 @@ fn test_reveal_crv3_commits_removes_past_epoch_commits() {
         // ---------------------------------------------------------------------
         // Run the reveal pass WITHOUT a pulse – only expiry housekeeping runs.
         // ---------------------------------------------------------------------
-        assert_ok!(SubtensorModule::reveal_crv3_commits_for_subnet(netuid));
+        assert_ok!(GameSolver::reveal_crv3_commits_for_subnet(netuid));
 
         // past_epoch (< reveal_epoch) must be gone
         assert!(
@@ -5999,12 +5976,12 @@ fn test_reveal_crv3_commits_multiple_valid_commits_all_processed() {
 
         // ───── network parameters ───────────────────────────────────────────
         add_network(netuid, 5, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 1));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_max_registrations_per_block(netuid, 100);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 100);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 1));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_max_registrations_per_block(netuid, 100);
+        GameSolver::set_target_registrations_per_interval(netuid, 100);
 
         // Insert the pulse
         let sig_bytes = hex::decode("b44679b9a59af2ec876b1a6b1ad52ea9b1615fc3982b19576350f93447cb1125e342b73a8dd2bacbe47e4b6b63ed5e39")
@@ -6031,11 +6008,11 @@ fn test_reveal_crv3_commits_multiple_valid_commits_all_processed() {
             let cold: AccountId = U256::from(i + 100);
 
             register_ok_neuron(netuid, *hk, cold, 100_000);
-            SubtensorModule::set_validator_permit_for_uid(netuid, i as u16, true);
+            GameSolver::set_validator_permit_for_uid(netuid, i as u16, true);
 
             // add minimal stake so `do_set_weights` will succeed
-            SubtensorModule::add_balance_to_coldkey_account(&cold, 1);
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::add_balance_to_coldkey_account(&cold, 1);
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 hk,
                 &cold,
                 netuid,
@@ -6062,7 +6039,7 @@ fn test_reveal_crv3_commits_multiple_valid_commits_all_processed() {
                 hotkey: hk.encode(),
                 values: vec![10, 20, 30, 40, 50],
                 uids: (0..5).map(|u| u as u16).collect(),
-                version_key: SubtensorModule::get_weights_version_key(netuid),
+                version_key: GameSolver::get_weights_version_key(netuid),
             };
 
             let id_msg = {
@@ -6082,12 +6059,12 @@ fn test_reveal_crv3_commits_multiple_valid_commits_all_processed() {
             let mut commit_bytes = Vec::new();
             ct.serialize_compressed(&mut commit_bytes).unwrap();
 
-            assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+            assert_ok!(GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(*hk),
                 netuid,
                 commit_bytes.try_into().unwrap(),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ));
         }
 
@@ -6095,9 +6072,9 @@ fn test_reveal_crv3_commits_multiple_valid_commits_all_processed() {
         step_epochs(2, netuid);
 
         // ───── assertions ───────────────────────────────────────────────────
-        let w_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let w_sparse = GameSolver::get_weights_sparse(netuid.into());
         for hk in hotkeys {
-            let uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hk).unwrap() as usize;
+            let uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hk).unwrap() as usize;
             assert!(
                 !w_sparse.get(uid).unwrap_or(&Vec::new()).is_empty(),
                 "weights for uid {uid} should be set"
@@ -6115,13 +6092,13 @@ fn test_reveal_crv3_commits_max_neurons() {
 
         // ───── network parameters ───────────────────────────────────────────
         add_network(netuid, 5, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 1));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_max_registrations_per_block(netuid, 10_000);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 10_000);
-        SubtensorModule::set_max_allowed_uids(netuid, 10_024);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 1));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_max_registrations_per_block(netuid, 10_000);
+        GameSolver::set_target_registrations_per_interval(netuid, 10_000);
+        GameSolver::set_max_allowed_uids(netuid, 10_024);
 
         // ───── register 1 024 neurons ───────────────────────────────────────
         for i in 0..1_024u16 {
@@ -6129,11 +6106,11 @@ fn test_reveal_crv3_commits_max_neurons() {
             let cold: AccountId = U256::from(i as u64 + 10_000);
 
             register_ok_neuron(netuid, hk, cold, 100_000);
-            SubtensorModule::set_validator_permit_for_uid(netuid, i, true);
+            GameSolver::set_validator_permit_for_uid(netuid, i, true);
 
             // give each neuron a nominal stake (safe even if not needed)
-            SubtensorModule::add_balance_to_coldkey_account(&cold, 1);
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::add_balance_to_coldkey_account(&cold, 1);
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &hk,
                 &cold,
                 netuid,
@@ -6175,7 +6152,7 @@ fn test_reveal_crv3_commits_max_neurons() {
                 hotkey: hk.encode(),
                 values: vec![10u16; 1_024],
                 uids: (0..1_024).collect(),
-                version_key: SubtensorModule::get_weights_version_key(netuid),
+                version_key: GameSolver::get_weights_version_key(netuid),
             };
             let id_msg = {
                 let mut h = sha2::Sha256::new();
@@ -6193,14 +6170,14 @@ fn test_reveal_crv3_commits_max_neurons() {
             let mut commit_bytes = Vec::new();
             ct.serialize_compressed(&mut commit_bytes).unwrap();
             // Submit the commit
-            assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+            assert_ok!(GameSolver::do_commit_timelocked_weights(
                 RuntimeOrigin::signed(*hk),
                 netuid,
                 commit_bytes
                     .try_into()
                     .expect("Failed to convert commit data"),
                 reveal_round,
-                SubtensorModule::get_commit_reveal_weights_version()
+                GameSolver::get_commit_reveal_weights_version()
             ));
 
             // Store the expected weights for later comparison
@@ -6210,9 +6187,9 @@ fn test_reveal_crv3_commits_max_neurons() {
         step_epochs(2, netuid);
 
         // ───── verify weights ───────────────────────────────────────────────
-        let w_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let w_sparse = GameSolver::get_weights_sparse(netuid.into());
         for hk in &committing_hotkeys {
-            let uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, hk).unwrap() as usize;
+            let uid = GameSolver::get_uid_for_net_and_hotkey(netuid, hk).unwrap() as usize;
             assert!(
                 !w_sparse.get(uid).unwrap_or(&Vec::new()).is_empty(),
                 "weights for uid {uid} should be set"
@@ -6228,11 +6205,11 @@ fn test_get_first_block_of_epoch_epoch_zero() {
         let tempo: u16 = 10;
         add_network(netuid, tempo, 0);
 
-        let first_block = SubtensorModule::get_first_block_of_epoch(netuid, 0);
+        let first_block = GameSolver::get_first_block_of_epoch(netuid, 0);
         assert_eq!(first_block, 0);
 
         // Cross-check: epoch at block 0 should be 0
-        assert_eq!(SubtensorModule::get_epoch_index(netuid, 0), 0);
+        assert_eq!(GameSolver::get_epoch_index(netuid, 0), 0);
     });
 }
 
@@ -6243,12 +6220,12 @@ fn test_get_first_block_of_epoch_small_epoch() {
         let tempo: u16 = 1;
         add_network(netuid, tempo, 0);
 
-        let first_block = SubtensorModule::get_first_block_of_epoch(netuid, 1);
+        let first_block = GameSolver::get_first_block_of_epoch(netuid, 1);
         assert_eq!(first_block, 1); // 1 * 2 - 1 = 1
 
         // Cross-check
-        assert_eq!(SubtensorModule::get_epoch_index(netuid, 1), 1);
-        assert_eq!(SubtensorModule::get_epoch_index(netuid, 0), 0);
+        assert_eq!(GameSolver::get_epoch_index(netuid, 1), 1);
+        assert_eq!(GameSolver::get_epoch_index(netuid, 0), 0);
     });
 }
 
@@ -6259,12 +6236,12 @@ fn test_get_first_block_of_epoch_with_offset() {
         let tempo: u16 = 10;
         add_network(netuid, tempo, 0);
 
-        let first_block = SubtensorModule::get_first_block_of_epoch(netuid, 1);
+        let first_block = GameSolver::get_first_block_of_epoch(netuid, 1);
         assert_eq!(first_block, 9); // 1 * 11 - 2 = 9
 
         // Cross-check
-        assert_eq!(SubtensorModule::get_epoch_index(netuid, 9), 1);
-        assert_eq!(SubtensorModule::get_epoch_index(netuid, 8), 0);
+        assert_eq!(GameSolver::get_epoch_index(netuid, 9), 1);
+        assert_eq!(GameSolver::get_epoch_index(netuid, 8), 0);
     });
 }
 
@@ -6276,7 +6253,7 @@ fn test_get_first_block_of_epoch_large_epoch() {
         add_network(netuid, tempo, 0);
 
         let epoch: u64 = 1000;
-        let first_block = SubtensorModule::get_first_block_of_epoch(netuid, epoch);
+        let first_block = GameSolver::get_first_block_of_epoch(netuid, epoch);
         assert_eq!(first_block, epoch * 101 - 1); // No overflow for this size
 
         // Cross-check (simulate, as large block not runnable, but math holds)
@@ -6293,7 +6270,7 @@ fn test_get_first_block_of_epoch_step_blocks_and_assert_with_until_next() {
 
         let mut current_block: u64 = 0;
         for expected_epoch in 0..10u64 {
-            let expected_first = SubtensorModule::get_first_block_of_epoch(netuid, expected_epoch);
+            let expected_first = GameSolver::get_first_block_of_epoch(netuid, expected_epoch);
 
             // Step blocks until we reach the start of this epoch
             while current_block < expected_first {
@@ -6304,13 +6281,13 @@ fn test_get_first_block_of_epoch_step_blocks_and_assert_with_until_next() {
             // Assert we are at the first block of the epoch
             assert_eq!(current_block, expected_first);
             assert_eq!(
-                SubtensorModule::get_epoch_index(netuid, current_block),
+                GameSolver::get_epoch_index(netuid, current_block),
                 expected_epoch
             );
 
             // From here, blocks_until_next_epoch should point to the start of next epoch
-            let until_next = SubtensorModule::blocks_until_next_epoch(netuid, tempo, current_block);
-            let next_first = SubtensorModule::get_first_block_of_epoch(netuid, expected_epoch + 1);
+            let until_next = GameSolver::blocks_until_next_epoch(netuid, tempo, current_block);
+            let next_first = GameSolver::get_first_block_of_epoch(netuid, expected_epoch + 1);
             assert_eq!(current_block + until_next + 1, next_first); // +1 since until is blocks to end, +1 to start next
 
             // Advance to near end of this epoch
@@ -6318,13 +6295,12 @@ fn test_get_first_block_of_epoch_step_blocks_and_assert_with_until_next() {
             run_to_block(last_block);
             current_block = System::block_number();
             assert_eq!(
-                SubtensorModule::get_epoch_index(netuid, current_block),
+                GameSolver::get_epoch_index(netuid, current_block),
                 expected_epoch
             );
 
             // Until next from near end
-            let until_next_end =
-                SubtensorModule::blocks_until_next_epoch(netuid, tempo, current_block);
+            let until_next_end = GameSolver::blocks_until_next_epoch(netuid, tempo, current_block);
             assert_eq!(current_block + until_next_end + 1, next_first);
         }
     });
@@ -6342,34 +6318,34 @@ fn test_reveal_crv3_commits_hotkey_check() {
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey1, U256::from(3), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(4), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
 
-        let neuron_uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1)
+        let neuron_uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1)
             .expect("Failed to get neuron UID for hotkey1");
-        let neuron_uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey2)
+        let neuron_uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey2)
             .expect("Failed to get neuron UID for hotkey2");
 
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid1, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid2, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(3), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(4), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid1, true);
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid2, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(3), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(4), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &(U256::from(3)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &(U256::from(4)),
             netuid,
             1.into(),
         );
 
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
 
         let payload = WeightsTlockPayload {
             hotkey: hotkey2.encode(), // Mismatch: using hotkey2 instead of hotkey1
@@ -6417,12 +6393,12 @@ fn test_reveal_crv3_commits_hotkey_check() {
             "Commit bytes now contain {commit_bytes:#?}"
         );
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey1),
             netuid,
             commit_bytes.clone().try_into().expect("Failed to convert commit bytes into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         let sig_bytes = hex::decode("b44679b9a59af2ec876b1a6b1ad52ea9b1615fc3982b19576350f93447cb1125e342b73a8dd2bacbe47e4b6b63ed5e39")
@@ -6440,7 +6416,7 @@ fn test_reveal_crv3_commits_hotkey_check() {
         // Step epochs to run the epoch via the blockstep
         step_epochs(3, netuid);
 
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse.get(neuron_uid1 as usize).cloned().unwrap_or_default();
 
         assert!(
@@ -6459,34 +6435,34 @@ fn test_reveal_crv3_commits_hotkey_check() {
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey1, U256::from(3), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(4), 100_000);
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
 
-        let neuron_uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1)
+        let neuron_uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1)
             .expect("Failed to get neuron UID for hotkey1");
-        let neuron_uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey2)
+        let neuron_uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey2)
             .expect("Failed to get neuron UID for hotkey2");
 
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid1, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, neuron_uid2, true);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(3), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(4), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid1, true);
+        GameSolver::set_validator_permit_for_uid(netuid, neuron_uid2, true);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(3), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(4), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &(U256::from(3)),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &(U256::from(4)),
             netuid,
             1.into(),
         );
 
-        let version_key = SubtensorModule::get_weights_version_key(netuid);
+        let version_key = GameSolver::get_weights_version_key(netuid);
 
         let payload = WeightsTlockPayload {
             hotkey: hotkey1.encode(), // Match: using hotkey1
@@ -6534,12 +6510,12 @@ fn test_reveal_crv3_commits_hotkey_check() {
             "Commit bytes now contain {commit_bytes:#?}"
         );
 
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey1),
             netuid,
             commit_bytes.clone().try_into().expect("Failed to convert commit bytes into bounded vector"),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         let sig_bytes = hex::decode("b44679b9a59af2ec876b1a6b1ad52ea9b1615fc3982b19576350f93447cb1125e342b73a8dd2bacbe47e4b6b63ed5e39")
@@ -6557,7 +6533,7 @@ fn test_reveal_crv3_commits_hotkey_check() {
         // Step epochs to run the epoch via the blockstep
         step_epochs(3, netuid);
 
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let weights = weights_sparse.get(neuron_uid1 as usize).cloned().unwrap_or_default();
 
         assert!(
@@ -6610,20 +6586,20 @@ fn test_reveal_crv3_commits_retry_on_missing_pulse() {
         // ─── network & neuron ───────────────────────────────────────────────
         add_network(netuid, 5, 0);
         register_ok_neuron(netuid, hotkey, U256::from(3), 100_000);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_stake_threshold(0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_stake_threshold(0);
 
-        let uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey).unwrap();
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid, true);
+        let uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey).unwrap();
+        GameSolver::set_validator_permit_for_uid(netuid, uid, true);
 
         // ─── craft commit ───────────────────────────────────────────────────
         let payload = WeightsTlockPayload {
             hotkey: hotkey.encode(),
             values: vec![10],
             uids: vec![uid],
-            version_key: SubtensorModule::get_weights_version_key(netuid),
+            version_key: GameSolver::get_weights_version_key(netuid),
         };
         let esk = [2u8; 32];
         let pk_bytes = hex::decode(
@@ -6651,12 +6627,12 @@ fn test_reveal_crv3_commits_retry_on_missing_pulse() {
         ct.serialize_compressed(&mut commit_bytes).unwrap();
 
         // submit commit
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey),
             netuid,
             commit_bytes.clone().try_into().unwrap(),
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         // epoch in which commit was stored
@@ -6667,9 +6643,8 @@ fn test_reveal_crv3_commits_retry_on_missing_pulse() {
                 .expect("commit stored");
 
         // first block of reveal epoch (commit_epoch + RP)
-        let first_reveal_epoch = stored_epoch + SubtensorModule::get_reveal_period(netuid);
-        let first_reveal_block =
-            SubtensorModule::get_first_block_of_epoch(netuid, first_reveal_epoch);
+        let first_reveal_epoch = stored_epoch + GameSolver::get_reveal_period(netuid);
+        let first_reveal_block = GameSolver::get_first_block_of_epoch(netuid, first_reveal_epoch);
         run_to_block_no_epoch(netuid, first_reveal_block);
 
         // run *one* block inside reveal epoch without pulse → commit should stay queued
@@ -6697,7 +6672,7 @@ fn test_reveal_crv3_commits_retry_on_missing_pulse() {
 
         step_block(1); // automatic reveal runs here
 
-        let weights = SubtensorModule::get_weights_sparse(netuid.into())
+        let weights = GameSolver::get_weights_sparse(netuid.into())
             .get(uid as usize)
             .cloned()
             .unwrap_or_default();
@@ -6726,26 +6701,26 @@ fn test_reveal_crv3_commits_legacy_payload_success() {
         register_ok_neuron(netuid, hotkey1, U256::from(3), 100_000);
         register_ok_neuron(netuid, hotkey2, U256::from(4), 100_000);
 
-        SubtensorModule::set_stake_threshold(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, 3));
+        GameSolver::set_stake_threshold(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        assert_ok!(GameSolver::set_reveal_period(netuid, 3));
 
-        let uid1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey1).unwrap();
-        let uid2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey2).unwrap();
+        let uid1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey1).unwrap();
+        let uid2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey2).unwrap();
 
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid1, true);
-        SubtensorModule::set_validator_permit_for_uid(netuid, uid2, true);
+        GameSolver::set_validator_permit_for_uid(netuid, uid1, true);
+        GameSolver::set_validator_permit_for_uid(netuid, uid2, true);
 
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(3), 1);
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(4), 1);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::add_balance_to_coldkey_account(&U256::from(3), 1);
+        GameSolver::add_balance_to_coldkey_account(&U256::from(4), 1);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey1,
             &U256::from(3),
             netuid,
             1.into(),
         );
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &U256::from(4),
             netuid,
@@ -6758,7 +6733,7 @@ fn test_reveal_crv3_commits_legacy_payload_success() {
         let legacy_payload = LegacyWeightsTlockPayload {
             uids: vec![uid1, uid2],
             values: vec![10, 20],
-            version_key: SubtensorModule::get_weights_version_key(netuid),
+            version_key: GameSolver::get_weights_version_key(netuid),
         };
         let serialized_payload = legacy_payload.encode();
 
@@ -6799,12 +6774,12 @@ fn test_reveal_crv3_commits_legacy_payload_success() {
         // ─────────────────────────────────────
         // 3 ▸ put commit on‑chain
         // ─────────────────────────────────────
-        assert_ok!(SubtensorModule::do_commit_timelocked_weights(
+        assert_ok!(GameSolver::do_commit_timelocked_weights(
             RuntimeOrigin::signed(hotkey1),
             netuid,
             bounded_commit,
             reveal_round,
-            SubtensorModule::get_commit_reveal_weights_version()
+            GameSolver::get_commit_reveal_weights_version()
         ));
 
         // insert pulse so reveal can succeed the first time
@@ -6822,8 +6797,8 @@ fn test_reveal_crv3_commits_legacy_payload_success() {
             },
         );
 
-        let commit_block = SubtensorModule::get_current_block_as_u64();
-        let commit_epoch = SubtensorModule::get_epoch_index(netuid, commit_block);
+        let commit_block = GameSolver::get_current_block_as_u64();
+        let commit_epoch = GameSolver::get_epoch_index(netuid, commit_block);
 
         // ─────────────────────────────────────
         // 4 ▸ advance epochs to trigger reveal
@@ -6833,7 +6808,7 @@ fn test_reveal_crv3_commits_legacy_payload_success() {
         // ─────────────────────────────────────
         // 5 ▸ assertions
         // ─────────────────────────────────────
-        let weights_sparse = SubtensorModule::get_weights_sparse(netuid.into());
+        let weights_sparse = GameSolver::get_weights_sparse(netuid.into());
         let w1 = weights_sparse
             .get(uid1 as usize)
             .cloned()

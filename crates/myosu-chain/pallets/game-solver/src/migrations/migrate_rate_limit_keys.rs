@@ -48,7 +48,7 @@ where
     weight = weight.saturating_add(child_weight);
     weight = weight.saturating_add(delegate_weight);
 
-    let prefix = storage_prefix("SubtensorModule", "LastRateLimitedBlock");
+    let prefix = storage_prefix("GameSolver", "LastRateLimitedBlock");
     let mut cursor = prefix.clone();
     let mut entries = Vec::new();
 

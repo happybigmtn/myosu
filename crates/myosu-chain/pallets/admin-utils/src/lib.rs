@@ -25,8 +25,8 @@ pub mod pallet {
     use frame_support::traits::tokens::Balance;
     use frame_support::{dispatch::DispatchResult, pallet_prelude::StorageMap};
     use frame_system::pallet_prelude::*;
-    use pallet_game_solver as pallet_subtensor;
-    use pallet_subtensor::{
+    use pallet_game_solver;
+    use pallet_game_solver::{
         DefaultMaxAllowedUids,
         utils::rate_limiting::{Hyperparameter, TransactionType},
     };
@@ -41,7 +41,7 @@ pub mod pallet {
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_subtensor::pallet::Config {
+    pub trait Config: frame_system::Config + pallet_game_solver::pallet::Config {
         /// Implementation of the AuraInterface
         type Aura: crate::AuraInterface<<Self as Config>::AuthorityId, Self::MaxAuthorities>;
 
@@ -197,7 +197,7 @@ pub mod pallet {
         .saturating_add(<T as frame_system::Config>::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_default_take(origin: OriginFor<T>, default_take: u16) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_max_delegate_take(default_take);
+            pallet_game_solver::Pallet::<T>::set_max_delegate_take(default_take);
             log::debug!("DefaultTakeSet( default_take: {default_take:?} ) ");
             Ok(())
         }
@@ -210,7 +210,7 @@ pub mod pallet {
         .saturating_add(T::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_tx_rate_limit(origin: OriginFor<T>, tx_rate_limit: u64) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_tx_rate_limit(tx_rate_limit);
+            pallet_game_solver::Pallet::<T>::set_tx_rate_limit(tx_rate_limit);
             log::debug!("TxRateLimitSet( tx_rate_limit: {tx_rate_limit:?} ) ");
             Ok(())
         }
@@ -227,15 +227,15 @@ pub mod pallet {
             netuid: NetUid,
             serving_rate_limit: u64,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::ServingRateLimit.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
-            pallet_subtensor::Pallet::<T>::set_serving_rate_limit(netuid, serving_rate_limit);
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::set_serving_rate_limit(netuid, serving_rate_limit);
             log::debug!("ServingRateLimitSet( serving_rate_limit: {serving_rate_limit:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::ServingRateLimit.into()],
@@ -256,13 +256,13 @@ pub mod pallet {
             min_difficulty: u64,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_min_difficulty(netuid, min_difficulty);
+            pallet_game_solver::Pallet::<T>::set_min_difficulty(netuid, min_difficulty);
             log::debug!(
                 "MinDifficultySet( netuid: {netuid:?} min_difficulty: {min_difficulty:?} ) "
             );
@@ -281,22 +281,22 @@ pub mod pallet {
             netuid: NetUid,
             max_difficulty: u64,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::MaxDifficulty.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_max_difficulty(netuid, max_difficulty);
+            pallet_game_solver::Pallet::<T>::set_max_difficulty(netuid, max_difficulty);
             log::debug!(
                 "MaxDifficultySet( netuid: {netuid:?} max_difficulty: {max_difficulty:?} ) "
             );
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::MaxDifficulty.into()],
@@ -316,25 +316,25 @@ pub mod pallet {
             netuid: NetUid,
             weights_version_key: u64,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin.clone(),
                 netuid,
                 &[TransactionType::SetWeightsVersionKey],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
 
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[TransactionType::SetWeightsVersionKey],
             );
 
-            pallet_subtensor::Pallet::<T>::set_weights_version_key(netuid, weights_version_key);
+            pallet_game_solver::Pallet::<T>::set_weights_version_key(netuid, weights_version_key);
             log::debug!(
                 "WeightsVersionKeySet( netuid: {netuid:?} weights_version_key: {weights_version_key:?} ) "
             );
@@ -356,10 +356,10 @@ pub mod pallet {
             ensure_root(origin)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_weights_set_rate_limit(
+            pallet_game_solver::Pallet::<T>::set_weights_set_rate_limit(
                 netuid,
                 weights_set_rate_limit,
             );
@@ -384,10 +384,10 @@ pub mod pallet {
             ensure_root(origin)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_adjustment_interval(netuid, adjustment_interval);
+            pallet_game_solver::Pallet::<T>::set_adjustment_interval(netuid, adjustment_interval);
             log::debug!(
                 "AdjustmentIntervalSet( netuid: {netuid:?} adjustment_interval: {adjustment_interval:?} ) "
             );
@@ -407,19 +407,19 @@ pub mod pallet {
             netuid: NetUid,
             adjustment_alpha: u64,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::AdjustmentAlpha.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_adjustment_alpha(netuid, adjustment_alpha);
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::set_adjustment_alpha(netuid, adjustment_alpha);
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::AdjustmentAlpha.into()],
@@ -440,19 +440,19 @@ pub mod pallet {
             netuid: NetUid,
             immunity_period: u16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::ImmunityPeriod.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
 
-            pallet_subtensor::Pallet::<T>::set_immunity_period(netuid, immunity_period);
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::set_immunity_period(netuid, immunity_period);
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::ImmunityPeriod.into()],
@@ -475,22 +475,22 @@ pub mod pallet {
             netuid: NetUid,
             min_allowed_weights: u16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::MinAllowedWeights.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_min_allowed_weights(netuid, min_allowed_weights);
+            pallet_game_solver::Pallet::<T>::set_min_allowed_weights(netuid, min_allowed_weights);
             log::debug!(
                 "MinAllowedWeightSet( netuid: {netuid:?} min_allowed_weights: {min_allowed_weights:?} ) "
             );
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::MinAllowedWeights.into()],
@@ -510,22 +510,22 @@ pub mod pallet {
             netuid: NetUid,
             max_allowed_uids: u16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::MaxAllowedUids.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
             ensure!(
-                max_allowed_uids >= pallet_subtensor::Pallet::<T>::get_min_allowed_uids(netuid),
+                max_allowed_uids >= pallet_game_solver::Pallet::<T>::get_min_allowed_uids(netuid),
                 Error::<T>::MaxAllowedUidsLessThanMinAllowedUids
             );
             ensure!(
-                pallet_subtensor::Pallet::<T>::get_subnetwork_n(netuid) <= max_allowed_uids,
+                pallet_game_solver::Pallet::<T>::get_subnetwork_n(netuid) <= max_allowed_uids,
                 Error::<T>::MaxAllowedUIdsLessThanCurrentUIds
             );
             ensure!(
@@ -533,13 +533,13 @@ pub mod pallet {
                 Error::<T>::MaxAllowedUidsGreaterThanDefaultMaxAllowedUids
             );
             // Prevent chain bloat: Require max UIDs to be limited
-            let mechanism_count = pallet_subtensor::MechanismCountCurrent::<T>::get(netuid);
-            pallet_subtensor::Pallet::<T>::ensure_max_uids_over_all_mechanisms(
+            let mechanism_count = pallet_game_solver::MechanismCountCurrent::<T>::get(netuid);
+            pallet_game_solver::Pallet::<T>::ensure_max_uids_over_all_mechanisms(
                 max_allowed_uids,
                 mechanism_count.into(),
             )?;
-            pallet_subtensor::Pallet::<T>::set_max_allowed_uids(netuid, max_allowed_uids);
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::set_max_allowed_uids(netuid, max_allowed_uids);
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::MaxAllowedUids.into()],
@@ -560,10 +560,10 @@ pub mod pallet {
         pub fn sudo_set_kappa(origin: OriginFor<T>, netuid: NetUid, kappa: u16) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_kappa(netuid, kappa);
+            pallet_game_solver::Pallet::<T>::set_kappa(netuid, kappa);
             log::debug!("KappaSet( netuid: {netuid:?} kappa: {kappa:?} ) ");
             Ok(())
         }
@@ -576,20 +576,20 @@ pub mod pallet {
         .saturating_add(<T as frame_system::Config>::DbWeight::get().reads(3_u64))
         .saturating_add(<T as frame_system::Config>::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_rho(origin: OriginFor<T>, netuid: NetUid, rho: u16) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::Rho.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_rho(netuid, rho);
+            pallet_game_solver::Pallet::<T>::set_rho(netuid, rho);
             log::debug!("RhoSet( netuid: {netuid:?} rho: {rho:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::Rho.into()],
@@ -609,28 +609,28 @@ pub mod pallet {
             netuid: NetUid,
             activity_cutoff: u16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::ActivityCutoff.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
 
             ensure!(
-                activity_cutoff >= pallet_subtensor::MinActivityCutoff::<T>::get(),
-                pallet_subtensor::Error::<T>::ActivityCutoffTooLow
+                activity_cutoff >= pallet_game_solver::MinActivityCutoff::<T>::get(),
+                pallet_game_solver::Error::<T>::ActivityCutoffTooLow
             );
 
-            pallet_subtensor::Pallet::<T>::set_activity_cutoff(netuid, activity_cutoff);
+            pallet_game_solver::Pallet::<T>::set_activity_cutoff(netuid, activity_cutoff);
             log::debug!(
                 "ActivityCutoffSet( netuid: {netuid:?} activity_cutoff: {activity_cutoff:?} ) "
             );
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::ActivityCutoff.into()],
@@ -651,7 +651,7 @@ pub mod pallet {
             registration_allowed: bool,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_network_registration_allowed(
+            pallet_game_solver::Pallet::<T>::set_network_registration_allowed(
                 netuid,
                 registration_allowed,
             );
@@ -674,21 +674,21 @@ pub mod pallet {
             netuid: NetUid,
             registration_allowed: bool,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::PowRegistrationAllowed.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
-            pallet_subtensor::Pallet::<T>::set_network_pow_registration_allowed(
+            pallet_game_solver::Pallet::<T>::set_network_pow_registration_allowed(
                 netuid,
                 registration_allowed,
             );
             log::debug!(
                 "NetworkPowRegistrationAllowed( registration_allowed: {registration_allowed:?} ) "
             );
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::PowRegistrationAllowed.into()],
@@ -709,13 +709,13 @@ pub mod pallet {
             target_registrations_per_interval: u16,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_target_registrations_per_interval(
+            pallet_game_solver::Pallet::<T>::set_target_registrations_per_interval(
                 netuid,
                 target_registrations_per_interval,
             );
@@ -737,14 +737,14 @@ pub mod pallet {
             netuid: NetUid,
             min_burn: TaoCurrency,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::MinBurn.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
             ensure!(
@@ -753,12 +753,12 @@ pub mod pallet {
             );
             // Min burn must be less than max burn
             ensure!(
-                min_burn < pallet_subtensor::Pallet::<T>::get_max_burn(netuid),
+                min_burn < pallet_game_solver::Pallet::<T>::get_max_burn(netuid),
                 Error::<T>::ValueNotInBounds
             );
-            pallet_subtensor::Pallet::<T>::set_min_burn(netuid, min_burn);
+            pallet_game_solver::Pallet::<T>::set_min_burn(netuid, min_burn);
             log::debug!("MinBurnSet( netuid: {netuid:?} min_burn: {min_burn:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::MinBurn.into()],
@@ -778,14 +778,14 @@ pub mod pallet {
             netuid: NetUid,
             max_burn: TaoCurrency,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::MaxBurn.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
             ensure!(
@@ -794,12 +794,12 @@ pub mod pallet {
             );
             // Max burn must be greater than min burn
             ensure!(
-                max_burn > pallet_subtensor::Pallet::<T>::get_min_burn(netuid),
+                max_burn > pallet_game_solver::Pallet::<T>::get_min_burn(netuid),
                 Error::<T>::ValueNotInBounds
             );
-            pallet_subtensor::Pallet::<T>::set_max_burn(netuid, max_burn);
+            pallet_game_solver::Pallet::<T>::set_max_burn(netuid, max_burn);
             log::debug!("MaxBurnSet( netuid: {netuid:?} max_burn: {max_burn:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::MaxBurn.into()],
@@ -820,12 +820,12 @@ pub mod pallet {
             difficulty: u64,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_difficulty(netuid, difficulty);
+            pallet_game_solver::Pallet::<T>::set_difficulty(netuid, difficulty);
             log::debug!("DifficultySet( netuid: {netuid:?} difficulty: {difficulty:?} ) ");
             Ok(())
         }
@@ -843,18 +843,18 @@ pub mod pallet {
             max_allowed_validators: u16,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
             ensure!(
                 max_allowed_validators
-                    <= pallet_subtensor::Pallet::<T>::get_max_allowed_uids(netuid),
+                    <= pallet_game_solver::Pallet::<T>::get_max_allowed_uids(netuid),
                 Error::<T>::MaxValidatorsLargerThanMaxUIds
             );
 
-            pallet_subtensor::Pallet::<T>::set_max_allowed_validators(
+            pallet_game_solver::Pallet::<T>::set_max_allowed_validators(
                 netuid,
                 max_allowed_validators,
             );
@@ -876,12 +876,12 @@ pub mod pallet {
             netuid: NetUid,
             bonds_moving_average: u64,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::BondsMovingAverage.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
             if maybe_owner.is_some() {
                 ensure!(
                     bonds_moving_average <= 975000,
@@ -890,14 +890,14 @@ pub mod pallet {
             }
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_bonds_moving_average(netuid, bonds_moving_average);
+            pallet_game_solver::Pallet::<T>::set_bonds_moving_average(netuid, bonds_moving_average);
             log::debug!(
                 "BondsMovingAverageSet( netuid: {netuid:?} bonds_moving_average: {bonds_moving_average:?} ) "
             );
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::BondsMovingAverage.into()],
@@ -917,20 +917,20 @@ pub mod pallet {
             netuid: NetUid,
             bonds_penalty: u16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::BondsPenalty.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_bonds_penalty(netuid, bonds_penalty);
+            pallet_game_solver::Pallet::<T>::set_bonds_penalty(netuid, bonds_penalty);
             log::debug!("BondsPenalty( netuid: {netuid:?} bonds_penalty: {bonds_penalty:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::BondsPenalty.into()],
@@ -951,13 +951,13 @@ pub mod pallet {
             max_registrations_per_block: u16,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_max_registrations_per_block(
+            pallet_game_solver::Pallet::<T>::set_max_registrations_per_block(
                 netuid,
                 max_registrations_per_block,
             );
@@ -978,7 +978,7 @@ pub mod pallet {
             subnet_owner_cut: u16,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_subnet_owner_cut(subnet_owner_cut);
+            pallet_game_solver::Pallet::<T>::set_subnet_owner_cut(subnet_owner_cut);
             log::debug!("SubnetOwnerCut( subnet_owner_cut: {subnet_owner_cut:?} ) ");
             Ok(())
         }
@@ -994,7 +994,7 @@ pub mod pallet {
             rate_limit: u64,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_network_rate_limit(rate_limit);
+            pallet_game_solver::Pallet::<T>::set_network_rate_limit(rate_limit);
             log::debug!("NetworkRateLimit( rate_limit: {rate_limit:?} ) ");
             Ok(())
         }
@@ -1008,12 +1008,12 @@ pub mod pallet {
         .saturating_add(<T as frame_system::Config>::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_tempo(origin: OriginFor<T>, netuid: NetUid, tempo: u16) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_tempo(netuid, tempo);
+            pallet_game_solver::Pallet::<T>::set_tempo(netuid, tempo);
             log::debug!("TempoSet( netuid: {netuid:?} tempo: {tempo:?} ) ");
             Ok(())
         }
@@ -1031,7 +1031,7 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
 
-            pallet_subtensor::Pallet::<T>::set_total_issuance(total_issuance);
+            pallet_game_solver::Pallet::<T>::set_total_issuance(total_issuance);
 
             Ok(())
         }
@@ -1048,7 +1048,7 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
 
-            pallet_subtensor::Pallet::<T>::set_network_immunity_period(immunity_period);
+            pallet_game_solver::Pallet::<T>::set_network_immunity_period(immunity_period);
 
             log::debug!("NetworkImmunityPeriod( period: {immunity_period:?} ) ");
 
@@ -1067,7 +1067,7 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
 
-            pallet_subtensor::Pallet::<T>::set_network_min_lock(lock_cost);
+            pallet_game_solver::Pallet::<T>::set_network_min_lock(lock_cost);
 
             log::debug!("NetworkMinLockCost( lock_cost: {lock_cost:?} ) ");
 
@@ -1082,7 +1082,7 @@ pub mod pallet {
         .saturating_add(<T as frame_system::Config>::DbWeight::get().writes(1)))]
         pub fn sudo_set_subnet_limit(origin: OriginFor<T>, max_subnets: u16) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_max_subnets(max_subnets);
+            pallet_game_solver::Pallet::<T>::set_max_subnets(max_subnets);
             log::debug!("MaxSubnets ( max_subnets: {max_subnets:?} ) ");
             Ok(())
         }
@@ -1099,7 +1099,7 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
 
-            pallet_subtensor::Pallet::<T>::set_lock_reduction_interval(interval);
+            pallet_game_solver::Pallet::<T>::set_lock_reduction_interval(interval);
 
             log::debug!("NetworkLockReductionInterval( interval: {interval:?} ) ");
 
@@ -1120,10 +1120,10 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
-            pallet_subtensor::Pallet::<T>::set_rao_recycled(netuid, rao_recycled);
+            pallet_game_solver::Pallet::<T>::set_rao_recycled(netuid, rao_recycled);
             Ok(())
         }
 
@@ -1136,7 +1136,7 @@ pub mod pallet {
         .saturating_add(T::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_stake_threshold(origin: OriginFor<T>, min_stake: u64) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_stake_threshold(min_stake);
+            pallet_game_solver::Pallet::<T>::set_stake_threshold(min_stake);
             Ok(())
         }
 
@@ -1153,12 +1153,13 @@ pub mod pallet {
             min_stake: u64,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            let prev_min_stake = pallet_subtensor::Pallet::<T>::get_nominator_min_required_stake();
+            let prev_min_stake =
+                pallet_game_solver::Pallet::<T>::get_nominator_min_required_stake();
             log::trace!("Setting minimum stake to: {min_stake}");
-            pallet_subtensor::Pallet::<T>::set_nominator_min_required_stake(min_stake);
+            pallet_game_solver::Pallet::<T>::set_nominator_min_required_stake(min_stake);
             if min_stake > prev_min_stake {
                 log::trace!("Clearing small nominations if possible");
-                pallet_subtensor::Pallet::<T>::clear_small_nominations();
+                pallet_game_solver::Pallet::<T>::clear_small_nominations();
                 log::trace!("Small nominations cleared");
             }
             Ok(())
@@ -1176,7 +1177,7 @@ pub mod pallet {
             tx_rate_limit: u64,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_tx_delegate_take_rate_limit(tx_rate_limit);
+            pallet_game_solver::Pallet::<T>::set_tx_delegate_take_rate_limit(tx_rate_limit);
             log::debug!(
                 "TxRateLimitDelegateTakeSet( tx_delegate_take_rate_limit: {tx_rate_limit:?} ) "
             );
@@ -1192,7 +1193,7 @@ pub mod pallet {
         .saturating_add(T::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_min_delegate_take(origin: OriginFor<T>, take: u16) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_min_delegate_take(take);
+            pallet_game_solver::Pallet::<T>::set_min_delegate_take(take);
             log::debug!("TxMinDelegateTakeSet( tx_min_delegate_take: {take:?} ) ");
             Ok(())
         }
@@ -1209,21 +1210,21 @@ pub mod pallet {
             netuid: NetUid,
             enabled: bool,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::CommitRevealEnabled.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
 
-            pallet_subtensor::Pallet::<T>::set_commit_reveal_weights_enabled(netuid, enabled);
+            pallet_game_solver::Pallet::<T>::set_commit_reveal_weights_enabled(netuid, enabled);
             log::debug!("ToggleSetWeightsCommitReveal( netuid: {netuid:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::CommitRevealEnabled.into()],
@@ -1249,15 +1250,15 @@ pub mod pallet {
             netuid: NetUid,
             enabled: bool,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::LiquidAlphaEnabled.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
-            pallet_subtensor::Pallet::<T>::set_liquid_alpha_enabled(netuid, enabled);
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::set_liquid_alpha_enabled(netuid, enabled);
             log::debug!("LiquidAlphaEnableToggled( netuid: {netuid:?}, Enabled: {enabled:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::LiquidAlphaEnabled.into()],
@@ -1276,17 +1277,17 @@ pub mod pallet {
             alpha_low: u16,
             alpha_high: u16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin.clone(),
                 netuid,
                 &[Hyperparameter::AlphaValues.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
-            let res = pallet_subtensor::Pallet::<T>::do_set_alpha_values(
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            let res = pallet_game_solver::Pallet::<T>::do_set_alpha_values(
                 origin, netuid, alpha_low, alpha_high,
             );
             if res.is_ok() {
-                pallet_subtensor::Pallet::<T>::record_owner_rl(
+                pallet_game_solver::Pallet::<T>::record_owner_rl(
                     maybe_owner,
                     netuid,
                     &[Hyperparameter::AlphaValues.into()],
@@ -1321,7 +1322,7 @@ pub mod pallet {
             ensure_root(origin)?;
 
             // Set the duration of schedule dissolve network
-            pallet_subtensor::Pallet::<T>::set_dissolve_network_schedule_duration(duration);
+            pallet_game_solver::Pallet::<T>::set_dissolve_network_schedule_duration(duration);
 
             // Log the change
             log::trace!("DissolveNetworkScheduleDurationSet( duration: {duration:?} )");
@@ -1354,22 +1355,22 @@ pub mod pallet {
             netuid: NetUid,
             interval: u64,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::WeightCommitInterval.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
 
             log::debug!("SetWeightCommitInterval( netuid: {netuid:?}, interval: {interval:?} ) ");
 
-            pallet_subtensor::Pallet::<T>::set_reveal_period(netuid, interval)?;
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::set_reveal_period(netuid, interval)?;
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::WeightCommitInterval.into()],
@@ -1426,15 +1427,15 @@ pub mod pallet {
             netuid: NetUid,
             toggle: bool,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::TransferEnabled.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
-            let res = pallet_subtensor::Pallet::<T>::toggle_transfer(netuid, toggle);
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            let res = pallet_game_solver::Pallet::<T>::toggle_transfer(netuid, toggle);
             if res.is_ok() {
-                pallet_subtensor::Pallet::<T>::record_owner_rl(
+                pallet_game_solver::Pallet::<T>::record_owner_rl(
                     maybe_owner,
                     netuid,
                     &[Hyperparameter::TransferEnabled.into()],
@@ -1459,17 +1460,17 @@ pub mod pallet {
         pub fn sudo_set_recycle_or_burn(
             origin: OriginFor<T>,
             netuid: NetUid,
-            recycle_or_burn: pallet_subtensor::RecycleOrBurnEnum,
+            recycle_or_burn: pallet_game_solver::RecycleOrBurnEnum,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::RecycleOrBurn.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
-            pallet_subtensor::Pallet::<T>::set_recycle_or_burn(netuid, recycle_or_burn);
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::set_recycle_or_burn(netuid, recycle_or_burn);
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::RecycleOrBurn.into()],
@@ -1527,7 +1528,7 @@ pub mod pallet {
         .saturating_add(T::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_subnet_moving_alpha(origin: OriginFor<T>, alpha: I96F32) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::SubnetMovingAlpha::<T>::set(alpha);
+            pallet_game_solver::SubnetMovingAlpha::<T>::set(alpha);
 
             log::debug!("SubnetMovingAlphaSet( alpha: {alpha:?} )");
             Ok(())
@@ -1553,7 +1554,7 @@ pub mod pallet {
             netuid: NetUid,
             hotkey: <T as frame_system::Config>::AccountId,
         ) -> DispatchResult {
-            pallet_subtensor::Pallet::<T>::do_set_sn_owner_hotkey(origin, netuid, &hotkey)
+            pallet_game_solver::Pallet::<T>::do_set_sn_owner_hotkey(origin, netuid, &hotkey)
         }
 
         ///
@@ -1577,7 +1578,7 @@ pub mod pallet {
             ema_halving: u64,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::EMAPriceHalvingBlocks::<T>::set(netuid, ema_halving);
+            pallet_game_solver::EMAPriceHalvingBlocks::<T>::set(netuid, ema_halving);
 
             log::debug!(
                 "EMAPriceHalvingBlocks( netuid: {netuid:?}, ema_halving: {ema_halving:?} )"
@@ -1609,15 +1610,15 @@ pub mod pallet {
             netuid: NetUid,
             steepness: i16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin.clone(),
                 netuid,
                 &[Hyperparameter::AlphaSigmoidSteepness.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
 
@@ -1627,10 +1628,10 @@ pub mod pallet {
                 Error::<T>::NegativeSigmoidSteepness
             );
 
-            pallet_subtensor::Pallet::<T>::set_alpha_sigmoid_steepness(netuid, steepness);
+            pallet_game_solver::Pallet::<T>::set_alpha_sigmoid_steepness(netuid, steepness);
 
             log::debug!("AlphaSigmoidSteepnessSet( netuid: {netuid:?}, steepness: {steepness:?} )");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::AlphaSigmoidSteepness.into()],
@@ -1656,17 +1657,17 @@ pub mod pallet {
             netuid: NetUid,
             enabled: bool,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::Yuma3Enabled.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
-            pallet_subtensor::Pallet::<T>::set_yuma3_enabled(netuid, enabled);
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::set_yuma3_enabled(netuid, enabled);
 
             Self::deposit_event(Event::Yuma3EnableToggled { netuid, enabled });
             log::debug!("Yuma3EnableToggled( netuid: {netuid:?}, Enabled: {enabled:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::Yuma3Enabled.into()],
@@ -1692,17 +1693,17 @@ pub mod pallet {
             netuid: NetUid,
             enabled: bool,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::BondsResetEnabled.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
-            pallet_subtensor::Pallet::<T>::set_bonds_reset(netuid, enabled);
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::set_bonds_reset(netuid, enabled);
 
             Self::deposit_event(Event::BondsResetToggled { netuid, enabled });
             log::debug!("BondsResetToggled( netuid: {netuid:?} bonds_reset: {enabled:?} ) ");
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::BondsResetEnabled.into()],
@@ -1749,7 +1750,7 @@ pub mod pallet {
             netuid: NetUid,
             hotkey: <T as frame_system::Config>::AccountId,
         ) -> DispatchResult {
-            pallet_subtensor::Pallet::<T>::do_set_sn_owner_hotkey(origin, netuid, &hotkey)
+            pallet_game_solver::Pallet::<T>::do_set_sn_owner_hotkey(origin, netuid, &hotkey)
         }
 
         /// Enables or disables subtoken trading for a given subnet.
@@ -1774,8 +1775,8 @@ pub mod pallet {
             subtoken_enabled: bool,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
-            pallet_subtensor::SubtokenEnabled::<T>::set(netuid, subtoken_enabled);
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::SubtokenEnabled::<T>::set(netuid, subtoken_enabled);
 
             log::debug!(
                 "SubtokenEnabled( netuid: {netuid:?}, subtoken_enabled: {subtoken_enabled:?} )"
@@ -1793,7 +1794,7 @@ pub mod pallet {
             version: u16,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_commit_reveal_weights_version(version);
+            pallet_game_solver::Pallet::<T>::set_commit_reveal_weights_version(version);
             Ok(())
         }
 
@@ -1807,14 +1808,14 @@ pub mod pallet {
             netuid: NetUid,
             immune_neurons: u16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[Hyperparameter::ImmuneNeuronLimit.into()],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
-            pallet_subtensor::Pallet::<T>::set_owner_immune_neuron_limit(netuid, immune_neurons)?;
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::set_owner_immune_neuron_limit(netuid, immune_neurons)?;
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[Hyperparameter::ImmuneNeuronLimit.into()],
@@ -1831,7 +1832,7 @@ pub mod pallet {
 		.saturating_add(<T as frame_system::Config>::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_ck_burn(origin: OriginFor<T>, burn: u64) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_ck_burn(burn);
+            pallet_game_solver::Pallet::<T>::set_ck_burn(burn);
             log::debug!("CKBurnSet( burn: {burn:?} ) ");
             Ok(())
         }
@@ -1844,7 +1845,7 @@ pub mod pallet {
         .saturating_add(<T as frame_system::Config>::DbWeight::get().writes(1_u64)))]
         pub fn sudo_set_admin_freeze_window(origin: OriginFor<T>, window: u16) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_admin_freeze_window(window);
+            pallet_game_solver::Pallet::<T>::set_admin_freeze_window(window);
             log::debug!("AdminFreezeWindowSet( window: {window:?} ) ");
             Ok(())
         }
@@ -1860,7 +1861,7 @@ pub mod pallet {
             epochs: u16,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_owner_hyperparam_rate_limit(epochs);
+            pallet_game_solver::Pallet::<T>::set_owner_hyperparam_rate_limit(epochs);
             log::debug!("OwnerHyperparamRateLimitSet( epochs: {epochs:?} ) ");
             Ok(())
         }
@@ -1875,16 +1876,16 @@ pub mod pallet {
             netuid: NetUid,
             mechanism_count: MechId,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[TransactionType::MechanismCountUpdate],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
-            pallet_subtensor::Pallet::<T>::do_set_mechanism_count(netuid, mechanism_count)?;
+            pallet_game_solver::Pallet::<T>::do_set_mechanism_count(netuid, mechanism_count)?;
 
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[TransactionType::MechanismCountUpdate],
@@ -1902,16 +1903,16 @@ pub mod pallet {
             netuid: NetUid,
             maybe_split: Option<Vec<u16>>,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin,
                 netuid,
                 &[TransactionType::MechanismEmission],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
-            pallet_subtensor::Pallet::<T>::do_set_emission_split(netuid, maybe_split)?;
+            pallet_game_solver::Pallet::<T>::do_set_emission_split(netuid, maybe_split)?;
 
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[TransactionType::MechanismEmission],
@@ -1933,16 +1934,16 @@ pub mod pallet {
             netuid: NetUid,
             max_n: u16,
         ) -> DispatchResult {
-            let maybe_owner = pallet_subtensor::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
+            let maybe_owner = pallet_game_solver::Pallet::<T>::ensure_sn_owner_or_root_with_limits(
                 origin.clone(),
                 netuid,
                 &[TransactionType::MaxUidsTrimming],
             )?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
-            pallet_subtensor::Pallet::<T>::trim_to_max_allowed_uids(netuid, max_n)?;
+            pallet_game_solver::Pallet::<T>::trim_to_max_allowed_uids(netuid, max_n)?;
 
-            pallet_subtensor::Pallet::<T>::record_owner_rl(
+            pallet_game_solver::Pallet::<T>::record_owner_rl(
                 maybe_owner,
                 netuid,
                 &[TransactionType::MaxUidsTrimming],
@@ -1962,22 +1963,22 @@ pub mod pallet {
             min_allowed_uids: u16,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::ensure_admin_window_open(netuid)?;
+            pallet_game_solver::Pallet::<T>::ensure_admin_window_open(netuid)?;
 
             ensure!(
-                pallet_subtensor::Pallet::<T>::if_subnet_exist(netuid),
+                pallet_game_solver::Pallet::<T>::if_subnet_exist(netuid),
                 Error::<T>::SubnetDoesNotExist
             );
             ensure!(
-                min_allowed_uids < pallet_subtensor::Pallet::<T>::get_max_allowed_uids(netuid),
+                min_allowed_uids < pallet_game_solver::Pallet::<T>::get_max_allowed_uids(netuid),
                 Error::<T>::MinAllowedUidsGreaterThanMaxAllowedUids
             );
             ensure!(
-                min_allowed_uids < pallet_subtensor::Pallet::<T>::get_subnetwork_n(netuid),
+                min_allowed_uids < pallet_game_solver::Pallet::<T>::get_subnetwork_n(netuid),
                 Error::<T>::MinAllowedUidsGreaterThanCurrentUids
             );
 
-            pallet_subtensor::Pallet::<T>::set_min_allowed_uids(netuid, min_allowed_uids);
+            pallet_game_solver::Pallet::<T>::set_min_allowed_uids(netuid, min_allowed_uids);
 
             log::debug!(
                 "MinAllowedUidsSet( netuid: {netuid:?} min_allowed_uids: {min_allowed_uids:?} ) "
@@ -1995,7 +1996,7 @@ pub mod pallet {
             flow_cutoff: I64F64,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_tao_flow_cutoff(flow_cutoff);
+            pallet_game_solver::Pallet::<T>::set_tao_flow_cutoff(flow_cutoff);
             log::debug!("set_tao_flow_cutoff( {flow_cutoff:?} ) ");
             Ok(())
         }
@@ -2018,7 +2019,7 @@ pub mod pallet {
                 Error::<T>::InvalidValue
             );
 
-            pallet_subtensor::Pallet::<T>::set_tao_flow_normalization_exponent(exponent);
+            pallet_game_solver::Pallet::<T>::set_tao_flow_normalization_exponent(exponent);
             log::debug!("set_tao_flow_normalization_exponent( {exponent:?} ) ");
             Ok(())
         }
@@ -2033,7 +2034,7 @@ pub mod pallet {
             smoothing_factor: u64,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_tao_flow_smoothing_factor(smoothing_factor);
+            pallet_game_solver::Pallet::<T>::set_tao_flow_smoothing_factor(smoothing_factor);
             log::debug!("set_tao_flow_smoothing_factor( {smoothing_factor:?} ) ");
             Ok(())
         }
@@ -2048,7 +2049,7 @@ pub mod pallet {
             max_mechanism_count: MechId,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::do_set_max_mechanism_count(max_mechanism_count)?;
+            pallet_game_solver::Pallet::<T>::do_set_max_mechanism_count(max_mechanism_count)?;
             Ok(())
         }
 
@@ -2063,7 +2064,7 @@ pub mod pallet {
             min: u16,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_min_non_immune_uids(netuid, min);
+            pallet_game_solver::Pallet::<T>::set_min_non_immune_uids(netuid, min);
             Ok(())
         }
 
@@ -2073,7 +2074,7 @@ pub mod pallet {
         .saturating_add(<T as frame_system::Config>::DbWeight::get().writes(1)))]
         pub fn sudo_set_start_call_delay(origin: OriginFor<T>, delay: u64) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_start_call_delay(delay);
+            pallet_game_solver::Pallet::<T>::set_start_call_delay(delay);
             log::debug!("StartCallDelay( delay: {delay:?} ) ");
             Ok(())
         }
@@ -2088,7 +2089,7 @@ pub mod pallet {
             duration: BlockNumberFor<T>,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_coldkey_swap_announcement_delay(duration);
+            pallet_game_solver::Pallet::<T>::set_coldkey_swap_announcement_delay(duration);
             log::trace!("ColdkeySwapAnnouncementDelaySet( duration: {duration:?} )");
             Ok(())
         }
@@ -2103,7 +2104,7 @@ pub mod pallet {
             duration: BlockNumberFor<T>,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            pallet_subtensor::Pallet::<T>::set_coldkey_swap_reannouncement_delay(duration);
+            pallet_game_solver::Pallet::<T>::set_coldkey_swap_reannouncement_delay(duration);
             log::trace!("ColdkeySwapReannouncementDelaySet( duration: {duration:?} )");
             Ok(())
         }

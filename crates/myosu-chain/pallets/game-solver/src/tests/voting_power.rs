@@ -23,17 +23,17 @@ const DEFAULT_STAKE_AMOUNT: u64 = 1_000_000_000_000; // 1 million RAO
 
 /// Build epoch output from current state for testing voting power updates.
 fn build_mock_epoch_output(netuid: NetUid) -> BTreeMap<U256, EpochTerms> {
-    let n = SubtensorModule::get_subnetwork_n(netuid);
+    let n = GameSolver::get_subnetwork_n(netuid);
     let validator_permits = ValidatorPermit::<Test>::get(netuid);
 
     let mut output = BTreeMap::new();
     for uid in 0..n {
-        if let Ok(hotkey) = SubtensorModule::get_hotkey_for_net_and_uid(netuid, uid) {
+        if let Ok(hotkey) = GameSolver::get_hotkey_for_net_and_uid(netuid, uid) {
             let has_permit = validator_permits
                 .get(uid as usize)
                 .copied()
                 .unwrap_or(false);
-            let stake = SubtensorModule::get_stake_for_hotkey_on_subnet(&hotkey, netuid).to_u64();
+            let stake = GameSolver::get_stake_for_hotkey_on_subnet(&hotkey, netuid).to_u64();
             output.insert(
                 hotkey,
                 EpochTerms {
@@ -77,12 +77,12 @@ impl VotingPowerTestFixture {
     #[allow(clippy::arithmetic_side_effects)]
     fn setup_for_staking_with_amount(&self, amount: u64) {
         mock::setup_reserves(self.netuid, (amount * 100).into(), (amount * 100).into());
-        SubtensorModule::add_balance_to_coldkey_account(&self.coldkey, amount * 10);
+        GameSolver::add_balance_to_coldkey_account(&self.coldkey, amount * 10);
     }
 
     /// Enable voting power tracking for the subnet
     fn enable_tracking(&self) {
-        assert_ok!(SubtensorModule::enable_voting_power_tracking(
+        assert_ok!(GameSolver::enable_voting_power_tracking(
             RuntimeOrigin::signed(self.coldkey),
             self.netuid
         ));
@@ -90,7 +90,7 @@ impl VotingPowerTestFixture {
 
     /// Add stake from coldkey to hotkey
     fn add_stake(&self, amount: u64) {
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(self.coldkey),
             self.hotkey,
             self.netuid,
@@ -107,13 +107,13 @@ impl VotingPowerTestFixture {
     fn run_epochs(&self, n: u32) {
         for _ in 0..n {
             let epoch_output = build_mock_epoch_output(self.netuid);
-            SubtensorModule::update_voting_power_for_subnet(self.netuid, &epoch_output);
+            GameSolver::update_voting_power_for_subnet(self.netuid, &epoch_output);
         }
     }
 
     /// Get current voting power for the hotkey
     fn get_voting_power(&self) -> u64 {
-        SubtensorModule::get_voting_power(self.netuid, &self.hotkey)
+        GameSolver::get_voting_power(self.netuid, &self.hotkey)
     }
 
     /// Full setup: reserves, balance, tracking enabled, stake added, validator permit
@@ -136,19 +136,14 @@ fn test_enable_voting_power_tracking() {
         let f = VotingPowerTestFixture::new();
 
         // Initially disabled
-        assert!(!SubtensorModule::get_voting_power_tracking_enabled(
-            f.netuid
-        ));
+        assert!(!GameSolver::get_voting_power_tracking_enabled(f.netuid));
 
         // Enable tracking (subnet owner can do this)
         f.enable_tracking();
 
         // Now enabled
-        assert!(SubtensorModule::get_voting_power_tracking_enabled(f.netuid));
-        assert_eq!(
-            SubtensorModule::get_voting_power_disable_at_block(f.netuid),
-            0
-        );
+        assert!(GameSolver::get_voting_power_tracking_enabled(f.netuid));
+        assert_eq!(GameSolver::get_voting_power_disable_at_block(f.netuid), 0);
     });
 }
 
@@ -159,12 +154,12 @@ fn test_enable_voting_power_tracking_root_can_enable() {
         let f = VotingPowerTestFixture::new();
 
         // Root can enable
-        assert_ok!(SubtensorModule::enable_voting_power_tracking(
+        assert_ok!(GameSolver::enable_voting_power_tracking(
             RuntimeOrigin::root(),
             f.netuid
         ));
 
-        assert!(SubtensorModule::get_voting_power_tracking_enabled(f.netuid));
+        assert!(GameSolver::get_voting_power_tracking_enabled(f.netuid));
     });
 }
 
@@ -175,17 +170,17 @@ fn test_disable_voting_power_tracking_schedules_disable() {
         let f = VotingPowerTestFixture::new();
         f.enable_tracking();
 
-        let current_block = SubtensorModule::get_current_block_as_u64();
+        let current_block = GameSolver::get_current_block_as_u64();
 
         // Schedule disable
-        assert_ok!(SubtensorModule::disable_voting_power_tracking(
+        assert_ok!(GameSolver::disable_voting_power_tracking(
             RuntimeOrigin::signed(f.coldkey),
             f.netuid
         ));
 
         // Still enabled, but scheduled for disable
-        assert!(SubtensorModule::get_voting_power_tracking_enabled(f.netuid));
-        let disable_at = SubtensorModule::get_voting_power_disable_at_block(f.netuid);
+        assert!(GameSolver::get_voting_power_tracking_enabled(f.netuid));
+        let disable_at = GameSolver::get_voting_power_disable_at_block(f.netuid);
         assert_eq!(
             disable_at,
             current_block + VOTING_POWER_DISABLE_GRACE_PERIOD_BLOCKS
@@ -201,10 +196,7 @@ fn test_disable_voting_power_tracking_fails_when_not_enabled() {
 
         // Try to disable when not enabled
         assert_noop!(
-            SubtensorModule::disable_voting_power_tracking(
-                RuntimeOrigin::signed(f.coldkey),
-                f.netuid
-            ),
+            GameSolver::disable_voting_power_tracking(RuntimeOrigin::signed(f.coldkey), f.netuid),
             Error::<Test>::VotingPowerTrackingNotEnabled
         );
     });
@@ -219,7 +211,7 @@ fn test_enable_voting_power_tracking_non_owner_fails() {
 
         // Non-owner cannot enable (returns BadOrigin)
         assert_noop!(
-            SubtensorModule::enable_voting_power_tracking(
+            GameSolver::enable_voting_power_tracking(
                 RuntimeOrigin::signed(random_account),
                 f.netuid
             ),
@@ -227,9 +219,7 @@ fn test_enable_voting_power_tracking_non_owner_fails() {
         );
 
         // Should still be disabled
-        assert!(!SubtensorModule::get_voting_power_tracking_enabled(
-            f.netuid
-        ));
+        assert!(!GameSolver::get_voting_power_tracking_enabled(f.netuid));
     });
 }
 
@@ -243,7 +233,7 @@ fn test_disable_voting_power_tracking_non_owner_fails() {
 
         // Non-owner cannot disable (returns BadOrigin)
         assert_noop!(
-            SubtensorModule::disable_voting_power_tracking(
+            GameSolver::disable_voting_power_tracking(
                 RuntimeOrigin::signed(random_account),
                 f.netuid
             ),
@@ -251,11 +241,8 @@ fn test_disable_voting_power_tracking_non_owner_fails() {
         );
 
         // Should still be enabled with no disable scheduled
-        assert!(SubtensorModule::get_voting_power_tracking_enabled(f.netuid));
-        assert_eq!(
-            SubtensorModule::get_voting_power_disable_at_block(f.netuid),
-            0
-        );
+        assert!(GameSolver::get_voting_power_tracking_enabled(f.netuid));
+        assert_eq!(GameSolver::get_voting_power_disable_at_block(f.netuid), 0);
     });
 }
 
@@ -270,21 +257,18 @@ fn test_set_voting_power_ema_alpha() {
         let f = VotingPowerTestFixture::new();
 
         // Get default alpha
-        let default_alpha = SubtensorModule::get_voting_power_ema_alpha(f.netuid);
+        let default_alpha = GameSolver::get_voting_power_ema_alpha(f.netuid);
         assert_eq!(default_alpha, 3_570_000_000_000_000); // 0.00357 * 10^18 = 2 weeks e-folding
 
         // Set new alpha (only root can do this)
         let new_alpha: u64 = 500_000_000_000_000_000; // 0.5 * 10^18
-        assert_ok!(SubtensorModule::sudo_set_voting_power_ema_alpha(
+        assert_ok!(GameSolver::sudo_set_voting_power_ema_alpha(
             RuntimeOrigin::root(),
             f.netuid,
             new_alpha
         ));
 
-        assert_eq!(
-            SubtensorModule::get_voting_power_ema_alpha(f.netuid),
-            new_alpha
-        );
+        assert_eq!(GameSolver::get_voting_power_ema_alpha(f.netuid), new_alpha);
     });
 }
 
@@ -297,7 +281,7 @@ fn test_set_voting_power_ema_alpha_fails_above_one() {
         // Try to set alpha > 1.0 (> 10^18)
         let invalid_alpha: u64 = MAX_VOTING_POWER_EMA_ALPHA + 1;
         assert_noop!(
-            SubtensorModule::sudo_set_voting_power_ema_alpha(
+            GameSolver::sudo_set_voting_power_ema_alpha(
                 RuntimeOrigin::root(),
                 f.netuid,
                 invalid_alpha
@@ -315,7 +299,7 @@ fn test_set_voting_power_ema_alpha_non_root_fails() {
 
         // Non-root cannot set alpha
         assert_noop!(
-            SubtensorModule::sudo_set_voting_power_ema_alpha(
+            GameSolver::sudo_set_voting_power_ema_alpha(
                 RuntimeOrigin::signed(f.coldkey),
                 f.netuid,
                 500_000_000_000_000_000
@@ -401,25 +385,25 @@ fn test_only_validators_get_voting_power() {
             (DEFAULT_STAKE_AMOUNT * 100).into(),
             (DEFAULT_STAKE_AMOUNT * 100).into(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, DEFAULT_STAKE_AMOUNT * 20);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, DEFAULT_STAKE_AMOUNT * 20);
 
         // Register miner
         register_ok_neuron(netuid, miner_hotkey, coldkey, 0);
 
         // Enable voting power tracking
-        assert_ok!(SubtensorModule::enable_voting_power_tracking(
+        assert_ok!(GameSolver::enable_voting_power_tracking(
             RuntimeOrigin::signed(coldkey),
             netuid
         ));
 
         // Add stake to both
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey),
             validator_hotkey,
             netuid,
             DEFAULT_STAKE_AMOUNT.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey),
             miner_hotkey,
             netuid,
@@ -431,11 +415,11 @@ fn test_only_validators_get_voting_power() {
 
         // Run epoch
         let epoch_output = build_mock_epoch_output(netuid);
-        SubtensorModule::update_voting_power_for_subnet(netuid, &epoch_output);
+        GameSolver::update_voting_power_for_subnet(netuid, &epoch_output);
 
         // Only validator should have voting power
-        assert!(SubtensorModule::get_voting_power(netuid, &validator_hotkey) > 0);
-        assert_eq!(SubtensorModule::get_voting_power(netuid, &miner_hotkey), 0);
+        assert!(GameSolver::get_voting_power(netuid, &validator_hotkey) > 0);
+        assert_eq!(GameSolver::get_voting_power(netuid, &miner_hotkey), 0);
     });
 }
 
@@ -479,15 +463,15 @@ fn test_voting_power_transfers_on_hotkey_swap() {
 
         // Verify old hotkey has voting power
         assert_eq!(f.get_voting_power(), voting_power_value);
-        assert_eq!(SubtensorModule::get_voting_power(f.netuid, &new_hotkey), 0);
+        assert_eq!(GameSolver::get_voting_power(f.netuid, &new_hotkey), 0);
 
         // Perform hotkey swap for this subnet
-        SubtensorModule::swap_voting_power_for_hotkey(&f.hotkey, &new_hotkey, f.netuid);
+        GameSolver::swap_voting_power_for_hotkey(&f.hotkey, &new_hotkey, f.netuid);
 
         // Old hotkey should have 0, new hotkey should have the voting power
         assert_eq!(f.get_voting_power(), 0);
         assert_eq!(
-            SubtensorModule::get_voting_power(f.netuid, &new_hotkey),
+            GameSolver::get_voting_power(f.netuid, &new_hotkey),
             voting_power_value
         );
     });
@@ -507,12 +491,12 @@ fn test_voting_power_swap_adds_to_existing() {
         VotingPower::<Test>::insert(f.netuid, new_hotkey, new_existing_voting_power);
 
         // Perform swap
-        SubtensorModule::swap_voting_power_for_hotkey(&f.hotkey, &new_hotkey, f.netuid);
+        GameSolver::swap_voting_power_for_hotkey(&f.hotkey, &new_hotkey, f.netuid);
 
         // New hotkey should have combined voting power
         assert_eq!(f.get_voting_power(), 0);
         assert_eq!(
-            SubtensorModule::get_voting_power(f.netuid, &new_hotkey),
+            GameSolver::get_voting_power(f.netuid, &new_hotkey),
             old_voting_power + new_existing_voting_power
         );
     });
@@ -532,7 +516,7 @@ fn test_voting_power_not_removed_if_never_above_threshold() {
         f.setup_full();
 
         // Get the threshold
-        let min_stake = SubtensorModule::get_stake_threshold();
+        let min_stake = GameSolver::get_stake_threshold();
 
         // Set voting power directly to a value below threshold (simulating building up)
         // This is below threshold but was never above it
@@ -565,7 +549,7 @@ fn test_voting_power_not_removed_with_small_dip_below_threshold() {
         f.enable_tracking();
         f.set_validator_permit(true);
 
-        let min_stake = SubtensorModule::get_stake_threshold();
+        let min_stake = GameSolver::get_stake_threshold();
 
         // Set voting power above threshold (validator was established)
         let above_threshold = min_stake + 100;
@@ -586,7 +570,7 @@ fn test_voting_power_not_removed_with_small_dip_below_threshold() {
             terms.stake = small_dip.into(); // Stake drops but stays in buffer zone
         }
 
-        SubtensorModule::update_voting_power_for_subnet(f.netuid, &epoch_output);
+        GameSolver::update_voting_power_for_subnet(f.netuid, &epoch_output);
 
         // Should NOT be removed - dip is within hysteresis buffer
         assert!(
@@ -628,7 +612,7 @@ fn test_voting_power_removed_with_significant_drop_below_threshold() {
         // With alpha = 1.0: new_ema = 1.0 * 0 + 0 * previous = 0
         // 0 < removal_threshold (90% of min_stake = 900M) AND previous (1B) >= min_stake (1B)
         // Should trigger removal
-        SubtensorModule::update_voting_power_for_subnet(f.netuid, &epoch_output);
+        GameSolver::update_voting_power_for_subnet(f.netuid, &epoch_output);
 
         assert!(
             !VotingPower::<Test>::contains_key(f.netuid, f.hotkey),
@@ -671,21 +655,18 @@ fn test_reenable_voting_power_clears_disable_schedule() {
         f.enable_tracking();
 
         // Schedule disable
-        assert_ok!(SubtensorModule::disable_voting_power_tracking(
+        assert_ok!(GameSolver::disable_voting_power_tracking(
             RuntimeOrigin::signed(f.coldkey),
             f.netuid
         ));
 
-        assert!(SubtensorModule::get_voting_power_disable_at_block(f.netuid) > 0);
+        assert!(GameSolver::get_voting_power_disable_at_block(f.netuid) > 0);
 
         // Re-enable should clear the disable schedule
         f.enable_tracking();
 
-        assert!(SubtensorModule::get_voting_power_tracking_enabled(f.netuid));
-        assert_eq!(
-            SubtensorModule::get_voting_power_disable_at_block(f.netuid),
-            0
-        );
+        assert!(GameSolver::get_voting_power_tracking_enabled(f.netuid));
+        assert_eq!(GameSolver::get_voting_power_disable_at_block(f.netuid), 0);
     });
 }
 
@@ -707,12 +688,12 @@ fn test_voting_power_finalized_after_grace_period() {
         assert!(voting_power_before > 0);
 
         // Schedule disable
-        assert_ok!(SubtensorModule::disable_voting_power_tracking(
+        assert_ok!(GameSolver::disable_voting_power_tracking(
             RuntimeOrigin::signed(f.coldkey),
             f.netuid
         ));
 
-        let disable_at = SubtensorModule::get_voting_power_disable_at_block(f.netuid);
+        let disable_at = GameSolver::get_voting_power_disable_at_block(f.netuid);
 
         // Advance block past grace period (time travel!)
         System::set_block_number(disable_at + 1);
@@ -721,13 +702,8 @@ fn test_voting_power_finalized_after_grace_period() {
         f.run_epochs(1);
 
         // Tracking should be disabled and all entries cleared
-        assert!(!SubtensorModule::get_voting_power_tracking_enabled(
-            f.netuid
-        ));
-        assert_eq!(
-            SubtensorModule::get_voting_power_disable_at_block(f.netuid),
-            0
-        );
+        assert!(!GameSolver::get_voting_power_tracking_enabled(f.netuid));
+        assert_eq!(GameSolver::get_voting_power_disable_at_block(f.netuid), 0);
         assert_eq!(f.get_voting_power(), 0);
     });
 }
@@ -740,12 +716,12 @@ fn test_voting_power_continues_during_grace_period() {
         f.setup_full();
 
         // Schedule disable
-        assert_ok!(SubtensorModule::disable_voting_power_tracking(
+        assert_ok!(GameSolver::disable_voting_power_tracking(
             RuntimeOrigin::signed(f.coldkey),
             f.netuid
         ));
 
-        let disable_at = SubtensorModule::get_voting_power_disable_at_block(f.netuid);
+        let disable_at = GameSolver::get_voting_power_disable_at_block(f.netuid);
 
         // Set block to middle of grace period (time travel!)
         System::set_block_number(disable_at - 1000);
@@ -754,7 +730,7 @@ fn test_voting_power_continues_during_grace_period() {
         f.run_epochs(1);
 
         // Tracking should still be enabled and voting power should exist
-        assert!(SubtensorModule::get_voting_power_tracking_enabled(f.netuid));
+        assert!(GameSolver::get_voting_power_tracking_enabled(f.netuid));
         assert!(f.get_voting_power() > 0);
     });
 }

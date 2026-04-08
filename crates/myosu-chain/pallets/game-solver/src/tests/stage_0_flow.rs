@@ -347,17 +347,17 @@ fn stage_0_flow_registers_stakes_serves_and_emits() {
         let miner_port: u16 = 128;
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tempo(netuid, 2);
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, 3);
-        SubtensorModule::set_max_allowed_validators(netuid, 1);
+        GameSolver::set_tempo(netuid, 2);
+        GameSolver::set_tao_weight(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, 3);
+        GameSolver::set_max_allowed_validators(netuid, 1);
 
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &validator_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &miner_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
@@ -365,20 +365,20 @@ fn stage_0_flow_registers_stakes_serves_and_emits() {
         register_ok_neuron(netuid, validator_hotkey, validator_coldkey, 0);
         register_ok_neuron(netuid, miner_hotkey, miner_coldkey, 0);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             netuid,
             TaoCurrency::from(stake_amount),
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(miner_coldkey),
             miner_hotkey,
             netuid,
             TaoCurrency::from(stake_amount),
         ));
 
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             RuntimeOrigin::signed(miner_hotkey),
             netuid,
             1,
@@ -390,24 +390,22 @@ fn stage_0_flow_registers_stakes_serves_and_emits() {
             0,
         ));
 
-        let validator_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &validator_hotkey)
+        let validator_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &validator_hotkey)
             .expect("validator uid should exist");
-        let miner_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &miner_hotkey)
+        let miner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &miner_hotkey)
             .expect("miner uid should exist");
 
         run_to_block_no_epoch(netuid, 30);
-        SubtensorModule::epoch(netuid, AlphaCurrency::ZERO);
+        GameSolver::epoch(netuid, AlphaCurrency::ZERO);
 
-        assert!(SubtensorModule::get_validator_permit_for_uid(
+        assert!(GameSolver::get_validator_permit_for_uid(
             netuid,
             validator_uid
         ));
-        assert!(!SubtensorModule::get_validator_permit_for_uid(
-            netuid, miner_uid
-        ));
+        assert!(!GameSolver::get_validator_permit_for_uid(netuid, miner_uid));
 
         next_block_no_epoch(netuid);
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(validator_hotkey),
             netuid,
             vec![miner_uid],
@@ -415,25 +413,22 @@ fn stage_0_flow_registers_stakes_serves_and_emits() {
             0,
         ));
 
-        let axon = SubtensorModule::get_axon_info(netuid, &miner_hotkey);
+        let axon = GameSolver::get_axon_info(netuid, &miner_hotkey);
         assert_eq!(axon.ip, miner_ip);
         assert_eq!(axon.port, miner_port);
 
         Incentive::<Test>::remove(NetUidStorageIndex::from(netuid));
         Dividends::<Test>::remove(netuid);
 
-        let blocks_to_next_epoch = SubtensorModule::blocks_until_next_epoch(
+        let blocks_to_next_epoch = GameSolver::blocks_until_next_epoch(
             netuid,
-            SubtensorModule::get_tempo(netuid),
-            SubtensorModule::get_current_block_as_u64(),
+            GameSolver::get_tempo(netuid),
+            GameSolver::get_current_block_as_u64(),
         );
         step_block(blocks_to_next_epoch as u16);
-        assert!(SubtensorModule::should_run_epoch(
-            netuid,
-            System::block_number()
-        ));
+        assert!(GameSolver::should_run_epoch(netuid, System::block_number()));
 
-        SubtensorModule::run_coinbase(U96F32::from_num(100_000_000_u64));
+        GameSolver::run_coinbase(U96F32::from_num(100_000_000_u64));
 
         assert_eq!(BlocksSinceLastStep::<Test>::get(netuid), 0);
         assert!(
@@ -472,17 +467,14 @@ fn stage_0_coinbase_root_proportion_and_pending_root_divs_stay_zero() {
             TaoCurrency::from(1_000_000_000_000u64),
             AlphaCurrency::from(1_000_000_000_000u64),
         );
-        SubtensorModule::set_tao_weight(u64::MAX);
+        GameSolver::set_tao_weight(u64::MAX);
         SubnetTAO::<Test>::set(NetUid::ROOT, TaoCurrency::from(9_000_000_000_000u64));
 
         let subnet_emissions = BTreeMap::from([(netuid, U96F32::from_num(1_000_000_000u64))]);
 
-        assert_eq!(
-            SubtensorModule::root_proportion(netuid),
-            U96F32::from_num(0)
-        );
+        assert_eq!(GameSolver::root_proportion(netuid), U96F32::from_num(0));
 
-        SubtensorModule::emit_to_subnets(&[netuid], &subnet_emissions, true);
+        GameSolver::emit_to_subnets(&[netuid], &subnet_emissions, true);
 
         assert_eq!(
             PendingRootAlphaDivs::<Test>::get(netuid),
@@ -501,26 +493,25 @@ fn stage_0_coinbase_dividend_distribution_folds_root_bucket_into_alpha_dividends
         let pending_alpha = AlphaCurrency::from(600u64);
         let pending_root_alpha = AlphaCurrency::from(400u64);
 
-        let (alpha_dividends, root_alpha_dividends) =
-            SubtensorModule::calculate_dividend_distribution(
-                pending_alpha,
-                pending_root_alpha,
-                U96F32::from_num(1.0),
-                BTreeMap::from([
-                    (
-                        first_hotkey,
-                        (AlphaCurrency::from(10u64), AlphaCurrency::from(10_000u64)),
-                    ),
-                    (
-                        second_hotkey,
-                        (AlphaCurrency::from(10u64), AlphaCurrency::from(1u64)),
-                    ),
-                ]),
-                BTreeMap::from([
-                    (first_hotkey, U96F32::from_num(3)),
-                    (second_hotkey, U96F32::from_num(1)),
-                ]),
-            );
+        let (alpha_dividends, root_alpha_dividends) = GameSolver::calculate_dividend_distribution(
+            pending_alpha,
+            pending_root_alpha,
+            U96F32::from_num(1.0),
+            BTreeMap::from([
+                (
+                    first_hotkey,
+                    (AlphaCurrency::from(10u64), AlphaCurrency::from(10_000u64)),
+                ),
+                (
+                    second_hotkey,
+                    (AlphaCurrency::from(10u64), AlphaCurrency::from(1u64)),
+                ),
+            ]),
+            BTreeMap::from([
+                (first_hotkey, U96F32::from_num(3)),
+                (second_hotkey, U96F32::from_num(1)),
+            ]),
+        );
 
         assert!(root_alpha_dividends.is_empty());
         assert_eq!(
@@ -558,23 +549,22 @@ fn stage_0_coinbase_zero_dividend_distribution_falls_back_to_weighted_stake() {
         let pending_alpha = AlphaCurrency::from(600u64);
         let pending_root_alpha = AlphaCurrency::from(400u64);
 
-        let (alpha_dividends, root_alpha_dividends) =
-            SubtensorModule::calculate_dividend_distribution(
-                pending_alpha,
-                pending_root_alpha,
-                U96F32::from_num(0.0),
-                BTreeMap::from([
-                    (
-                        first_hotkey,
-                        (AlphaCurrency::from(300u64), AlphaCurrency::ZERO),
-                    ),
-                    (
-                        second_hotkey,
-                        (AlphaCurrency::from(100u64), AlphaCurrency::ZERO),
-                    ),
-                ]),
-                BTreeMap::new(),
-            );
+        let (alpha_dividends, root_alpha_dividends) = GameSolver::calculate_dividend_distribution(
+            pending_alpha,
+            pending_root_alpha,
+            U96F32::from_num(0.0),
+            BTreeMap::from([
+                (
+                    first_hotkey,
+                    (AlphaCurrency::from(300u64), AlphaCurrency::ZERO),
+                ),
+                (
+                    second_hotkey,
+                    (AlphaCurrency::from(100u64), AlphaCurrency::ZERO),
+                ),
+            ]),
+            BTreeMap::new(),
+        );
 
         assert!(root_alpha_dividends.is_empty());
         assert_eq!(
@@ -663,7 +653,7 @@ fn legacy_epoch_skip_emits_event_when_state_is_inconsistent() {
         Keys::<Test>::insert(netuid, 1u16, hotkey);
         System::reset_events();
 
-        let output = SubtensorModule::epoch(netuid, 1_000.into());
+        let output = GameSolver::epoch(netuid, 1_000.into());
 
         assert!(output.is_empty());
         assert_last_event::<Test>(
@@ -691,18 +681,18 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
         let tempo = 2_u16;
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tempo(netuid, tempo);
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::set_subnet_owner_cut(u16::MAX / 10);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, 3);
-        SubtensorModule::set_max_allowed_validators(netuid, 1);
+        GameSolver::set_tempo(netuid, tempo);
+        GameSolver::set_tao_weight(0);
+        GameSolver::set_subnet_owner_cut(u16::MAX / 10);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, 3);
+        GameSolver::set_max_allowed_validators(netuid, 1);
 
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &validator_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &miner_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
@@ -710,19 +700,19 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
         register_ok_neuron(netuid, validator_hotkey, validator_coldkey, 0);
         register_ok_neuron(netuid, miner_hotkey, miner_coldkey, 0);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             netuid,
             TaoCurrency::from(stake_amount),
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(miner_coldkey),
             miner_hotkey,
             netuid,
             TaoCurrency::from(stake_amount),
         ));
-        assert_ok!(SubtensorModule::serve_axon(
+        assert_ok!(GameSolver::serve_axon(
             RuntimeOrigin::signed(miner_hotkey),
             netuid,
             1,
@@ -734,15 +724,15 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
             0,
         ));
 
-        let validator_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &validator_hotkey)
+        let validator_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &validator_hotkey)
             .expect("validator uid should exist");
-        let miner_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &miner_hotkey)
+        let miner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &miner_hotkey)
             .expect("miner uid should exist");
 
         run_to_block_no_epoch(netuid, 30);
-        SubtensorModule::epoch(netuid, AlphaCurrency::ZERO);
+        GameSolver::epoch(netuid, AlphaCurrency::ZERO);
         next_block_no_epoch(netuid);
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(validator_hotkey),
             netuid,
             vec![miner_uid],
@@ -750,15 +740,15 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
             0,
         ));
 
-        let block_emission = SubtensorModule::get_block_emission_for_issuance(
-            SubtensorModule::get_alpha_issuance(netuid).into(),
+        let block_emission = GameSolver::get_block_emission_for_issuance(
+            GameSolver::get_alpha_issuance(netuid).into(),
         )
         .expect("block emission should derive from subnet issuance");
         assert!(block_emission > 0);
 
         let accrual_blocks = u64::from(tempo) + 1;
-        let mut cycle_start_block = SubtensorModule::get_current_block_as_u64();
-        while SubtensorModule::blocks_until_next_epoch(netuid, tempo, cycle_start_block)
+        let mut cycle_start_block = GameSolver::get_current_block_as_u64();
+        while GameSolver::blocks_until_next_epoch(netuid, tempo, cycle_start_block)
             != u64::from(tempo)
         {
             cycle_start_block = cycle_start_block.saturating_add(1);
@@ -773,7 +763,7 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
         let mut final_summary = None;
         for offset in 0..accrual_blocks {
             System::set_block_number(cycle_start_block.saturating_add(offset));
-            let summary = SubtensorModule::run_coinbase(U96F32::from_num(block_emission));
+            let summary = GameSolver::run_coinbase(U96F32::from_num(block_emission));
             if summary.drained_epoch_count > 0 {
                 final_summary = Some(summary);
             }
@@ -841,19 +831,19 @@ fn stage_0_commit_reveal_v2_is_the_only_live_weight_hiding_path() {
         let salt = vec![7, 11, 13, 17];
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tempo(netuid, 2);
-        SubtensorModule::set_reveal_period(netuid, 1).expect("reveal period should be valid");
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, 3);
-        SubtensorModule::set_max_allowed_validators(netuid, 1);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_tempo(netuid, 2);
+        GameSolver::set_reveal_period(netuid, 1).expect("reveal period should be valid");
+        GameSolver::set_tao_weight(0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, 3);
+        GameSolver::set_max_allowed_validators(netuid, 1);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &validator_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &miner_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
@@ -861,13 +851,13 @@ fn stage_0_commit_reveal_v2_is_the_only_live_weight_hiding_path() {
         register_ok_neuron(netuid, validator_hotkey, validator_coldkey, 0);
         register_ok_neuron(netuid, miner_hotkey, miner_coldkey, 0);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             netuid,
             TaoCurrency::from(stake_amount),
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(miner_coldkey),
             miner_hotkey,
             netuid,
@@ -875,20 +865,20 @@ fn stage_0_commit_reveal_v2_is_the_only_live_weight_hiding_path() {
         ));
 
         run_to_block_no_epoch(netuid, 30);
-        SubtensorModule::epoch(netuid, AlphaCurrency::ZERO);
+        GameSolver::epoch(netuid, AlphaCurrency::ZERO);
 
-        let validator_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &validator_hotkey)
+        let validator_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &validator_hotkey)
             .expect("validator uid should exist");
-        let miner_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &miner_hotkey)
+        let miner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &miner_hotkey)
             .expect("miner uid should exist");
 
-        assert!(SubtensorModule::get_validator_permit_for_uid(
+        assert!(GameSolver::get_validator_permit_for_uid(
             netuid,
             validator_uid
         ));
 
         assert_noop!(
-            SubtensorModule::set_weights(
+            GameSolver::set_weights(
                 RuntimeOrigin::signed(validator_hotkey),
                 netuid,
                 vec![miner_uid],
@@ -898,7 +888,7 @@ fn stage_0_commit_reveal_v2_is_the_only_live_weight_hiding_path() {
             Error::<Test>::CommitRevealEnabled
         );
 
-        let commit_hash = SubtensorModule::get_commit_hash(
+        let commit_hash = GameSolver::get_commit_hash(
             &validator_hotkey,
             NetUidStorageIndex::from(netuid),
             &[miner_uid],
@@ -907,14 +897,14 @@ fn stage_0_commit_reveal_v2_is_the_only_live_weight_hiding_path() {
             version_key,
         );
 
-        assert_ok!(SubtensorModule::commit_weights(
+        assert_ok!(GameSolver::commit_weights(
             RuntimeOrigin::signed(validator_hotkey),
             netuid,
             commit_hash,
         ));
 
         assert_noop!(
-            SubtensorModule::reveal_weights(
+            GameSolver::reveal_weights(
                 RuntimeOrigin::signed(validator_hotkey),
                 netuid,
                 vec![miner_uid],
@@ -926,10 +916,10 @@ fn stage_0_commit_reveal_v2_is_the_only_live_weight_hiding_path() {
         );
 
         let (first_reveal_block, _) =
-            SubtensorModule::get_reveal_blocks(netuid, SubtensorModule::get_current_block_as_u64());
+            GameSolver::get_reveal_blocks(netuid, GameSolver::get_current_block_as_u64());
         run_to_block_no_epoch(netuid, first_reveal_block);
 
-        assert_ok!(SubtensorModule::reveal_weights(
+        assert_ok!(GameSolver::reveal_weights(
             RuntimeOrigin::signed(validator_hotkey),
             netuid,
             vec![miner_uid],
@@ -961,21 +951,21 @@ fn stage_0_stake_summaries_follow_noop_swap_pricing() {
         let reserve_amount: u64 = stake_amount * 1_000;
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_tao_weight(0);
+        GameSolver::add_balance_to_coldkey_account(
             &staker_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
 
         register_ok_neuron(netuid, staker_hotkey, staker_coldkey, 0);
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(staker_coldkey),
             staker_hotkey,
             netuid,
             TaoCurrency::from(stake_amount),
         ));
 
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &staker_hotkey,
             &staker_coldkey,
             netuid,
@@ -986,15 +976,15 @@ fn stage_0_stake_summaries_follow_noop_swap_pricing() {
             .into();
 
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&staker_hotkey),
+            GameSolver::get_total_stake_for_hotkey(&staker_hotkey),
             expected
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&staker_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&staker_coldkey),
             expected
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey_on_subnet(&staker_coldkey, netuid),
+            GameSolver::get_total_stake_for_coldkey_on_subnet(&staker_coldkey, netuid),
             expected
         );
     });
@@ -1015,41 +1005,41 @@ fn stage_0_neuron_lite_stake_map_matches_live_coldkey_entries() {
         let reserve_amount: u64 = (neuron_owner_stake_amount + delegator_stake_amount) * 1_000;
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_tao_weight(0);
+        GameSolver::add_balance_to_coldkey_account(
             &neuron_owner_coldkey,
             neuron_owner_stake_amount + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &delegator_coldkey,
             delegator_stake_amount + ExistentialDeposit::get(),
         );
 
         register_ok_neuron(netuid, neuron_hotkey, neuron_owner_coldkey, 0);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(neuron_owner_coldkey),
             neuron_hotkey,
             netuid,
             TaoCurrency::from(neuron_owner_stake_amount),
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(delegator_coldkey),
             neuron_hotkey,
             netuid,
             TaoCurrency::from(delegator_stake_amount),
         ));
 
-        let uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &neuron_hotkey)
+        let uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &neuron_hotkey)
             .expect("owner neuron uid should exist");
-        let neurons = SubtensorModule::get_neurons_lite(netuid);
+        let neurons = GameSolver::get_neurons_lite(netuid);
         let decoded = decode_neuron_info_lite_by_uid(&neurons, uid);
-        let owner_alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let owner_alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &neuron_hotkey,
             &neuron_owner_coldkey,
             netuid,
         );
-        let delegator_alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let delegator_alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &neuron_hotkey,
             &delegator_coldkey,
             netuid,
@@ -1094,26 +1084,26 @@ fn stage_0_delegate_info_keeps_sparse_live_netuids() {
         let reserve_amount: u64 = (delegate_owner_stake_amount + nominator_stake_amount) * 1_000;
 
         setup_reserves(second_netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_tao_weight(0);
+        GameSolver::add_balance_to_coldkey_account(
             &delegate_owner_coldkey,
             delegate_owner_stake_amount + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &nominator_coldkey,
             nominator_stake_amount + ExistentialDeposit::get(),
         );
 
         register_ok_neuron(second_netuid, delegate_hotkey, delegate_owner_coldkey, 0);
-        SubtensorModule::maybe_become_delegate(&delegate_hotkey);
+        GameSolver::maybe_become_delegate(&delegate_hotkey);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(delegate_owner_coldkey),
             delegate_hotkey,
             second_netuid,
             TaoCurrency::from(delegate_owner_stake_amount),
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(nominator_coldkey),
             delegate_hotkey,
             second_netuid,
@@ -1123,13 +1113,13 @@ fn stage_0_delegate_info_keeps_sparse_live_netuids() {
         NetworksAdded::<Test>::insert(first_netuid, false);
 
         let delegate_info =
-            SubtensorModule::get_delegate(delegate_hotkey).expect("delegate info should exist");
-        let owner_alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_delegate(delegate_hotkey).expect("delegate info should exist");
+        let owner_alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &delegate_hotkey,
             &delegate_owner_coldkey,
             second_netuid,
         );
-        let nominator_alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let nominator_alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &delegate_hotkey,
             &nominator_coldkey,
             second_netuid,
@@ -1174,34 +1164,34 @@ fn stage_0_delegate_return_per_1000_uses_total_hotkey_stake() {
         let emission_per_epoch = AlphaCurrency::from(1_000_000_000u64);
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::set_tempo(netuid, 2);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_tao_weight(0);
+        GameSolver::set_tempo(netuid, 2);
+        GameSolver::add_balance_to_coldkey_account(
             &delegate_owner_coldkey,
             delegate_owner_stake_amount + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &nominator_coldkey,
             nominator_stake_amount + ExistentialDeposit::get(),
         );
 
         register_ok_neuron(netuid, delegate_hotkey, delegate_owner_coldkey, 0);
-        SubtensorModule::maybe_become_delegate(&delegate_hotkey);
+        GameSolver::maybe_become_delegate(&delegate_hotkey);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(delegate_owner_coldkey),
             delegate_hotkey,
             netuid,
             TaoCurrency::from(delegate_owner_stake_amount),
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(nominator_coldkey),
             delegate_hotkey,
             netuid,
             TaoCurrency::from(nominator_stake_amount),
         ));
 
-        let uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &delegate_hotkey)
+        let uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &delegate_hotkey)
             .expect("delegate uid should exist");
         Emission::<Test>::mutate(netuid, |emissions| {
             if emissions.len() <= uid as usize {
@@ -1211,16 +1201,14 @@ fn stage_0_delegate_return_per_1000_uses_total_hotkey_stake() {
         });
 
         let delegate_info =
-            SubtensorModule::get_delegate(delegate_hotkey).expect("delegate info should exist");
-        let total_stake: U64F64 = u64::from(SubtensorModule::get_total_stake_for_hotkey(
-            &delegate_hotkey,
-        ))
-        .into();
-        let tempo: U64F64 = SubtensorModule::get_tempo(netuid).into();
+            GameSolver::get_delegate(delegate_hotkey).expect("delegate info should exist");
+        let total_stake: U64F64 =
+            u64::from(GameSolver::get_total_stake_for_hotkey(&delegate_hotkey)).into();
+        let tempo: U64F64 = GameSolver::get_tempo(netuid).into();
         let epochs_per_day = U64F64::saturating_from_num(7200).safe_div(tempo);
         let emissions_per_day =
             U64F64::from_num(u64::from(emission_per_epoch)).saturating_mul(epochs_per_day);
-        let expected_return_per_1000 = SubtensorModule::return_per_1000_tao_test(
+        let expected_return_per_1000 = GameSolver::return_per_1000_tao_test(
             delegate_info.take,
             total_stake,
             emissions_per_day,
@@ -1251,35 +1239,35 @@ fn stage_0_delegate_total_daily_return_applies_take() {
         let take = Compact(u16::MAX / 2);
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::set_tempo(netuid, 2);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_tao_weight(0);
+        GameSolver::set_tempo(netuid, 2);
+        GameSolver::add_balance_to_coldkey_account(
             &delegate_owner_coldkey,
             delegate_owner_stake_amount + ExistentialDeposit::get(),
         );
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &nominator_coldkey,
             nominator_stake_amount + ExistentialDeposit::get(),
         );
 
         register_ok_neuron(netuid, delegate_hotkey, delegate_owner_coldkey, 0);
-        SubtensorModule::maybe_become_delegate(&delegate_hotkey);
+        GameSolver::maybe_become_delegate(&delegate_hotkey);
         Delegates::<Test>::insert(delegate_hotkey, take.0);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(delegate_owner_coldkey),
             delegate_hotkey,
             netuid,
             TaoCurrency::from(delegate_owner_stake_amount),
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(nominator_coldkey),
             delegate_hotkey,
             netuid,
             TaoCurrency::from(nominator_stake_amount),
         ));
 
-        let uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &delegate_hotkey)
+        let uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &delegate_hotkey)
             .expect("delegate uid should exist");
         Emission::<Test>::mutate(netuid, |emissions| {
             if emissions.len() <= uid as usize {
@@ -1289,13 +1277,13 @@ fn stage_0_delegate_total_daily_return_applies_take() {
         });
 
         let delegate_info =
-            SubtensorModule::get_delegate(delegate_hotkey).expect("delegate info should exist");
-        let tempo: U64F64 = SubtensorModule::get_tempo(netuid).into();
+            GameSolver::get_delegate(delegate_hotkey).expect("delegate info should exist");
+        let tempo: U64F64 = GameSolver::get_tempo(netuid).into();
         let epochs_per_day = U64F64::saturating_from_num(7200).safe_div(tempo);
         let emissions_per_day =
             U64F64::from_num(u64::from(emission_per_epoch)).saturating_mul(epochs_per_day);
         let expected_total_daily_return =
-            SubtensorModule::delegator_daily_return_test(take, emissions_per_day);
+            GameSolver::delegator_daily_return_test(take, emissions_per_day);
 
         assert!(delegate_info.total_daily_return.0 > 0);
         assert!(delegate_info.total_daily_return.0 < emissions_per_day.saturating_to_num::<u64>());
@@ -1318,32 +1306,32 @@ fn stage_0_stake_info_omits_swap_era_fields() {
         let reserve_amount: u64 = stake_amount * 1_000;
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_tao_weight(0);
+        GameSolver::add_balance_to_coldkey_account(
             &staker_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
 
         register_ok_neuron(netuid, staker_hotkey, staker_coldkey, 0);
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(staker_coldkey),
             staker_hotkey,
             netuid,
             TaoCurrency::from(stake_amount),
         ));
 
-        let alpha = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let alpha = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &staker_hotkey,
             &staker_coldkey,
             netuid,
         );
-        let direct_info = SubtensorModule::get_stake_info_for_hotkey_coldkey_netuid(
+        let direct_info = GameSolver::get_stake_info_for_hotkey_coldkey_netuid(
             staker_hotkey,
             staker_coldkey,
             netuid,
         )
         .expect("stake info should exist");
-        let coldkey_info = SubtensorModule::get_stake_info_for_coldkey(staker_coldkey);
+        let coldkey_info = GameSolver::get_stake_info_for_coldkey(staker_coldkey);
 
         assert_eq!(coldkey_info.len(), 1);
 
@@ -1371,7 +1359,7 @@ fn stage_0_dynamic_info_omits_dead_zero_fields() {
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
 
-        let info = SubtensorModule::get_dynamic_info(netuid).expect("dynamic info should exist");
+        let info = GameSolver::get_dynamic_info(netuid).expect("dynamic info should exist");
         let decoded = decode_dynamic_info(&info);
 
         assert_eq!(decoded.netuid.0, netuid);
@@ -1396,52 +1384,51 @@ fn stage_0_subnet_info_omits_dead_zero_fields() {
         let owner_coldkey = U256::from(411);
         let netuid = add_dynamic_network_disable_commit_reveal(&owner_hotkey, &owner_coldkey);
 
-        let info_v2 =
-            SubtensorModule::get_subnet_info_v2(netuid).expect("subnet info v2 should exist");
+        let info_v2 = GameSolver::get_subnet_info_v2(netuid).expect("subnet info v2 should exist");
         let decoded_v2 = decode_subnet_info_v2(&info_v2);
 
         assert_eq!(decoded_v2.netuid.0, netuid);
-        assert_eq!(decoded_v2.rho.0, SubtensorModule::get_rho(netuid));
-        assert_eq!(decoded_v2.kappa.0, SubtensorModule::get_kappa(netuid));
+        assert_eq!(decoded_v2.rho.0, GameSolver::get_rho(netuid));
+        assert_eq!(decoded_v2.kappa.0, GameSolver::get_kappa(netuid));
         assert_eq!(
             decoded_v2.difficulty.0,
-            SubtensorModule::get_difficulty_as_u64(netuid)
+            GameSolver::get_difficulty_as_u64(netuid)
         );
         assert_eq!(
             decoded_v2.immunity_period.0,
-            SubtensorModule::get_immunity_period(netuid)
+            GameSolver::get_immunity_period(netuid)
         );
         assert_eq!(
             decoded_v2.max_allowed_validators.0,
-            SubtensorModule::get_max_allowed_validators(netuid)
+            GameSolver::get_max_allowed_validators(netuid)
         );
         assert_eq!(
             decoded_v2.min_allowed_weights.0,
-            SubtensorModule::get_min_allowed_weights(netuid)
+            GameSolver::get_min_allowed_weights(netuid)
         );
         assert_eq!(
             decoded_v2.max_weights_limit.0,
-            SubtensorModule::get_max_weight_limit(netuid)
+            GameSolver::get_max_weight_limit(netuid)
         );
         assert_eq!(
             decoded_v2.scaling_law_power.0,
-            SubtensorModule::get_scaling_law_power(netuid)
+            GameSolver::get_scaling_law_power(netuid)
         );
         assert_eq!(
             decoded_v2.subnetwork_n.0,
-            SubtensorModule::get_subnetwork_n(netuid)
+            GameSolver::get_subnetwork_n(netuid)
         );
         assert_eq!(
             decoded_v2.max_allowed_uids.0,
-            SubtensorModule::get_max_allowed_uids(netuid)
+            GameSolver::get_max_allowed_uids(netuid)
         );
         assert_eq!(
             decoded_v2.blocks_since_last_step.0,
-            SubtensorModule::get_blocks_since_last_step(netuid)
+            GameSolver::get_blocks_since_last_step(netuid)
         );
-        assert_eq!(decoded_v2.tempo.0, SubtensorModule::get_tempo(netuid));
-        assert_eq!(decoded_v2.burn.0, SubtensorModule::get_burn(netuid));
-        assert_eq!(decoded_v2.owner, SubtensorModule::get_subnet_owner(netuid));
+        assert_eq!(decoded_v2.tempo.0, GameSolver::get_tempo(netuid));
+        assert_eq!(decoded_v2.burn.0, GameSolver::get_burn(netuid));
+        assert_eq!(decoded_v2.owner, GameSolver::get_subnet_owner(netuid));
 
         assert_eq!(decoded_v2.identity, SubnetIdentitiesV3::<Test>::get(netuid));
     });
@@ -1454,119 +1441,119 @@ fn stage_0_subnet_hyperparams_surface_is_v2_only() {
         let owner_coldkey = U256::from(511);
         let netuid = add_dynamic_network_disable_commit_reveal(&owner_hotkey, &owner_coldkey);
 
-        let info_v2 = SubtensorModule::get_subnet_hyperparams_v2(netuid)
+        let info_v2 = GameSolver::get_subnet_hyperparams_v2(netuid)
             .expect("subnet hyperparams v2 should exist");
         let decoded_v2 = decode_subnet_hyperparams_v2(&info_v2);
 
-        assert_eq!(decoded_v2.rho.0, SubtensorModule::get_rho(netuid));
-        assert_eq!(decoded_v2.kappa.0, SubtensorModule::get_kappa(netuid));
+        assert_eq!(decoded_v2.rho.0, GameSolver::get_rho(netuid));
+        assert_eq!(decoded_v2.kappa.0, GameSolver::get_kappa(netuid));
         assert_eq!(
             decoded_v2.immunity_period.0,
-            SubtensorModule::get_immunity_period(netuid)
+            GameSolver::get_immunity_period(netuid)
         );
         assert_eq!(
             decoded_v2.min_allowed_weights.0,
-            SubtensorModule::get_min_allowed_weights(netuid)
+            GameSolver::get_min_allowed_weights(netuid)
         );
         assert_eq!(
             decoded_v2.max_weights_limit.0,
-            SubtensorModule::get_max_weight_limit(netuid)
+            GameSolver::get_max_weight_limit(netuid)
         );
-        assert_eq!(decoded_v2.tempo.0, SubtensorModule::get_tempo(netuid));
+        assert_eq!(decoded_v2.tempo.0, GameSolver::get_tempo(netuid));
         assert_eq!(
             decoded_v2.min_difficulty.0,
-            SubtensorModule::get_min_difficulty(netuid)
+            GameSolver::get_min_difficulty(netuid)
         );
         assert_eq!(
             decoded_v2.max_difficulty.0,
-            SubtensorModule::get_max_difficulty(netuid)
+            GameSolver::get_max_difficulty(netuid)
         );
         assert_eq!(
             decoded_v2.weights_version.0,
-            SubtensorModule::get_weights_version_key(netuid)
+            GameSolver::get_weights_version_key(netuid)
         );
         assert_eq!(
             decoded_v2.weights_rate_limit.0,
-            SubtensorModule::get_weights_set_rate_limit(netuid)
+            GameSolver::get_weights_set_rate_limit(netuid)
         );
         assert_eq!(
             decoded_v2.adjustment_interval.0,
-            SubtensorModule::get_adjustment_interval(netuid)
+            GameSolver::get_adjustment_interval(netuid)
         );
         assert_eq!(
             decoded_v2.activity_cutoff.0,
-            SubtensorModule::get_activity_cutoff(netuid)
+            GameSolver::get_activity_cutoff(netuid)
         );
         assert_eq!(
             decoded_v2.registration_allowed,
-            SubtensorModule::get_network_registration_allowed(netuid)
+            GameSolver::get_network_registration_allowed(netuid)
         );
         assert_eq!(
             decoded_v2.target_regs_per_interval.0,
-            SubtensorModule::get_target_registrations_per_interval(netuid)
+            GameSolver::get_target_registrations_per_interval(netuid)
         );
-        assert_eq!(decoded_v2.min_burn.0, SubtensorModule::get_min_burn(netuid));
-        assert_eq!(decoded_v2.max_burn.0, SubtensorModule::get_max_burn(netuid));
+        assert_eq!(decoded_v2.min_burn.0, GameSolver::get_min_burn(netuid));
+        assert_eq!(decoded_v2.max_burn.0, GameSolver::get_max_burn(netuid));
         assert_eq!(
             decoded_v2.bonds_moving_avg.0,
-            SubtensorModule::get_bonds_moving_average(netuid)
+            GameSolver::get_bonds_moving_average(netuid)
         );
         assert_eq!(
             decoded_v2.max_regs_per_block.0,
-            SubtensorModule::get_max_registrations_per_block(netuid)
+            GameSolver::get_max_registrations_per_block(netuid)
         );
         assert_eq!(
             decoded_v2.serving_rate_limit.0,
-            SubtensorModule::get_serving_rate_limit(netuid)
+            GameSolver::get_serving_rate_limit(netuid)
         );
         assert_eq!(
             decoded_v2.max_validators.0,
-            SubtensorModule::get_max_allowed_validators(netuid)
+            GameSolver::get_max_allowed_validators(netuid)
         );
         assert_eq!(
             decoded_v2.adjustment_alpha.0,
-            SubtensorModule::get_adjustment_alpha(netuid)
+            GameSolver::get_adjustment_alpha(netuid)
         );
         assert_eq!(
             decoded_v2.difficulty.0,
-            SubtensorModule::get_difficulty_as_u64(netuid)
+            GameSolver::get_difficulty_as_u64(netuid)
         );
         assert_eq!(
             decoded_v2.commit_reveal_period.0,
-            SubtensorModule::get_reveal_period(netuid)
+            GameSolver::get_reveal_period(netuid)
         );
         assert_eq!(
             decoded_v2.commit_reveal_weights_enabled,
-            SubtensorModule::get_commit_reveal_weights_enabled(netuid)
+            GameSolver::get_commit_reveal_weights_enabled(netuid)
         );
         assert_eq!(
             decoded_v2.alpha_high.0,
-            SubtensorModule::get_alpha_values(netuid).1
+            GameSolver::get_alpha_values(netuid).1
         );
         assert_eq!(
             decoded_v2.alpha_low.0,
-            SubtensorModule::get_alpha_values(netuid).0
+            GameSolver::get_alpha_values(netuid).0
         );
         assert_eq!(
             decoded_v2.liquid_alpha_enabled,
-            SubtensorModule::get_liquid_alpha_enabled(netuid)
+            GameSolver::get_liquid_alpha_enabled(netuid)
         );
         assert_eq!(
             decoded_v2.alpha_sigmoid_steepness,
-            SubtensorModule::get_alpha_sigmoid_steepness(netuid)
+            GameSolver::get_alpha_sigmoid_steepness(netuid)
         );
         assert_eq!(decoded_v2.yuma_version.0, 2);
         assert_eq!(
             decoded_v2.subnet_is_active,
-            SubtensorModule::get_subtoken_enabled(netuid)
+            GameSolver::get_subtoken_enabled(netuid)
         );
         assert_eq!(
             decoded_v2.transfers_enabled,
-            SubtensorModule::get_transfer_toggle(netuid)
+            GameSolver::get_transfer_toggle(netuid)
         );
         assert_eq!(
             decoded_v2.bonds_reset_enabled,
-            SubtensorModule::get_bonds_reset(netuid)
+            GameSolver::get_bonds_reset(netuid)
         );
     });
 }
@@ -1583,24 +1570,24 @@ fn stage_0_subnet_state_omits_cross_subnet_emission_history() {
         let reserve_amount: u64 = stake_amount * 1_000;
 
         setup_reserves(netuid, reserve_amount.into(), reserve_amount.into());
-        SubtensorModule::set_tao_weight(0);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_tao_weight(0);
+        GameSolver::add_balance_to_coldkey_account(
             &validator_coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
 
         register_ok_neuron(netuid, validator_hotkey, validator_coldkey, 0);
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(validator_coldkey),
             validator_hotkey,
             netuid,
             TaoCurrency::from(stake_amount),
         ));
 
-        let state = SubtensorModule::get_subnet_state(netuid).expect("subnet state should exist");
+        let state = GameSolver::get_subnet_state(netuid).expect("subnet state should exist");
         let decoded = decode_subnet_state(&state);
 
-        let expected_hotkeys = (0..SubtensorModule::get_subnetwork_n(netuid))
+        let expected_hotkeys = (0..GameSolver::get_subnetwork_n(netuid))
             .map(|uid| Keys::<Test>::get(netuid, uid))
             .collect::<Vec<_>>();
         let expected_coldkeys = expected_hotkeys
@@ -1672,11 +1659,11 @@ fn stage_0_subnet_state_omits_cross_subnet_emission_history() {
                 .map(Compact::from)
                 .collect::<Vec<_>>()
         );
-        let expected_block_at_registration = (0..SubtensorModule::get_subnetwork_n(netuid))
+        let expected_block_at_registration = (0..GameSolver::get_subnetwork_n(netuid))
             .map(|uid| BlockAtRegistration::<Test>::get(netuid, uid).into())
             .collect::<Vec<_>>();
         let (total_stake_fl, alpha_stake_fl, tao_stake_fl) =
-            SubtensorModule::get_stake_weights_for_network(netuid);
+            GameSolver::get_stake_weights_for_network(netuid);
         let expected_alpha = alpha_stake_fl
             .into_iter()
             .map(|value| Compact::from(AlphaCurrency::from(fixed64_to_u64(value))))
@@ -1712,11 +1699,11 @@ fn stage_0_all_dynamic_info_omits_dead_subnet_entries() {
         setup_reserves(live_netuid, reserve_amount.into(), reserve_amount.into());
         NetworksAdded::<Test>::insert(dead_netuid, false);
 
-        let infos = SubtensorModule::get_all_dynamic_info();
+        let infos = GameSolver::get_all_dynamic_info();
         let decoded = decode_dynamic_infos(&infos);
-        let expected_live_netuids = SubtensorModule::get_all_subnet_netuids()
+        let expected_live_netuids = GameSolver::get_all_subnet_netuids()
             .into_iter()
-            .filter(|netuid| SubtensorModule::get_dynamic_info(*netuid).is_some())
+            .filter(|netuid| GameSolver::get_dynamic_info(*netuid).is_some())
             .collect::<Vec<_>>();
 
         assert_eq!(infos.len(), decoded.len());
@@ -1738,10 +1725,10 @@ fn stage_0_all_metagraphs_omit_dead_subnet_entries() {
         setup_reserves(live_netuid, reserve_amount.into(), reserve_amount.into());
         NetworksAdded::<Test>::insert(dead_netuid, false);
 
-        let metagraphs = SubtensorModule::get_all_metagraphs();
-        let expected = SubtensorModule::get_all_subnet_netuids()
+        let metagraphs = GameSolver::get_all_metagraphs();
+        let expected = GameSolver::get_all_subnet_netuids()
             .into_iter()
-            .filter_map(SubtensorModule::get_metagraph)
+            .filter_map(GameSolver::get_metagraph)
             .collect::<Vec<_>>();
 
         assert_eq!(metagraphs.len(), expected.len());
@@ -1762,11 +1749,11 @@ fn stage_0_subnets_info_v2_omit_dead_subnet_entries() {
 
         NetworksAdded::<Test>::insert(dead_netuid, false);
 
-        let infos = SubtensorModule::get_subnets_info_v2();
+        let infos = GameSolver::get_subnets_info_v2();
         let decoded = decode_subnet_infos_v2(&infos);
-        let expected = SubtensorModule::get_all_subnet_netuids()
+        let expected = GameSolver::get_all_subnet_netuids()
             .into_iter()
-            .filter_map(SubtensorModule::get_subnet_info_v2)
+            .filter_map(GameSolver::get_subnet_info_v2)
             .collect::<Vec<_>>();
 
         assert_eq!(infos.len(), expected.len());
@@ -1789,14 +1776,14 @@ fn stage_0_all_mechagraphs_omit_dead_entries() {
         MechanismCountCurrent::<Test>::insert(live_netuid, MechId::from(2u8));
         NetworksAdded::<Test>::insert(dead_netuid, false);
 
-        let mechagraphs = SubtensorModule::get_all_mechagraphs();
-        let expected = SubtensorModule::get_all_subnet_netuids()
+        let mechagraphs = GameSolver::get_all_mechagraphs();
+        let expected = GameSolver::get_all_subnet_netuids()
             .into_iter()
             .flat_map(|netuid| {
                 let mechanism_count = u8::from(MechanismCountCurrent::<Test>::get(netuid));
 
                 (0..mechanism_count).filter_map(move |mecid| {
-                    SubtensorModule::get_mechagraph(netuid, MechId::from(mecid))
+                    GameSolver::get_mechagraph(netuid, MechId::from(mecid))
                 })
             })
             .collect::<Vec<_>>();
@@ -1816,34 +1803,34 @@ fn stage_0_register_network_allows_second_registration_when_rate_limit_is_zero()
         let first_hot = U256::from(62_u64);
         let second_cold = U256::from(63_u64);
         let second_hot = U256::from(64_u64);
-        let lock_cost: u64 = SubtensorModule::get_network_lock_cost().into();
+        let lock_cost: u64 = GameSolver::get_network_lock_cost().into();
 
-        SubtensorModule::set_network_rate_limit(0);
-        SubtensorModule::add_balance_to_coldkey_account(&first_cold, lock_cost.saturating_mul(10));
-        SubtensorModule::add_balance_to_coldkey_account(&second_cold, lock_cost.saturating_mul(10));
+        GameSolver::set_network_rate_limit(0);
+        GameSolver::add_balance_to_coldkey_account(&first_cold, lock_cost.saturating_mul(10));
+        GameSolver::add_balance_to_coldkey_account(&second_cold, lock_cost.saturating_mul(10));
         System::set_block_number(10);
 
-        assert_ok!(SubtensorModule::do_register_network(
+        assert_ok!(GameSolver::do_register_network(
             RuntimeOrigin::signed(first_cold),
             &first_hot,
             1,
             None,
         ));
-        assert_eq!(SubtensorModule::get_network_last_lock_block(), 10);
+        assert_eq!(GameSolver::get_network_last_lock_block(), 10);
         assert_eq!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&first_hot),
+            GameSolver::get_owning_coldkey_for_hotkey(&first_hot),
             first_cold
         );
 
-        assert_ok!(SubtensorModule::do_register_network(
+        assert_ok!(GameSolver::do_register_network(
             RuntimeOrigin::signed(second_cold),
             &second_hot,
             1,
             None,
         ));
-        assert_eq!(SubtensorModule::get_network_last_lock_block(), 10);
+        assert_eq!(GameSolver::get_network_last_lock_block(), 10);
         assert_eq!(
-            SubtensorModule::get_owning_coldkey_for_hotkey(&second_hot),
+            GameSolver::get_owning_coldkey_for_hotkey(&second_hot),
             second_cold
         );
     });

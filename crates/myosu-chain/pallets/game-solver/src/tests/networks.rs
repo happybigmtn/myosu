@@ -19,7 +19,7 @@ fn test_registration_ok() {
         let tempo: u16 = 13;
         let hotkey_account_id: U256 = U256::from(1);
         let coldkey_account_id = U256::from(0); // Neighbour of the beast, har har
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             129123813,
@@ -29,7 +29,7 @@ fn test_registration_ok() {
         //add network
         add_network(netuid, tempo, 0);
 
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -39,9 +39,9 @@ fn test_registration_ok() {
             coldkey_account_id
         ));
 
-        assert_ok!(SubtensorModule::do_dissolve_network(netuid));
+        assert_ok!(GameSolver::do_dissolve_network(netuid));
 
-        assert!(!SubtensorModule::if_subnet_exist(netuid))
+        assert!(!GameSolver::if_subnet_exist(netuid))
     })
 }
 
@@ -52,17 +52,17 @@ fn dissolve_no_stakers_no_alpha_no_emission() {
         let hot = U256::from(2);
         let net = add_dynamic_network(&hot, &cold);
 
-        SubtensorModule::set_subnet_locked_balance(net, TaoCurrency::from(0));
+        GameSolver::set_subnet_locked_balance(net, TaoCurrency::from(0));
         SubnetTAO::<Test>::insert(net, TaoCurrency::from(0));
         Emission::<Test>::insert(net, Vec::<AlphaCurrency>::new());
 
-        let before = SubtensorModule::get_coldkey_balance(&cold);
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
-        let after = SubtensorModule::get_coldkey_balance(&cold);
+        let before = GameSolver::get_coldkey_balance(&cold);
+        assert_ok!(GameSolver::do_dissolve_network(net));
+        let after = GameSolver::get_coldkey_balance(&cold);
 
         // Balance should be unchanged (whatever the network-lock bookkeeping left there)
         assert_eq!(after, before);
-        assert!(!SubtensorModule::if_subnet_exist(net));
+        assert!(!GameSolver::if_subnet_exist(net));
     });
 }
 
@@ -78,13 +78,13 @@ fn dissolve_refunds_full_lock_cost_when_no_emission() {
         NetworkRegistrationStartBlock::<Test>::put(reg_at.saturating_add(1));
 
         let lock: TaoCurrency = TaoCurrency::from(1_000_000);
-        SubtensorModule::set_subnet_locked_balance(net, lock);
+        GameSolver::set_subnet_locked_balance(net, lock);
         SubnetTAO::<Test>::insert(net, TaoCurrency::from(0));
         Emission::<Test>::insert(net, Vec::<AlphaCurrency>::new());
 
-        let before = SubtensorModule::get_coldkey_balance(&cold);
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
-        let after = SubtensorModule::get_coldkey_balance(&cold);
+        let before = GameSolver::get_coldkey_balance(&cold);
+        assert_ok!(GameSolver::do_dissolve_network(net));
+        let after = GameSolver::get_coldkey_balance(&cold);
 
         assert_eq!(TaoCurrency::from(after), TaoCurrency::from(before) + lock);
     });
@@ -105,17 +105,17 @@ fn dissolve_single_alpha_out_staker_gets_all_tao() {
         // Entire TAO pot should be paid to staker's cold-key
         let pot: u64 = 99_999;
         SubnetTAO::<Test>::insert(net, TaoCurrency::from(pot));
-        SubtensorModule::set_subnet_locked_balance(net, 0.into());
+        GameSolver::set_subnet_locked_balance(net, 0.into());
         TotalHotkeyAlpha::<Test>::insert(s_hot, net, AlphaCurrency::from(5_000u64));
 
         // Cold-key balance before
-        let before = SubtensorModule::get_coldkey_balance(&s_cold);
+        let before = GameSolver::get_coldkey_balance(&s_cold);
 
         // Dissolve
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
+        assert_ok!(GameSolver::do_dissolve_network(net));
 
         // Cold-key received full pot
-        let after = SubtensorModule::get_coldkey_balance(&s_cold);
+        let after = GameSolver::get_coldkey_balance(&s_cold);
         assert_eq!(after, before + pot);
 
         // No α entries left for dissolved subnet
@@ -148,12 +148,12 @@ fn dissolve_two_stakers_pro_rata_distribution() {
 
         let pot: u64 = 10_000;
         SubnetTAO::<Test>::insert(net, TaoCurrency::from(pot));
-        SubtensorModule::set_subnet_locked_balance(net, 5_000.into()); // owner refund path present; emission = 0
+        GameSolver::set_subnet_locked_balance(net, 5_000.into()); // owner refund path present; emission = 0
 
         // Cold-key balances before
-        let s1_before = SubtensorModule::get_coldkey_balance(&s1_cold);
-        let s2_before = SubtensorModule::get_coldkey_balance(&s2_cold);
-        let owner_before = SubtensorModule::get_coldkey_balance(&oc);
+        let s1_before = GameSolver::get_coldkey_balance(&s1_cold);
+        let s2_before = GameSolver::get_coldkey_balance(&s2_cold);
+        let owner_before = GameSolver::get_coldkey_balance(&oc);
 
         // Expected τ shares with largest remainder
         let total = a1 + a2;
@@ -183,23 +183,20 @@ fn dissolve_two_stakers_pro_rata_distribution() {
         }
 
         // Dissolve
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
+        assert_ok!(GameSolver::do_dissolve_network(net));
 
         // Cold-keys received their τ shares
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&s1_cold),
+            GameSolver::get_coldkey_balance(&s1_cold),
             s1_before + expected1
         );
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&s2_cold),
+            GameSolver::get_coldkey_balance(&s2_cold),
             s2_before + expected2
         );
 
         // Owner refunded lock (no emission)
-        assert_eq!(
-            SubtensorModule::get_coldkey_balance(&oc),
-            owner_before + 5_000
-        );
+        assert_eq!(GameSolver::get_coldkey_balance(&oc), owner_before + 5_000);
 
         // α entries for dissolved subnet gone
         assert!(Alpha::<Test>::iter().all(|((_h, _c, n), _)| n != net));
@@ -220,7 +217,7 @@ fn dissolve_owner_cut_refund_logic() {
         // One staker and a TAO pot (not relevant to refund amount).
         let sh = U256::from(77);
         let sc = U256::from(88);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &sh,
             &sc,
             net,
@@ -230,16 +227,16 @@ fn dissolve_owner_cut_refund_logic() {
 
         // Lock & emissions: total emitted α = 800.
         let lock: TaoCurrency = TaoCurrency::from(2_000);
-        SubtensorModule::set_subnet_locked_balance(net, lock);
+        GameSolver::set_subnet_locked_balance(net, lock);
         // ensure there was some Alpha issued
-        assert!(SubtensorModule::get_alpha_issuance(net).to_u64() > 0);
+        assert!(GameSolver::get_alpha_issuance(net).to_u64() > 0);
 
         // Owner cut = 11796 / 65535 (about 18%).
         SubnetOwnerCut::<Test>::put(11_796u16);
 
         // Compute expected refund with the SAME math as the pallet.
-        let frac: U96F32 = SubtensorModule::get_float_subnet_owner_cut();
-        let total_emitted_alpha: u64 = SubtensorModule::get_alpha_issuance(net).to_u64();
+        let frac: U96F32 = GameSolver::get_float_subnet_owner_cut();
+        let total_emitted_alpha: u64 = GameSolver::get_alpha_issuance(net).to_u64();
         let owner_alpha_u64: u64 = U96F32::from_num(total_emitted_alpha)
             .saturating_mul(frac)
             .floor()
@@ -258,9 +255,9 @@ fn dissolve_owner_cut_refund_logic() {
 
         let expected_refund: TaoCurrency = lock.saturating_sub(owner_emission_tao);
 
-        let before = SubtensorModule::get_coldkey_balance(&oc);
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
-        let after = SubtensorModule::get_coldkey_balance(&oc);
+        let before = GameSolver::get_coldkey_balance(&oc);
+        assert_ok!(GameSolver::do_dissolve_network(net));
+        let after = GameSolver::get_coldkey_balance(&oc);
 
         assert!(after > before); // some refund is expected
         assert_eq!(
@@ -277,13 +274,13 @@ fn dissolve_zero_refund_when_emission_exceeds_lock() {
         let oh = U256::from(2_000);
         let net = add_dynamic_network(&oh, &oc);
 
-        SubtensorModule::set_subnet_locked_balance(net, TaoCurrency::from(1_000));
+        GameSolver::set_subnet_locked_balance(net, TaoCurrency::from(1_000));
         SubnetOwnerCut::<Test>::put(u16::MAX); // 100 %
         Emission::<Test>::insert(net, vec![AlphaCurrency::from(2_000)]);
 
-        let before = SubtensorModule::get_coldkey_balance(&oc);
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
-        let after = SubtensorModule::get_coldkey_balance(&oc);
+        let before = GameSolver::get_coldkey_balance(&oc);
+        assert_ok!(GameSolver::do_dissolve_network(net));
+        let after = GameSolver::get_coldkey_balance(&oc);
 
         assert_eq!(after, before); // no refund
     });
@@ -293,7 +290,7 @@ fn dissolve_zero_refund_when_emission_exceeds_lock() {
 fn dissolve_nonexistent_subnet_fails() {
     new_test_ext(0).execute_with(|| {
         assert_err!(
-            SubtensorModule::do_dissolve_network(9_999.into()),
+            GameSolver::do_dissolve_network(9_999.into()),
             Error::<Test>::SubnetNotExists
         );
     });
@@ -454,7 +451,7 @@ fn dissolve_clears_all_per_subnet_storages() {
         // ------------------------------------------------------------------
         // Dissolve
         // ------------------------------------------------------------------
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
+        assert_ok!(GameSolver::do_dissolve_network(net));
 
         // ------------------------------------------------------------------
         // Items that must be COMPLETELY REMOVED
@@ -621,7 +618,7 @@ fn dissolve_clears_all_per_subnet_storages() {
         // ------------------------------------------------------------------
         // Final subnet removal confirmation
         // ------------------------------------------------------------------
-        assert!(!SubtensorModule::if_subnet_exist(net));
+        assert!(!GameSolver::if_subnet_exist(net));
     });
 }
 
@@ -637,13 +634,13 @@ fn dissolve_alpha_out_but_zero_tao_no_rewards() {
 
         Alpha::<Test>::insert((sh, sc, net), U64F64::from_num(1_000u64));
         SubnetTAO::<Test>::insert(net, TaoCurrency::from(0)); // zero TAO
-        SubtensorModule::set_subnet_locked_balance(net, TaoCurrency::from(0));
+        GameSolver::set_subnet_locked_balance(net, TaoCurrency::from(0));
         Emission::<Test>::insert(net, Vec::<AlphaCurrency>::new());
         TotalHotkeyAlpha::<Test>::insert(sh, net, AlphaCurrency::from(1_000u64));
 
-        let before = SubtensorModule::get_coldkey_balance(&sc);
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
-        let after = SubtensorModule::get_coldkey_balance(&sc);
+        let before = GameSolver::get_coldkey_balance(&sc);
+        assert_ok!(GameSolver::do_dissolve_network(net));
+        let after = GameSolver::get_coldkey_balance(&sc);
 
         // No reward distributed, α-out cleared.
         assert_eq!(after, before);
@@ -663,7 +660,7 @@ fn dissolve_decrements_total_networks() {
         // Sanity: adding network increments the counter.
         assert_eq!(TotalNetworks::<Test>::get(), total_before + 1);
 
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
+        assert_ok!(GameSolver::do_dissolve_network(net));
         assert_eq!(TotalNetworks::<Test>::get(), total_before);
     });
 }
@@ -683,21 +680,21 @@ fn dissolve_rounding_remainder_distribution() {
         Alpha::<Test>::insert((s2h, s2c, net), U64F64::from_num(2u128));
 
         SubnetTAO::<Test>::insert(net, TaoCurrency::from(1)); // TAO pot = 1
-        SubtensorModule::set_subnet_locked_balance(net, TaoCurrency::from(0));
+        GameSolver::set_subnet_locked_balance(net, TaoCurrency::from(0));
 
         TotalHotkeyAlpha::<Test>::insert(s1h, net, AlphaCurrency::from(3u64));
         TotalHotkeyAlpha::<Test>::insert(s2h, net, AlphaCurrency::from(2u64));
 
         // Cold-key balances before
-        let c1_before = SubtensorModule::get_coldkey_balance(&s1c);
-        let c2_before = SubtensorModule::get_coldkey_balance(&s2c);
+        let c1_before = GameSolver::get_coldkey_balance(&s1c);
+        let c2_before = GameSolver::get_coldkey_balance(&s2c);
 
         // 3. Run full dissolve flow
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
+        assert_ok!(GameSolver::do_dissolve_network(net));
 
         // 4. s1 (larger remainder) should get +1 τ on cold-key
-        let c1_after = SubtensorModule::get_coldkey_balance(&s1c);
-        let c2_after = SubtensorModule::get_coldkey_balance(&s2c);
+        let c1_after = GameSolver::get_coldkey_balance(&s1c);
+        let c2_after = GameSolver::get_coldkey_balance(&s2c);
 
         assert_eq!(c1_after, c1_before + 1);
         assert_eq!(c2_after, c2_before);
@@ -731,16 +728,16 @@ fn destroy_alpha_out_multiple_stakers_pro_rata() {
         let s1: u64 = 3u64 * min_total_u64;
         let s2: u64 = 7u64 * min_total_u64;
 
-        SubtensorModule::add_balance_to_coldkey_account(&c1, s1 + 50_000);
-        SubtensorModule::add_balance_to_coldkey_account(&c2, s2 + 50_000);
+        GameSolver::add_balance_to_coldkey_account(&c1, s1 + 50_000);
+        GameSolver::add_balance_to_coldkey_account(&c2, s2 + 50_000);
 
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(c1),
             h1,
             netuid,
             s1.into()
         ));
-        assert_ok!(SubtensorModule::do_add_stake(
+        assert_ok!(GameSolver::do_add_stake(
             RuntimeOrigin::signed(c2),
             h2,
             netuid,
@@ -755,15 +752,15 @@ fn destroy_alpha_out_multiple_stakers_pro_rata() {
         // 5. TAO pot & lock
         let tao_pot: u64 = 10_000;
         SubnetTAO::<Test>::insert(netuid, TaoCurrency::from(tao_pot));
-        SubtensorModule::set_subnet_locked_balance(netuid, TaoCurrency::from(5_000));
+        GameSolver::set_subnet_locked_balance(netuid, TaoCurrency::from(5_000));
 
         // 6. Balances before
-        let c1_before = SubtensorModule::get_coldkey_balance(&c1);
-        let c2_before = SubtensorModule::get_coldkey_balance(&c2);
-        let owner_before = SubtensorModule::get_coldkey_balance(&owner_cold);
+        let c1_before = GameSolver::get_coldkey_balance(&c1);
+        let c2_before = GameSolver::get_coldkey_balance(&c2);
+        let owner_before = GameSolver::get_coldkey_balance(&owner_cold);
 
         // 7. Run the (now credit-to-coldkey) logic
-        assert_ok!(SubtensorModule::destroy_alpha_in_out_stakes(netuid));
+        assert_ok!(GameSolver::destroy_alpha_in_out_stakes(netuid));
 
         // 8. Expected τ shares via largest remainder
         let prod1 = (tao_pot as u128) * a1;
@@ -783,18 +780,12 @@ fn destroy_alpha_out_multiple_stakers_pro_rata() {
         }
 
         // 9. Cold-key balances must have increased accordingly
-        assert_eq!(
-            SubtensorModule::get_coldkey_balance(&c1),
-            c1_before + s1_share
-        );
-        assert_eq!(
-            SubtensorModule::get_coldkey_balance(&c2),
-            c2_before + s2_share
-        );
+        assert_eq!(GameSolver::get_coldkey_balance(&c1), c1_before + s1_share);
+        assert_eq!(GameSolver::get_coldkey_balance(&c2), c2_before + s2_share);
 
         // 10. Owner refund (5 000 τ) to cold-key (no emission)
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&owner_cold),
+            GameSolver::get_coldkey_balance(&owner_cold),
             owner_before + 5_000
         );
 
@@ -812,8 +803,8 @@ fn destroy_alpha_out_many_stakers_complex_distribution() {
         let owner_cold = U256::from(1_000);
         let owner_hot = U256::from(2_000);
         let netuid = add_dynamic_network(&owner_hot, &owner_cold);
-        SubtensorModule::set_max_registrations_per_block(netuid, 1_000u16);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 1_000u16);
+        GameSolver::set_max_registrations_per_block(netuid, 1_000u16);
+        GameSolver::set_target_registrations_per_interval(netuid, 1_000u16);
 
         // Mark this subnet as *legacy* so owner refund path is enabled.
         let reg_at = NetworkRegisteredAt::<Test>::get(netuid);
@@ -842,9 +833,9 @@ fn destroy_alpha_out_many_stakers_complex_distribution() {
             stake[i] = (i as u64 + 1u64) * min_amount_u64; // multiples of min_amount
 
             register_ok_neuron(netuid, hot[i], cold[i], 0);
-            SubtensorModule::add_balance_to_coldkey_account(&cold[i], stake[i] + 100_000);
+            GameSolver::add_balance_to_coldkey_account(&cold[i], stake[i] + 100_000);
 
-            assert_ok!(SubtensorModule::do_add_stake(
+            assert_ok!(GameSolver::do_add_stake(
                 RuntimeOrigin::signed(cold[i]),
                 hot[i],
                 netuid,
@@ -864,10 +855,10 @@ fn destroy_alpha_out_many_stakers_complex_distribution() {
         let tao_pot: u64 = 123_456;
         let lock: u64 = 30_000;
         SubnetTAO::<Test>::insert(netuid, TaoCurrency::from(tao_pot));
-        SubtensorModule::set_subnet_locked_balance(netuid, TaoCurrency::from(lock));
+        GameSolver::set_subnet_locked_balance(netuid, TaoCurrency::from(lock));
 
         // ensure there was some Alpha issued
-        assert!(SubtensorModule::get_alpha_issuance(netuid).to_u64() > 0);
+        assert!(GameSolver::get_alpha_issuance(netuid).to_u64() > 0);
 
         // Owner already earned some emission; owner-cut = 50 %
         SubnetOwnerCut::<Test>::put(32_768u16); // ~ 0.5 in fixed-point
@@ -875,9 +866,9 @@ fn destroy_alpha_out_many_stakers_complex_distribution() {
         // ── 4) balances before ──────────────────────────────────────────────
         let mut bal_before = [0u64; N];
         for i in 0..N {
-            bal_before[i] = SubtensorModule::get_coldkey_balance(&cold[i]);
+            bal_before[i] = GameSolver::get_coldkey_balance(&cold[i]);
         }
-        let owner_before = SubtensorModule::get_coldkey_balance(&owner_cold);
+        let owner_before = GameSolver::get_coldkey_balance(&owner_cold);
 
         // ── 5) expected τ share per pallet algorithm (incl. remainder) ─────
         let mut share = [0u64; N];
@@ -898,8 +889,8 @@ fn destroy_alpha_out_many_stakers_complex_distribution() {
         }
 
         // ── 5b) expected owner refund with price-aware emission deduction ───
-        let frac: U96F32 = SubtensorModule::get_float_subnet_owner_cut();
-        let total_emitted_alpha: u64 = SubtensorModule::get_alpha_issuance(netuid).to_u64();
+        let frac: U96F32 = GameSolver::get_float_subnet_owner_cut();
+        let total_emitted_alpha: u64 = GameSolver::get_alpha_issuance(netuid).to_u64();
         let owner_alpha_u64: u64 = U96F32::from_num(total_emitted_alpha)
             .saturating_mul(frac)
             .floor()
@@ -918,13 +909,13 @@ fn destroy_alpha_out_many_stakers_complex_distribution() {
         let expected_refund = lock.saturating_sub(owner_emission_tao);
 
         // ── 6) run distribution (credits τ to coldkeys, wipes α state) ─────
-        assert_ok!(SubtensorModule::destroy_alpha_in_out_stakes(netuid));
+        assert_ok!(GameSolver::destroy_alpha_in_out_stakes(netuid));
 
         // ── 7) post checks ──────────────────────────────────────────────────
         for i in 0..N {
             // cold-key balances increased by expected τ share
             assert_eq!(
-                SubtensorModule::get_coldkey_balance(&cold[i]),
+                GameSolver::get_coldkey_balance(&cold[i]),
                 bal_before[i] + share[i],
                 "staker {i} cold-key balance changed unexpectedly"
             );
@@ -932,7 +923,7 @@ fn destroy_alpha_out_many_stakers_complex_distribution() {
 
         // owner refund
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&owner_cold),
+            GameSolver::get_coldkey_balance(&owner_cold),
             owner_before + expected_refund
         );
 
@@ -940,7 +931,7 @@ fn destroy_alpha_out_many_stakers_complex_distribution() {
         assert!(Alpha::<Test>::iter().all(|((_h, _c, n), _)| n != netuid));
         assert_eq!(SubnetAlphaIn::<Test>::get(netuid), 0.into());
         assert_eq!(SubnetAlphaOut::<Test>::get(netuid), 0.into());
-        assert_eq!(SubtensorModule::get_subnet_locked_balance(netuid), 0.into());
+        assert_eq!(GameSolver::get_subnet_locked_balance(netuid), 0.into());
     });
 }
 
@@ -961,14 +952,14 @@ fn destroy_alpha_out_refund_gating_by_registration_block() {
 
         // Lock and (nonzero) emissions
         let lock_u64: u64 = 50_000;
-        SubtensorModule::set_subnet_locked_balance(netuid, TaoCurrency::from(lock_u64));
+        GameSolver::set_subnet_locked_balance(netuid, TaoCurrency::from(lock_u64));
         // Owner cut ≈ 50%
         SubnetOwnerCut::<Test>::put(32_768u16);
 
         // give some stake to other key
         let other_cold = U256::from(1_234);
         let other_hot = U256::from(2_345);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &other_hot,
             &other_cold,
             netuid,
@@ -976,11 +967,11 @@ fn destroy_alpha_out_refund_gating_by_registration_block() {
         );
 
         // ensure there was some Alpha issued
-        assert!(SubtensorModule::get_alpha_issuance(netuid).to_u64() > 0);
+        assert!(GameSolver::get_alpha_issuance(netuid).to_u64() > 0);
 
         // Compute expected refund using the same math as the pallet
-        let frac: U96F32 = SubtensorModule::get_float_subnet_owner_cut();
-        let total_emitted_alpha: u64 = SubtensorModule::get_alpha_issuance(netuid).to_u64();
+        let frac: U96F32 = GameSolver::get_float_subnet_owner_cut();
+        let total_emitted_alpha: u64 = GameSolver::get_alpha_issuance(netuid).to_u64();
         let owner_alpha_u64: u64 = U96F32::from_num(total_emitted_alpha)
             .saturating_mul(frac)
             .floor()
@@ -998,18 +989,18 @@ fn destroy_alpha_out_refund_gating_by_registration_block() {
         let expected_refund: u64 = lock_u64.saturating_sub(owner_emission_tao_u64);
 
         // Balances before
-        let owner_before = SubtensorModule::get_coldkey_balance(&owner_cold);
+        let owner_before = GameSolver::get_coldkey_balance(&owner_cold);
 
         // Run the path under test
-        assert_ok!(SubtensorModule::destroy_alpha_in_out_stakes(netuid));
+        assert_ok!(GameSolver::destroy_alpha_in_out_stakes(netuid));
 
         // Owner received their refund…
-        let owner_after = SubtensorModule::get_coldkey_balance(&owner_cold);
+        let owner_after = GameSolver::get_coldkey_balance(&owner_cold);
         assert_eq!(owner_after, owner_before + expected_refund);
 
         // …and the lock is always cleared to zero by destroy_alpha_in_out_stakes.
         assert_eq!(
-            SubtensorModule::get_subnet_locked_balance(netuid),
+            GameSolver::get_subnet_locked_balance(netuid),
             TaoCurrency::from(0u64)
         );
     });
@@ -1029,33 +1020,33 @@ fn destroy_alpha_out_refund_gating_by_registration_block() {
 
         // Lock and emissions present (should be ignored for refund)
         let lock_u64: u64 = 42_000;
-        SubtensorModule::set_subnet_locked_balance(netuid, TaoCurrency::from(lock_u64));
+        GameSolver::set_subnet_locked_balance(netuid, TaoCurrency::from(lock_u64));
         // give some stake to other key
         let other_cold = U256::from(1_234);
         let other_hot = U256::from(2_345);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &other_hot,
             &other_cold,
             netuid,
             AlphaCurrency::from(300u64), // not nearly enough to cover the lock
         );
         // ensure there was some Alpha issued
-        assert!(SubtensorModule::get_alpha_issuance(netuid).to_u64() > 0);
+        assert!(GameSolver::get_alpha_issuance(netuid).to_u64() > 0);
         SubnetOwnerCut::<Test>::put(32_768u16); // ~50%
 
         // Balances before
-        let owner_before = SubtensorModule::get_coldkey_balance(&owner_cold);
+        let owner_before = GameSolver::get_coldkey_balance(&owner_cold);
 
         // Run the path under test
-        assert_ok!(SubtensorModule::destroy_alpha_in_out_stakes(netuid));
+        assert_ok!(GameSolver::destroy_alpha_in_out_stakes(netuid));
 
         // No refund for non‑legacy
-        let owner_after = SubtensorModule::get_coldkey_balance(&owner_cold);
+        let owner_after = GameSolver::get_coldkey_balance(&owner_cold);
         assert_eq!(owner_after, owner_before);
 
         // Lock is still cleared to zero by the routine
         assert_eq!(
-            SubtensorModule::get_subnet_locked_balance(netuid),
+            GameSolver::get_subnet_locked_balance(netuid),
             TaoCurrency::from(0u64)
         );
     });
@@ -1074,20 +1065,20 @@ fn destroy_alpha_out_refund_gating_by_registration_block() {
         NetworkRegistrationStartBlock::<Test>::put(reg_at.saturating_add(1));
 
         // lock = 0; emissions present (must not matter)
-        SubtensorModule::set_subnet_locked_balance(netuid, TaoCurrency::from(0u64));
+        GameSolver::set_subnet_locked_balance(netuid, TaoCurrency::from(0u64));
         SubnetAlphaOut::<Test>::insert(netuid, AlphaCurrency::from(10_000));
         // ensure there was some Alpha issued
-        assert!(SubtensorModule::get_alpha_issuance(netuid).to_u64() > 0);
+        assert!(GameSolver::get_alpha_issuance(netuid).to_u64() > 0);
         SubnetOwnerCut::<Test>::put(32_768u16); // ~50%
 
-        let owner_before = SubtensorModule::get_coldkey_balance(&owner_cold);
-        assert_ok!(SubtensorModule::destroy_alpha_in_out_stakes(netuid));
-        let owner_after = SubtensorModule::get_coldkey_balance(&owner_cold);
+        let owner_before = GameSolver::get_coldkey_balance(&owner_cold);
+        assert_ok!(GameSolver::destroy_alpha_in_out_stakes(netuid));
+        let owner_after = GameSolver::get_coldkey_balance(&owner_cold);
 
         // No refund possible when lock = 0
         assert_eq!(owner_after, owner_before);
         assert_eq!(
-            SubtensorModule::get_subnet_locked_balance(netuid),
+            GameSolver::get_subnet_locked_balance(netuid),
             TaoCurrency::from(0u64)
         );
     });
@@ -1096,7 +1087,7 @@ fn destroy_alpha_out_refund_gating_by_registration_block() {
 #[test]
 fn prune_none_with_no_networks() {
     new_test_ext(0).execute_with(|| {
-        assert_eq!(SubtensorModule::get_network_to_prune(), None);
+        assert_eq!(GameSolver::get_network_to_prune(), None);
     });
 }
 
@@ -1110,7 +1101,7 @@ fn prune_none_when_all_networks_immune() {
         // emissions don’t matter while immune
         Emission::<Test>::insert(n1, vec![AlphaCurrency::from(10)]);
 
-        assert_eq!(SubtensorModule::get_network_to_prune(), None);
+        assert_eq!(GameSolver::get_network_to_prune(), None);
     });
 }
 
@@ -1121,14 +1112,14 @@ fn prune_selects_network_with_lowest_price() {
         let n2 = add_dynamic_network(&U256::from(40), &U256::from(30));
 
         // make both networks eligible (past immunity)
-        let imm = SubtensorModule::get_network_immunity_period();
+        let imm = GameSolver::get_network_immunity_period();
         System::set_block_number(imm + 10);
 
         // n1 has lower price → should be pruned
         SubnetMovingPrice::<Test>::insert(n1, I96F32::from_num(1));
         SubnetMovingPrice::<Test>::insert(n2, I96F32::from_num(10));
 
-        assert_eq!(SubtensorModule::get_network_to_prune(), Some(n1));
+        assert_eq!(GameSolver::get_network_to_prune(), Some(n1));
     });
 }
 
@@ -1138,7 +1129,7 @@ fn prune_ignores_immune_network_even_if_lower_price() {
         // create mature network n1 first
         let n1 = add_dynamic_network(&U256::from(22), &U256::from(11));
 
-        let imm = SubtensorModule::get_network_immunity_period();
+        let imm = GameSolver::get_network_immunity_period();
         System::set_block_number(imm + 5); // advance → n1 now mature
 
         // create second network n2 *inside* immunity
@@ -1149,7 +1140,7 @@ fn prune_ignores_immune_network_even_if_lower_price() {
         SubnetMovingPrice::<Test>::insert(n2, I96F32::from_num(1));
 
         System::set_block_number(imm + 10); // still immune for n2
-        assert_eq!(SubtensorModule::get_network_to_prune(), Some(n1));
+        assert_eq!(GameSolver::get_network_to_prune(), Some(n1));
     });
 }
 
@@ -1164,21 +1155,21 @@ fn prune_tie_on_price_earlier_registration_wins() {
         let n2 = add_dynamic_network(&U256::from(88), &U256::from(77));
 
         // push past immunity for both
-        let imm = SubtensorModule::get_network_immunity_period();
+        let imm = GameSolver::get_network_immunity_period();
         System::set_block_number(imm + 20);
 
         // identical prices → tie; earlier (n1) must be chosen
         SubnetMovingPrice::<Test>::insert(n1, I96F32::from_num(7));
         SubnetMovingPrice::<Test>::insert(n2, I96F32::from_num(7));
 
-        assert_eq!(SubtensorModule::get_network_to_prune(), Some(n1));
+        assert_eq!(GameSolver::get_network_to_prune(), Some(n1));
     });
 }
 
 #[test]
 fn prune_selection_complex_state_exhaustive() {
     new_test_ext(0).execute_with(|| {
-        let imm = SubtensorModule::get_network_immunity_period();
+        let imm = GameSolver::get_network_immunity_period();
 
         // ---------------------------------------------------------------------
         // Build a rich topology of networks with controlled registration times.
@@ -1225,7 +1216,7 @@ fn prune_selection_complex_state_exhaustive() {
         // ---------------------------------------------------------------------
         System::set_block_number(imm + 10);
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n4),
             "Among mature nets (n1..n4), n4 has price=1 (lowest) and should be chosen."
         );
@@ -1238,7 +1229,7 @@ fn prune_selection_complex_state_exhaustive() {
         // ---------------------------------------------------------------------
         SubnetMovingPrice::<Test>::insert(n4, I96F32::from_num(25)); // n4 now 25
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n1),
             "Tie on price with equal timestamps (n1,n2) → first encountered (n1) should persist."
         );
@@ -1250,7 +1241,7 @@ fn prune_selection_complex_state_exhaustive() {
         // ---------------------------------------------------------------------
         SubnetMovingPrice::<Test>::insert(n3, I96F32::from_num(25));
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n1),
             "Tie on price across multiple nets → earliest registration (n1) wins."
         );
@@ -1270,7 +1261,7 @@ fn prune_selection_complex_state_exhaustive() {
             "n6 is immune at current block"
         );
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n1),
             "Immune nets (n5,n6) must be ignored despite lower price."
         );
@@ -1281,7 +1272,7 @@ fn prune_selection_complex_state_exhaustive() {
         // ---------------------------------------------------------------------
         System::set_block_number(0);
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             None,
             "With all networks immune, there is no prunable candidate."
         );
@@ -1301,7 +1292,7 @@ fn prune_selection_complex_state_exhaustive() {
             "n6 has matured"
         );
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n5),
             "After immunity, n5 (price=0) should win; tie with n6 broken by earlier registration."
         );
@@ -1311,9 +1302,9 @@ fn prune_selection_complex_state_exhaustive() {
         // Remove n5; now n6 (price=0) should be selected.
         // This validates robustness to holes / non-contiguous netuids.
         // ---------------------------------------------------------------------
-        SubtensorModule::do_dissolve_network(n5).expect("Expected not to panic");
+        GameSolver::do_dissolve_network(n5).expect("Expected not to panic");
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n6),
             "After removing n5, next-lowest (n6=0) should be chosen even with sparse netuids."
         );
@@ -1325,7 +1316,7 @@ fn prune_selection_complex_state_exhaustive() {
         SubnetMovingPrice::<Test>::insert(n6, I96F32::from_num(100));
         SubnetMovingPrice::<Test>::insert(n3, I96F32::from_num(1));
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n3),
             "Dynamic changes: n3 set to price=1 (lowest among eligibles) → should be pruned."
         );
@@ -1337,7 +1328,7 @@ fn prune_selection_complex_state_exhaustive() {
         // ---------------------------------------------------------------------
         SubnetMovingPrice::<Test>::insert(n2, I96F32::from_num(1));
         assert_eq!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n2),
             "Tie on price across n2 (earlier reg) and n3 → n2 wins by timestamp."
         );
@@ -1348,7 +1339,7 @@ fn prune_selection_complex_state_exhaustive() {
         // ---------------------------------------------------------------------
         NetworksAdded::<Test>::insert(n2, false);
         assert_ne!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(n2),
             "`added=false` must exclude n2 from consideration."
         );
@@ -1356,7 +1347,7 @@ fn prune_selection_complex_state_exhaustive() {
 
         // Root is always ignored even if cheapest (get_moving_alpha_price returns 1 for ROOT).
         assert_ne!(
-            SubtensorModule::get_network_to_prune(),
+            GameSolver::get_network_to_prune(),
             Some(root),
             "ROOT must never be selected for pruning."
         );
@@ -1376,7 +1367,7 @@ fn register_network_prunes_and_recycles_netuid() {
         let n2_hot = U256::from(24);
         let n2 = add_dynamic_network(&n2_hot, &n2_cold);
 
-        let imm = SubtensorModule::get_network_immunity_period();
+        let imm = GameSolver::get_network_immunity_period();
         System::set_block_number(imm + 100);
 
         Emission::<Test>::insert(n1, vec![AlphaCurrency::from(1)]);
@@ -1384,10 +1375,10 @@ fn register_network_prunes_and_recycles_netuid() {
 
         let new_cold = U256::from(30);
         let new_hot = U256::from(31);
-        let needed: u64 = SubtensorModule::get_network_lock_cost().into();
-        SubtensorModule::add_balance_to_coldkey_account(&new_cold, needed.saturating_mul(10));
+        let needed: u64 = GameSolver::get_network_lock_cost().into();
+        GameSolver::add_balance_to_coldkey_account(&new_cold, needed.saturating_mul(10));
 
-        assert_ok!(SubtensorModule::do_register_network(
+        assert_ok!(GameSolver::do_register_network(
             RuntimeOrigin::signed(new_cold),
             &new_hot,
             1,
@@ -1410,7 +1401,7 @@ fn register_network_fails_before_prune_keeps_existing() {
         let n_hot = U256::from(42);
         let net = add_dynamic_network(&n_hot, &n_cold);
 
-        let imm = SubtensorModule::get_network_immunity_period();
+        let imm = GameSolver::get_network_immunity_period();
         System::set_block_number(imm + 50);
         Emission::<Test>::insert(net, vec![AlphaCurrency::from(10)]);
 
@@ -1418,7 +1409,7 @@ fn register_network_fails_before_prune_keeps_existing() {
         let caller_hot = U256::from(51);
 
         assert_err!(
-            SubtensorModule::do_register_network(
+            GameSolver::do_register_network(
                 RuntimeOrigin::signed(caller_cold),
                 &caller_hot,
                 1,
@@ -1427,7 +1418,7 @@ fn register_network_fails_before_prune_keeps_existing() {
             Error::<Test>::CannotAffordLockCost
         );
 
-        assert!(SubtensorModule::if_subnet_exist(net));
+        assert!(GameSolver::if_subnet_exist(net));
         assert_eq!(TotalNetworks::<Test>::get(), 1);
     });
 }
@@ -1439,32 +1430,31 @@ fn register_network_allows_second_registration_when_rate_limit_is_zero() {
         let first_hot = U256::from(62);
         let second_cold = U256::from(63);
         let second_hot = U256::from(64);
-        let needed: u64 = SubtensorModule::get_network_lock_cost().into();
+        let needed: u64 = GameSolver::get_network_lock_cost().into();
 
-        SubtensorModule::set_network_rate_limit(0);
-        SubtensorModule::add_balance_to_coldkey_account(&first_cold, needed.saturating_mul(10));
-        SubtensorModule::add_balance_to_coldkey_account(&second_cold, needed.saturating_mul(10));
+        GameSolver::set_network_rate_limit(0);
+        GameSolver::add_balance_to_coldkey_account(&first_cold, needed.saturating_mul(10));
+        GameSolver::add_balance_to_coldkey_account(&second_cold, needed.saturating_mul(10));
         System::set_block_number(10);
 
-        assert_ok!(SubtensorModule::do_register_network(
+        assert_ok!(GameSolver::do_register_network(
             RuntimeOrigin::signed(first_cold),
             &first_hot,
             1,
             None,
         ));
-        assert_eq!(SubtensorModule::get_network_last_lock_block(), 10);
+        assert_eq!(GameSolver::get_network_last_lock_block(), 10);
 
-        assert_ok!(SubtensorModule::do_register_network(
+        assert_ok!(GameSolver::do_register_network(
             RuntimeOrigin::signed(second_cold),
             &second_hot,
             1,
             None,
         ));
-        assert_eq!(SubtensorModule::get_network_last_lock_block(), 10);
+        assert_eq!(GameSolver::get_network_last_lock_block(), 10);
 
-        let first_netuid = SubtensorModule::get_uid_for_net_and_hotkey(NetUid::from(2), &first_hot);
-        let second_netuid =
-            SubtensorModule::get_uid_for_net_and_hotkey(NetUid::from(3), &second_hot);
+        let first_netuid = GameSolver::get_uid_for_net_and_hotkey(NetUid::from(2), &first_hot);
+        let second_netuid = GameSolver::get_uid_for_net_and_hotkey(NetUid::from(3), &second_hot);
         assert!(first_netuid.is_ok());
         assert!(second_netuid.is_ok());
     });
@@ -1539,7 +1529,7 @@ fn test_migrate_network_immunity_period() {
 //         let tempo: u16 = 13;
 //         let hotkey_account_id: U256 = U256::from(1);
 //         let coldkey_account_id = U256::from(0); // Neighbour of the beast, har har
-//         let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+//         let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
 //             netuid,
 //             block_number,
 //             129123813,
@@ -1549,7 +1539,7 @@ fn test_migrate_network_immunity_period() {
 //         //add network
 //         add_network(netuid, tempo, 0);
 
-//         assert_ok!(SubtensorModule::register(
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
 //             netuid,
 //             block_number,
@@ -1559,9 +1549,9 @@ fn test_migrate_network_immunity_period() {
 //             coldkey_account_id
 //         ));
 
-//         assert!(SubtensorModule::if_subnet_exist(netuid));
+//         assert!(GameSolver::if_subnet_exist(netuid));
 
-//         assert_ok!(SubtensorModule::schedule_dissolve_network(
+//         assert_ok!(GameSolver::schedule_dissolve_network(
 //             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //             netuid
 //         ));
@@ -1579,7 +1569,7 @@ fn test_migrate_network_immunity_period() {
 //         );
 
 //         run_to_block(execution_block);
-//         assert!(!SubtensorModule::if_subnet_exist(netuid));
+//         assert!(!GameSolver::if_subnet_exist(netuid));
 //     })
 // }
 
@@ -1592,7 +1582,7 @@ fn test_migrate_network_immunity_period() {
 //         let hotkey_account_id: U256 = U256::from(1);
 //         let coldkey_account_id = U256::from(0); // Neighbour of the beast, har har
 //         let non_network_owner_account_id = U256::from(2); //
-//         let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+//         let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
 //             netuid,
 //             block_number,
 //             129123813,
@@ -1602,7 +1592,7 @@ fn test_migrate_network_immunity_period() {
 //         //add network
 //         add_network(netuid, tempo, 0);
 
-//         assert_ok!(SubtensorModule::register(
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
 //             netuid,
 //             block_number,
@@ -1612,9 +1602,9 @@ fn test_migrate_network_immunity_period() {
 //             coldkey_account_id
 //         ));
 
-//         assert!(SubtensorModule::if_subnet_exist(netuid));
+//         assert!(GameSolver::if_subnet_exist(netuid));
 
-//         assert_ok!(SubtensorModule::schedule_dissolve_network(
+//         assert_ok!(GameSolver::schedule_dissolve_network(
 //             <<Test as Config>::RuntimeOrigin>::signed(non_network_owner_account_id),
 //             netuid
 //         ));
@@ -1633,7 +1623,7 @@ fn test_migrate_network_immunity_period() {
 
 //         run_to_block(execution_block);
 //         // network exists since the caller is no the network owner
-//         assert!(SubtensorModule::if_subnet_exist(netuid));
+//         assert!(GameSolver::if_subnet_exist(netuid));
 //     })
 // }
 
@@ -1646,7 +1636,7 @@ fn test_migrate_network_immunity_period() {
 //         let hotkey_account_id: U256 = U256::from(1);
 //         let coldkey_account_id = U256::from(0); // Neighbour of the beast, har har
 //         let new_network_owner_account_id = U256::from(2); //
-//         let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+//         let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
 //             netuid,
 //             block_number,
 //             129123813,
@@ -1656,7 +1646,7 @@ fn test_migrate_network_immunity_period() {
 //         //add network
 //         add_network(netuid, tempo, 0);
 
-//         assert_ok!(SubtensorModule::register(
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
 //             netuid,
 //             block_number,
@@ -1666,10 +1656,10 @@ fn test_migrate_network_immunity_period() {
 //             coldkey_account_id
 //         ));
 
-//         assert!(SubtensorModule::if_subnet_exist(netuid));
+//         assert!(GameSolver::if_subnet_exist(netuid));
 
 //         // the account is not network owner when schedule the call
-//         assert_ok!(SubtensorModule::schedule_dissolve_network(
+//         assert_ok!(GameSolver::schedule_dissolve_network(
 //             <<Test as Config>::RuntimeOrigin>::signed(new_network_owner_account_id),
 //             netuid
 //         ));
@@ -1691,7 +1681,7 @@ fn test_migrate_network_immunity_period() {
 
 //         run_to_block(execution_block);
 //         // network exists since the caller is no the network owner
-//         assert!(!SubtensorModule::if_subnet_exist(netuid));
+//         assert!(!GameSolver::if_subnet_exist(netuid));
 //     })
 // }
 
@@ -1705,9 +1695,9 @@ fn test_migrate_network_immunity_period() {
 //         let coldkey_account_id = U256::from(0); // Neighbour of the beast, har har
 //         let new_network_owner_account_id = U256::from(2); //
 
-//         SubtensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 1000000000000000);
+//         GameSolver::add_balance_to_coldkey_account(&coldkey_account_id, 1000000000000000);
 
-//         let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+//         let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
 //             netuid,
 //             block_number,
 //             129123813,
@@ -1717,7 +1707,7 @@ fn test_migrate_network_immunity_period() {
 //         //add network
 //         add_network(netuid, tempo, 0);
 
-//         assert_ok!(SubtensorModule::register(
+//         assert_ok!(GameSolver::register(
 //             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
 //             netuid,
 //             block_number,
@@ -1727,10 +1717,10 @@ fn test_migrate_network_immunity_period() {
 //             coldkey_account_id
 //         ));
 
-//         assert!(SubtensorModule::if_subnet_exist(netuid));
+//         assert!(GameSolver::if_subnet_exist(netuid));
 
 //         // the account is not network owner when schedule the call
-//         assert_ok!(SubtensorModule::schedule_swap_coldkey(
+//         assert_ok!(GameSolver::schedule_swap_coldkey(
 //             <<Test as Config>::RuntimeOrigin>::signed(coldkey_account_id),
 //             new_network_owner_account_id
 //         ));
@@ -1741,7 +1731,7 @@ fn test_migrate_network_immunity_period() {
 //         run_to_block(execution_block - 1);
 
 //         // the account is not network owner when schedule the call
-//         assert_ok!(SubtensorModule::schedule_dissolve_network(
+//         assert_ok!(GameSolver::schedule_dissolve_network(
 //             <<Test as Config>::RuntimeOrigin>::signed(new_network_owner_account_id),
 //             netuid
 //         ));
@@ -1767,7 +1757,7 @@ fn test_migrate_network_immunity_period() {
 
 //         run_to_block(execution_block);
 //         // network exists since the caller is no the network owner
-//         assert!(!SubtensorModule::if_subnet_exist(netuid));
+//         assert!(!GameSolver::if_subnet_exist(netuid));
 //     })
 // }
 
@@ -1779,13 +1769,13 @@ fn test_register_subnet_low_lock_cost() {
         NetworkLastLockCost::<Test>::set(TaoCurrency::from(1_000));
 
         // Make sure lock cost is lower than 100 TAO
-        let lock_cost = SubtensorModule::get_network_lock_cost();
+        let lock_cost = GameSolver::get_network_lock_cost();
         assert!(lock_cost < 100_000_000_000.into());
 
         let subnet_owner_coldkey = U256::from(1);
         let subnet_owner_hotkey = U256::from(2);
         let netuid = add_dynamic_network(&subnet_owner_hotkey, &subnet_owner_coldkey);
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // Ensure that both Subnet TAO and Subnet Alpha In equal to (actual) lock_cost
         assert_eq!(SubnetTAO::<Test>::get(netuid), lock_cost);
@@ -1805,13 +1795,13 @@ fn test_register_subnet_high_lock_cost() {
         NetworkLastLockCost::<Test>::set(lock_cost);
 
         // Make sure lock cost is higher than 100 TAO
-        let lock_cost = SubtensorModule::get_network_lock_cost();
+        let lock_cost = GameSolver::get_network_lock_cost();
         assert!(lock_cost >= 1_000_000_000_000.into());
 
         let subnet_owner_coldkey = U256::from(1);
         let subnet_owner_hotkey = U256::from(2);
         let netuid = add_dynamic_network(&subnet_owner_hotkey, &subnet_owner_coldkey);
-        assert!(SubtensorModule::if_subnet_exist(netuid));
+        assert!(GameSolver::if_subnet_exist(netuid));
 
         // Ensure that both Subnet TAO and Subnet Alpha In equal to 100 TAO
         assert_eq!(SubnetTAO::<Test>::get(netuid), lock_cost);
@@ -1831,9 +1821,9 @@ fn test_tempo_greater_than_weight_set_rate_limit() {
         let netuid = add_dynamic_network(&subnet_owner_hotkey, &subnet_owner_coldkey);
 
         // Get tempo
-        let tempo = SubtensorModule::get_tempo(netuid);
+        let tempo = GameSolver::get_tempo(netuid);
 
-        let weights_set_rate_limit = SubtensorModule::get_weights_set_rate_limit(netuid);
+        let weights_set_rate_limit = GameSolver::get_weights_set_rate_limit(netuid);
 
         assert!(tempo as u64 >= weights_set_rate_limit);
     })
@@ -1905,10 +1895,10 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
             let owner_hot = U256::from(10_000 + (i as u64));
             let owner_cold = U256::from(20_000 + (i as u64));
             let net = add_dynamic_network(&owner_hot, &owner_cold);
-            SubtensorModule::set_max_registrations_per_block(net, 1_000u16);
-            SubtensorModule::set_target_registrations_per_interval(net, 1_000u16);
+            GameSolver::set_max_registrations_per_block(net, 1_000u16);
+            GameSolver::set_target_registrations_per_interval(net, 1_000u16);
             Emission::<Test>::insert(net, Vec::<AlphaCurrency>::new());
-            SubtensorModule::set_subnet_locked_balance(net, TaoCurrency::from(0));
+            GameSolver::set_subnet_locked_balance(net, TaoCurrency::from(0));
 
             assert_ok!(
                 pallet_subtensor_swap::Pallet::<Test>::toggle_user_liquidity(
@@ -1948,7 +1938,7 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
         // 3) LPs per net: register each (hot, cold), massive τ prefund, and stake
         // ────────────────────────────────────────────────────────────────────
         for &cold in cold_lps.iter() {
-            SubtensorModule::add_balance_to_coldkey_account(&cold, u64::MAX);
+            GameSolver::add_balance_to_coldkey_account(&cold, u64::MAX);
         }
 
         // τ balances before LP adds (after staking):
@@ -1983,13 +1973,13 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
                 let stake1: u64 = base.saturating_mul(3) / 5; // 60%
                 let stake2: u64 = base.saturating_sub(stake1); // 40%
 
-                assert_ok!(SubtensorModule::do_add_stake(
+                assert_ok!(GameSolver::do_add_stake(
                     RuntimeOrigin::signed(cold),
                     hot1,
                     net,
                     stake1.into()
                 ));
-                assert_ok!(SubtensorModule::do_add_stake(
+                assert_ok!(GameSolver::do_add_stake(
                     RuntimeOrigin::signed(cold),
                     hot2,
                     net,
@@ -2000,7 +1990,7 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
 
         // Record τ balances now (post‑stake, pre‑LP).
         for &cold in cold_lps.iter() {
-            tao_before.insert(cold, SubtensorModule::get_coldkey_balance(&cold));
+            tao_before.insert(cold, GameSolver::get_coldkey_balance(&cold));
         }
 
         // Capture **pair‑level** α snapshot per net (pre‑LP).
@@ -2038,7 +2028,7 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
         // Snapshot τ balances AFTER LP adds (to measure actual principal debit).
         let mut tao_after_adds: BTreeMap<U256, u64> = BTreeMap::new();
         for &cold in cold_lps.iter() {
-            tao_after_adds.insert(cold, SubtensorModule::get_coldkey_balance(&cold));
+            tao_after_adds.insert(cold, GameSolver::get_coldkey_balance(&cold));
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -2084,7 +2074,7 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
             SubnetTAO::<Test>::insert(net, TaoCurrency::from(pots[ni]));
         }
         for &net in nets.iter() {
-            assert_ok!(SubtensorModule::do_dissolve_network(net));
+            assert_ok!(GameSolver::do_dissolve_network(net));
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -2096,7 +2086,7 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
             cold_lps.iter().copied().map(|c| (c, 0_u64)).collect();
         for &cold in cold_lps.iter() {
             let before = tao_before[&cold];
-            let after = SubtensorModule::get_coldkey_balance(&cold);
+            let after = GameSolver::get_coldkey_balance(&cold);
             actual_pot_cold.insert(cold, after.saturating_sub(before));
         }
 
@@ -2137,7 +2127,7 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
         for &cold in cold_lps.iter() {
             let before = tao_before[&cold];
             let mid = tao_after_adds[&cold];
-            let after = SubtensorModule::get_coldkey_balance(&cold);
+            let after = GameSolver::get_coldkey_balance(&cold);
             let principal_actual = before.saturating_sub(mid);
             let actual_pot = after.saturating_sub(before);
             assert_eq!(
@@ -2154,7 +2144,7 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
                 "alpha ledger not fully cleared for net {net:?}"
             );
             assert!(
-                !SubtensorModule::if_subnet_exist(net),
+                !GameSolver::if_subnet_exist(net),
                 "subnet {net:?} still exists"
             );
             assert!(
@@ -2206,10 +2196,10 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
         let new_owner_hot = U256::from(99_000);
         let new_owner_cold = U256::from(99_001);
         let net_new = add_dynamic_network(&new_owner_hot, &new_owner_cold);
-        SubtensorModule::set_max_registrations_per_block(net_new, 1_000u16);
-        SubtensorModule::set_target_registrations_per_interval(net_new, 1_000u16);
+        GameSolver::set_max_registrations_per_block(net_new, 1_000u16);
+        GameSolver::set_target_registrations_per_interval(net_new, 1_000u16);
         Emission::<Test>::insert(net_new, Vec::<AlphaCurrency>::new());
-        SubtensorModule::set_subnet_locked_balance(net_new, TaoCurrency::from(0));
+        GameSolver::set_subnet_locked_balance(net_new, TaoCurrency::from(0));
 
         assert_ok!(
             pallet_subtensor_swap::Pallet::<Test>::toggle_user_liquidity(
@@ -2241,7 +2231,7 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
             let [hot1, _hot2] = cold_to_hots[&cold];
             register_ok_neuron(net_new, hot1, cold, 7777);
 
-            let before_tao = SubtensorModule::get_coldkey_balance(&cold);
+            let before_tao = GameSolver::get_coldkey_balance(&cold);
             let a_prev: u64 = Alpha::<Test>::get((hot1, cold, net_new)).saturating_to_num();
 
             // Expected α for this exact τ, using the same sim path as the pallet.
@@ -2253,14 +2243,14 @@ fn massive_dissolve_refund_and_reregistration_flow_is_lossless_and_cleans_state(
             .map(|r| r.amount_paid_out)
             .expect("sim_swap must succeed for fresh net and min amount");
 
-            assert_ok!(SubtensorModule::do_add_stake(
+            assert_ok!(GameSolver::do_add_stake(
                 RuntimeOrigin::signed(cold),
                 hot1,
                 net_new,
                 min_amount_required.into()
             ));
 
-            let after_tao = SubtensorModule::get_coldkey_balance(&cold);
+            let after_tao = GameSolver::get_coldkey_balance(&cold);
             let a_new: u64 = Alpha::<Test>::get((hot1, cold, net_new)).saturating_to_num();
             let a_delta = a_new.saturating_sub(a_prev);
 
@@ -2304,8 +2294,8 @@ fn dissolve_clears_all_mechanism_scoped_maps_for_all_mechanisms() {
         let m0 = MechId::from(0u8);
         let m1 = MechId::from(1u8);
 
-        let idx0 = SubtensorModule::get_mechanism_storage_index(net, m0);
-        let idx1 = SubtensorModule::get_mechanism_storage_index(net, m1);
+        let idx0 = GameSolver::get_mechanism_storage_index(net, m0);
+        let idx1 = GameSolver::get_mechanism_storage_index(net, m1);
 
         // Minimal content to ensure each storage actually has keys for BOTH mechanisms.
 
@@ -2352,7 +2342,7 @@ fn dissolve_clears_all_mechanism_scoped_maps_for_all_mechanisms() {
         assert!(MechanismCountCurrent::<Test>::contains_key(net));
 
         // --- Dissolve the subnet ---
-        assert_ok!(SubtensorModule::do_dissolve_network(net));
+        assert_ok!(GameSolver::do_dissolve_network(net));
 
         // After dissolve, ALL mechanism-scoped items must be cleared for ALL mechanisms.
 

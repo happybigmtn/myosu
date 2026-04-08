@@ -22,13 +22,13 @@ pub fn migrate_remove_unused_maps_and_values<T: Config>() -> Weight {
     );
 
     // Remove EmissionValues entries
-    remove_prefix::<T>("SubtensorModule", "EmissionValues", &mut weight);
+    remove_prefix::<T>("GameSolver", "EmissionValues", &mut weight);
 
     // Remove NetworkMaxStake
-    remove_prefix::<T>("SubtensorModule", "NetworkMaxStake", &mut weight);
+    remove_prefix::<T>("GameSolver", "NetworkMaxStake", &mut weight);
 
     // Remove SubnetLimit
-    clear(b"SubtensorModule::SubnetLimit");
+    clear(b"GameSolver::SubnetLimit");
 
     // Mark Migration as Completed
     HasMigrationRun::<T>::insert(&migration_name, true);

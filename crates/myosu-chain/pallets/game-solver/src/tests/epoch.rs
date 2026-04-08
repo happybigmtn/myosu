@@ -116,28 +116,25 @@ fn distribute_nodes(
 fn uid_stats(netuid: NetUid, uid: u16) {
     log::info!(
         "stake: {:?}",
-        SubtensorModule::get_total_stake_for_hotkey(&(U256::from(uid)))
+        GameSolver::get_total_stake_for_hotkey(&(U256::from(uid)))
     );
-    log::info!("rank: {:?}", SubtensorModule::get_rank_for_uid(netuid, uid));
-    log::info!(
-        "trust: {:?}",
-        SubtensorModule::get_trust_for_uid(netuid, uid)
-    );
+    log::info!("rank: {:?}", GameSolver::get_rank_for_uid(netuid, uid));
+    log::info!("trust: {:?}", GameSolver::get_trust_for_uid(netuid, uid));
     log::info!(
         "consensus: {:?}",
-        SubtensorModule::get_consensus_for_uid(netuid, uid)
+        GameSolver::get_consensus_for_uid(netuid, uid)
     );
     log::info!(
         "incentive: {:?}",
-        SubtensorModule::get_incentive_for_uid(NetUidStorageIndex::from(netuid), uid)
+        GameSolver::get_incentive_for_uid(NetUidStorageIndex::from(netuid), uid)
     );
     log::info!(
         "dividend: {:?}",
-        SubtensorModule::get_dividends_for_uid(netuid, uid)
+        GameSolver::get_dividends_for_uid(netuid, uid)
     );
     log::info!(
         "emission: {:?}",
-        SubtensorModule::get_emission_for_uid(netuid, uid)
+        GameSolver::get_emission_for_uid(netuid, uid)
     );
 }
 
@@ -163,10 +160,10 @@ fn init_run_epochs(
     add_network_disable_commit_reveal(netuid, u16::MAX - 1, 0); // set higher tempo to avoid built-in epoch, then manual epoch instead
 
     // === Set bonds penalty
-    SubtensorModule::set_bonds_penalty(netuid, bonds_penalty);
+    GameSolver::set_bonds_penalty(netuid, bonds_penalty);
 
     // === Register uids
-    SubtensorModule::set_max_allowed_uids(netuid, n);
+    GameSolver::set_max_allowed_uids(netuid, n);
     for key in 0..n {
         let stake = if use_input_stake {
             input_stake[key as usize]
@@ -178,24 +175,24 @@ fn init_run_epochs(
         };
 
         // let stake: u64 = 1; // alternative test: all nodes receive stake, should be same outcome, except stake
-        SubtensorModule::add_balance_to_coldkey_account(&(U256::from(key)), stake);
-        SubtensorModule::append_neuron(netuid, &(U256::from(key)), 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::add_balance_to_coldkey_account(&(U256::from(key)), stake);
+        GameSolver::append_neuron(netuid, &(U256::from(key)), 0);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &U256::from(key),
             &U256::from(key),
             netuid,
             stake.into(),
         );
     }
-    assert_eq!(SubtensorModule::get_subnetwork_n(netuid), n);
+    assert_eq!(GameSolver::get_subnetwork_n(netuid), n);
 
     // === Issue validator permits
-    SubtensorModule::set_max_allowed_validators(netuid, validators.len() as u16);
+    GameSolver::set_max_allowed_validators(netuid, validators.len() as u16);
     assert_eq!(
-        SubtensorModule::get_max_allowed_validators(netuid),
+        GameSolver::get_max_allowed_validators(netuid),
         validators.len() as u16
     );
-    SubtensorModule::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
+    GameSolver::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
     run_to_block(1); // run to next block to ensure weights are set on nodes after their registration block
 
     // === Set weights
@@ -212,7 +209,7 @@ fn init_run_epochs(
             let sparse_weights = input_weights[*uid as usize].clone();
             weights = sparse_weights.iter().map(|(_, w)| *w).collect();
             let srvs: Vec<u16> = sparse_weights.iter().map(|(s, _)| *s).collect();
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(*uid as u64)),
                 netuid,
                 srvs,
@@ -220,7 +217,7 @@ fn init_run_epochs(
                 0
             ));
         } else {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(*uid as u64)),
                 netuid,
                 servers.to_vec(),
@@ -231,7 +228,7 @@ fn init_run_epochs(
     }
     if server_self {
         for uid in servers {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(*uid as u64)),
                 netuid,
                 vec![*uid],
@@ -246,15 +243,15 @@ fn init_run_epochs(
     let start = Instant::now();
     for _ in 0..epochs {
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
     }
     let duration = start.elapsed();
     log::info!("Time elapsed in (sparse={sparse}) epoch() is: {duration:?}");
 
-    // let bonds = SubtensorModule::get_bonds( netuid );
+    // let bonds = GameSolver::get_bonds( netuid );
     // for (uid, node) in vec![ (validators[0], "validator"), (servers[0], "server") ] {
     // 	log::info!("\n{node}" );
     // 	uid_stats(netuid, uid);
@@ -471,13 +468,13 @@ fn init_run_epochs(
 //             for set in vec![major_validators, major_servers] {
 //                 for uid in set {
 //                     major_emission +=
-//                         I64F64::from_num(SubtensorModule::get_emission_for_uid(netuid, uid));
+//                         I64F64::from_num(GameSolver::get_emission_for_uid(netuid, uid));
 //                 }
 //             }
 //             for set in vec![minor_validators, minor_servers] {
 //                 for uid in set {
 //                     minor_emission +=
-//                         I64F64::from_num(SubtensorModule::get_emission_for_uid(netuid, uid));
+//                         I64F64::from_num(GameSolver::get_emission_for_uid(netuid, uid));
 //                 }
 //             }
 //             let major_ratio: I32F32 =
@@ -494,50 +491,50 @@ fn init_run_epochs(
 //         log::info!("test_overflow:");
 //         let netuid = NetUid::from(1);
 //         add_network(netuid, 1,  0);
-//         SubtensorModule::set_max_allowed_uids(netuid, 3);
-//         SubtensorModule::increase_stake_on_coldkey_hotkey_account(
+//         GameSolver::set_max_allowed_uids(netuid, 3);
+//         GameSolver::increase_stake_on_coldkey_hotkey_account(
 //             &U256::from(0),
 //             &U256::from(0),
 //             10,
 //         );
-//         SubtensorModule::increase_stake_on_coldkey_hotkey_account(
+//         GameSolver::increase_stake_on_coldkey_hotkey_account(
 //             &U256::from(1),
 //             &U256::from(1),
 //             10,
 //         );
-//         SubtensorModule::increase_stake_on_coldkey_hotkey_account(
+//         GameSolver::increase_stake_on_coldkey_hotkey_account(
 //             &U256::from(2),
 //             &U256::from(2),
 //             10,
 //         );
-//         SubtensorModule::append_neuron(netuid, &U256::from(0), 0);
-//         SubtensorModule::append_neuron(netuid, &U256::from(1), 0);
-//         SubtensorModule::append_neuron(netuid, &U256::from(2), 0);
-//         SubtensorModule::set_validator_permit_for_uid(0, 0, true);
-//         SubtensorModule::set_validator_permit_for_uid(0, 1, true);
-//         SubtensorModule::set_validator_permit_for_uid(0, 2, true);
-//         assert_ok!(SubtensorModule::set_weights(
+//         GameSolver::append_neuron(netuid, &U256::from(0), 0);
+//         GameSolver::append_neuron(netuid, &U256::from(1), 0);
+//         GameSolver::append_neuron(netuid, &U256::from(2), 0);
+//         GameSolver::set_validator_permit_for_uid(0, 0, true);
+//         GameSolver::set_validator_permit_for_uid(0, 1, true);
+//         GameSolver::set_validator_permit_for_uid(0, 2, true);
+//         assert_ok!(GameSolver::set_weights(
 //             RuntimeOrigin::signed(U256::from(0)),
 //             netuid,
 //             vec![0, 1, 2],
 //             vec![u16::MAX / 3, u16::MAX / 3, u16::MAX],
 //             0
 //         ));
-//         assert_ok!(SubtensorModule::set_weights(
+//         assert_ok!(GameSolver::set_weights(
 //             RuntimeOrigin::signed(U256::from(1)),
 //             netuid,
 //             vec![1, 2],
 //             vec![u16::MAX / 2, u16::MAX / 2],
 //             0
 //         ));
-//         assert_ok!(SubtensorModule::set_weights(
+//         assert_ok!(GameSolver::set_weights(
 //             RuntimeOrigin::signed(U256::from(2)),
 //             netuid,
 //             vec![2],
 //             vec![u16::MAX],
 //             0
 //         ));
-//         SubtensorModule::epoch(0, u64::MAX);
+//         GameSolver::epoch(0, u64::MAX);
 //     });
 // }
 
@@ -546,7 +543,7 @@ fn init_run_epochs(
 // fn test_nill_epoch_subtensor() {
 //     new_test_ext(1).execute_with(|| {
 //         log::info!("test_nill_epoch:");
-//         SubtensorModule::epoch(0, 0);
+//         GameSolver::epoch(0, 0);
 //     });
 // }
 
@@ -562,45 +559,42 @@ fn test_1_graph() {
         let uid: u16 = 0;
         let stake_amount: u64 = 1_000_000_000;
         add_network_disable_commit_reveal(netuid, u16::MAX - 1, 0); // set higher tempo to avoid built-in epoch, then manual epoch instead
-        SubtensorModule::set_max_allowed_uids(netuid, 1);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_max_allowed_uids(netuid, 1);
+        GameSolver::add_balance_to_coldkey_account(
             &coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
         register_ok_neuron(netuid, hotkey, coldkey, 1);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid,
             stake_amount.into()
         ));
 
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 1);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 1);
         run_to_block(1); // run to next block to ensure weights are set on nodes after their registration block
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(U256::from(uid)),
             netuid,
             vec![uid],
             vec![u16::MAX],
             0
         ));
-        // SubtensorModule::set_weights_for_testing( netuid, i as u16, vec![ ( 0, u16::MAX )]); // doesn't set update status
-        // SubtensorModule::set_bonds_for_testing( netuid, uid, vec![ ( 0, u16::MAX )]); // rather, bonds are calculated in epoch
-        SubtensorModule::epoch(netuid, 1_000_000_000.into());
+        // GameSolver::set_weights_for_testing( netuid, i as u16, vec![ ( 0, u16::MAX )]); // doesn't set update status
+        // GameSolver::set_bonds_for_testing( netuid, uid, vec![ ( 0, u16::MAX )]); // rather, bonds are calculated in epoch
+        GameSolver::epoch(netuid, 1_000_000_000.into());
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey),
+            GameSolver::get_total_stake_for_hotkey(&hotkey),
             stake_amount.into()
         );
-        assert_eq!(SubtensorModule::get_rank_for_uid(netuid, uid), 0);
-        assert_eq!(SubtensorModule::get_trust_for_uid(netuid, uid), 0);
-        assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, uid), 0);
-        assert_eq!(
-            SubtensorModule::get_incentive_for_uid(netuid.into(), uid),
-            0
-        );
-        assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, uid), 0);
+        assert_eq!(GameSolver::get_rank_for_uid(netuid, uid), 0);
+        assert_eq!(GameSolver::get_trust_for_uid(netuid, uid), 0);
+        assert_eq!(GameSolver::get_consensus_for_uid(netuid, uid), 0);
+        assert_eq!(GameSolver::get_incentive_for_uid(netuid.into(), uid), 0);
+        assert_eq!(GameSolver::get_dividends_for_uid(netuid, uid), 0);
     });
 }
 
@@ -619,30 +613,30 @@ fn test_10_graph() {
                 hotkey,
                 uid,
                 stake_amount,
-                SubtensorModule::get_subnetwork_n(netuid),
+                GameSolver::get_subnetwork_n(netuid),
             );
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &hotkey,
                 &coldkey,
                 netuid,
                 stake_amount.into(),
             );
-            SubtensorModule::append_neuron(netuid, &hotkey, 0);
-            assert_eq!(SubtensorModule::get_subnetwork_n(netuid) - 1, uid);
+            GameSolver::append_neuron(netuid, &hotkey, 0);
+            assert_eq!(GameSolver::get_subnetwork_n(netuid) - 1, uid);
         }
         // Build the graph with 10 items
         // each with 1 stake and self weights.
         let n: usize = 10;
         let netuid = NetUid::from(1);
         add_network_disable_commit_reveal(netuid, u16::MAX - 1, 0); // set higher tempo to avoid built-in epoch, then manual epoch instead
-        SubtensorModule::set_max_allowed_uids(netuid, n as u16);
+        GameSolver::set_max_allowed_uids(netuid, n as u16);
         for i in 0..10 {
             add_node(netuid, U256::from(i), U256::from(i), i as u16, 1)
         }
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 10);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 10);
         run_to_block(1); // run to next block to ensure weights are set on nodes after their registration block
         for i in 0..10 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(i)),
                 netuid,
                 vec![i as u16],
@@ -651,23 +645,23 @@ fn test_10_graph() {
             ));
         }
         // Run the epoch.
-        SubtensorModule::epoch(netuid, 1_000_000_000.into());
+        GameSolver::epoch(netuid, 1_000_000_000.into());
         // Check return values.
         for i in 0..n {
             assert_eq!(
-                SubtensorModule::get_total_stake_for_hotkey(&(U256::from(i))),
+                GameSolver::get_total_stake_for_hotkey(&(U256::from(i))),
                 TaoCurrency::from(1)
             );
-            assert_eq!(SubtensorModule::get_rank_for_uid(netuid, i as u16), 0);
-            assert_eq!(SubtensorModule::get_trust_for_uid(netuid, i as u16), 0);
-            assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, i as u16), 0);
+            assert_eq!(GameSolver::get_rank_for_uid(netuid, i as u16), 0);
+            assert_eq!(GameSolver::get_trust_for_uid(netuid, i as u16), 0);
+            assert_eq!(GameSolver::get_consensus_for_uid(netuid, i as u16), 0);
             assert_eq!(
-                SubtensorModule::get_incentive_for_uid(netuid.into(), i as u16),
+                GameSolver::get_incentive_for_uid(netuid.into(), i as u16),
                 0
             );
-            assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, i as u16), 0);
+            assert_eq!(GameSolver::get_dividends_for_uid(netuid, i as u16), 0);
             assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, i as u16),
+                GameSolver::get_emission_for_uid(netuid, i as u16),
                 99999999.into()
             );
         }
@@ -712,20 +706,17 @@ fn test_512_graph() {
                     false,
                     u16::MAX,
                 );
-                let bonds = SubtensorModule::get_bonds(netuid.into());
+                let bonds = GameSolver::get_bonds(netuid.into());
                 for uid in validators {
                     assert_eq!(
-                        SubtensorModule::get_total_stake_for_hotkey(&(U256::from(uid))),
+                        GameSolver::get_total_stake_for_hotkey(&(U256::from(uid))),
                         max_stake_per_validator.into()
                     );
-                    assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, uid), 0);
+                    assert_eq!(GameSolver::get_consensus_for_uid(netuid, uid), 0);
+                    assert_eq!(GameSolver::get_incentive_for_uid(netuid.into(), uid), 0);
+                    assert_eq!(GameSolver::get_dividends_for_uid(netuid, uid), 1023); // floor(1 / 64 * 65_535)
                     assert_eq!(
-                        SubtensorModule::get_incentive_for_uid(netuid.into(), uid),
-                        0
-                    );
-                    assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, uid), 1023); // floor(1 / 64 * 65_535)
-                    assert_eq!(
-                        SubtensorModule::get_emission_for_uid(netuid, uid),
+                        GameSolver::get_emission_for_uid(netuid, uid),
                         7812500.into()
                     ); // 0.5 / 200 * 1_000_000_000
                     assert_eq!(bonds[uid as usize][validator], 0.0);
@@ -733,17 +724,14 @@ fn test_512_graph() {
                 }
                 for uid in servers {
                     assert_eq!(
-                        SubtensorModule::get_total_stake_for_hotkey(&(U256::from(uid))),
+                        GameSolver::get_total_stake_for_hotkey(&(U256::from(uid))),
                         TaoCurrency::ZERO
                     );
-                    assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, uid), 146);
+                    assert_eq!(GameSolver::get_consensus_for_uid(netuid, uid), 146);
+                    assert_eq!(GameSolver::get_incentive_for_uid(netuid.into(), uid), 146); // floor(1 / (512 - 64) * 65_535)
+                    assert_eq!(GameSolver::get_dividends_for_uid(netuid, uid), 0);
                     assert_eq!(
-                        SubtensorModule::get_incentive_for_uid(netuid.into(), uid),
-                        146
-                    ); // floor(1 / (512 - 64) * 65_535)
-                    assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, uid), 0);
-                    assert_eq!(
-                        SubtensorModule::get_emission_for_uid(netuid, uid),
+                        GameSolver::get_emission_for_uid(netuid, uid),
                         1116071.into()
                     ); // floor(0.5 / (512 - 64) * 1_000_000_000)
                     assert_eq!(bonds[uid as usize][validator], 0.0);
@@ -803,12 +791,12 @@ fn test_512_graph_random_weights() {
                         bonds_penalty,
                     );
 
-                    let bond = SubtensorModule::get_bonds(netuid.into());
+                    let bond = GameSolver::get_bonds(netuid.into());
                     for uid in 0..network_n {
-                        rank.push(SubtensorModule::get_rank_for_uid(netuid, uid));
-                        incentive.push(SubtensorModule::get_incentive_for_uid(netuid.into(), uid));
-                        dividend.push(SubtensorModule::get_dividends_for_uid(netuid, uid));
-                        emission.push(SubtensorModule::get_emission_for_uid(netuid, uid));
+                        rank.push(GameSolver::get_rank_for_uid(netuid, uid));
+                        incentive.push(GameSolver::get_incentive_for_uid(netuid.into(), uid));
+                        dividend.push(GameSolver::get_dividends_for_uid(netuid, uid));
+                        emission.push(GameSolver::get_emission_for_uid(netuid, uid));
                         bondv.push(bond[uid as usize][validator]);
                         bonds.push(bond[uid as usize][server]);
                     }
@@ -834,22 +822,22 @@ fn test_512_graph_random_weights() {
                         bonds_penalty,
                     );
                     // Assert that dense and sparse epoch results are equal
-                    let bond = SubtensorModule::get_bonds(netuid.into());
+                    let bond = GameSolver::get_bonds(netuid.into());
                     for uid in 0..network_n {
                         assert_eq!(
-                            SubtensorModule::get_rank_for_uid(netuid, uid),
+                            GameSolver::get_rank_for_uid(netuid, uid),
                             rank[uid as usize]
                         );
                         assert_eq!(
-                            SubtensorModule::get_incentive_for_uid(netuid.into(), uid),
+                            GameSolver::get_incentive_for_uid(netuid.into(), uid),
                             incentive[uid as usize]
                         );
                         assert_eq!(
-                            SubtensorModule::get_dividends_for_uid(netuid, uid),
+                            GameSolver::get_dividends_for_uid(netuid, uid),
                             dividend[uid as usize]
                         );
                         assert_eq!(
-                            SubtensorModule::get_emission_for_uid(netuid, uid),
+                            GameSolver::get_emission_for_uid(netuid, uid),
                             emission[uid as usize]
                         );
                         assert_eq!(bond[uid as usize][validator], bondv[uid as usize]);
@@ -898,20 +886,20 @@ fn test_512_graph_random_weights() {
 //                     true,
 //                     u16::MAX,
 //                 );
-//                 let (total_stake, _, _) = SubtensorModule::get_stake_weights_for_network(netuid);
+//                 let (total_stake, _, _) = GameSolver::get_stake_weights_for_network(netuid);
 //                 assert_eq!(total_stake.iter().map(|s| s.to_num::<u64>()).sum::<u64>(), 21_000_000_000_000_000);
-//                 let bonds = SubtensorModule::get_bonds(netuid);
+//                 let bonds = GameSolver::get_bonds(netuid);
 //                 for uid in &validators {
 //                     assert_eq!(
-//                         SubtensorModule::get_total_stake_for_hotkey(&(U256::from(*uid as u64))),
+//                         GameSolver::get_total_stake_for_hotkey(&(U256::from(*uid as u64))),
 //                         max_stake_per_validator
 //                     );
-//                     assert_eq!(SubtensorModule::get_rank_for_uid(netuid, *uid), 0);
-//                     assert_eq!(SubtensorModule::get_trust_for_uid(netuid, *uid), 0);
-//                     assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, *uid), 0);
-//                     assert_eq!(SubtensorModule::get_incentive_for_uid(netuid, *uid), 0);
-//                     assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, *uid), 255); // Note D = floor(1 / 256 * 65_535)
-//                     assert_eq!(SubtensorModule::get_emission_for_uid(netuid, *uid), 1953125); // Note E = 0.5 / 256 * 1_000_000_000 = 1953125
+//                     assert_eq!(GameSolver::get_rank_for_uid(netuid, *uid), 0);
+//                     assert_eq!(GameSolver::get_trust_for_uid(netuid, *uid), 0);
+//                     assert_eq!(GameSolver::get_consensus_for_uid(netuid, *uid), 0);
+//                     assert_eq!(GameSolver::get_incentive_for_uid(netuid, *uid), 0);
+//                     assert_eq!(GameSolver::get_dividends_for_uid(netuid, *uid), 255); // Note D = floor(1 / 256 * 65_535)
+//                     assert_eq!(GameSolver::get_emission_for_uid(netuid, *uid), 1953125); // Note E = 0.5 / 256 * 1_000_000_000 = 1953125
 //                     assert_eq!(bonds[*uid as usize][validator], 0.0);
 //                     assert_eq!(
 //                         bonds[*uid as usize][server],
@@ -920,15 +908,15 @@ fn test_512_graph_random_weights() {
 //                 }
 //                 for uid in &servers {
 //                     assert_eq!(
-//                         SubtensorModule::get_total_stake_for_hotkey(&(U256::from(*uid as u64))),
+//                         GameSolver::get_total_stake_for_hotkey(&(U256::from(*uid as u64))),
 //                         0
 //                     );
-//                     assert_eq!(SubtensorModule::get_rank_for_uid(netuid, *uid), 17); // Note R = floor(1 / (4096 - 256) * 65_535) = 17
-//                     assert_eq!(SubtensorModule::get_trust_for_uid(netuid, *uid), 65535);
-//                     assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, *uid), 17); // Note C = floor(1 / (4096 - 256) * 65_535) = 17
-//                     assert_eq!(SubtensorModule::get_incentive_for_uid(netuid, *uid), 17); // Note I = floor(1 / (4096 - 256) * 65_535) = 17
-//                     assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, *uid), 0);
-//                     assert_eq!(SubtensorModule::get_emission_for_uid(netuid, *uid), 130208); // Note E = floor(0.5 / (4096 - 256) * 1_000_000_000) = 130208
+//                     assert_eq!(GameSolver::get_rank_for_uid(netuid, *uid), 17); // Note R = floor(1 / (4096 - 256) * 65_535) = 17
+//                     assert_eq!(GameSolver::get_trust_for_uid(netuid, *uid), 65535);
+//                     assert_eq!(GameSolver::get_consensus_for_uid(netuid, *uid), 17); // Note C = floor(1 / (4096 - 256) * 65_535) = 17
+//                     assert_eq!(GameSolver::get_incentive_for_uid(netuid, *uid), 17); // Note I = floor(1 / (4096 - 256) * 65_535) = 17
+//                     assert_eq!(GameSolver::get_dividends_for_uid(netuid, *uid), 0);
+//                     assert_eq!(GameSolver::get_emission_for_uid(netuid, *uid), 130208); // Note E = floor(0.5 / (4096 - 256) * 1_000_000_000) = 130208
 //                     assert_eq!(bonds[*uid as usize][validator], 0.0);
 //                     assert_eq!(bonds[*uid as usize][server], 0.0);
 //                 }
@@ -966,18 +954,18 @@ fn test_512_graph_random_weights() {
 //             true,
 //             u16::MAX,
 //         );
-//         let bonds = SubtensorModule::get_bonds(netuid);
+//         let bonds = GameSolver::get_bonds(netuid);
 //         for uid in validators {
 //             assert_eq!(
-//                 SubtensorModule::get_total_stake_for_hotkey(&(U256::from(uid))),
+//                 GameSolver::get_total_stake_for_hotkey(&(U256::from(uid))),
 //                 1
 //             );
-//             assert_eq!(SubtensorModule::get_rank_for_uid(netuid, uid), 0);
-//             assert_eq!(SubtensorModule::get_trust_for_uid(netuid, uid), 0);
-//             assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, uid), 438); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
-//             assert_eq!(SubtensorModule::get_incentive_for_uid(netuid, uid), 0);
-//             assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, uid), 127); // Note D = floor(1 / 512 * 65_535) = 127
-//             assert_eq!(SubtensorModule::get_emission_for_uid(netuid, uid), 976085); // Note E = 0.5 / 512 * 1_000_000_000 = 976_562 (discrepancy)
+//             assert_eq!(GameSolver::get_rank_for_uid(netuid, uid), 0);
+//             assert_eq!(GameSolver::get_trust_for_uid(netuid, uid), 0);
+//             assert_eq!(GameSolver::get_consensus_for_uid(netuid, uid), 438); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+//             assert_eq!(GameSolver::get_incentive_for_uid(netuid, uid), 0);
+//             assert_eq!(GameSolver::get_dividends_for_uid(netuid, uid), 127); // Note D = floor(1 / 512 * 65_535) = 127
+//             assert_eq!(GameSolver::get_emission_for_uid(netuid, uid), 976085); // Note E = 0.5 / 512 * 1_000_000_000 = 976_562 (discrepancy)
 //             assert_eq!(bonds[uid as usize][0], 0.0);
 //             assert_eq!(
 //                 bonds[uid as usize][server as usize],
@@ -986,15 +974,15 @@ fn test_512_graph_random_weights() {
 //         }
 //         for uid in servers {
 //             assert_eq!(
-//                 SubtensorModule::get_total_stake_for_hotkey(&(U256::from(uid))),
+//                 GameSolver::get_total_stake_for_hotkey(&(U256::from(uid))),
 //                 0
 //             );
-//             assert_eq!(SubtensorModule::get_rank_for_uid(netuid, uid), 4); // Note R = floor(1 / (16384 - 512) * 65_535) = 4
-//             assert_eq!(SubtensorModule::get_trust_for_uid(netuid, uid), 65535);
-//             assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, uid), 4); // Note C = floor(1 / (16384 - 512) * 65_535) = 4
-//             assert_eq!(SubtensorModule::get_incentive_for_uid(netuid, uid), 4); // Note I = floor(1 / (16384 - 512) * 65_535) = 4
-//             assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, uid), 0);
-//             assert_eq!(SubtensorModule::get_emission_for_uid(netuid, uid), 31517); // Note E = floor(0.5 / (16384 - 512) * 1_000_000_000) = 31502 (discrepancy)
+//             assert_eq!(GameSolver::get_rank_for_uid(netuid, uid), 4); // Note R = floor(1 / (16384 - 512) * 65_535) = 4
+//             assert_eq!(GameSolver::get_trust_for_uid(netuid, uid), 65535);
+//             assert_eq!(GameSolver::get_consensus_for_uid(netuid, uid), 4); // Note C = floor(1 / (16384 - 512) * 65_535) = 4
+//             assert_eq!(GameSolver::get_incentive_for_uid(netuid, uid), 4); // Note I = floor(1 / (16384 - 512) * 65_535) = 4
+//             assert_eq!(GameSolver::get_dividends_for_uid(netuid, uid), 0);
+//             assert_eq!(GameSolver::get_emission_for_uid(netuid, uid), 31517); // Note E = floor(0.5 / (16384 - 512) * 1_000_000_000) = 31502 (discrepancy)
 //             assert_eq!(bonds[uid as usize][0], 0.0);
 //             assert_eq!(bonds[uid as usize][server as usize], 0.0);
 //         }
@@ -1013,37 +1001,37 @@ fn test_bonds() {
 		let stakes: Vec<u64> = vec![1, 2, 3, 4, 0, 0, 0, 0];
         let block_number = System::block_number();
 		add_network_disable_commit_reveal(netuid, tempo, 0);
-		SubtensorModule::set_max_allowed_uids( netuid, n );
-		assert_eq!(SubtensorModule::get_max_allowed_uids(netuid), n);
-		SubtensorModule::set_max_registrations_per_block( netuid, n );
-		SubtensorModule::set_target_registrations_per_interval(netuid, n);
-		SubtensorModule::set_weights_set_rate_limit( netuid, 0 );
-        SubtensorModule::set_min_allowed_weights( netuid, 1 );
-		SubtensorModule::set_bonds_penalty(netuid, u16::MAX);
+		GameSolver::set_max_allowed_uids( netuid, n );
+		assert_eq!(GameSolver::get_max_allowed_uids(netuid), n);
+		GameSolver::set_max_registrations_per_block( netuid, n );
+		GameSolver::set_target_registrations_per_interval(netuid, n);
+		GameSolver::set_weights_set_rate_limit( netuid, 0 );
+        GameSolver::set_min_allowed_weights( netuid, 1 );
+		GameSolver::set_bonds_penalty(netuid, u16::MAX);
 
 
 		// === Register [validator1, validator2, validator3, validator4, server1, server2, server3, server4]
 		for key in 0..n as u64 {
-			SubtensorModule::add_balance_to_coldkey_account( &U256::from(key), max_stake );
-			let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number( netuid, block_number, key * 1_000_000, &U256::from(key));
-			assert_ok!(SubtensorModule::register(<<Test as frame_system::Config>::RuntimeOrigin>::signed(U256::from(key)), netuid, block_number, nonce, work, U256::from(key), U256::from(key)));
-			SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet( &U256::from(key), &U256::from(key), netuid, stakes[key as usize].into() );
+			GameSolver::add_balance_to_coldkey_account( &U256::from(key), max_stake );
+			let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number( netuid, block_number, key * 1_000_000, &U256::from(key));
+			assert_ok!(GameSolver::register(<<Test as frame_system::Config>::RuntimeOrigin>::signed(U256::from(key)), netuid, block_number, nonce, work, U256::from(key), U256::from(key)));
+			GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet( &U256::from(key), &U256::from(key), netuid, stakes[key as usize].into() );
 		}
-		assert_eq!(SubtensorModule::get_max_allowed_uids(netuid), n);
-		assert_eq!(SubtensorModule::get_subnetwork_n(netuid), n);
+		assert_eq!(GameSolver::get_max_allowed_uids(netuid), n);
+		assert_eq!(GameSolver::get_subnetwork_n(netuid), n);
 
 		// === Issue validator permits
-		SubtensorModule::set_max_allowed_validators(netuid, n);
-		assert_eq!( SubtensorModule::get_max_allowed_validators(netuid), n);
-		SubtensorModule::epoch( netuid, 1_000_000_000 .into()); // run first epoch to set allowed validators
+		GameSolver::set_max_allowed_validators(netuid, n);
+		assert_eq!( GameSolver::get_max_allowed_validators(netuid), n);
+		GameSolver::epoch( netuid, 1_000_000_000 .into()); // run first epoch to set allowed validators
         next_block_no_epoch(netuid); // run to next block to ensure weights are set on nodes after their registration block
 
 		// === Set weights [val->srv1: 0.1, val->srv2: 0.2, val->srv3: 0.3, val->srv4: 0.4]
 		for uid in 0..(n/2) as u64 {
-			assert_ok!(SubtensorModule::set_weights(RuntimeOrigin::signed(U256::from(uid)), netuid, ((n/2)..n).collect(), vec![ u16::MAX/4, u16::MAX/2, (u16::MAX/4)*3, u16::MAX], 0));
+			assert_ok!(GameSolver::set_weights(RuntimeOrigin::signed(U256::from(uid)), netuid, ((n/2)..n).collect(), vec![ u16::MAX/4, u16::MAX/2, (u16::MAX/4)*3, u16::MAX], 0));
 		}
-		if sparse { SubtensorModule::epoch( netuid, 1_000_000_000 .into()); }
-		else { SubtensorModule::epoch_dense( netuid, 1_000_000_000 .into()); }
+		if sparse { GameSolver::epoch( netuid, 1_000_000_000 .into()); }
+		else { GameSolver::epoch_dense( netuid, 1_000_000_000 .into()); }
 		/*  n: 8
 			current_block: 1; activity_cutoff: 5000; Last update: [1, 1, 1, 1, 0, 0, 0, 0]
 			Inactive: [false, false, false, false, false, false, false, false]
@@ -1077,7 +1065,7 @@ fn test_bonds() {
 			E: [49999998, 99999999, 150000000, 200000001, 49998779, 100000610, 149996337, 200004272]
 			P: [0.0499999989, 0.0999999992, 0.1500000006, 0.2000000011, 0.049998779, 0.1000006103, 0.1499963375, 0.2000042726]
 			emaB: [[(4, 0.2499999937), (5, 0.2499999953), (6, 0.2499999937), (7, 0.2499999937)], [(4, 0.4999999942), (5, 0.499999997), (6, 0.4999999942), (7, 0.4999999942)], [(4, 0.7499999937), (5, 0.7499999981), (6, 0.7499999995), (7, 0.7499999995)], [(4, 1), (5, 1), (6, 1), (7, 1)], [], [], [], []] */
-		let bonds = SubtensorModule::get_bonds( netuid.into() );
+		let bonds = GameSolver::get_bonds( netuid.into() );
 		assert_eq!(bonds[0][4], 16383);
 		assert_eq!(bonds[1][4], 32767);
 		assert_eq!(bonds[2][4], 49151);
@@ -1085,11 +1073,11 @@ fn test_bonds() {
 
 		// === Set self-weight only on val1
 		let uid = 0;
-		assert_ok!(SubtensorModule::set_weights(RuntimeOrigin::signed(U256::from(uid)), netuid, vec![uid], vec![u16::MAX], 0));
+		assert_ok!(GameSolver::set_weights(RuntimeOrigin::signed(U256::from(uid)), netuid, vec![uid], vec![u16::MAX], 0));
         next_block_no_epoch(netuid);
 
-		if sparse { SubtensorModule::epoch( netuid, 1_000_000_000 .into()); }
-		else { SubtensorModule::epoch_dense( netuid, 1_000_000_000.into() ); }
+		if sparse { GameSolver::epoch( netuid, 1_000_000_000 .into()); }
+		else { GameSolver::epoch_dense( netuid, 1_000_000_000.into() ); }
 		/*  n: 8
 			current_block: 2
 			activity_cutoff: 5000
@@ -1125,7 +1113,7 @@ fn test_bonds() {
 			E: [44998351, 101110561, 151667215, 202223870, 49998779, 100000610, 149996337, 200004272]
 			P: [0.0449983515, 0.1011105615, 0.1516672159, 0.2022238704, 0.049998779, 0.1000006103, 0.1499963377, 0.2000042726]
 			emaB: [[(4, 0.2225175085), (5, 0.2225175085), (6, 0.2225175085), (7, 0.2225175085)], [(4, 0.499993208), (5, 0.4999932083), (6, 0.4999932083), (7, 0.4999932083)], [(4, 0.7499966028), (5, 0.7499966032), (6, 0.7499966032), (7, 0.7499966032)], [(4, 1), (5, 1), (6, 1), (7, 1)], [], [], [], []] */
-		let bonds = SubtensorModule::get_bonds( netuid.into() );
+		let bonds = GameSolver::get_bonds( netuid.into() );
 		assert_eq!(bonds[0][4], 14582);
 		assert_eq!(bonds[1][4], 32767);
 		assert_eq!(bonds[2][4], 49151);
@@ -1133,11 +1121,11 @@ fn test_bonds() {
 
 		// === Set self-weight only on val2
 		let uid = 1;
-		assert_ok!(SubtensorModule::set_weights(RuntimeOrigin::signed(U256::from(uid)), netuid, vec![uid], vec![u16::MAX], 0));
+		assert_ok!(GameSolver::set_weights(RuntimeOrigin::signed(U256::from(uid)), netuid, vec![uid], vec![u16::MAX], 0));
         next_block_no_epoch(netuid);
 
-		if sparse { SubtensorModule::epoch( netuid, 1_000_000_000 .into()); }
-		else { SubtensorModule::epoch_dense( netuid, 1_000_000_000.into() ); }
+		if sparse { GameSolver::epoch( netuid, 1_000_000_000 .into()); }
+		else { GameSolver::epoch_dense( netuid, 1_000_000_000.into() ); }
 		/*  current_block: 3
 			W: [[(0, 65535)], [(1, 65535)], [(4, 16383), (5, 32767), (6, 49149), (7, 65535)], [(4, 16383), (5, 32767), (6, 49149), (7, 65535)], [], [], [], []]
 			W (permit): [[(0, 65535)], [(1, 65535)], [(4, 16383), (5, 32767), (6, 49149), (7, 65535)], [(4, 16383), (5, 32767), (6, 49149), (7, 65535)], [], [], [], []]
@@ -1162,7 +1150,7 @@ fn test_bonds() {
 			E: [40496805, 90999783, 157929636, 210573773, 49998779, 100000610, 149996337, 200004272]
 			P: [0.040496806, 0.0909997837, 0.157929636, 0.2105737738, 0.049998779, 0.1000006103, 0.1499963377, 0.2000042726]
 			emaB: [[(4, 0.192316476), (5, 0.192316476), (6, 0.192316476), (7, 0.192316476)], [(4, 0.4321515555), (5, 0.4321515558), (6, 0.4321515558), (7, 0.4321515558)], [(4, 0.7499967015), (5, 0.7499967027), (6, 0.7499967027), (7, 0.7499967027)], [(4, 1), (5, 1), (6, 1), (7, 1)], [], [], [], []] */
-		let bonds = SubtensorModule::get_bonds( netuid.into() );
+		let bonds = GameSolver::get_bonds( netuid.into() );
 		assert_eq!(bonds[0][4], 12603);
 		assert_eq!(bonds[1][4], 28321);
 		assert_eq!(bonds[2][4], 49151);
@@ -1170,11 +1158,11 @@ fn test_bonds() {
 
 		// === Set self-weight only on val3
 		let uid = 2;
-		assert_ok!(SubtensorModule::set_weights(RuntimeOrigin::signed(U256::from(uid)), netuid, vec![uid], vec![u16::MAX], 0));
+		assert_ok!(GameSolver::set_weights(RuntimeOrigin::signed(U256::from(uid)), netuid, vec![uid], vec![u16::MAX], 0));
         next_block_no_epoch(netuid);
 
-		if sparse { SubtensorModule::epoch( netuid, 1_000_000_000 .into()); }
-		else { SubtensorModule::epoch_dense( netuid, 1_000_000_000.into() ); }
+		if sparse { GameSolver::epoch( netuid, 1_000_000_000 .into()); }
+		else { GameSolver::epoch_dense( netuid, 1_000_000_000.into() ); }
 		/*  current_block: 4
 			W: [[(0, 65535)], [(1, 65535)], [(2, 65535)], [(4, 16383), (5, 32767), (6, 49149), (7, 65535)], [], [], [], []]
 			W (permit): [[(0, 65535)], [(1, 65535)], [(2, 65535)], [(4, 16383), (5, 32767), (6, 49149), (7, 65535)], [], [], [], []]
@@ -1199,18 +1187,18 @@ fn test_bonds() {
 			E: [99999999, 199999999, 299999999, 399999999, 0, 0, 0, 0]
 			P: [0.0999999999, 0.2, 0.2999999998, 0.4, 0, 0, 0, 0]
 			emaB: [[(4, 0.1923094518), (5, 0.1923094518), (6, 0.1923094518), (7, 0.1923094518)], [(4, 0.4321507583), (5, 0.4321507583), (6, 0.4321507583), (7, 0.4321507583)], [(4, 0.7499961846), (5, 0.7499961846), (6, 0.7499961846), (7, 0.7499961846)], [(4, 1), (5, 1), (6, 1), (7, 1)], [], [], [], []] */
-		let bonds = SubtensorModule::get_bonds( netuid.into() );
+		let bonds = GameSolver::get_bonds( netuid.into() );
 		assert_eq!(bonds[0][7], 12602);
 		assert_eq!(bonds[1][7], 28320);
 		assert_eq!(bonds[2][7], 49150);
 		assert_eq!(bonds[3][7], 65535);
 
 		// === Set val3->srv4: 1
-		assert_ok!(SubtensorModule::set_weights(RuntimeOrigin::signed(U256::from(2)), netuid, vec![7], vec![u16::MAX], 0));
+		assert_ok!(GameSolver::set_weights(RuntimeOrigin::signed(U256::from(2)), netuid, vec![7], vec![u16::MAX], 0));
         next_block_no_epoch(netuid);
 
-		if sparse { SubtensorModule::epoch( netuid, 1_000_000_000 .into()); }
-		else { SubtensorModule::epoch_dense( netuid, 1_000_000_000.into() ); }
+		if sparse { GameSolver::epoch( netuid, 1_000_000_000 .into()); }
+		else { GameSolver::epoch_dense( netuid, 1_000_000_000.into() ); }
 		/*  current_block: 5
 			W: [[(0, 65535)], [(1, 65535)], [(7, 65535)], [(4, 16383), (5, 32767), (6, 49149), (7, 65535)], [], [], [], []]
 			W (permit): [[(0, 65535)], [(1, 65535)], [(7, 65535)], [(4, 16383), (5, 32767), (6, 49149), (7, 65535)], [], [], [], []]
@@ -1235,7 +1223,7 @@ fn test_bonds() {
 			E: [36443733, 81898628, 163565493, 218092144, 0, 0, 0, 500000000]
 			P: [0.0364437331, 0.081898629, 0.1635654932, 0.2180921442, 0, 0, 0, 0.5]
 			emaB: [[(4, 0.1922941932), (5, 0.1922941932), (6, 0.1922941932), (7, 0.1671024568)], [(4, 0.4321354993), (5, 0.4321354993), (6, 0.4321354993), (7, 0.3755230587)], [(4, 0.7499809256), (5, 0.7499809256), (6, 0.7499809256), (7, 0.749983425)], [(4, 1), (5, 1), (6, 1), (7, 1)], [], [], [], []] */
-		let bonds = SubtensorModule::get_bonds( netuid.into() );
+		let bonds = GameSolver::get_bonds( netuid.into() );
 		assert_eq!(bonds[0][7], 10951);
 		assert_eq!(bonds[1][7], 24609);
 		assert_eq!(bonds[2][7], 49150);
@@ -1243,8 +1231,8 @@ fn test_bonds() {
 
         next_block_no_epoch(netuid);
 
-		if sparse { SubtensorModule::epoch( netuid, 1_000_000_000 .into()); }
-		else { SubtensorModule::epoch_dense( netuid, 1_000_000_000.into() ); }
+		if sparse { GameSolver::epoch( netuid, 1_000_000_000 .into()); }
+		else { GameSolver::epoch_dense( netuid, 1_000_000_000.into() ); }
 		/*  current_block: 6
 			B: [[(4, 12601), (5, 12601), (6, 12601), (7, 10951)], [(4, 28319), (5, 28319), (6, 28319), (7, 24609)], [(4, 49149), (5, 49149), (6, 49149), (7, 49150)], [(4, 65535), (5, 65535), (6, 65535), (7, 65535)], [], [], [], []]
 			B (outdatedmask): [[(4, 12601), (5, 12601), (6, 12601), (7, 10951)], [(4, 28319), (5, 28319), (6, 28319), (7, 24609)], [(4, 49149), (5, 49149), (6, 49149), (7, 49150)], [(4, 65535), (5, 65535), (6, 65535), (7, 65535)], [], [], [], []]
@@ -1257,7 +1245,7 @@ fn test_bonds() {
 			E: [32799427, 73706612, 168638129, 224855830, 0, 0, 0, 500000000]
 			P: [0.0327994274, 0.0737066122, 0.1686381293, 0.2248558307, 0, 0, 0, 0.5]
 			emaB: [[(4, 0.1922789337), (5, 0.1922789337), (6, 0.1922789337), (7, 0.1458686984)], [(4, 0.4321202405), (5, 0.4321202405), (6, 0.4321202405), (7, 0.3277949789)], [(4, 0.749965667), (5, 0.749965667), (6, 0.749965667), (7, 0.74998335)], [(4, 1), (5, 1), (6, 1), (7, 1)], [], [], [], []] */
-		let bonds = SubtensorModule::get_bonds( netuid.into() );
+		let bonds = GameSolver::get_bonds( netuid.into() );
 		assert_eq!(bonds[0][7], 9559);
 		assert_eq!(bonds[1][7], 21482);
 		assert_eq!(bonds[2][7], 49150);
@@ -1265,8 +1253,8 @@ fn test_bonds() {
 
         next_block_no_epoch(netuid);
 
-		if sparse { SubtensorModule::epoch( netuid, 1_000_000_000 .into()); }
-		else { SubtensorModule::epoch_dense( netuid, 1_000_000_000.into() ); }
+		if sparse { GameSolver::epoch( netuid, 1_000_000_000 .into()); }
+		else { GameSolver::epoch_dense( netuid, 1_000_000_000.into() ); }
 		/*  current_block: 7
 			B: [[(4, 12600), (5, 12600), (6, 12600), (7, 9559)], [(4, 28318), (5, 28318), (6, 28318), (7, 21482)], [(4, 49148), (5, 49148), (6, 49148), (7, 49150)], [(4, 65535), (5, 65535), (6, 65535), (7, 65535)], [], [], [], []]
 			B (outdatedmask): [[(4, 12600), (5, 12600), (6, 12600), (7, 9559)], [(4, 28318), (5, 28318), (6, 28318), (7, 21482)], [(4, 49148), (5, 49148), (6, 49148), (7, 49150)], [(4, 65535), (5, 65535), (6, 65535), (7, 65535)], [], [], [], []]
@@ -1279,7 +1267,7 @@ fn test_bonds() {
 			E: [29518068, 66336137, 173203134, 230942659, 0, 0, 0, 500000000]
 			P: [0.029518068, 0.0663361375, 0.1732031347, 0.2309426593, 0, 0, 0, 0.5]
 			emaB: [[(4, 0.192263675), (5, 0.192263675), (6, 0.192263675), (7, 0.1278155716)], [(4, 0.4321049813), (5, 0.4321049813), (6, 0.4321049813), (7, 0.2872407278)], [(4, 0.7499504078), (5, 0.7499504078), (6, 0.7499504078), (7, 0.7499832863)], [(4, 1), (5, 1), (6, 1), (7, 1)], [], [], [], []] */
-		let bonds = SubtensorModule::get_bonds( netuid.into() );
+		let bonds = GameSolver::get_bonds( netuid.into() );
 		assert_eq!(bonds[0][7], 8376);
 		assert_eq!(bonds[1][7], 18824);
 		assert_eq!(bonds[2][7], 49150);
@@ -1287,8 +1275,8 @@ fn test_bonds() {
 
 		next_block_no_epoch(netuid);
 
-		if sparse { SubtensorModule::epoch( netuid, 1_000_000_000 .into()); }
-		else { SubtensorModule::epoch_dense( netuid, 1_000_000_000.into() ); }
+		if sparse { GameSolver::epoch( netuid, 1_000_000_000 .into()); }
+		else { GameSolver::epoch_dense( netuid, 1_000_000_000.into() ); }
 		/*  current_block: 8
 			B: [[(4, 12599), (5, 12599), (6, 12599), (7, 8376)], [(4, 28317), (5, 28317), (6, 28317), (7, 18824)], [(4, 49147), (5, 49147), (6, 49147), (7, 49150)], [(4, 65535), (5, 65535), (6, 65535), (7, 65535)], [], [], [], []]
 			B (outdatedmask): [[(4, 12599), (5, 12599), (6, 12599), (7, 8376)], [(4, 28317), (5, 28317), (6, 28317), (7, 18824)], [(4, 49147), (5, 49147), (6, 49147), (7, 49150)], [(4, 65535), (5, 65535), (6, 65535), (7, 65535)], [], [], [], []]
@@ -1313,32 +1301,32 @@ fn test_set_alpha_disabled() {
         let signer = RuntimeOrigin::signed(coldkey);
 
         // Enable Liquid Alpha and setup
-        SubtensorModule::set_liquid_alpha_enabled(netuid, true);
+        GameSolver::set_liquid_alpha_enabled(netuid, true);
         migrations::migrate_create_root_network::migrate_create_root_network::<Test>();
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, 1_000_000_000_000_000);
-        assert_ok!(SubtensorModule::root_register(signer.clone(), hotkey,));
+        GameSolver::add_balance_to_coldkey_account(&coldkey, 1_000_000_000_000_000);
+        assert_ok!(GameSolver::root_register(signer.clone(), hotkey,));
         let fee = <Test as pallet::Config>::SwapInterface::approx_fee_amount(
             netuid.into(),
             DefaultMinStake::<Test>::get(),
         );
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             signer.clone(),
             hotkey,
             netuid,
             TaoCurrency::from(5) * DefaultMinStake::<Test>::get() + fee
         ));
         // Only owner can set alpha values
-        assert_ok!(SubtensorModule::register_network(signer.clone(), hotkey));
+        assert_ok!(GameSolver::register_network(signer.clone(), hotkey));
 
         // Explicitly set to false
-        SubtensorModule::set_liquid_alpha_enabled(netuid, false);
+        GameSolver::set_liquid_alpha_enabled(netuid, false);
         assert_err!(
-            SubtensorModule::do_set_alpha_values(signer.clone(), netuid, 1638_u16, u16::MAX),
+            GameSolver::do_set_alpha_values(signer.clone(), netuid, 1638_u16, u16::MAX),
             Error::<Test>::LiquidAlphaDisabled
         );
 
-        SubtensorModule::set_liquid_alpha_enabled(netuid, true);
-        assert_ok!(SubtensorModule::do_set_alpha_values(
+        GameSolver::set_liquid_alpha_enabled(netuid, true);
+        assert_ok!(GameSolver::do_set_alpha_values(
             signer.clone(),
             netuid,
             1638_u16,
@@ -1359,22 +1347,22 @@ fn test_active_stake() {
         let block_number: u64 = System::block_number();
         let stake: u64 = 1;
         add_network_disable_commit_reveal(netuid, tempo, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, n);
-        assert_eq!(SubtensorModule::get_max_allowed_uids(netuid), n);
-        SubtensorModule::set_max_registrations_per_block(netuid, n);
-        SubtensorModule::set_target_registrations_per_interval(netuid, n);
-        SubtensorModule::set_min_allowed_weights(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, n);
+        assert_eq!(GameSolver::get_max_allowed_uids(netuid), n);
+        GameSolver::set_max_registrations_per_block(netuid, n);
+        GameSolver::set_target_registrations_per_interval(netuid, n);
+        GameSolver::set_min_allowed_weights(netuid, 0);
 
         // === Register [validator1, validator2, server1, server2]
         for key in 0..n as u64 {
-            SubtensorModule::add_balance_to_coldkey_account(&U256::from(key), stake);
-            let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+            GameSolver::add_balance_to_coldkey_account(&U256::from(key), stake);
+            let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
                 netuid,
                 block_number,
                 key * 1_000_000,
                 &U256::from(key),
             );
-            assert_ok!(SubtensorModule::register(
+            assert_ok!(GameSolver::register(
                 RuntimeOrigin::signed(U256::from(key)),
                 netuid,
                 block_number,
@@ -1383,25 +1371,25 @@ fn test_active_stake() {
                 U256::from(key),
                 U256::from(key)
             ));
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &U256::from(key),
                 &U256::from(key),
                 netuid,
                 stake.into(),
             );
         }
-        assert_eq!(SubtensorModule::get_max_allowed_uids(netuid), n);
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), n);
+        assert_eq!(GameSolver::get_max_allowed_uids(netuid), n);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), n);
 
         // === Issue validator permits
-        SubtensorModule::set_max_allowed_validators(netuid, n);
-        assert_eq!(SubtensorModule::get_max_allowed_validators(netuid), n);
-        SubtensorModule::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
+        GameSolver::set_max_allowed_validators(netuid, n);
+        assert_eq!(GameSolver::get_max_allowed_validators(netuid), n);
+        GameSolver::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
         next_block_no_epoch(netuid); // run to next block to ensure weights are set on nodes after their registration block
 
         // === Set weights [val1->srv1: 0.5, val1->srv2: 0.5, val2->srv1: 0.5, val2->srv2: 0.5]
         for uid in 0..(n / 2) as u64 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(uid)),
                 netuid,
                 ((n / 2)..n).collect(),
@@ -1410,21 +1398,21 @@ fn test_active_stake() {
             ));
         }
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
-        let bonds = SubtensorModule::get_bonds(netuid.into());
+        let bonds = GameSolver::get_bonds(netuid.into());
         for uid in 0..n {
             // log::info!("\n{uid}" );
             // uid_stats(netuid, uid);
             // log::info!("bonds: {:?}", bonds[uid as usize]);
             if uid < n / 2 {
-                assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, uid), 32767);
+                assert_eq!(GameSolver::get_dividends_for_uid(netuid, uid), 32767);
                 // Note D = floor(0.5 * 65_535)
             }
             assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, uid),
+                GameSolver::get_emission_for_uid(netuid, uid),
                 250000000.into()
             ); // Note E = 0.5 / (n/2) * 1_000_000_000 = 250_000_000
         }
@@ -1437,11 +1425,11 @@ fn test_active_stake() {
                 assert_eq!(*i, I32F32::from_num(65_535)); // floor(0.5*(2^16-1))/(2^16-1), then max-upscale to 65_535
             }
         }
-        let activity_cutoff: u64 = SubtensorModule::get_activity_cutoff(netuid) as u64;
+        let activity_cutoff: u64 = GameSolver::get_activity_cutoff(netuid) as u64;
         run_to_block_no_epoch(netuid, activity_cutoff + 2); // run to block where validator (uid 0, 1) weights become outdated
 
         // === Update uid 0 weights
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(U256::from(0)),
             netuid,
             ((n / 2)..n).collect(),
@@ -1449,9 +1437,9 @@ fn test_active_stake() {
             0
         ));
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
         /*  current_block: 5002; activity_cutoff: 5000
         Last update: [5002, 1, 0, 0]; Inactive: [false, true, true, true]; Block at registration: [0, 0, 0, 0]
@@ -1479,22 +1467,19 @@ fn test_active_stake() {
         E: [274999999, 224999999, 250000000, 250000000]
         P: [0.275, 0.2249999999, 0.25, 0.25]
         P (u16): [65535, 53619, 59577, 59577] */
-        let bonds = SubtensorModule::get_bonds(netuid.into());
-        assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, 0), 36044); // Note D = floor((0.5 * 0.9 + 0.1) * 65_535)
+        let bonds = GameSolver::get_bonds(netuid.into());
+        assert_eq!(GameSolver::get_dividends_for_uid(netuid, 0), 36044); // Note D = floor((0.5 * 0.9 + 0.1) * 65_535)
         assert_eq!(
-            SubtensorModule::get_emission_for_uid(netuid, 0),
+            GameSolver::get_emission_for_uid(netuid, 0),
             274999999.into()
         ); // Note E = 0.5 * 0.55 * 1_000_000_000 = 275_000_000 (discrepancy)
         for server in ((n / 2) as usize)..n as usize {
             assert_eq!(bonds[0][server], I32F32::from_num(65_535)); // floor(0.55*(2^16-1))/(2^16-1), then max-upscale
         }
         for validator in 1..(n / 2) {
+            assert_eq!(GameSolver::get_dividends_for_uid(netuid, validator), 29490); // Note D = floor((0.5 * 0.9) * 65_535)
             assert_eq!(
-                SubtensorModule::get_dividends_for_uid(netuid, validator),
-                29490
-            ); // Note D = floor((0.5 * 0.9) * 65_535)
-            assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, validator),
+                GameSolver::get_emission_for_uid(netuid, validator),
                 224999999.into()
             ); // Note E = 0.5 * 0.45 * 1_000_000_000 = 225_000_000 (discrepancy)
             for server in ((n / 2) as usize)..n as usize {
@@ -1504,7 +1489,7 @@ fn test_active_stake() {
         }
 
         // === Update uid 1 weights as well
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(U256::from(1)),
             netuid,
             ((n / 2)..n).collect(),
@@ -1513,9 +1498,9 @@ fn test_active_stake() {
         ));
         run_to_block_no_epoch(netuid, activity_cutoff + 3); // run to block where validator (uid 0, 1) weights become outdated
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
         /*  current_block: 5003; activity_cutoff: 5000
         Last update: [5002, 5002, 0, 0]; Inactive: [false, false, true, true]; Block at registration: [0, 0, 0, 0]
@@ -1543,18 +1528,18 @@ fn test_active_stake() {
         E: [272501132, 227498866, 250000000, 250000000]
         P: [0.272501133, 0.2274988669, 0.25, 0.25]
         P (u16): [65535, 54711, 60123, 60123] */
-        let bonds = SubtensorModule::get_bonds(netuid.into());
-        assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, 0), 35716); // Note D = floor((0.55 * 0.9 + 0.5 * 0.1) * 65_535)
+        let bonds = GameSolver::get_bonds(netuid.into());
+        assert_eq!(GameSolver::get_dividends_for_uid(netuid, 0), 35716); // Note D = floor((0.55 * 0.9 + 0.5 * 0.1) * 65_535)
         assert_eq!(
-            SubtensorModule::get_emission_for_uid(netuid, 0),
+            GameSolver::get_emission_for_uid(netuid, 0),
             272501132.into()
         ); // Note E = 0.5 * (0.55 * 0.9 + 0.5 * 0.1) * 1_000_000_000 = 272_500_000 (discrepancy)
         for server in ((n / 2) as usize)..n as usize {
             assert_eq!(bonds[0][server], I32F32::from_num(65_535)); // floor((0.55 * 0.9 + 0.5 * 0.1)*(2^16-1))/(2^16-1), then max-upscale
         }
-        assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, 1), 29818); // Note D = floor((0.45 * 0.9 + 0.5 * 0.1) * 65_535)
+        assert_eq!(GameSolver::get_dividends_for_uid(netuid, 1), 29818); // Note D = floor((0.45 * 0.9 + 0.5 * 0.1) * 65_535)
         assert_eq!(
-            SubtensorModule::get_emission_for_uid(netuid, 1),
+            GameSolver::get_emission_for_uid(netuid, 1),
             227498866.into()
         ); // Note E = 0.5 * (0.45 * 0.9 + 0.5 * 0.1) * 1_000_000_000 = 227_500_000 (discrepancy)
         for server in ((n / 2) as usize)..n as usize {
@@ -1575,24 +1560,24 @@ fn test_outdated_weights() {
         let mut block_number: u64 = System::block_number();
         let stake: u64 = 1;
         add_network_disable_commit_reveal(netuid, tempo, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, n);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_max_registrations_per_block(netuid, n);
-        SubtensorModule::set_target_registrations_per_interval(netuid, n);
-        SubtensorModule::set_min_allowed_weights(netuid, 0);
-        SubtensorModule::set_bonds_penalty(netuid, u16::MAX);
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 0);
+        GameSolver::set_max_allowed_uids(netuid, n);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_max_registrations_per_block(netuid, n);
+        GameSolver::set_target_registrations_per_interval(netuid, n);
+        GameSolver::set_min_allowed_weights(netuid, 0);
+        GameSolver::set_bonds_penalty(netuid, u16::MAX);
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 0);
 
         // === Register [validator1, validator2, server1, server2]
         for key in 0..n as u64 {
-            SubtensorModule::add_balance_to_coldkey_account(&U256::from(key), stake);
-            let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+            GameSolver::add_balance_to_coldkey_account(&U256::from(key), stake);
+            let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
                 netuid,
                 block_number,
                 key * 1_000_000,
                 &U256::from(key),
             );
-            assert_ok!(SubtensorModule::register(
+            assert_ok!(GameSolver::register(
                 RuntimeOrigin::signed(U256::from(key)),
                 netuid,
                 block_number,
@@ -1601,27 +1586,27 @@ fn test_outdated_weights() {
                 U256::from(key),
                 U256::from(key)
             ));
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &U256::from(key),
                 &U256::from(key),
                 netuid,
                 stake.into(),
             );
         }
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), n);
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 4);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), n);
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 4);
 
         // === Issue validator permits
-        SubtensorModule::set_max_allowed_validators(netuid, n);
-        assert_eq!(SubtensorModule::get_max_allowed_validators(netuid), n);
-        SubtensorModule::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 4);
+        GameSolver::set_max_allowed_validators(netuid, n);
+        assert_eq!(GameSolver::get_max_allowed_validators(netuid), n);
+        GameSolver::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 4);
         block_number = next_block_no_epoch(netuid); // run to next block to ensure weights are set on nodes after their registration block
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 0);
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 0);
 
         // === Set weights [val1->srv1: 2/3, val1->srv2: 1/3, val2->srv1: 2/3, val2->srv2: 1/3, srv1->srv1: 1, srv2->srv2: 1]
         for uid in 0..(n / 2) as u64 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(uid)),
                 netuid,
                 ((n / 2)..n).collect(),
@@ -1630,7 +1615,7 @@ fn test_outdated_weights() {
             ));
         }
         for uid in ((n / 2) as u64)..n as u64 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(uid)),
                 netuid,
                 vec![uid as u16],
@@ -1639,9 +1624,9 @@ fn test_outdated_weights() {
             )); // server self-weight
         }
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
         /*  current_block: 1; activity_cutoff: 5000
         Last update: [1, 1, 1, 1]; Inactive: [false, false, false, false]; Block at registration: [0, 0, 0, 0]
@@ -1673,16 +1658,12 @@ fn test_outdated_weights() {
 
         // === Dereg server2 at uid3 (least emission) + register new key over uid3
         let new_key: u64 = n as u64; // register a new key while at max capacity, which means the least incentive uid will be deregistered
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &U256::from(new_key),
-        );
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &U256::from(new_key));
         assert_eq!(System::block_number(), block_number);
-        assert_eq!(SubtensorModule::get_max_registrations_per_block(netuid), n);
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 0);
-        assert_ok!(SubtensorModule::register(
+        assert_eq!(GameSolver::get_max_registrations_per_block(netuid), n);
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 0);
+        assert_ok!(GameSolver::register(
             RuntimeOrigin::signed(U256::from(new_key)),
             netuid,
             block_number,
@@ -1694,13 +1675,13 @@ fn test_outdated_weights() {
         let deregistered_uid: u16 = n - 1; // since uid=n-1 only recieved 1/3 of weight, it will get pruned first
         assert_eq!(
             U256::from(new_key),
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid, deregistered_uid)
+            GameSolver::get_hotkey_for_net_and_uid(netuid, deregistered_uid)
                 .expect("Not registered")
         );
         next_block_no_epoch(netuid); // run to next block to outdate weights and bonds set on deregistered uid
 
         // === Update weights from only uid=0
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(U256::from(0)),
             netuid,
             ((n / 2)..n).collect(),
@@ -1708,9 +1689,9 @@ fn test_outdated_weights() {
             0
         ));
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
         /*  current_block: 2; activity_cutoff: 5000
         Last update: [2, 1, 1, 1]; Inactive: [false, false, false, false]; Block at registration: [0, 0, 0, 1]
@@ -1742,10 +1723,10 @@ fn test_outdated_weights() {
         E: [250000000, 250000000, 500000000, 0]
         P: [0.25, 0.25, 0.5, 0]
         P (u16): [32767, 32767, 65535, 0] */
-        let bonds = SubtensorModule::get_bonds(netuid.into());
-        assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, 0), 32767); // Note D = floor(0.5 * 65_535)
+        let bonds = GameSolver::get_bonds(netuid.into());
+        assert_eq!(GameSolver::get_dividends_for_uid(netuid, 0), 32767); // Note D = floor(0.5 * 65_535)
         assert_eq!(
-            SubtensorModule::get_emission_for_uid(netuid, 0),
+            GameSolver::get_emission_for_uid(netuid, 0),
             250000000.into()
         ); // Note E = 0.5 * 0.5 * 1_000_000_000 = 249311245
         assert_eq!(bonds[0][2], I32F32::from_num(65_535)); // floor(0.5*(2^16-1))/(2^16-1), then max-upscale
@@ -1764,21 +1745,21 @@ fn test_zero_weights() {
         let mut block_number: u64 = 0;
         let stake: u64 = 1;
         add_network_disable_commit_reveal(netuid, tempo, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, n);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_max_registrations_per_block(netuid, n);
-        SubtensorModule::set_target_registrations_per_interval(netuid, n);
-        SubtensorModule::set_min_allowed_weights(netuid, 0);
+        GameSolver::set_max_allowed_uids(netuid, n);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_max_registrations_per_block(netuid, n);
+        GameSolver::set_target_registrations_per_interval(netuid, n);
+        GameSolver::set_min_allowed_weights(netuid, 0);
 
         // === Register [validator, server]
         for key in 0..n as u64 {
-            let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+            let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
                 netuid,
                 block_number,
                 key * 1_000_000,
                 &U256::from(key),
             );
-            assert_ok!(SubtensorModule::register(
+            assert_ok!(GameSolver::register(
                 RuntimeOrigin::signed(U256::from(key)),
                 netuid,
                 block_number,
@@ -1789,21 +1770,21 @@ fn test_zero_weights() {
             ));
         }
         for validator in 0..(n / 2) as u64 {
-            SubtensorModule::add_balance_to_coldkey_account(&U256::from(validator), stake);
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::add_balance_to_coldkey_account(&U256::from(validator), stake);
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &U256::from(validator),
                 &U256::from(validator),
                 netuid,
                 stake.into(),
             );
         }
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), n);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), n);
 
         // === No weights
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
         /*	current_block: 0; activity_cutoff: 5000; Last update: [0, 0]; Inactive: [false, false]
         S: [1, 0]; S (mask): [1, 0]; S (mask+norm): [1, 0]; Block at registration: [0, 0]
@@ -1814,15 +1795,12 @@ fn test_zero_weights() {
         E: [1000000000, 0]; P: [1, 0] */
         for validator in 0..(n / 2) {
             assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, validator),
+                GameSolver::get_emission_for_uid(netuid, validator),
                 1000000000.into()
             ); // Note E = 1 * 1_000_000_000
         }
         for server in (n / 2)..n {
-            assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, server),
-                0.into()
-            );
+            assert_eq!(GameSolver::get_emission_for_uid(netuid, server), 0.into());
             // no stake
         }
         run_to_block(1);
@@ -1830,7 +1808,7 @@ fn test_zero_weights() {
 
         // === Self-weights only: set weights [srv->srv: 1]
         for uid in ((n / 2) as u64)..n as u64 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(uid)),
                 netuid,
                 vec![uid as u16],
@@ -1839,9 +1817,9 @@ fn test_zero_weights() {
             )); // server self-weight
         }
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
         /*	current_block: 1; activity_cutoff: 5000; Last update: [0, 1]; Inactive: [false, false]
         S: [1, 0]; S (mask): [1, 0]; S (mask+norm): [1, 0]; Block at registration: [0, 0]
@@ -1853,15 +1831,12 @@ fn test_zero_weights() {
         E: [1000000000, 0]; P: [1, 0] */
         for validator in 0..(n / 2) {
             assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, validator),
+                GameSolver::get_emission_for_uid(netuid, validator),
                 1000000000.into()
             ); // Note E = 1 * 1_000_000_000
         }
         for server in (n / 2)..n {
-            assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, server),
-                0.into()
-            );
+            assert_eq!(GameSolver::get_emission_for_uid(netuid, server), 0.into());
             // no stake
         }
         run_to_block(2);
@@ -1869,7 +1844,7 @@ fn test_zero_weights() {
 
         // === Set weights [val->srv: 1/(n/2)]
         for uid in 0..(n / 2) as u64 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(uid)),
                 netuid,
                 ((n / 2)..n).collect(),
@@ -1881,13 +1856,13 @@ fn test_zero_weights() {
         // === Outdate weights by reregistering servers
         for new_key in n..n + (n / 2) {
             // register a new key while at max capacity, which means the least emission uid will be deregistered
-            let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+            let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
                 netuid,
                 block_number,
                 new_key as u64 * 1_000_000,
                 &(U256::from(new_key)),
             );
-            assert_ok!(SubtensorModule::register(
+            assert_ok!(GameSolver::register(
                 RuntimeOrigin::signed(U256::from(new_key)),
                 netuid,
                 block_number,
@@ -1898,9 +1873,9 @@ fn test_zero_weights() {
             ));
         }
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
         /*	current_block: 2; activity_cutoff: 5000; Last update: [2, 1]; Inactive: [false, false];
         S: [1, 0]; S (mask): [1, 0]; S (mask+norm): [1, 0]; Block at registration: [0, 2];
@@ -1911,22 +1886,19 @@ fn test_zero_weights() {
         E: [1000000000, 0]; P: [1, 0] */
         for validator in 0..(n / 2) {
             assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, validator),
+                GameSolver::get_emission_for_uid(netuid, validator),
                 1000000000.into()
             ); // Note E = 1 * 1_000_000_000
         }
         for server in (n / 2)..n {
-            assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, server),
-                0.into()
-            );
+            assert_eq!(GameSolver::get_emission_for_uid(netuid, server), 0.into());
             // no stake
         }
         run_to_block(3);
 
         // === Set new weights [val->srv: 1/(n/2)] to check that updated weights would produce non-zero incentive
         for uid in 0..(n / 2) as u64 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(uid)),
                 netuid,
                 ((n / 2)..n).collect(),
@@ -1935,9 +1907,9 @@ fn test_zero_weights() {
             ));
         }
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
         /*	current_block: 3; activity_cutoff: 5000; Last update: [3, 1]; Inactive: [false, false];
         S: [1, 0]; S (mask): [1, 0]; S (mask+norm): [1, 0]; Block at registration: [0, 2];
@@ -1948,7 +1920,7 @@ fn test_zero_weights() {
         E: [500000000, 500000000]; P: [0.5, 0.5] */
         for validator in 0..n {
             assert_eq!(
-                SubtensorModule::get_emission_for_uid(netuid, validator),
+                GameSolver::get_emission_for_uid(netuid, validator),
                 (1000000000 / (n as u64)).into()
             ); // Note E = 1/2 * 1_000_000_000
         }
@@ -1966,25 +1938,25 @@ fn test_deregistered_miner_bonds() {
 
         let stake: u64 = 1;
         add_network_disable_commit_reveal(netuid, high_tempo, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, n);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        SubtensorModule::set_max_registrations_per_block(netuid, n);
-        SubtensorModule::set_target_registrations_per_interval(netuid, n);
-        SubtensorModule::set_min_allowed_weights(netuid, 0);
-        SubtensorModule::set_bonds_penalty(netuid, u16::MAX);
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 0);
+        GameSolver::set_max_allowed_uids(netuid, n);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_max_registrations_per_block(netuid, n);
+        GameSolver::set_target_registrations_per_interval(netuid, n);
+        GameSolver::set_min_allowed_weights(netuid, 0);
+        GameSolver::set_bonds_penalty(netuid, u16::MAX);
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 0);
 
         // === Register [validator1, validator2, server1, server2]
         let block_number = System::block_number();
         for key in 0..n as u64 {
-            SubtensorModule::add_balance_to_coldkey_account(&U256::from(key), stake);
-            let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+            GameSolver::add_balance_to_coldkey_account(&U256::from(key), stake);
+            let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
                 netuid,
                 block_number,
                 key * 1_000_000,
                 &U256::from(key),
             );
-            assert_ok!(SubtensorModule::register(
+            assert_ok!(GameSolver::register(
                 RuntimeOrigin::signed(U256::from(key)),
                 netuid,
                 block_number,
@@ -1993,27 +1965,27 @@ fn test_deregistered_miner_bonds() {
                 U256::from(key),
                 U256::from(key)
             ));
-            SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                 &U256::from(key),
                 &U256::from(key),
                 netuid,
                 stake.into(),
             );
         }
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), n);
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 4);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), n);
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 4);
 
         // === Issue validator permits
-        SubtensorModule::set_max_allowed_validators(netuid, n);
-        assert_eq!(SubtensorModule::get_max_allowed_validators(netuid), n);
-        SubtensorModule::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 4);
+        GameSolver::set_max_allowed_validators(netuid, n);
+        assert_eq!(GameSolver::get_max_allowed_validators(netuid), n);
+        GameSolver::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 4);
         next_block(); // run to next block to ensure weights are set on nodes after their registration block
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 0);
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 0);
 
         // === Set weights [val1->srv1: 2/3, val1->srv2: 1/3, val2->srv1: 2/3, val2->srv2: 1/3]
         for uid in 0..(n / 2) as u64 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(uid)),
                 netuid,
                 ((n / 2)..n).collect(),
@@ -2023,23 +1995,23 @@ fn test_deregistered_miner_bonds() {
         }
 
         // Set tempo high so we don't automatically run epochs
-        SubtensorModule::set_tempo(netuid, high_tempo);
+        GameSolver::set_tempo(netuid, high_tempo);
 
         // Run 2 blocks
         next_block();
         next_block();
 
         // set tempo to 2 blocks
-        SubtensorModule::set_tempo(netuid, 2);
+        GameSolver::set_tempo(netuid, 2);
         // Run epoch
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
 
         // Check the bond values for the servers
-        let bonds = SubtensorModule::get_bonds(netuid.into());
+        let bonds = GameSolver::get_bonds(netuid.into());
         let bond_0_2 = bonds[0][2];
         let bond_0_3 = bonds[0][3];
 
@@ -2048,7 +2020,7 @@ fn test_deregistered_miner_bonds() {
         assert!(bond_0_3 > 0);
 
         // Set tempo high so we don't automatically run epochs
-        SubtensorModule::set_tempo(netuid, high_tempo);
+        GameSolver::set_tempo(netuid, high_tempo);
 
         // Run one more block
         next_block();
@@ -2056,15 +2028,11 @@ fn test_deregistered_miner_bonds() {
         // === Dereg server2 at uid3 (least emission) + register new key over uid3
         let new_key: u64 = n as u64; // register a new key while at max capacity, which means the least incentive uid will be deregistered
         let block_number = System::block_number();
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
-            netuid,
-            block_number,
-            0,
-            &U256::from(new_key),
-        );
-        assert_eq!(SubtensorModule::get_max_registrations_per_block(netuid), n);
-        assert_eq!(SubtensorModule::get_registrations_this_block(netuid), 0);
-        assert_ok!(SubtensorModule::register(
+        let (nonce, work): (u64, Vec<u8>) =
+            GameSolver::create_work_for_block_number(netuid, block_number, 0, &U256::from(new_key));
+        assert_eq!(GameSolver::get_max_registrations_per_block(netuid), n);
+        assert_eq!(GameSolver::get_registrations_this_block(netuid), 0);
+        assert_ok!(GameSolver::register(
             RuntimeOrigin::signed(U256::from(new_key)),
             netuid,
             block_number,
@@ -2076,13 +2044,13 @@ fn test_deregistered_miner_bonds() {
         let deregistered_uid: u16 = n - 1; // since uid=n-1 only recieved 1/3 of weight, it will get pruned first
         assert_eq!(
             U256::from(new_key),
-            SubtensorModule::get_hotkey_for_net_and_uid(netuid, deregistered_uid)
+            GameSolver::get_hotkey_for_net_and_uid(netuid, deregistered_uid)
                 .expect("Not registered")
         );
 
         // Set weights again so they're active.
         for uid in 0..(n / 2) as u64 {
-            assert_ok!(SubtensorModule::set_weights(
+            assert_ok!(GameSolver::set_weights(
                 RuntimeOrigin::signed(U256::from(uid)),
                 netuid,
                 ((n / 2)..n).collect(),
@@ -2094,7 +2062,7 @@ fn test_deregistered_miner_bonds() {
         // Run 1 block
         next_block();
         // Assert block at registration happened after the last tempo
-        let block_at_registration = SubtensorModule::get_neuron_block_at_registration(netuid, 3);
+        let block_at_registration = GameSolver::get_neuron_block_at_registration(netuid, 3);
         let block_number = System::block_number();
         assert!(
             block_at_registration >= block_number - 2,
@@ -2102,16 +2070,16 @@ fn test_deregistered_miner_bonds() {
         );
 
         // set tempo to 2 blocks
-        SubtensorModule::set_tempo(netuid, 2);
+        GameSolver::set_tempo(netuid, 2);
         // Run epoch again.
         if sparse {
-            SubtensorModule::epoch(netuid, 1_000_000_000.into());
+            GameSolver::epoch(netuid, 1_000_000_000.into());
         } else {
-            SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+            GameSolver::epoch_dense(netuid, 1_000_000_000.into());
         }
 
         // Check the bond values for the servers
-        let bonds = SubtensorModule::get_bonds(netuid.into());
+        let bonds = GameSolver::get_bonds(netuid.into());
         let bond_0_2_new = bonds[0][2];
         let bond_0_3_new = bonds[0][3];
 
@@ -2156,32 +2124,26 @@ fn test_validator_permits() {
                 new_test_ext(1).execute_with(|| {
                     let block_number: u64 = 0;
                     add_network(netuid, tempo, 0);
-                    SubtensorModule::set_max_allowed_uids(netuid, network_n as u16);
-                    assert_eq!(
-                        SubtensorModule::get_max_allowed_uids(netuid),
-                        network_n as u16
-                    );
-                    SubtensorModule::set_max_registrations_per_block(netuid, network_n as u16);
-                    SubtensorModule::set_target_registrations_per_interval(
-                        netuid,
-                        network_n as u16,
-                    );
-                    SubtensorModule::set_stake_threshold(min_stake);
+                    GameSolver::set_max_allowed_uids(netuid, network_n as u16);
+                    assert_eq!(GameSolver::get_max_allowed_uids(netuid), network_n as u16);
+                    GameSolver::set_max_registrations_per_block(netuid, network_n as u16);
+                    GameSolver::set_target_registrations_per_interval(netuid, network_n as u16);
+                    GameSolver::set_stake_threshold(min_stake);
 
                     // === Register [validator1, validator2, server1, server2]
                     for key in 0..network_n as u64 {
-                        SubtensorModule::add_balance_to_coldkey_account(
+                        GameSolver::add_balance_to_coldkey_account(
                             &U256::from(key),
                             stake[key as usize],
                         );
                         let (nonce, work): (u64, Vec<u8>) =
-                            SubtensorModule::create_work_for_block_number(
+                            GameSolver::create_work_for_block_number(
                                 netuid,
                                 block_number,
                                 key * 1_000_000,
                                 &U256::from(key),
                             );
-                        assert_ok!(SubtensorModule::register(
+                        assert_ok!(GameSolver::register(
                             RuntimeOrigin::signed(U256::from(key)),
                             netuid,
                             block_number,
@@ -2190,42 +2152,42 @@ fn test_validator_permits() {
                             U256::from(key),
                             U256::from(key)
                         ));
-                        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+                        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                             &U256::from(key),
                             &U256::from(key),
                             netuid,
                             stake[key as usize].into(),
                         );
                     }
-                    assert_eq!(SubtensorModule::get_subnetwork_n(netuid), network_n as u16);
+                    assert_eq!(GameSolver::get_subnetwork_n(netuid), network_n as u16);
 
                     // === Issue validator permits
-                    SubtensorModule::set_max_allowed_validators(netuid, validators_n as u16);
+                    GameSolver::set_max_allowed_validators(netuid, validators_n as u16);
                     assert_eq!(
-                        SubtensorModule::get_max_allowed_validators(netuid),
+                        GameSolver::get_max_allowed_validators(netuid),
                         validators_n as u16
                     );
-                    SubtensorModule::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
+                    GameSolver::epoch(netuid, 1_000_000_000.into()); // run first epoch to set allowed validators
                     for validator in &validators {
                         assert_eq!(
                             stake[*validator as usize] >= min_stake,
-                            SubtensorModule::get_validator_permit_for_uid(netuid, *validator)
+                            GameSolver::get_validator_permit_for_uid(netuid, *validator)
                         );
                     }
                     for server in &servers {
                         assert_eq!(
                             !correct,
-                            SubtensorModule::get_validator_permit_for_uid(netuid, *server)
+                            GameSolver::get_validator_permit_for_uid(netuid, *server)
                         );
                     }
 
                     // === Increase server stake above validators
                     for server in &servers {
-                        SubtensorModule::add_balance_to_coldkey_account(
+                        GameSolver::add_balance_to_coldkey_account(
                             &(U256::from(*server as u64)),
                             2 * network_n as u64,
                         );
-                        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+                        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
                             &(U256::from(*server as u64)),
                             &(U256::from(*server as u64)),
                             netuid,
@@ -2235,19 +2197,19 @@ fn test_validator_permits() {
 
                     // === Update validator permits
                     run_to_block(1);
-                    SubtensorModule::epoch(netuid, 1_000_000_000.into());
+                    GameSolver::epoch(netuid, 1_000_000_000.into());
 
                     // === Check that servers now own permits instead of the validator uids
                     for validator in &validators {
                         assert_eq!(
                             !correct,
-                            SubtensorModule::get_validator_permit_for_uid(netuid, *validator)
+                            GameSolver::get_validator_permit_for_uid(netuid, *validator)
                         );
                     }
                     for server in &servers {
                         assert_eq!(
                             (stake[*server as usize] + (2 * network_n as u64)) >= min_stake,
-                            SubtensorModule::get_validator_permit_for_uid(netuid, *server)
+                            GameSolver::get_validator_permit_for_uid(netuid, *server)
                         );
                     }
                 });
@@ -2269,18 +2231,18 @@ fn test_get_set_alpha() {
         let signer = RuntimeOrigin::signed(coldkey);
 
         // Enable Liquid Alpha and setup
-        SubtensorModule::set_liquid_alpha_enabled(netuid, true);
+        GameSolver::set_liquid_alpha_enabled(netuid, true);
         migrations::migrate_create_root_network::migrate_create_root_network::<Test>();
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, 1_000_000_000_000_000);
-        assert_ok!(SubtensorModule::root_register(signer.clone(), hotkey,));
+        GameSolver::add_balance_to_coldkey_account(&coldkey, 1_000_000_000_000_000);
+        assert_ok!(GameSolver::root_register(signer.clone(), hotkey,));
 
         // Should fail as signer does not own the subnet
         assert_err!(
-            SubtensorModule::do_set_alpha_values(signer.clone(), netuid, alpha_low, alpha_high),
+            GameSolver::do_set_alpha_values(signer.clone(), netuid, alpha_low, alpha_high),
             DispatchError::BadOrigin
         );
 
-        assert_ok!(SubtensorModule::register_network(signer.clone(), hotkey));
+        assert_ok!(GameSolver::register_network(signer.clone(), hotkey));
         SubtokenEnabled::<Test>::insert(netuid, true);
 
         let fee = <Test as pallet::Config>::SwapInterface::approx_fee_amount(
@@ -2288,21 +2250,21 @@ fn test_get_set_alpha() {
             DefaultMinStake::<Test>::get(),
         );
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             signer.clone(),
             hotkey,
             netuid,
             DefaultMinStake::<Test>::get() + fee * 2.into()
         ));
 
-        assert_ok!(SubtensorModule::do_set_alpha_values(
+        assert_ok!(GameSolver::do_set_alpha_values(
             signer.clone(),
             netuid,
             alpha_low,
             alpha_high
         ));
         let (grabbed_alpha_low, grabbed_alpha_high): (u16, u16) =
-            SubtensorModule::get_alpha_values(netuid);
+            GameSolver::get_alpha_values(netuid);
 
         log::info!("alpha_low: {grabbed_alpha_low:?} alpha_high: {grabbed_alpha_high:?}");
         assert_eq!(grabbed_alpha_low, alpha_low);
@@ -2317,7 +2279,7 @@ fn test_get_set_alpha() {
         let alpha_low_decimal = unnormalize_u16_to_float(alpha_low);
         let alpha_high_decimal = unnormalize_u16_to_float(alpha_high);
 
-        let (alpha_low_32, alpha_high_32) = SubtensorModule::get_alpha_values_32(netuid);
+        let (alpha_low_32, alpha_high_32) = GameSolver::get_alpha_values_32(netuid);
 
         let tolerance: f32 = 1e-6; // 0.000001
 
@@ -2336,14 +2298,14 @@ fn test_get_set_alpha() {
         );
 
         // 1. Liquid alpha disabled
-        SubtensorModule::set_liquid_alpha_enabled(netuid, false);
+        GameSolver::set_liquid_alpha_enabled(netuid, false);
         assert_err!(
-            SubtensorModule::do_set_alpha_values(signer.clone(), netuid, alpha_low, alpha_high),
+            GameSolver::do_set_alpha_values(signer.clone(), netuid, alpha_low, alpha_high),
             Error::<Test>::LiquidAlphaDisabled
         );
         // Correct scenario after error
-        SubtensorModule::set_liquid_alpha_enabled(netuid, true); // Re-enable for further tests
-        assert_ok!(SubtensorModule::do_set_alpha_values(
+        GameSolver::set_liquid_alpha_enabled(netuid, true); // Re-enable for further tests
+        assert_ok!(GameSolver::do_set_alpha_values(
             signer.clone(),
             netuid,
             alpha_low,
@@ -2353,16 +2315,11 @@ fn test_get_set_alpha() {
         // 2. Alpha high too low
         let alpha_high_too_low = (u16::MAX as u32 / 40) as u16 - 1; // One less than the minimum acceptable value
         assert_err!(
-            SubtensorModule::do_set_alpha_values(
-                signer.clone(),
-                netuid,
-                alpha_low,
-                alpha_high_too_low
-            ),
+            GameSolver::do_set_alpha_values(signer.clone(), netuid, alpha_low, alpha_high_too_low),
             Error::<Test>::AlphaHighTooLow
         );
         // Correct scenario after error
-        assert_ok!(SubtensorModule::do_set_alpha_values(
+        assert_ok!(GameSolver::do_set_alpha_values(
             signer.clone(),
             netuid,
             alpha_low,
@@ -2372,16 +2329,11 @@ fn test_get_set_alpha() {
         // 3. Alpha low too low or too high
         let alpha_low_too_low = 0_u16;
         assert_err!(
-            SubtensorModule::do_set_alpha_values(
-                signer.clone(),
-                netuid,
-                alpha_low_too_low,
-                alpha_high
-            ),
+            GameSolver::do_set_alpha_values(signer.clone(), netuid, alpha_low_too_low, alpha_high),
             Error::<Test>::AlphaLowOutOfRange
         );
         // Correct scenario after error
-        assert_ok!(SubtensorModule::do_set_alpha_values(
+        assert_ok!(GameSolver::do_set_alpha_values(
             signer.clone(),
             netuid,
             alpha_low,
@@ -2390,16 +2342,11 @@ fn test_get_set_alpha() {
 
         let alpha_low_too_high = alpha_high + 1; // alpha_low should be <= alpha_high
         assert_err!(
-            SubtensorModule::do_set_alpha_values(
-                signer.clone(),
-                netuid,
-                alpha_low_too_high,
-                alpha_high
-            ),
+            GameSolver::do_set_alpha_values(signer.clone(), netuid, alpha_low_too_high, alpha_high),
             Error::<Test>::AlphaLowOutOfRange
         );
         // Correct scenario after error
-        assert_ok!(SubtensorModule::do_set_alpha_values(
+        assert_ok!(GameSolver::do_set_alpha_values(
             signer.clone(),
             netuid,
             alpha_low,
@@ -2417,42 +2364,42 @@ fn test_blocks_since_last_step() {
         let tempo: u16 = 7200;
         add_network(netuid, tempo, 0);
 
-        let original_blocks: u64 = SubtensorModule::get_blocks_since_last_step(netuid);
+        let original_blocks: u64 = GameSolver::get_blocks_since_last_step(netuid);
 
         step_block(5);
 
-        let new_blocks: u64 = SubtensorModule::get_blocks_since_last_step(netuid);
+        let new_blocks: u64 = GameSolver::get_blocks_since_last_step(netuid);
 
         assert!(new_blocks > original_blocks);
         assert_eq!(new_blocks, 5);
 
-        let blocks_to_step: u16 = SubtensorModule::blocks_until_next_epoch(
+        let blocks_to_step: u16 = GameSolver::blocks_until_next_epoch(
             netuid,
             tempo,
-            SubtensorModule::get_current_block_as_u64(),
+            GameSolver::get_current_block_as_u64(),
         ) as u16
             + 10;
         step_block(blocks_to_step);
 
-        let post_blocks: u64 = SubtensorModule::get_blocks_since_last_step(netuid);
+        let post_blocks: u64 = GameSolver::get_blocks_since_last_step(netuid);
 
         assert_eq!(post_blocks, 10);
 
-        let blocks_to_step: u16 = SubtensorModule::blocks_until_next_epoch(
+        let blocks_to_step: u16 = GameSolver::blocks_until_next_epoch(
             netuid,
             tempo,
-            SubtensorModule::get_current_block_as_u64(),
+            GameSolver::get_current_block_as_u64(),
         ) as u16
             + 20;
         step_block(blocks_to_step);
 
-        let new_post_blocks: u64 = SubtensorModule::get_blocks_since_last_step(netuid);
+        let new_post_blocks: u64 = GameSolver::get_blocks_since_last_step(netuid);
 
         assert_eq!(new_post_blocks, 20);
 
         step_block(7);
 
-        assert_eq!(SubtensorModule::get_blocks_since_last_step(netuid), 27);
+        assert_eq!(GameSolver::get_blocks_since_last_step(netuid), 27);
     });
 }
 
@@ -2475,7 +2422,7 @@ fn test_can_set_self_weight_as_subnet_owner() {
         register_ok_neuron(netuid, other_hotkey, subnet_owner_coldkey, 0);
 
         // Add stake to owner hotkey.
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &subnet_owner_hotkey,
             &subnet_owner_coldkey,
             netuid,
@@ -2499,7 +2446,7 @@ fn test_can_set_self_weight_as_subnet_owner() {
         LastUpdate::<Test>::insert(NetUidStorageIndex::from(netuid), vec![2, 0]);
 
         // Run epoch
-        let hotkey_emission = SubtensorModule::epoch(netuid, to_emit.into());
+        let hotkey_emission = GameSolver::epoch(netuid, to_emit.into());
 
         // hotkey_emission is [(hotkey, incentive, dividend)]
         assert_eq!(hotkey_emission.len(), 2);
@@ -2531,7 +2478,7 @@ fn test_epoch_outputs_single_staker_registered_no_weights() {
         let coldkey = U256::from(2);
         register_ok_neuron(netuid, hotkey, coldkey, 0);
         // Give non-zero alpha
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey,
             &coldkey,
             netuid,
@@ -2539,7 +2486,7 @@ fn test_epoch_outputs_single_staker_registered_no_weights() {
         );
 
         let pending_alpha = AlphaCurrency::from(1_000_000_000);
-        let hotkey_emission = SubtensorModule::epoch(netuid, pending_alpha);
+        let hotkey_emission = GameSolver::epoch(netuid, pending_alpha);
 
         let sum_incentives = hotkey_emission
             .iter()
@@ -2645,12 +2592,12 @@ fn test_epoch_outputs_single_staker_registered_no_weights() {
 // 					let mut minor_emission: I64F64 = I64F64::from_num(0);
 // 					for set in vec![major_validators, major_servers] {
 // 						for uid in set {
-// 							major_emission += I64F64::from_num(SubtensorModule::get_emission_for_uid( netuid, uid ));
+// 							major_emission += I64F64::from_num(GameSolver::get_emission_for_uid( netuid, uid ));
 // 						}
 // 					}
 // 					for set in vec![minor_validators, minor_servers] {
 // 						for uid in set {
-// 							minor_emission += I64F64::from_num(SubtensorModule::get_emission_for_uid( netuid, uid ));
+// 							minor_emission += I64F64::from_num(GameSolver::get_emission_for_uid( netuid, uid ));
 // 						}
 // 					}
 // 					let major_ratio: I32F32 = I32F32::from_num(major_emission / (major_emission + minor_emission));
@@ -2684,26 +2631,26 @@ fn setup_yuma_3_scenario(netuid: NetUid, n: u16, sparse: bool, max_stake: u64, s
     let tempo: u16 = 1; // high tempo to skip automatic epochs in on_initialize, use manual epochs instead
     add_network_disable_commit_reveal(netuid, tempo, 0);
 
-    SubtensorModule::set_max_allowed_uids(netuid, n);
-    assert_eq!(SubtensorModule::get_max_allowed_uids(netuid), n);
-    SubtensorModule::set_max_registrations_per_block(netuid, n);
-    SubtensorModule::set_target_registrations_per_interval(netuid, n);
-    SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-    SubtensorModule::set_min_allowed_weights(netuid, 1);
-    SubtensorModule::set_bonds_penalty(netuid, 0);
-    SubtensorModule::set_alpha_sigmoid_steepness(netuid, 1000);
-    SubtensorModule::set_bonds_moving_average(netuid, 975_000);
+    GameSolver::set_max_allowed_uids(netuid, n);
+    assert_eq!(GameSolver::get_max_allowed_uids(netuid), n);
+    GameSolver::set_max_registrations_per_block(netuid, n);
+    GameSolver::set_target_registrations_per_interval(netuid, n);
+    GameSolver::set_weights_set_rate_limit(netuid, 0);
+    GameSolver::set_min_allowed_weights(netuid, 1);
+    GameSolver::set_bonds_penalty(netuid, 0);
+    GameSolver::set_alpha_sigmoid_steepness(netuid, 1000);
+    GameSolver::set_bonds_moving_average(netuid, 975_000);
 
     // === Register
     for key in 0..n as u64 {
-        SubtensorModule::add_balance_to_coldkey_account(&U256::from(key), max_stake);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        GameSolver::add_balance_to_coldkey_account(&U256::from(key), max_stake);
+        let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             key * 1_000_000,
             &U256::from(key),
         );
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as frame_system::Config>::RuntimeOrigin>::signed(U256::from(key)),
             netuid,
             block_number,
@@ -2712,26 +2659,26 @@ fn setup_yuma_3_scenario(netuid: NetUid, n: u16, sparse: bool, max_stake: u64, s
             U256::from(key),
             U256::from(key)
         ));
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &U256::from(key),
             &U256::from(key),
             netuid,
             stakes[key as usize].into(),
         );
     }
-    assert_eq!(SubtensorModule::get_max_allowed_uids(netuid), n);
-    assert_eq!(SubtensorModule::get_subnetwork_n(netuid), n);
+    assert_eq!(GameSolver::get_max_allowed_uids(netuid), n);
+    assert_eq!(GameSolver::get_subnetwork_n(netuid), n);
 
     // Enable Liquid Alpha
-    SubtensorModule::set_kappa(netuid, u16::MAX / 2);
-    SubtensorModule::set_liquid_alpha_enabled(netuid, true);
-    SubtensorModule::set_alpha_values_32(netuid, I32F32::from_num(0.1), I32F32::from_num(0.3));
+    GameSolver::set_kappa(netuid, u16::MAX / 2);
+    GameSolver::set_liquid_alpha_enabled(netuid, true);
+    GameSolver::set_alpha_values_32(netuid, I32F32::from_num(0.1), I32F32::from_num(0.3));
 
     // Enable Yuma3
-    SubtensorModule::set_yuma3_enabled(netuid, true);
+    GameSolver::set_yuma3_enabled(netuid, true);
 
     // === Issue validator permits
-    SubtensorModule::set_max_allowed_validators(netuid, 3);
+    GameSolver::set_max_allowed_validators(netuid, 3);
 
     // run first epoch to set allowed validators
     // run to next block to ensure weights are set on nodes after their registration block
@@ -2741,9 +2688,9 @@ fn setup_yuma_3_scenario(netuid: NetUid, n: u16, sparse: bool, max_stake: u64, s
 fn run_epoch(netuid: NetUid, sparse: bool) {
     next_block_no_epoch(netuid);
     if sparse {
-        SubtensorModule::epoch(netuid, 1_000_000_000.into());
+        GameSolver::epoch(netuid, 1_000_000_000.into());
     } else {
-        SubtensorModule::epoch_dense(netuid, 1_000_000_000.into());
+        GameSolver::epoch_dense(netuid, 1_000_000_000.into());
     }
 }
 
@@ -2754,8 +2701,8 @@ fn run_epoch_and_check_bonds_dividends(
     target_dividends: &[f32],
 ) {
     run_epoch(netuid, sparse);
-    let bonds = SubtensorModule::get_bonds_fixed_proportion(netuid.into());
-    let dividends = SubtensorModule::get_dividends(netuid);
+    let bonds = GameSolver::get_bonds_fixed_proportion(netuid.into());
+    let dividends = GameSolver::get_dividends(netuid);
 
     let epsilon = I32F32::from_num(1e-3);
     // Check the bonds
@@ -2777,7 +2724,7 @@ fn run_epoch_and_check_bonds_dividends(
 
 fn set_yuma_3_weights(netuid: NetUid, weights: Vec<Vec<u16>>, indices: Vec<u16>) {
     for (uid, weight) in weights.iter().enumerate() {
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(U256::from(uid as u64)),
             netuid,
             indices.clone(),
@@ -3194,7 +3141,7 @@ fn test_yuma_3_liquid_alpha_disabled() {
             setup_yuma_3_scenario(netuid, n, *sparse, max_stake, stakes);
 
             // disable liquid alpha
-            SubtensorModule::set_liquid_alpha_enabled(netuid, false);
+            GameSolver::set_liquid_alpha_enabled(netuid, false);
 
             let targets_bonds = [
                 vec![
@@ -3398,7 +3345,7 @@ fn test_yuma_3_bonds_reset() {
         let stakes: Vec<u64> = vec![8, 1, 1, 0, 0];
 
         setup_yuma_3_scenario(netuid, n, sparse, max_stake, stakes);
-        SubtensorModule::set_bonds_reset(netuid, true);
+        GameSolver::set_bonds_reset(netuid, true);
 
         // target bonds and dividends for specific epoch
         let targets_dividends: std::collections::HashMap<_, _> = [
@@ -3495,9 +3442,9 @@ fn test_yuma_3_bonds_reset() {
                     // All validators -> Server 2
                     set_yuma_3_weights(netuid, vec![vec![0, u16::MAX]; 3], vec![3, 4]);
                     if epoch == 20 {
-                        let hotkey = SubtensorModule::get_hotkey_for_net_and_uid(netuid, 3)
+                        let hotkey = GameSolver::get_hotkey_for_net_and_uid(netuid, 3)
                             .expect("Hotkey not found");
-                        let _ = SubtensorModule::do_reset_bonds(netuid.into(), &hotkey);
+                        let _ = GameSolver::do_reset_bonds(netuid.into(), &hotkey);
                     }
                 }
                 21 => {
@@ -3551,17 +3498,17 @@ fn test_liquid_alpha_equal_values_against_itself() {
 
         // set both alpha values to 0.1 and bonds moving average to 0.9
         AlphaValues::<Test>::insert(netuid, (alpha_low, alpha_high));
-        SubtensorModule::set_bonds_moving_average(netuid.into(), 900_000);
+        GameSolver::set_bonds_moving_average(netuid.into(), 900_000);
 
         // compute bonds with liquid alpha enabled
-        SubtensorModule::set_liquid_alpha_enabled(netuid.into(), true);
+        GameSolver::set_liquid_alpha_enabled(netuid.into(), true);
         let new_bonds_liquid_alpha_on =
-            SubtensorModule::compute_bonds(netuid.into(), &weights, &bonds, &consensus);
+            GameSolver::compute_bonds(netuid.into(), &weights, &bonds, &consensus);
 
         // compute bonds with liquid alpha disabled
-        SubtensorModule::set_liquid_alpha_enabled(netuid.into(), false);
+        GameSolver::set_liquid_alpha_enabled(netuid.into(), false);
         let new_bonds_liquid_alpha_off =
-            SubtensorModule::compute_bonds(netuid.into(), &weights, &bonds, &consensus);
+            GameSolver::compute_bonds(netuid.into(), &weights, &bonds, &consensus);
 
         assert_mat_compare(
             &new_bonds_liquid_alpha_on,
@@ -3579,26 +3526,26 @@ fn test_epoch_masks_incoming_to_sniped_uid_prevents_inheritance() {
         let reveal: u64 = 2;
 
         add_network(netuid, tempo, 0);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, reveal));
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_max_allowed_uids(netuid, 3);
-        SubtensorModule::set_target_registrations_per_interval(netuid, u16::MAX);
+        assert_ok!(GameSolver::set_reveal_period(netuid, reveal));
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_max_allowed_uids(netuid, 3);
+        GameSolver::set_target_registrations_per_interval(netuid, u16::MAX);
 
         /* Validator uid‑0 */
         let (val_hot, val_cold) = (U256::from(100), U256::from(200));
         register_ok_neuron(netuid, val_hot, val_cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &val_hot,
             &val_cold,
             netuid,
             10_000.into(),
         );
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
 
         /* Miner uid‑1 (to be sniped later) */
         let (old_hot, old_cold) = (U256::from(101), U256::from(201));
         register_ok_neuron(netuid, old_hot, old_cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &old_hot,
             &old_cold,
             netuid,
@@ -3608,13 +3555,13 @@ fn test_epoch_masks_incoming_to_sniped_uid_prevents_inheritance() {
         /* filler uid‑2 */
         let (fill_hot, fill_cold) = (U256::from(102), U256::from(202));
         register_ok_neuron(netuid, fill_hot, fill_cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &fill_hot,
             &fill_cold,
             netuid,
             5_000.into(),
         );
-        SubtensorModule::set_max_allowed_validators(netuid, 3);
+        GameSolver::set_max_allowed_validators(netuid, 3);
 
         run_to_block(tempo as u64 * 2 + 1);
 
@@ -3623,49 +3570,46 @@ fn test_epoch_masks_incoming_to_sniped_uid_prevents_inheritance() {
         run_to_block(System::block_number() + 1);
 
         /* validator weights uid‑1 */
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        assert_ok!(SubtensorModule::set_weights(
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(val_hot),
             netuid,
             vec![1],
             vec![u16::MAX],
             0
         ));
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::epoch(netuid, 1_000.into());
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::epoch(netuid, 1_000.into());
 
         /* register new miner (snipes) */
         let (new_hot, new_cold) = (U256::from(103), U256::from(203));
         register_ok_neuron(netuid, new_hot, new_cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &new_hot,
             &new_cold,
             netuid,
             10_000.into(),
         );
-        let new_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &new_hot)
-            .expect("new miner gets UID");
+        let new_uid =
+            GameSolver::get_uid_for_net_and_hotkey(netuid, &new_hot).expect("new miner gets UID");
 
         run_to_block(System::block_number() + 1);
 
         /* validator refreshes vote (still inside window) */
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
-        assert_ok!(SubtensorModule::set_weights(
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(val_hot),
             netuid,
             vec![0, new_uid],
             vec![u16::MAX / 2, u16::MAX / 2],
             0
         ));
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
-        SubtensorModule::epoch(netuid, 1_000.into());
-        assert_eq!(SubtensorModule::get_rank_for_uid(netuid, new_uid), 0);
-        assert_eq!(
-            SubtensorModule::get_incentive_for_uid(netuid.into(), new_uid),
-            0
-        );
+        GameSolver::epoch(netuid, 1_000.into());
+        assert_eq!(GameSolver::get_rank_for_uid(netuid, new_uid), 0);
+        assert_eq!(GameSolver::get_incentive_for_uid(netuid.into(), new_uid), 0);
     });
 }
 
@@ -3675,29 +3619,29 @@ fn test_epoch_no_mask_when_commit_reveal_disabled() {
         let netuid = NetUid::from(32);
         let tempo: u16 = 5;
         add_network(netuid, tempo, 0);
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
 
         let (hot, cold) = (U256::from(1000), U256::from(1100));
         register_ok_neuron(netuid, hot, cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hot,
             &cold,
             netuid,
             1_000.into(),
         );
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
 
         let (hot1, cold1) = (U256::from(1001), U256::from(1101));
         register_ok_neuron(netuid, hot1, cold1, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &hot1,
             &cold1,
             netuid,
             1_000.into(),
         );
 
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        assert_ok!(SubtensorModule::set_weights(
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(hot),
             netuid,
             vec![1],
@@ -3706,9 +3650,9 @@ fn test_epoch_no_mask_when_commit_reveal_disabled() {
         ));
 
         for _ in 0..3 {
-            SubtensorModule::epoch(netuid, 1.into());
+            GameSolver::epoch(netuid, 1.into());
             assert!(
-                !SubtensorModule::get_weights_sparse(netuid.into())[0].is_empty(),
+                !GameSolver::get_weights_sparse(netuid.into())[0].is_empty(),
                 "row visible when CR disabled"
             );
             run_to_block(System::block_number() + tempo as u64 + 1);
@@ -3724,21 +3668,21 @@ fn test_epoch_does_not_mask_outside_window_but_masks_inside() {
         let reveal: u16 = 2;
 
         add_network(netuid, tempo, 0);
-        assert_ok!(SubtensorModule::set_reveal_period(netuid, reveal as u64));
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
-        SubtensorModule::set_target_registrations_per_interval(netuid, u16::MAX);
+        assert_ok!(GameSolver::set_reveal_period(netuid, reveal as u64));
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_target_registrations_per_interval(netuid, u16::MAX);
 
         /* validator uid‑0 */
         let (v_hot, v_cold) = (U256::from(2000), U256::from(2100));
         register_ok_neuron(netuid, v_hot, v_cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &v_hot,
             &v_cold,
             netuid,
             10_000.into(),
         );
-        SubtensorModule::set_validator_permit_for_uid(netuid, 0, true);
-        SubtensorModule::set_max_allowed_validators(netuid, 1);
+        GameSolver::set_validator_permit_for_uid(netuid, 0, true);
+        GameSolver::set_max_allowed_validators(netuid, 1);
 
         run_to_block(tempo as u64 + 1);
 
@@ -3748,7 +3692,7 @@ fn test_epoch_does_not_mask_outside_window_but_masks_inside() {
         /* UID‑1 — outside window */
         let (old_hot, old_cold) = (U256::from(2001), U256::from(2101));
         register_ok_neuron(netuid, old_hot, old_cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &old_hot,
             &old_cold,
             netuid,
@@ -3769,7 +3713,7 @@ fn test_epoch_does_not_mask_outside_window_but_masks_inside() {
         /* UID‑2, UID‑3 — inside window */
         let (mid_hot, mid_cold) = (U256::from(2002), U256::from(2102));
         register_ok_neuron(netuid, mid_hot, mid_cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &mid_hot,
             &mid_cold,
             netuid,
@@ -3778,7 +3722,7 @@ fn test_epoch_does_not_mask_outside_window_but_masks_inside() {
 
         let (new_hot, new_cold) = (U256::from(2003), U256::from(2103));
         register_ok_neuron(netuid, new_hot, new_cold, 0);
-        SubtensorModule::increase_stake_for_hotkey_and_coldkey_on_subnet(
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
             &new_hot,
             &new_cold,
             netuid,
@@ -3788,30 +3732,30 @@ fn test_epoch_does_not_mask_outside_window_but_masks_inside() {
         run_to_block(System::block_number() + 1); // avoid out‑dated
 
         /* vote */
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, false);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
-        assert_ok!(SubtensorModule::set_weights(
+        GameSolver::set_commit_reveal_weights_enabled(netuid, false);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(v_hot),
             netuid,
             vec![1, 2, 3],
             vec![u16::MAX / 3, u16::MAX / 3, u16::MAX / 3],
             0
         ));
-        SubtensorModule::set_commit_reveal_weights_enabled(netuid, true);
+        GameSolver::set_commit_reveal_weights_enabled(netuid, true);
 
-        SubtensorModule::epoch(netuid, 1_000.into());
+        GameSolver::epoch(netuid, 1_000.into());
 
         assert!(
-            SubtensorModule::get_incentive_for_uid(netuid.into(), 1) > 0,
+            GameSolver::get_incentive_for_uid(netuid.into(), 1) > 0,
             "UID-1 (old) unmasked"
         );
         assert_eq!(
-            SubtensorModule::get_incentive_for_uid(netuid.into(), 2),
+            GameSolver::get_incentive_for_uid(netuid.into(), 2),
             0,
             "UID-2 (inside window) masked"
         );
         assert_eq!(
-            SubtensorModule::get_incentive_for_uid(netuid.into(), 3),
+            GameSolver::get_incentive_for_uid(netuid.into(), 3),
             0,
             "UID-3 (inside window) masked"
         );
@@ -3830,24 +3774,24 @@ fn test_last_update_size_mismatch() {
         let uid: u16 = 0;
         let stake_amount: u64 = 1_000_000_000;
         add_network_disable_commit_reveal(netuid, u16::MAX - 1, 0);
-        SubtensorModule::set_max_allowed_uids(netuid, 1);
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::set_max_allowed_uids(netuid, 1);
+        GameSolver::add_balance_to_coldkey_account(
             &coldkey,
             stake_amount + ExistentialDeposit::get(),
         );
         register_ok_neuron(netuid, hotkey, coldkey, 1);
-        SubtensorModule::set_weights_set_rate_limit(netuid, 0);
+        GameSolver::set_weights_set_rate_limit(netuid, 0);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(coldkey),
             hotkey,
             netuid,
             stake_amount.into()
         ));
 
-        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 1);
+        assert_eq!(GameSolver::get_subnetwork_n(netuid), 1);
         run_to_block(1); // run to next block to ensure weights are set on nodes after their registration block
-        assert_ok!(SubtensorModule::set_weights(
+        assert_ok!(GameSolver::set_weights(
             RuntimeOrigin::signed(U256::from(uid)),
             netuid,
             vec![uid],
@@ -3858,19 +3802,16 @@ fn test_last_update_size_mismatch() {
         // Set mismatching LastUpdate vector
         LastUpdate::<Test>::insert(NetUidStorageIndex::from(netuid), vec![1, 1, 1]);
 
-        SubtensorModule::epoch(netuid, 1_000_000_000.into());
+        GameSolver::epoch(netuid, 1_000_000_000.into());
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey),
+            GameSolver::get_total_stake_for_hotkey(&hotkey),
             stake_amount.into()
         );
-        assert_eq!(SubtensorModule::get_rank_for_uid(netuid, uid), 0);
-        assert_eq!(SubtensorModule::get_trust_for_uid(netuid, uid), 0);
-        assert_eq!(SubtensorModule::get_consensus_for_uid(netuid, uid), 0);
-        assert_eq!(
-            SubtensorModule::get_incentive_for_uid(netuid.into(), uid),
-            0
-        );
-        assert_eq!(SubtensorModule::get_dividends_for_uid(netuid, uid), 0);
+        assert_eq!(GameSolver::get_rank_for_uid(netuid, uid), 0);
+        assert_eq!(GameSolver::get_trust_for_uid(netuid, uid), 0);
+        assert_eq!(GameSolver::get_consensus_for_uid(netuid, uid), 0);
+        assert_eq!(GameSolver::get_incentive_for_uid(netuid.into(), uid), 0);
+        assert_eq!(GameSolver::get_dividends_for_uid(netuid, uid), 0);
     });
 }
 
@@ -3937,7 +3878,7 @@ fn legacy_epoch_skips_persistence_when_state_is_inconsistent() {
         Keys::<Test>::insert(netuid, 1u16, hotkey);
         Incentive::<Test>::insert(NetUidStorageIndex::from(netuid), sentinel.clone());
 
-        let output = SubtensorModule::epoch(netuid, 1_000.into());
+        let output = GameSolver::epoch(netuid, 1_000.into());
 
         assert!(output.is_empty());
         assert_eq!(
@@ -3956,7 +3897,7 @@ fn legacy_epoch_dense_returns_empty_when_state_is_inconsistent() {
         Keys::<Test>::insert(netuid, 0u16, hotkey);
         Keys::<Test>::insert(netuid, 1u16, hotkey);
 
-        let output = SubtensorModule::epoch_dense(netuid, 1_000.into());
+        let output = GameSolver::epoch_dense(netuid, 1_000.into());
 
         assert!(output.is_empty());
     });

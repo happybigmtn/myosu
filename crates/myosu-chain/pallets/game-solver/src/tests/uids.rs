@@ -22,7 +22,7 @@ fn test_replace_neuron() {
         let netuid = NetUid::from(1);
         let tempo: u16 = 13;
         let hotkey_account_id = U256::from(1);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             111111,
@@ -37,7 +37,7 @@ fn test_replace_neuron() {
         add_network(netuid, tempo, 0);
 
         // Register a neuron.
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -48,25 +48,25 @@ fn test_replace_neuron() {
         ));
 
         // Get UID
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
         assert_ok!(neuron_uid);
         let neuron_uid = neuron_uid.unwrap();
 
         // set non-default values
         Trust::<Test>::mutate(netuid, |v| {
-            SubtensorModule::set_element_at(v, neuron_uid as usize, 5u16)
+            GameSolver::set_element_at(v, neuron_uid as usize, 5u16)
         });
         Emission::<Test>::mutate(netuid, |v| {
-            SubtensorModule::set_element_at(v, neuron_uid as usize, 5.into())
+            GameSolver::set_element_at(v, neuron_uid as usize, 5.into())
         });
         Consensus::<Test>::mutate(netuid, |v| {
-            SubtensorModule::set_element_at(v, neuron_uid as usize, 5u16)
+            GameSolver::set_element_at(v, neuron_uid as usize, 5u16)
         });
         Incentive::<Test>::mutate(NetUidStorageIndex::from(netuid), |v| {
-            SubtensorModule::set_element_at(v, neuron_uid as usize, 5u16)
+            GameSolver::set_element_at(v, neuron_uid as usize, 5u16)
         });
         Dividends::<Test>::mutate(netuid, |v| {
-            SubtensorModule::set_element_at(v, neuron_uid as usize, 5u16)
+            GameSolver::set_element_at(v, neuron_uid as usize, 5u16)
         });
         Bonds::<Test>::insert(NetUidStorageIndex::from(netuid), neuron_uid, vec![(0, 1)]);
 
@@ -80,23 +80,21 @@ fn test_replace_neuron() {
         AssociatedEvmAddress::<Test>::insert(netuid, neuron_uid, (evm_address, 1));
 
         // Replace the neuron.
-        SubtensorModule::replace_neuron(netuid, neuron_uid, &new_hotkey_account_id, block_number);
+        GameSolver::replace_neuron(netuid, neuron_uid, &new_hotkey_account_id, block_number);
 
         // Check old hotkey is not registered on any network.
-        assert!(SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_err());
-        assert!(!SubtensorModule::is_hotkey_registered_on_any_network(
+        assert!(GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_err());
+        assert!(!GameSolver::is_hotkey_registered_on_any_network(
             &hotkey_account_id
         ));
 
-        let curr_hotkey = SubtensorModule::get_hotkey_for_net_and_uid(netuid, neuron_uid);
+        let curr_hotkey = GameSolver::get_hotkey_for_net_and_uid(netuid, neuron_uid);
         assert_ok!(curr_hotkey);
         assert_ne!(curr_hotkey.unwrap(), hotkey_account_id);
 
         // Check new hotkey is registered on the network.
-        assert!(
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &new_hotkey_account_id).is_ok()
-        );
-        assert!(SubtensorModule::is_hotkey_registered_on_any_network(
+        assert!(GameSolver::get_uid_for_net_and_hotkey(netuid, &new_hotkey_account_id).is_ok());
+        assert!(GameSolver::is_hotkey_registered_on_any_network(
             &new_hotkey_account_id
         ));
         assert_eq!(curr_hotkey.unwrap(), new_hotkey_account_id);
@@ -106,23 +104,17 @@ fn test_replace_neuron() {
         assert_eq!(certificate, None);
 
         // Check trust, emission, consensus, incentive, dividends have been reset to 0.
-        assert_eq!(SubtensorModule::get_trust_for_uid(netuid, neuron_uid), 0);
+        assert_eq!(GameSolver::get_trust_for_uid(netuid, neuron_uid), 0);
         assert_eq!(
-            SubtensorModule::get_emission_for_uid(netuid, neuron_uid),
+            GameSolver::get_emission_for_uid(netuid, neuron_uid),
             AlphaCurrency::ZERO
         );
+        assert_eq!(GameSolver::get_consensus_for_uid(netuid, neuron_uid), 0);
         assert_eq!(
-            SubtensorModule::get_consensus_for_uid(netuid, neuron_uid),
+            GameSolver::get_incentive_for_uid(netuid.into(), neuron_uid),
             0
         );
-        assert_eq!(
-            SubtensorModule::get_incentive_for_uid(netuid.into(), neuron_uid),
-            0
-        );
-        assert_eq!(
-            SubtensorModule::get_dividends_for_uid(netuid, neuron_uid),
-            0
-        );
+        assert_eq!(GameSolver::get_dividends_for_uid(netuid, neuron_uid), 0);
 
         // Check axon info is reset.
         assert!(!Axons::<Test>::contains_key(netuid, curr_hotkey.unwrap()));
@@ -151,7 +143,7 @@ fn test_bonds_cleared_on_replace() {
         let netuid = NetUid::from(1);
         let tempo: u16 = 13;
         let hotkey_account_id = U256::from(1);
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             111111,
@@ -167,7 +159,7 @@ fn test_bonds_cleared_on_replace() {
         add_network(netuid, tempo, 0);
 
         // Register a neuron.
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -178,7 +170,7 @@ fn test_bonds_cleared_on_replace() {
         ));
 
         // Get UID
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
         assert_ok!(neuron_uid);
         let neuron_uid = neuron_uid.unwrap();
         AssociatedEvmAddress::<Test>::insert(netuid, neuron_uid, (evm_address, 1));
@@ -186,23 +178,21 @@ fn test_bonds_cleared_on_replace() {
         Bonds::<Test>::insert(NetUidStorageIndex::from(netuid), neuron_uid, vec![(0, 1)]);
 
         // Replace the neuron.
-        SubtensorModule::replace_neuron(netuid, neuron_uid, &new_hotkey_account_id, block_number);
+        GameSolver::replace_neuron(netuid, neuron_uid, &new_hotkey_account_id, block_number);
 
         // Check old hotkey is not registered on any network.
-        assert!(SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_err());
-        assert!(!SubtensorModule::is_hotkey_registered_on_any_network(
+        assert!(GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_err());
+        assert!(!GameSolver::is_hotkey_registered_on_any_network(
             &hotkey_account_id
         ));
 
-        let curr_hotkey = SubtensorModule::get_hotkey_for_net_and_uid(netuid, neuron_uid);
+        let curr_hotkey = GameSolver::get_hotkey_for_net_and_uid(netuid, neuron_uid);
         assert_ok!(curr_hotkey);
         assert_ne!(curr_hotkey.unwrap(), hotkey_account_id);
 
         // Check new hotkey is registered on the network.
-        assert!(
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &new_hotkey_account_id).is_ok()
-        );
-        assert!(SubtensorModule::is_hotkey_registered_on_any_network(
+        assert!(GameSolver::get_uid_for_net_and_hotkey(netuid, &new_hotkey_account_id).is_ok());
+        assert!(GameSolver::is_hotkey_registered_on_any_network(
             &new_hotkey_account_id
         ));
         assert_eq!(curr_hotkey.unwrap(), new_hotkey_account_id);
@@ -226,13 +216,13 @@ fn test_replace_neuron_multiple_subnets() {
         let hotkey_account_id = U256::from(1);
         let new_hotkey_account_id = U256::from(2);
 
-        let (nonce, work): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce, work): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid,
             block_number,
             111111,
             &hotkey_account_id,
         );
-        let (nonce1, work1): (u64, Vec<u8>) = SubtensorModule::create_work_for_block_number(
+        let (nonce1, work1): (u64, Vec<u8>) = GameSolver::create_work_for_block_number(
             netuid1,
             block_number,
             111111 * 5,
@@ -248,7 +238,7 @@ fn test_replace_neuron_multiple_subnets() {
         add_network(netuid1, tempo, 0);
 
         // Register a neuron on both networks.
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid,
             block_number,
@@ -257,7 +247,7 @@ fn test_replace_neuron_multiple_subnets() {
             hotkey_account_id,
             coldkey_account_id
         ));
-        assert_ok!(SubtensorModule::register(
+        assert_ok!(GameSolver::register(
             <<Test as Config>::RuntimeOrigin>::signed(hotkey_account_id),
             netuid1,
             block_number,
@@ -268,19 +258,19 @@ fn test_replace_neuron_multiple_subnets() {
         ));
 
         // Get UID
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
         assert_ok!(neuron_uid);
 
         // Verify neuron is registered on both networks.
-        assert!(SubtensorModule::is_hotkey_registered_on_network(
+        assert!(GameSolver::is_hotkey_registered_on_network(
             netuid,
             &hotkey_account_id
         ));
-        assert!(SubtensorModule::is_hotkey_registered_on_network(
+        assert!(GameSolver::is_hotkey_registered_on_network(
             netuid1,
             &hotkey_account_id
         ));
-        assert!(SubtensorModule::is_hotkey_registered_on_any_network(
+        assert!(GameSolver::is_hotkey_registered_on_any_network(
             &hotkey_account_id
         ));
 
@@ -288,7 +278,7 @@ fn test_replace_neuron_multiple_subnets() {
 
         // Replace the neuron.
         // Only replace on ONE network.
-        SubtensorModule::replace_neuron(
+        GameSolver::replace_neuron(
             netuid,
             neuron_uid.unwrap(),
             &new_hotkey_account_id,
@@ -296,13 +286,13 @@ fn test_replace_neuron_multiple_subnets() {
         );
 
         // Check old hotkey is not registered on netuid network.
-        assert!(SubtensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_err());
+        assert!(GameSolver::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_err());
 
         // Verify still registered on netuid1 network.
-        assert!(SubtensorModule::is_hotkey_registered_on_any_network(
+        assert!(GameSolver::is_hotkey_registered_on_any_network(
             &hotkey_account_id
         ));
-        assert!(SubtensorModule::is_hotkey_registered_on_network(
+        assert!(GameSolver::is_hotkey_registered_on_network(
             netuid1,
             &hotkey_account_id
         ));
@@ -344,13 +334,13 @@ fn test_replace_neuron_subnet_owner_not_replaced() {
         let evm_address = H160::from_slice(&[1_u8; 20]);
 
         let netuid = add_dynamic_network(&owner_hotkey, &owner_coldkey);
-        let neuron_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &owner_hotkey)
+        let neuron_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &owner_hotkey)
             .expect("Owner neuron should be registered by add_dynamic_network");
         AssociatedEvmAddress::<Test>::insert(netuid, neuron_uid, (evm_address, 1));
-        let current_block = SubtensorModule::get_current_block_as_u64();
-        SubtensorModule::replace_neuron(netuid, neuron_uid, &new_hotkey_account_id, current_block);
+        let current_block = GameSolver::get_current_block_as_u64();
+        GameSolver::replace_neuron(netuid, neuron_uid, &new_hotkey_account_id, current_block);
 
-        let still_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &owner_hotkey);
+        let still_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &owner_hotkey);
         assert_ok!(still_uid);
         assert_eq!(
             still_uid.unwrap(),
@@ -358,8 +348,7 @@ fn test_replace_neuron_subnet_owner_not_replaced() {
             "UID should remain unchanged for subnet owner"
         );
 
-        let new_key_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &new_hotkey_account_id);
+        let new_key_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &new_hotkey_account_id);
         assert_err!(new_key_uid, Error::<Test>::HotKeyNotRegisteredInSubNet,);
         assert!(AssociatedEvmAddress::<Test>::get(netuid, neuron_uid).is_some());
     });
@@ -375,28 +364,27 @@ fn test_replace_neuron_subnet_owner_not_replaced_if_in_sn_owner_hotkey_map() {
 
         let netuid = add_dynamic_network(&owner_hotkey, &owner_coldkey);
 
-        SubtensorModule::set_max_registrations_per_block(netuid, 100);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 100);
+        GameSolver::set_max_registrations_per_block(netuid, 100);
+        GameSolver::set_target_registrations_per_interval(netuid, 100);
         SubnetOwner::<Test>::insert(netuid, owner_coldkey);
 
-        let owner_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &owner_hotkey)
+        let owner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &owner_hotkey)
             .expect("Owner neuron should already be registered by add_dynamic_network");
 
         AssociatedEvmAddress::<Test>::insert(netuid, owner_uid, (evm_address, 1));
 
         // Register another hotkey for the owner
         register_ok_neuron(netuid, other_owner_hotkey, owner_coldkey, 0);
-        let other_owner_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &other_owner_hotkey)
-                .expect("Should be registered");
+        let other_owner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &other_owner_hotkey)
+            .expect("Should be registered");
 
         let additional_hotkey_1 = U256::from(1000);
         let additional_hotkey_2 = U256::from(1001);
 
-        let current_block = SubtensorModule::get_current_block_as_u64();
-        SubtensorModule::replace_neuron(netuid, owner_uid, &additional_hotkey_1, current_block);
+        let current_block = GameSolver::get_current_block_as_u64();
+        GameSolver::replace_neuron(netuid, owner_uid, &additional_hotkey_1, current_block);
 
-        let still_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &owner_hotkey);
+        let still_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &owner_hotkey);
         assert_ok!(still_uid);
         assert_eq!(
             still_uid.unwrap(),
@@ -405,37 +393,31 @@ fn test_replace_neuron_subnet_owner_not_replaced_if_in_sn_owner_hotkey_map() {
         );
         assert!(AssociatedEvmAddress::<Test>::get(netuid, owner_uid).is_some());
 
-        let new_key_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_1);
+        let new_key_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_1);
         assert_err!(new_key_uid, Error::<Test>::HotKeyNotRegisteredInSubNet,);
         AssociatedEvmAddress::<Test>::insert(netuid, other_owner_uid, (evm_address, 1));
 
         // Try to replace the other owner hotkey
-        SubtensorModule::replace_neuron(
-            netuid,
-            other_owner_uid,
-            &additional_hotkey_1,
-            current_block,
-        );
-        let still_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &other_owner_hotkey);
+        GameSolver::replace_neuron(netuid, other_owner_uid, &additional_hotkey_1, current_block);
+        let still_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &other_owner_hotkey);
         assert_err!(still_uid, Error::<Test>::HotKeyNotRegisteredInSubNet,); // Was replaced
         assert!(AssociatedEvmAddress::<Test>::get(netuid, other_owner_uid).is_none());
 
         // Re-register this hotkey
         register_ok_neuron(netuid, other_owner_hotkey, owner_coldkey, 0);
-        let _other_owner_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &other_owner_hotkey)
-                .expect("Should be registered");
+        let _other_owner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &other_owner_hotkey)
+            .expect("Should be registered");
 
         // Set this hotkey as the SubnetOwnerHotkey
         SubnetOwnerHotkey::<Test>::insert(netuid, other_owner_hotkey);
 
-        SubtensorModule::replace_neuron(netuid, owner_uid, &additional_hotkey_2, current_block);
+        GameSolver::replace_neuron(netuid, owner_uid, &additional_hotkey_2, current_block);
 
         // The owner's first hotkey should be replaceable; it's not the top-stake owner hotkey
-        let still_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &owner_hotkey);
+        let still_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &owner_hotkey);
         assert_err!(still_uid, Error::<Test>::HotKeyNotRegisteredInSubNet,);
 
-        let new_key_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_2);
+        let new_key_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_2);
         assert_ok!(new_key_uid);
         assert!(AssociatedEvmAddress::<Test>::get(netuid, owner_uid).is_none());
     });
@@ -450,17 +432,17 @@ fn test_get_neuron_to_prune_owner_not_pruned() {
 
         let netuid = add_dynamic_network(&owner_hotkey, &owner_coldkey);
 
-        SubtensorModule::set_max_registrations_per_block(netuid, 100);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 100);
+        GameSolver::set_max_registrations_per_block(netuid, 100);
+        GameSolver::set_target_registrations_per_interval(netuid, 100);
         SubnetOwner::<Test>::insert(netuid, owner_coldkey);
 
         // Ensure owner's hotkey is counted as immortal in this test
         ImmuneOwnerUidsLimit::<Test>::insert(netuid, 1);
 
         // Neutralize safety floor for this test
-        SubtensorModule::set_min_non_immune_uids(netuid, 0);
+        GameSolver::set_min_non_immune_uids(netuid, 0);
 
-        let owner_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &owner_hotkey)
+        let owner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &owner_hotkey)
             .expect("Owner neuron should already be registered by add_dynamic_network");
 
         let additional_hotkey_1 = U256::from(1000);
@@ -470,11 +452,11 @@ fn test_get_neuron_to_prune_owner_not_pruned() {
         let additional_coldkey_2 = U256::from(2001);
 
         register_ok_neuron(netuid, additional_hotkey_1, additional_coldkey_1, 0);
-        let uid_1 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_1)
+        let uid_1 = GameSolver::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_1)
             .expect("Should be registered");
 
         register_ok_neuron(netuid, additional_hotkey_2, additional_coldkey_2, 1);
-        let uid_2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_2)
+        let uid_2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_2)
             .expect("Should be registered");
 
         // Set emissions; owner has the lowest but is immortal, so choose uid_1
@@ -484,7 +466,7 @@ fn test_get_neuron_to_prune_owner_not_pruned() {
             v[uid_2 as usize] = 2u64.into();
         });
 
-        let pruned_uid = SubtensorModule::get_neuron_to_prune(netuid);
+        let pruned_uid = GameSolver::get_neuron_to_prune(netuid);
 
         // Expect to prune uid_1; owner's UID is skipped as immortal.
         assert_eq!(
@@ -505,24 +487,23 @@ fn test_get_neuron_to_prune_owner_pruned_if_not_in_sn_owner_hotkey_map() {
 
         let netuid = add_dynamic_network(&owner_hotkey, &owner_coldkey);
 
-        SubtensorModule::set_max_registrations_per_block(netuid, 100);
-        SubtensorModule::set_target_registrations_per_interval(netuid, 100);
+        GameSolver::set_max_registrations_per_block(netuid, 100);
+        GameSolver::set_target_registrations_per_interval(netuid, 100);
         SubnetOwner::<Test>::insert(netuid, owner_coldkey);
 
         // Make only one owner hotkey immortal at a time
         ImmuneOwnerUidsLimit::<Test>::insert(netuid, 1);
 
         // Neutralize safety floor for this test
-        SubtensorModule::set_min_non_immune_uids(netuid, 0);
+        GameSolver::set_min_non_immune_uids(netuid, 0);
 
-        let owner_uid = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &owner_hotkey)
+        let owner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &owner_hotkey)
             .expect("Owner neuron should already be registered by add_dynamic_network");
 
         // Register another hotkey for the owner (same coldkey)
         register_ok_neuron(netuid, other_owner_hotkey, owner_coldkey, 0);
-        let other_owner_uid =
-            SubtensorModule::get_uid_for_net_and_hotkey(netuid, &other_owner_hotkey)
-                .expect("Should be registered");
+        let other_owner_uid = GameSolver::get_uid_for_net_and_hotkey(netuid, &other_owner_hotkey)
+            .expect("Should be registered");
 
         let additional_hotkey_1 = U256::from(1000);
         let additional_coldkey_1 = U256::from(2000);
@@ -531,11 +512,11 @@ fn test_get_neuron_to_prune_owner_pruned_if_not_in_sn_owner_hotkey_map() {
         let additional_coldkey_2 = U256::from(2001);
 
         register_ok_neuron(netuid, additional_hotkey_1, additional_coldkey_1, 1);
-        let uid_2 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_1)
+        let uid_2 = GameSolver::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_1)
             .expect("Should be registered");
 
         register_ok_neuron(netuid, additional_hotkey_2, additional_coldkey_2, 2);
-        let uid_3 = SubtensorModule::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_2)
+        let uid_3 = GameSolver::get_uid_for_net_and_hotkey(netuid, &additional_hotkey_2)
             .expect("Should be registered");
 
         // Case 1: With ImmuneOwnerUidsLimit = 1, the default SubnetOwnerHotkey is `owner_hotkey`.
@@ -548,7 +529,7 @@ fn test_get_neuron_to_prune_owner_pruned_if_not_in_sn_owner_hotkey_map() {
             v[uid_3 as usize] = 3u64.into();
         });
 
-        let pruned_uid = SubtensorModule::get_neuron_to_prune(netuid);
+        let pruned_uid = GameSolver::get_neuron_to_prune(netuid);
         assert_eq!(pruned_uid, Some(other_owner_uid), "Should prune the owner");
 
         // Case 2: Make the other owner's hotkey the SubnetOwnerHotkey, so it becomes the prioritized
@@ -556,7 +537,7 @@ fn test_get_neuron_to_prune_owner_pruned_if_not_in_sn_owner_hotkey_map() {
         SubnetOwnerHotkey::<Test>::insert(netuid, other_owner_hotkey);
 
         // Emissions remain the same; `owner_uid` now becomes the lowest non-immortal candidate.
-        let pruned_uid = SubtensorModule::get_neuron_to_prune(netuid);
+        let pruned_uid = GameSolver::get_neuron_to_prune(netuid);
         assert_eq!(
             pruned_uid,
             Some(owner_uid),
@@ -573,10 +554,10 @@ fn test_prune_respects_min_non_immune_floor_prefers_immune() {
         ImmuneOwnerUidsLimit::<Test>::insert(netuid, 0);
 
         MaxRegistrationsPerBlock::<Test>::insert(netuid, 1024);
-        SubtensorModule::set_target_registrations_per_interval(netuid, u16::MAX);
+        GameSolver::set_target_registrations_per_interval(netuid, u16::MAX);
 
         let immunity_period: u64 = 1000;
-        SubtensorModule::set_immunity_period(netuid, immunity_period as u16);
+        GameSolver::set_immunity_period(netuid, immunity_period as u16);
 
         // Register three neurons, each in its own block so the per‑block counter resets.
         for i in 0..3 {
@@ -592,10 +573,10 @@ fn test_prune_respects_min_non_immune_floor_prefers_immune() {
         // Register a 4th neuron now — it will be immune.
         register_ok_neuron(netuid, U256::from(99_999), U256::from(88_888), 0);
 
-        SubtensorModule::set_min_non_immune_uids(netuid, 3);
+        GameSolver::set_min_non_immune_uids(netuid, 3);
 
         // With floor in place (3 non‑immune + 1 immune), we must prune the immune candidate (uid = 3).
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(3));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(3));
     });
 }
 
@@ -606,7 +587,7 @@ fn test_prune_tie_breakers_non_immune_emission_block_uid() {
         add_network(netuid, 1, 0);
 
         ImmuneOwnerUidsLimit::<Test>::insert(netuid, 0);
-        SubtensorModule::set_immunity_period(netuid, 0);
+        GameSolver::set_immunity_period(netuid, 0);
 
         // Register 3 neurons; registration blocks ascend (0,1,2).
         for i in 0..3 {
@@ -615,7 +596,7 @@ fn test_prune_tie_breakers_non_immune_emission_block_uid() {
         }
 
         // Allow pruning of non-immune.
-        SubtensorModule::set_min_non_immune_uids(netuid, 0);
+        GameSolver::set_min_non_immune_uids(netuid, 0);
 
         // Equalize emissions across all 3.
         Emission::<Test>::mutate(netuid, |v| {
@@ -625,7 +606,7 @@ fn test_prune_tie_breakers_non_immune_emission_block_uid() {
         });
 
         // Since emission ties, the earliest registration (uid=0) should be pruned.
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), Some(0));
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), Some(0));
     });
 }
 
@@ -653,6 +634,6 @@ fn test_prune_all_owner_immortal_returns_none() {
 
         ImmuneOwnerUidsLimit::<Test>::insert(netuid, 10);
 
-        assert_eq!(SubtensorModule::get_neuron_to_prune(netuid), None);
+        assert_eq!(GameSolver::get_neuron_to_prune(netuid), None);
     });
 }

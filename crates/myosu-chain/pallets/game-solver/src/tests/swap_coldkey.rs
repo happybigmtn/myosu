@@ -49,11 +49,11 @@ fn test_announce_coldkey_swap_works() {
 
         assert_eq!(ColdkeySwapAnnouncements::<Test>::iter().count(), 0);
 
-        let swap_cost = SubtensorModule::get_key_swap_cost().to_u64();
-        SubtensorModule::add_balance_to_coldkey_account(&who, swap_cost + ed);
-        assert_eq!(SubtensorModule::get_coldkey_balance(&who), swap_cost + ed);
+        let swap_cost = GameSolver::get_key_swap_cost().to_u64();
+        GameSolver::add_balance_to_coldkey_account(&who, swap_cost + ed);
+        assert_eq!(GameSolver::get_coldkey_balance(&who), swap_cost + ed);
 
-        assert_ok!(SubtensorModule::announce_coldkey_swap(
+        assert_ok!(GameSolver::announce_coldkey_swap(
             RuntimeOrigin::signed(who),
             new_coldkey_hash,
         ));
@@ -64,10 +64,10 @@ fn test_announce_coldkey_swap_works() {
             ColdkeySwapAnnouncements::<Test>::iter().collect::<Vec<_>>(),
             vec![(who, (now + delay, new_coldkey_hash))]
         );
-        assert_eq!(SubtensorModule::get_coldkey_balance(&who), ed);
+        assert_eq!(GameSolver::get_coldkey_balance(&who), ed);
         assert_eq!(
             last_event(),
-            RuntimeEvent::SubtensorModule(Event::ColdkeySwapAnnounced {
+            RuntimeEvent::GameSolver(Event::ColdkeySwapAnnounced {
                 who,
                 new_coldkey_hash,
             })
@@ -86,10 +86,10 @@ fn test_announce_coldkey_swap_with_existing_announcement_past_delay_works() {
 
         assert_eq!(ColdkeySwapAnnouncements::<Test>::iter().count(), 0);
 
-        let swap_cost = SubtensorModule::get_key_swap_cost().to_u64();
-        SubtensorModule::add_balance_to_coldkey_account(&who, 2 * swap_cost);
+        let swap_cost = GameSolver::get_key_swap_cost().to_u64();
+        GameSolver::add_balance_to_coldkey_account(&who, 2 * swap_cost);
 
-        assert_ok!(SubtensorModule::announce_coldkey_swap(
+        assert_ok!(GameSolver::announce_coldkey_swap(
             RuntimeOrigin::signed(who),
             new_coldkey_hash,
         ));
@@ -104,7 +104,7 @@ fn test_announce_coldkey_swap_with_existing_announcement_past_delay_works() {
         let reannouncement_delay = ColdkeySwapReannouncementDelay::<Test>::get();
         run_to_block(now + delay + reannouncement_delay);
 
-        assert_ok!(SubtensorModule::announce_coldkey_swap(
+        assert_ok!(GameSolver::announce_coldkey_swap(
             RuntimeOrigin::signed(who),
             new_coldkey_2_hash,
         ));
@@ -127,26 +127,26 @@ fn test_announce_coldkey_swap_only_pays_swap_cost_if_no_announcement_exists() {
         let new_coldkey_2_hash = <Test as frame_system::Config>::Hashing::hash_of(&new_coldkey_2);
         let ed = ExistentialDeposit::get();
 
-        let swap_cost = SubtensorModule::get_key_swap_cost().to_u64();
-        SubtensorModule::add_balance_to_coldkey_account(&who, swap_cost + ed);
-        assert_eq!(SubtensorModule::get_coldkey_balance(&who), swap_cost + ed);
+        let swap_cost = GameSolver::get_key_swap_cost().to_u64();
+        GameSolver::add_balance_to_coldkey_account(&who, swap_cost + ed);
+        assert_eq!(GameSolver::get_coldkey_balance(&who), swap_cost + ed);
 
-        assert_ok!(SubtensorModule::announce_coldkey_swap(
+        assert_ok!(GameSolver::announce_coldkey_swap(
             RuntimeOrigin::signed(who),
             new_coldkey_hash,
         ));
-        assert_eq!(SubtensorModule::get_coldkey_balance(&who), ed);
+        assert_eq!(GameSolver::get_coldkey_balance(&who), ed);
 
         let now = System::block_number();
         let base_delay = ColdkeySwapAnnouncementDelay::<Test>::get();
         let reannouncement_delay = ColdkeySwapReannouncementDelay::<Test>::get();
         run_to_block(now + base_delay + reannouncement_delay);
 
-        assert_ok!(SubtensorModule::announce_coldkey_swap(
+        assert_ok!(GameSolver::announce_coldkey_swap(
             RuntimeOrigin::signed(who),
             new_coldkey_2_hash,
         ));
-        assert_eq!(SubtensorModule::get_coldkey_balance(&who), ed);
+        assert_eq!(GameSolver::get_coldkey_balance(&who), ed);
     });
 }
 
@@ -157,12 +157,12 @@ fn test_announce_coldkey_swap_with_bad_origin_fails() {
         let new_coldkey_hash = <Test as frame_system::Config>::Hashing::hash_of(&new_coldkey);
 
         assert_noop!(
-            SubtensorModule::announce_coldkey_swap(RuntimeOrigin::none(), new_coldkey_hash),
+            GameSolver::announce_coldkey_swap(RuntimeOrigin::none(), new_coldkey_hash),
             BadOrigin
         );
 
         assert_noop!(
-            SubtensorModule::announce_coldkey_swap(RuntimeOrigin::root(), new_coldkey_hash),
+            GameSolver::announce_coldkey_swap(RuntimeOrigin::root(), new_coldkey_hash),
             BadOrigin
         );
     });
@@ -179,11 +179,11 @@ fn test_announce_coldkey_swap_with_existing_announcement_not_past_delay_fails() 
 
         assert_eq!(ColdkeySwapAnnouncements::<Test>::iter().count(), 0);
 
-        let swap_cost = SubtensorModule::get_key_swap_cost().to_u64();
+        let swap_cost = GameSolver::get_key_swap_cost().to_u64();
         let ed = ExistentialDeposit::get();
-        SubtensorModule::add_balance_to_coldkey_account(&who, swap_cost + ed);
+        GameSolver::add_balance_to_coldkey_account(&who, swap_cost + ed);
 
-        assert_ok!(SubtensorModule::announce_coldkey_swap(
+        assert_ok!(GameSolver::announce_coldkey_swap(
             RuntimeOrigin::signed(who),
             new_coldkey_hash,
         ));
@@ -196,7 +196,7 @@ fn test_announce_coldkey_swap_with_existing_announcement_not_past_delay_fails() 
         );
 
         assert_noop!(
-            SubtensorModule::announce_coldkey_swap(RuntimeOrigin::signed(who), new_coldkey_2_hash,),
+            GameSolver::announce_coldkey_swap(RuntimeOrigin::signed(who), new_coldkey_2_hash,),
             Error::<Test>::ColdkeySwapReannouncedTooEarly
         );
     });
@@ -224,7 +224,7 @@ fn test_swap_coldkey_announced_works() {
         let delay = ColdkeySwapAnnouncementDelay::<Test>::get() + 1;
         run_to_block(now + delay);
 
-        SubtensorModule::add_balance_to_coldkey_account(&who, stake1 + stake2 + stake3 + ed);
+        GameSolver::add_balance_to_coldkey_account(&who, stake1 + stake2 + stake3 + ed);
 
         let (
             netuid1,
@@ -249,7 +249,7 @@ fn test_swap_coldkey_announced_works() {
             hotkey3
         );
 
-        assert_ok!(SubtensorModule::swap_coldkey_announced(
+        assert_ok!(GameSolver::swap_coldkey_announced(
             <Test as frame_system::Config>::RuntimeOrigin::signed(who),
             new_coldkey
         ));
@@ -282,12 +282,12 @@ fn test_swap_coldkey_announced_with_bad_origin_fails() {
         let new_coldkey = U256::from(2);
 
         assert_noop!(
-            SubtensorModule::swap_coldkey_announced(RuntimeOrigin::none(), new_coldkey),
+            GameSolver::swap_coldkey_announced(RuntimeOrigin::none(), new_coldkey),
             BadOrigin
         );
 
         assert_noop!(
-            SubtensorModule::swap_coldkey_announced(RuntimeOrigin::root(), new_coldkey),
+            GameSolver::swap_coldkey_announced(RuntimeOrigin::root(), new_coldkey),
             BadOrigin
         );
     });
@@ -300,7 +300,7 @@ fn test_swap_coldkey_announced_without_announcement_fails() {
         let new_coldkey = U256::from(2);
 
         assert_noop!(
-            SubtensorModule::swap_coldkey_announced(RuntimeOrigin::signed(who), new_coldkey),
+            GameSolver::swap_coldkey_announced(RuntimeOrigin::signed(who), new_coldkey),
             Error::<Test>::ColdkeySwapAnnouncementNotFound
         );
     })
@@ -318,7 +318,7 @@ fn test_swap_coldkey_announced_with_mismatched_coldkey_hash_fails() {
         ColdkeySwapAnnouncements::<Test>::insert(who, (now, new_coldkey_hash));
 
         assert_noop!(
-            SubtensorModule::swap_coldkey_announced(RuntimeOrigin::signed(who), other_coldkey),
+            GameSolver::swap_coldkey_announced(RuntimeOrigin::signed(who), other_coldkey),
             Error::<Test>::AnnouncedColdkeyHashDoesNotMatch
         );
     })
@@ -337,7 +337,7 @@ fn test_swap_coldkey_announced_too_early_fails() {
         ColdkeySwapAnnouncements::<Test>::insert(who, (now + delay, new_coldkey_hash));
 
         assert_noop!(
-            SubtensorModule::swap_coldkey_announced(
+            GameSolver::swap_coldkey_announced(
                 <Test as frame_system::Config>::RuntimeOrigin::signed(who),
                 new_coldkey
             ),
@@ -348,7 +348,7 @@ fn test_swap_coldkey_announced_too_early_fails() {
         run_to_block(now + delay - 1);
 
         assert_noop!(
-            SubtensorModule::swap_coldkey_announced(
+            GameSolver::swap_coldkey_announced(
                 <Test as frame_system::Config>::RuntimeOrigin::signed(who),
                 new_coldkey
             ),
@@ -365,11 +365,11 @@ fn test_swap_coldkey_announced_with_already_associated_coldkey_fails() {
         let new_coldkey_hash = <Test as frame_system::Config>::Hashing::hash_of(&new_coldkey);
         let hotkey = U256::from(3);
 
-        let swap_cost = SubtensorModule::get_key_swap_cost().to_u64();
+        let swap_cost = GameSolver::get_key_swap_cost().to_u64();
         let ed = ExistentialDeposit::get();
-        SubtensorModule::add_balance_to_coldkey_account(&who, swap_cost + ed);
+        GameSolver::add_balance_to_coldkey_account(&who, swap_cost + ed);
 
-        assert_ok!(SubtensorModule::announce_coldkey_swap(
+        assert_ok!(GameSolver::announce_coldkey_swap(
             RuntimeOrigin::signed(who),
             new_coldkey_hash,
         ));
@@ -378,10 +378,10 @@ fn test_swap_coldkey_announced_with_already_associated_coldkey_fails() {
         let delay = ColdkeySwapAnnouncementDelay::<Test>::get() + 1;
         run_to_block(now + delay);
 
-        SubtensorModule::create_account_if_non_existent(&new_coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&new_coldkey, &hotkey);
 
         assert_noop!(
-            SubtensorModule::swap_coldkey_announced(
+            GameSolver::swap_coldkey_announced(
                 <Test as frame_system::Config>::RuntimeOrigin::signed(who),
                 new_coldkey
             ),
@@ -405,10 +405,10 @@ fn test_swap_coldkey_announced_with_hotkey_fails() {
         let delay = ColdkeySwapAnnouncementDelay::<Test>::get() + 1;
         run_to_block(now + delay);
 
-        SubtensorModule::create_account_if_non_existent(&new_coldkey, &hotkey);
+        GameSolver::create_account_if_non_existent(&new_coldkey, &hotkey);
 
         assert_noop!(
-            SubtensorModule::swap_coldkey_announced(
+            GameSolver::swap_coldkey_announced(
                 <Test as frame_system::Config>::RuntimeOrigin::signed(who),
                 hotkey
             ),
@@ -427,13 +427,13 @@ fn test_swap_coldkey_works() {
         let hotkey2 = U256::from(1002);
         let hotkey3 = U256::from(1003);
         let ed = ExistentialDeposit::get();
-        let swap_cost = SubtensorModule::get_key_swap_cost();
+        let swap_cost = GameSolver::get_key_swap_cost();
         let min_stake = DefaultMinStake::<Test>::get().to_u64();
         let stake1 = min_stake * 10;
         let stake2 = min_stake * 20;
         let stake3 = min_stake * 30;
 
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &old_coldkey,
             swap_cost.to_u64() + stake1 + stake2 + stake3 + ed,
         );
@@ -466,7 +466,7 @@ fn test_swap_coldkey_works() {
             hotkey3
         );
 
-        assert_ok!(SubtensorModule::swap_coldkey(
+        assert_ok!(GameSolver::swap_coldkey(
             <Test as frame_system::Config>::RuntimeOrigin::root(),
             old_coldkey,
             new_coldkey,
@@ -514,10 +514,7 @@ fn test_swap_coldkey_works_with_zero_cost() {
         let stake2 = min_stake * 20;
         let stake3 = min_stake * 30;
 
-        SubtensorModule::add_balance_to_coldkey_account(
-            &old_coldkey,
-            stake1 + stake2 + stake3 + ed,
-        );
+        GameSolver::add_balance_to_coldkey_account(&old_coldkey, stake1 + stake2 + stake3 + ed);
 
         let (
             netuid1,
@@ -542,7 +539,7 @@ fn test_swap_coldkey_works_with_zero_cost() {
             hotkey3
         );
 
-        assert_ok!(SubtensorModule::swap_coldkey(
+        assert_ok!(GameSolver::swap_coldkey(
             <Test as frame_system::Config>::RuntimeOrigin::root(),
             old_coldkey,
             new_coldkey,
@@ -576,10 +573,10 @@ fn test_swap_coldkey_with_bad_origin_fails() {
         let who = U256::from(1);
         let old_coldkey = U256::from(2);
         let new_coldkey = U256::from(3);
-        let swap_cost = SubtensorModule::get_key_swap_cost();
+        let swap_cost = GameSolver::get_key_swap_cost();
 
         assert_noop!(
-            SubtensorModule::swap_coldkey(
+            GameSolver::swap_coldkey(
                 <Test as frame_system::Config>::RuntimeOrigin::signed(who),
                 old_coldkey,
                 new_coldkey,
@@ -589,7 +586,7 @@ fn test_swap_coldkey_with_bad_origin_fails() {
         );
 
         assert_noop!(
-            SubtensorModule::swap_coldkey(
+            GameSolver::swap_coldkey(
                 <Test as frame_system::Config>::RuntimeOrigin::none(),
                 old_coldkey,
                 new_coldkey,
@@ -605,29 +602,19 @@ fn test_swap_coldkey_with_not_enough_balance_to_pay_swap_cost_fails() {
     new_test_ext(1).execute_with(|| {
         let old_coldkey = U256::from(1);
         let new_coldkey = U256::from(2);
-        let swap_cost = SubtensorModule::get_key_swap_cost();
+        let swap_cost = GameSolver::get_key_swap_cost();
 
         // No balance to pay swap cost
         assert_noop!(
-            SubtensorModule::swap_coldkey(
-                RuntimeOrigin::root(),
-                old_coldkey,
-                new_coldkey,
-                swap_cost
-            ),
+            GameSolver::swap_coldkey(RuntimeOrigin::root(), old_coldkey, new_coldkey, swap_cost),
             Error::<Test>::NotEnoughBalanceToPaySwapColdKey
         );
 
         // Needs to preserve ED
-        let balance = SubtensorModule::get_key_swap_cost().to_u64() + ExistentialDeposit::get() - 1;
-        SubtensorModule::add_balance_to_coldkey_account(&old_coldkey, balance);
+        let balance = GameSolver::get_key_swap_cost().to_u64() + ExistentialDeposit::get() - 1;
+        GameSolver::add_balance_to_coldkey_account(&old_coldkey, balance);
         assert_noop!(
-            SubtensorModule::swap_coldkey(
-                RuntimeOrigin::root(),
-                old_coldkey,
-                new_coldkey,
-                swap_cost
-            ),
+            GameSolver::swap_coldkey(RuntimeOrigin::root(), old_coldkey, new_coldkey, swap_cost),
             Error::<Test>::NotEnoughBalanceToPaySwapColdKey
         );
     });
@@ -651,7 +638,7 @@ fn test_do_swap_coldkey_preserves_new_coldkey_identity() {
         };
         IdentitiesV2::<Test>::insert(new_coldkey, new_identity.clone());
 
-        assert_ok!(SubtensorModule::do_swap_coldkey(&who, &new_coldkey,));
+        assert_ok!(GameSolver::do_swap_coldkey(&who, &new_coldkey,));
 
         // Identity is preserved
         assert_eq!(IdentitiesV2::<Test>::get(who), Some(old_identity));
@@ -668,15 +655,15 @@ fn test_announce_coldkey_swap_with_not_enough_balance_to_pay_swap_cost_fails() {
 
         // No balance to pay swap cost
         assert_noop!(
-            SubtensorModule::announce_coldkey_swap(RuntimeOrigin::signed(who), new_coldkey_hash),
+            GameSolver::announce_coldkey_swap(RuntimeOrigin::signed(who), new_coldkey_hash),
             Error::<Test>::NotEnoughBalanceToPaySwapColdKey
         );
 
         // Needs to preserve ED
-        let balance = SubtensorModule::get_key_swap_cost().to_u64() + ExistentialDeposit::get() - 1;
-        SubtensorModule::add_balance_to_coldkey_account(&who, balance);
+        let balance = GameSolver::get_key_swap_cost().to_u64() + ExistentialDeposit::get() - 1;
+        GameSolver::add_balance_to_coldkey_account(&who, balance);
         assert_noop!(
-            SubtensorModule::announce_coldkey_swap(RuntimeOrigin::signed(who), new_coldkey_hash),
+            GameSolver::announce_coldkey_swap(RuntimeOrigin::signed(who), new_coldkey_hash),
             Error::<Test>::NotEnoughBalanceToPaySwapColdKey
         );
     });
@@ -688,14 +675,14 @@ fn test_do_swap_coldkey_with_no_stake() {
         let old_coldkey = U256::from(1);
         let new_coldkey = U256::from(2);
 
-        assert_ok!(SubtensorModule::do_swap_coldkey(&old_coldkey, &new_coldkey));
+        assert_ok!(GameSolver::do_swap_coldkey(&old_coldkey, &new_coldkey));
 
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&old_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&old_coldkey),
             TaoCurrency::ZERO
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&new_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&new_coldkey),
             TaoCurrency::ZERO
         );
     });
@@ -726,59 +713,53 @@ fn test_do_swap_coldkey_with_max_values() {
         register_ok_neuron(netuid2, hotkey2, other_coldkey, 1001000);
 
         // Give balance to old_coldkey and old_coldkey2.
-        SubtensorModule::add_balance_to_coldkey_account(&old_coldkey, max_stake + 1_000);
-        SubtensorModule::add_balance_to_coldkey_account(&old_coldkey2, max_stake + 1_000);
+        GameSolver::add_balance_to_coldkey_account(&old_coldkey, max_stake + 1_000);
+        GameSolver::add_balance_to_coldkey_account(&old_coldkey2, max_stake + 1_000);
 
         let reserve = max_stake * 10;
         mock::setup_reserves(netuid, reserve.into(), reserve.into());
         mock::setup_reserves(netuid2, reserve.into(), reserve.into());
 
         // Stake to hotkey on each subnet.
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(old_coldkey),
             hotkey,
             netuid,
             max_stake.into()
         ));
-        let expected_stake1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-            &hotkey,
-            &old_coldkey,
-            netuid,
-        );
+        let expected_stake1 =
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey, &old_coldkey, netuid);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(old_coldkey2),
             hotkey2,
             netuid2,
             max_stake.into()
         ));
-        let expected_stake2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+        let expected_stake2 = GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
             &hotkey2,
             &old_coldkey2,
             netuid2,
         );
 
-        assert_ok!(SubtensorModule::do_swap_coldkey(&old_coldkey, &new_coldkey,));
-        assert_ok!(SubtensorModule::do_swap_coldkey(
-            &old_coldkey2,
-            &new_coldkey2,
-        ));
+        assert_ok!(GameSolver::do_swap_coldkey(&old_coldkey, &new_coldkey,));
+        assert_ok!(GameSolver::do_swap_coldkey(&old_coldkey2, &new_coldkey2,));
 
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&old_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&old_coldkey),
             TaoCurrency::ZERO
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&new_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&new_coldkey),
             expected_stake1.to_u64().into(),
             epsilon = TaoCurrency::from(expected_stake1.to_u64()) / 1000.into()
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&old_coldkey2),
+            GameSolver::get_total_stake_for_coldkey(&old_coldkey2),
             TaoCurrency::ZERO
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&new_coldkey2),
+            GameSolver::get_total_stake_for_coldkey(&new_coldkey2),
             expected_stake2.to_u64().into(),
             epsilon = TaoCurrency::from(expected_stake2.to_u64()) / 1000.into()
         );
@@ -800,39 +781,39 @@ fn test_do_swap_coldkey_effect_on_delegated_stake() {
 
         StakingHotkeys::<Test>::insert(old_coldkey, vec![hotkey]);
         StakingHotkeys::<Test>::insert(delegator, vec![hotkey]);
-        SubtensorModule::create_account_if_non_existent(&old_coldkey, &hotkey);
-        SubtensorModule::add_balance_to_coldkey_account(&old_coldkey, stake);
-        SubtensorModule::add_balance_to_coldkey_account(&delegator, stake);
+        GameSolver::create_account_if_non_existent(&old_coldkey, &hotkey);
+        GameSolver::add_balance_to_coldkey_account(&old_coldkey, stake);
+        GameSolver::add_balance_to_coldkey_account(&delegator, stake);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(old_coldkey),
             hotkey,
             netuid,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             RuntimeOrigin::signed(delegator),
             hotkey,
             netuid,
             stake.into()
         ));
-        let coldkey_stake_before = SubtensorModule::get_total_stake_for_coldkey(&old_coldkey);
-        let delegator_stake_before = SubtensorModule::get_total_stake_for_coldkey(&delegator);
+        let coldkey_stake_before = GameSolver::get_total_stake_for_coldkey(&old_coldkey);
+        let delegator_stake_before = GameSolver::get_total_stake_for_coldkey(&delegator);
 
-        assert_ok!(SubtensorModule::do_swap_coldkey(&old_coldkey, &new_coldkey,));
+        assert_ok!(GameSolver::do_swap_coldkey(&old_coldkey, &new_coldkey,));
 
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&new_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&new_coldkey),
             coldkey_stake_before,
             epsilon = 500.into()
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&delegator),
+            GameSolver::get_total_stake_for_coldkey(&delegator),
             delegator_stake_before,
             epsilon = 500.into()
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&old_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&old_coldkey),
             TaoCurrency::ZERO,
             epsilon = 500.into()
         );
@@ -862,120 +843,92 @@ fn test_swap_delegated_stake_for_coldkey() {
         // Notice hotkey1 and hotkey2 are Owned by other_coldkey
         // old_coldkey and new_coldkey therefore delegates stake to them
         // === Give old_coldkey some balance ===
-        SubtensorModule::add_balance_to_coldkey_account(
+        GameSolver::add_balance_to_coldkey_account(
             &old_coldkey,
             stake_amount1 + stake_amount2 + 1_000_000,
         );
 
         // === Stake to hotkeys ===
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(old_coldkey),
             hotkey1,
             netuid,
             stake_amount1.into()
         ));
-        let expected_stake_alpha1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-            &hotkey1,
-            &old_coldkey,
-            netuid,
-        );
+        let expected_stake_alpha1 =
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &old_coldkey, netuid);
 
         let (expected_stake_alpha2, fee) = mock::swap_tao_to_alpha(netuid, stake_amount2.into());
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(old_coldkey),
             hotkey2,
             netuid,
             stake_amount2.into()
         ));
-        let expected_stake_alpha2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-            &hotkey2,
-            &old_coldkey,
-            netuid,
-        );
+        let expected_stake_alpha2 =
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &old_coldkey, netuid);
         let fee = (expected_stake_alpha2.to_u64() as f64 * 0.003) as u64;
 
         // Record initial values
-        let initial_total_issuance = SubtensorModule::get_total_issuance();
-        let initial_total_stake = SubtensorModule::get_total_stake();
-        let coldkey_stake = SubtensorModule::get_total_stake_for_coldkey(&old_coldkey);
-        let stake_coldkey_hotkey1 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-            &hotkey1,
-            &old_coldkey,
-            netuid,
-        );
-        let stake_coldkey_hotkey2 = SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-            &hotkey2,
-            &old_coldkey,
-            netuid,
-        );
-        let total_hotkey1_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey1);
-        let total_hotkey2_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey2);
+        let initial_total_issuance = GameSolver::get_total_issuance();
+        let initial_total_stake = GameSolver::get_total_stake();
+        let coldkey_stake = GameSolver::get_total_stake_for_coldkey(&old_coldkey);
+        let stake_coldkey_hotkey1 =
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &old_coldkey, netuid);
+        let stake_coldkey_hotkey2 =
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &old_coldkey, netuid);
+        let total_hotkey1_stake = GameSolver::get_total_stake_for_hotkey(&hotkey1);
+        let total_hotkey2_stake = GameSolver::get_total_stake_for_hotkey(&hotkey2);
 
         // Perform the swap
-        assert_ok!(SubtensorModule::do_swap_coldkey(&old_coldkey, &new_coldkey,));
+        assert_ok!(GameSolver::do_swap_coldkey(&old_coldkey, &new_coldkey,));
 
         // Verify stake transfer
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey1,
-                &new_coldkey,
-                netuid
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &new_coldkey, netuid),
             expected_stake_alpha1
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey2,
-                &new_coldkey,
-                netuid
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &new_coldkey, netuid),
             expected_stake_alpha2
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey1,
-                &old_coldkey,
-                netuid
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey1, &old_coldkey, netuid),
             AlphaCurrency::ZERO
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
-                &hotkey2,
-                &old_coldkey,
-                netuid
-            ),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&hotkey2, &old_coldkey, netuid),
             AlphaCurrency::ZERO
         );
 
         // Verify TotalColdkeyStake
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&new_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&new_coldkey),
             coldkey_stake
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&old_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&old_coldkey),
             TaoCurrency::ZERO
         );
 
         // Verify TotalHotkeyStake remains unchanged
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey1),
+            GameSolver::get_total_stake_for_hotkey(&hotkey1),
             total_hotkey1_stake
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey2),
+            GameSolver::get_total_stake_for_hotkey(&hotkey2),
             total_hotkey2_stake
         );
 
         // Verify total stake and issuance remain unchanged
         assert_eq!(
-            SubtensorModule::get_total_stake(),
+            GameSolver::get_total_stake(),
             initial_total_stake,
             "Total stake changed unexpectedly"
         );
         assert_eq!(
-            SubtensorModule::get_total_issuance(),
+            GameSolver::get_total_issuance(),
             initial_total_issuance,
             "Total issuance changed unexpectedly"
         );
@@ -999,13 +952,13 @@ fn test_coldkey_swap_total() {
         let netuid2 = NetUid::from(2);
         let netuid3 = NetUid::from(3);
         let stake = DefaultMinStake::<Test>::get().to_u64() * 10;
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, stake * 6);
-        SubtensorModule::add_balance_to_coldkey_account(&delegate1, stake * 2);
-        SubtensorModule::add_balance_to_coldkey_account(&delegate2, stake * 2);
-        SubtensorModule::add_balance_to_coldkey_account(&delegate3, stake * 2);
-        SubtensorModule::add_balance_to_coldkey_account(&nominator1, stake * 2);
-        SubtensorModule::add_balance_to_coldkey_account(&nominator2, stake * 2);
-        SubtensorModule::add_balance_to_coldkey_account(&nominator3, stake * 2);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, stake * 6);
+        GameSolver::add_balance_to_coldkey_account(&delegate1, stake * 2);
+        GameSolver::add_balance_to_coldkey_account(&delegate2, stake * 2);
+        GameSolver::add_balance_to_coldkey_account(&delegate3, stake * 2);
+        GameSolver::add_balance_to_coldkey_account(&nominator1, stake * 2);
+        GameSolver::add_balance_to_coldkey_account(&nominator2, stake * 2);
+        GameSolver::add_balance_to_coldkey_account(&nominator3, stake * 2);
 
         let reserve = stake * 10;
         mock::setup_reserves(netuid1, reserve.into(), reserve.into());
@@ -1029,113 +982,113 @@ fn test_coldkey_swap_total() {
         Delegates::<Test>::insert(delegate2, u16::MAX / 10);
         Delegates::<Test>::insert(delegate3, u16::MAX / 10);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             hotkey1,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             hotkey2,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             hotkey3,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             delegate1,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             delegate2,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             delegate3,
             netuid1,
             stake.into()
         ));
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(delegate1),
             hotkey1,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(delegate2),
             hotkey2,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(delegate3),
             hotkey3,
             netuid1,
             stake.into()
         ));
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(delegate1),
             delegate1,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(delegate2),
             delegate2,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(delegate3),
             delegate3,
             netuid1,
             stake.into()
         ));
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(nominator1),
             hotkey1,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(nominator2),
             hotkey2,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(nominator3),
             hotkey3,
             netuid1,
             stake.into()
         ));
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(nominator1),
             delegate1,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(nominator2),
             delegate2,
             netuid1,
             stake.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(nominator3),
             delegate3,
             netuid1,
@@ -1143,153 +1096,114 @@ fn test_coldkey_swap_total() {
         ));
 
         assert_eq!(
-            SubtensorModule::get_owned_hotkeys(&coldkey),
+            GameSolver::get_owned_hotkeys(&coldkey),
             vec![hotkey1, hotkey2, hotkey3]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&coldkey),
+            GameSolver::get_all_staked_hotkeys(&coldkey),
             vec![hotkey1, hotkey2, hotkey3, delegate1, delegate2, delegate3]
         );
-        let ck_stake = SubtensorModule::get_total_stake_for_coldkey(&coldkey);
-        let hk1_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey1);
-        let hk2_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey2);
-        let hk3_stake = SubtensorModule::get_total_stake_for_hotkey(&hotkey3);
-        let d1_stake = SubtensorModule::get_total_stake_for_hotkey(&delegate1);
-        let d2_stake = SubtensorModule::get_total_stake_for_hotkey(&delegate2);
-        let d3_stake = SubtensorModule::get_total_stake_for_hotkey(&delegate3);
+        let ck_stake = GameSolver::get_total_stake_for_coldkey(&coldkey);
+        let hk1_stake = GameSolver::get_total_stake_for_hotkey(&hotkey1);
+        let hk2_stake = GameSolver::get_total_stake_for_hotkey(&hotkey2);
+        let hk3_stake = GameSolver::get_total_stake_for_hotkey(&hotkey3);
+        let d1_stake = GameSolver::get_total_stake_for_hotkey(&delegate1);
+        let d2_stake = GameSolver::get_total_stake_for_hotkey(&delegate2);
+        let d3_stake = GameSolver::get_total_stake_for_hotkey(&delegate3);
 
+        assert_eq!(GameSolver::get_owned_hotkeys(&delegate1), vec![delegate1]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&delegate2), vec![delegate2]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&delegate3), vec![delegate3]);
         assert_eq!(
-            SubtensorModule::get_owned_hotkeys(&delegate1),
-            vec![delegate1]
-        );
-        assert_eq!(
-            SubtensorModule::get_owned_hotkeys(&delegate2),
-            vec![delegate2]
-        );
-        assert_eq!(
-            SubtensorModule::get_owned_hotkeys(&delegate3),
-            vec![delegate3]
-        );
-        assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&delegate1),
+            GameSolver::get_all_staked_hotkeys(&delegate1),
             vec![delegate1, hotkey1]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&delegate2),
+            GameSolver::get_all_staked_hotkeys(&delegate2),
             vec![delegate2, hotkey2]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&delegate3),
+            GameSolver::get_all_staked_hotkeys(&delegate3),
             vec![delegate3, hotkey3]
         );
 
-        assert_eq!(SubtensorModule::get_owned_hotkeys(&nominator1), vec![]);
-        assert_eq!(SubtensorModule::get_owned_hotkeys(&nominator2), vec![]);
-        assert_eq!(SubtensorModule::get_owned_hotkeys(&nominator3), vec![]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&nominator1), vec![]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&nominator2), vec![]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&nominator3), vec![]);
 
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&nominator1),
+            GameSolver::get_all_staked_hotkeys(&nominator1),
             vec![hotkey1, delegate1]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&nominator2),
+            GameSolver::get_all_staked_hotkeys(&nominator2),
             vec![hotkey2, delegate2]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&nominator3),
+            GameSolver::get_all_staked_hotkeys(&nominator3),
             vec![hotkey3, delegate3]
         );
 
         // Perform the swap
         let new_coldkey = U256::from(1100);
+        assert_eq!(GameSolver::get_total_stake_for_coldkey(&coldkey), ck_stake);
+        assert_ok!(GameSolver::do_swap_coldkey(&coldkey, &new_coldkey,));
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey),
-            ck_stake
-        );
-        assert_ok!(SubtensorModule::do_swap_coldkey(&coldkey, &new_coldkey,));
-        assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&new_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&new_coldkey),
             ck_stake
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey),
+            GameSolver::get_total_stake_for_coldkey(&coldkey),
             TaoCurrency::ZERO
         );
 
         // Check everything is swapped.
         assert_eq!(
-            SubtensorModule::get_owned_hotkeys(&new_coldkey),
+            GameSolver::get_owned_hotkeys(&new_coldkey),
             vec![hotkey1, hotkey2, hotkey3]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&new_coldkey),
+            GameSolver::get_all_staked_hotkeys(&new_coldkey),
             vec![hotkey1, hotkey2, hotkey3, delegate1, delegate2, delegate3]
         );
         // Shouldn't change.
-        assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey1),
-            hk1_stake
-        );
-        assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey2),
-            hk2_stake
-        );
-        assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&hotkey3),
-            hk3_stake
-        );
-        assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&delegate1),
-            d1_stake
-        );
-        assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&delegate2),
-            d2_stake
-        );
-        assert_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&delegate3),
-            d3_stake
-        );
+        assert_eq!(GameSolver::get_total_stake_for_hotkey(&hotkey1), hk1_stake);
+        assert_eq!(GameSolver::get_total_stake_for_hotkey(&hotkey2), hk2_stake);
+        assert_eq!(GameSolver::get_total_stake_for_hotkey(&hotkey3), hk3_stake);
+        assert_eq!(GameSolver::get_total_stake_for_hotkey(&delegate1), d1_stake);
+        assert_eq!(GameSolver::get_total_stake_for_hotkey(&delegate2), d2_stake);
+        assert_eq!(GameSolver::get_total_stake_for_hotkey(&delegate3), d3_stake);
 
+        assert_eq!(GameSolver::get_owned_hotkeys(&delegate1), vec![delegate1]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&delegate2), vec![delegate2]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&delegate3), vec![delegate3]);
         assert_eq!(
-            SubtensorModule::get_owned_hotkeys(&delegate1),
-            vec![delegate1]
-        );
-        assert_eq!(
-            SubtensorModule::get_owned_hotkeys(&delegate2),
-            vec![delegate2]
-        );
-        assert_eq!(
-            SubtensorModule::get_owned_hotkeys(&delegate3),
-            vec![delegate3]
-        );
-        assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&delegate1),
+            GameSolver::get_all_staked_hotkeys(&delegate1),
             vec![delegate1, hotkey1]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&delegate2),
+            GameSolver::get_all_staked_hotkeys(&delegate2),
             vec![delegate2, hotkey2]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&delegate3),
+            GameSolver::get_all_staked_hotkeys(&delegate3),
             vec![delegate3, hotkey3]
         );
 
-        assert_eq!(SubtensorModule::get_owned_hotkeys(&nominator1), vec![]);
-        assert_eq!(SubtensorModule::get_owned_hotkeys(&nominator2), vec![]);
-        assert_eq!(SubtensorModule::get_owned_hotkeys(&nominator3), vec![]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&nominator1), vec![]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&nominator2), vec![]);
+        assert_eq!(GameSolver::get_owned_hotkeys(&nominator3), vec![]);
 
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&nominator1),
+            GameSolver::get_all_staked_hotkeys(&nominator1),
             vec![hotkey1, delegate1]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&nominator2),
+            GameSolver::get_all_staked_hotkeys(&nominator2),
             vec![hotkey2, delegate2]
         );
         assert_eq!(
-            SubtensorModule::get_all_staked_hotkeys(&nominator3),
+            GameSolver::get_all_staked_hotkeys(&nominator3),
             vec![hotkey3, delegate3]
         );
     });
@@ -1313,19 +1227,19 @@ fn test_do_swap_coldkey_effect_on_delegations() {
         add_network(netuid, 13, 0); // root
         add_network(netuid2, 13, 0);
 
-        assert_ok!(SubtensorModule::root_register(
+        assert_ok!(GameSolver::root_register(
             <<Test as Config>::RuntimeOrigin>::signed(owner),
             delegate
         )); // register on root
         register_ok_neuron(netuid2, delegate, owner, 0);
-        SubtensorModule::add_balance_to_coldkey_account(&coldkey, stake * 10);
+        GameSolver::add_balance_to_coldkey_account(&coldkey, stake * 10);
 
         // since the reserves are equal and we stake the same amount to both networks, we can reuse
         // this values for different networks. but you should take it into account in case of tests
         // changes
         let (expected_stake, fee) = mock::swap_tao_to_alpha(netuid, stake.into());
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             delegate,
             netuid,
@@ -1333,7 +1247,7 @@ fn test_do_swap_coldkey_effect_on_delegations() {
         ));
 
         // Add stake to netuid2
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed(coldkey),
             delegate,
             netuid2,
@@ -1341,21 +1255,21 @@ fn test_do_swap_coldkey_effect_on_delegations() {
         ));
 
         // Perform the swap
-        assert_ok!(SubtensorModule::do_swap_coldkey(&coldkey, &new_coldkey,));
+        assert_ok!(GameSolver::do_swap_coldkey(&coldkey, &new_coldkey,));
 
         // Verify stake was moved for the delegate
         let approx_total_stake = TaoCurrency::from(stake * 2 - fee * 2);
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_hotkey(&delegate),
+            GameSolver::get_total_stake_for_hotkey(&delegate),
             approx_total_stake,
             epsilon = approx_total_stake / 100.into()
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&coldkey),
+            GameSolver::get_total_stake_for_coldkey(&coldkey),
             TaoCurrency::ZERO
         );
         assert_abs_diff_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&new_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&new_coldkey),
             approx_total_stake,
             epsilon = approx_total_stake / 100.into()
         );
@@ -1387,14 +1301,12 @@ fn test_dispute_coldkey_swap_works() {
 
         ColdkeySwapAnnouncements::<Test>::insert(who, (now, new_coldkey_hash));
 
-        assert_ok!(SubtensorModule::dispute_coldkey_swap(
-            RuntimeOrigin::signed(who)
-        ));
+        assert_ok!(GameSolver::dispute_coldkey_swap(RuntimeOrigin::signed(who)));
 
         assert_eq!(ColdkeySwapDisputes::<Test>::get(who), Some(now));
         assert!(matches!(
             last_event(),
-            RuntimeEvent::SubtensorModule(Event::ColdkeySwapDisputed { coldkey: _ })
+            RuntimeEvent::GameSolver(Event::ColdkeySwapDisputed { coldkey: _ })
         ));
     });
 }
@@ -1410,12 +1322,12 @@ fn test_dispute_coldkey_swap_with_bad_origin_fails() {
         ColdkeySwapAnnouncements::<Test>::insert(who, (now, new_coldkey_hash));
 
         assert_noop!(
-            SubtensorModule::dispute_coldkey_swap(RuntimeOrigin::root()),
+            GameSolver::dispute_coldkey_swap(RuntimeOrigin::root()),
             BadOrigin
         );
 
         assert_noop!(
-            SubtensorModule::dispute_coldkey_swap(RuntimeOrigin::none()),
+            GameSolver::dispute_coldkey_swap(RuntimeOrigin::none()),
             BadOrigin
         );
     });
@@ -1430,7 +1342,7 @@ fn test_dispute_coldkey_swap_without_announcement_fails() {
         let now = System::block_number();
 
         assert_noop!(
-            SubtensorModule::dispute_coldkey_swap(RuntimeOrigin::signed(who)),
+            GameSolver::dispute_coldkey_swap(RuntimeOrigin::signed(who)),
             Error::<Test>::ColdkeySwapAnnouncementNotFound
         );
     });
@@ -1448,7 +1360,7 @@ fn test_dispute_coldkey_swap_already_disputed_fails() {
         ColdkeySwapDisputes::<Test>::insert(who, now);
 
         assert_noop!(
-            SubtensorModule::dispute_coldkey_swap(RuntimeOrigin::signed(who)),
+            GameSolver::dispute_coldkey_swap(RuntimeOrigin::signed(who)),
             Error::<Test>::ColdkeySwapAlreadyDisputed
         );
     });
@@ -1465,16 +1377,13 @@ fn test_reset_coldkey_swap_works() {
         ColdkeySwapAnnouncements::<Test>::insert(who, (now, new_coldkey_hash));
         ColdkeySwapDisputes::<Test>::insert(who, now);
 
-        assert_ok!(SubtensorModule::reset_coldkey_swap(
-            RuntimeOrigin::root(),
-            who,
-        ));
+        assert_ok!(GameSolver::reset_coldkey_swap(RuntimeOrigin::root(), who,));
 
         assert!(!ColdkeySwapAnnouncements::<Test>::contains_key(who));
         assert!(!ColdkeySwapDisputes::<Test>::contains_key(who));
         assert!(matches!(
             last_event(),
-            RuntimeEvent::SubtensorModule(Event::ColdkeySwapReset { who })
+            RuntimeEvent::GameSolver(Event::ColdkeySwapReset { who })
         ));
     });
 }
@@ -1486,12 +1395,12 @@ fn test_reset_coldkey_swap_with_bad_origin_fails() {
         let coldkey = U256::from(2);
 
         assert_noop!(
-            SubtensorModule::reset_coldkey_swap(RuntimeOrigin::signed(who), coldkey),
+            GameSolver::reset_coldkey_swap(RuntimeOrigin::signed(who), coldkey),
             BadOrigin
         );
 
         assert_noop!(
-            SubtensorModule::reset_coldkey_swap(RuntimeOrigin::none(), coldkey),
+            GameSolver::reset_coldkey_swap(RuntimeOrigin::none(), coldkey),
             BadOrigin
         );
     });
@@ -1505,7 +1414,7 @@ fn test_schedule_swap_coldkey_deprecated() {
         let new_coldkey = U256::from(2);
 
         assert_noop!(
-            SubtensorModule::schedule_swap_coldkey(
+            GameSolver::schedule_swap_coldkey(
                 <<Test as Config>::RuntimeOrigin>::root(),
                 new_coldkey,
             ),
@@ -1567,31 +1476,31 @@ macro_rules! comprehensive_setup {
         assert_eq!(Owner::<Test>::get($hotkey2), $who);
         assert_eq!(Owner::<Test>::get($hotkey3), $who);
 
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed($who),
             $hotkey1,
             netuid1,
             $stake1.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed($who),
             $hotkey2,
             netuid2,
             $stake2.into()
         ));
-        assert_ok!(SubtensorModule::add_stake(
+        assert_ok!(GameSolver::add_stake(
             <<Test as Config>::RuntimeOrigin>::signed($who),
             $hotkey3,
             netuid1,
             $stake3.into()
         ));
         let hk1_alpha =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey1, &$who, netuid1);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey1, &$who, netuid1);
         let hk2_alpha =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey2, &$who, netuid2);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey2, &$who, netuid2);
         let hk3_alpha =
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey3, &$who, netuid1);
-        let total_ck_stake = SubtensorModule::get_total_stake_for_coldkey(&$who);
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey3, &$who, netuid1);
+        let total_ck_stake = GameSolver::get_total_stake_for_coldkey(&$who);
 
         // Setup identity
         let identity = ChainIdentityV2::default();
@@ -1599,8 +1508,8 @@ macro_rules! comprehensive_setup {
         assert_eq!(IdentitiesV2::<Test>::get($who), Some(identity.clone()));
         assert!(IdentitiesV2::<Test>::get($new_coldkey).is_none());
 
-        let balance_before = SubtensorModule::get_coldkey_balance(&$who);
-        let total_stake_before = SubtensorModule::get_total_stake();
+        let balance_before = GameSolver::get_coldkey_balance(&$who);
+        let total_stake_before = GameSolver::get_total_stake();
 
         (
             netuid1,
@@ -1641,7 +1550,7 @@ macro_rules! comprehensive_checks {
         assert!(!ColdkeySwapAnnouncements::<Test>::contains_key($who));
 
         // Ensure the cost has been withdrawn from the old coldkey and recycled
-        let balance_after = SubtensorModule::get_coldkey_balance(&$who);
+        let balance_after = GameSolver::get_coldkey_balance(&$who);
         let ed = ExistentialDeposit::get();
         assert_eq!($balance_before - $swap_cost, balance_after + ed);
 
@@ -1675,19 +1584,19 @@ macro_rules! comprehensive_checks {
 
         // Ensure the coldkey stake is correctly swapped
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey1, &$who, $netuid1),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey1, &$who, $netuid1),
             0.into(),
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey2, &$who, $netuid2),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey2, &$who, $netuid2),
             0.into(),
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey3, &$who, $netuid1),
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(&$hotkey3, &$who, $netuid1),
             0.into(),
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &$hotkey1,
                 &$new_coldkey,
                 $netuid1
@@ -1695,7 +1604,7 @@ macro_rules! comprehensive_checks {
             $hk1_alpha
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &$hotkey2,
                 &$new_coldkey,
                 $netuid2
@@ -1703,7 +1612,7 @@ macro_rules! comprehensive_checks {
             $hk2_alpha
         );
         assert_eq!(
-            SubtensorModule::get_stake_for_hotkey_and_coldkey_on_subnet(
+            GameSolver::get_stake_for_hotkey_and_coldkey_on_subnet(
                 &$hotkey3,
                 &$new_coldkey,
                 $netuid1
@@ -1711,11 +1620,11 @@ macro_rules! comprehensive_checks {
             $hk3_alpha
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&$who),
+            GameSolver::get_total_stake_for_coldkey(&$who),
             TaoCurrency::ZERO
         );
         assert_eq!(
-            SubtensorModule::get_total_stake_for_coldkey(&$new_coldkey),
+            GameSolver::get_total_stake_for_coldkey(&$new_coldkey),
             $total_ck_stake,
         );
 
@@ -1731,15 +1640,15 @@ macro_rules! comprehensive_checks {
         assert_eq!(Owner::<Test>::get($hotkey3), $new_coldkey);
 
         // Ensure the remaining balance is transferred to the new coldkey
-        assert_eq!(SubtensorModule::get_coldkey_balance(&$who), 0);
+        assert_eq!(GameSolver::get_coldkey_balance(&$who), 0);
         assert_eq!(
-            SubtensorModule::get_coldkey_balance(&$new_coldkey),
+            GameSolver::get_coldkey_balance(&$new_coldkey),
             ExistentialDeposit::get()
         );
 
         // Ensure total stake is unchanged
         assert_eq!(
-            SubtensorModule::get_total_stake(),
+            GameSolver::get_total_stake(),
             $total_stake_before,
             "Total stake changed unexpectedly"
         );

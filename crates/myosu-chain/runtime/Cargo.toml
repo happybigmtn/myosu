@@ -16,7 +16,7 @@ default = ["std"]
 fast-runtime = []
 fast-blocks = ["fast-runtime"]
 full-runtime = [
-    "pallet_subtensor/full-runtime",
+    "pallet_game_solver/full-runtime",
     "subtensor-transaction-fee/full-runtime",
     "dep:pallet-insecure-randomness-collective-flip",
     "dep:pallet-multisig",
@@ -34,7 +34,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "pallet-admin-utils/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
-    "pallet_subtensor/runtime-benchmarks",
+    "pallet_game_solver/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "full-runtime",
     "pallet-subtensor-proxy?/runtime-benchmarks",
@@ -53,7 +53,7 @@ std = [
     "pallet-admin-utils/std",
     "pallet-aura/std",
     "pallet-balances/std",
-    "pallet_subtensor/std",
+    "pallet_game_solver/std",
     "pallet-grandpa/std",
     "pallet-insecure-randomness-collective-flip?/std",
     "pallet-multisig?/std",
@@ -85,7 +85,7 @@ std = [
     "sp-transaction-pool/std",
     "sp-version/std",
     "subtensor-runtime-common/std",
-    "subtensor-custom-rpc-runtime-api/std",
+    "game-solver-rpc-runtime-api/std",
     "subtensor-swap-interface/std",
     "subtensor-transaction-fee/std",
 ]
@@ -97,7 +97,7 @@ try-runtime = [
     "pallet-admin-utils/try-runtime",
     "pallet-aura/try-runtime",
     "pallet-balances/try-runtime",
-    "pallet_subtensor/try-runtime",
+    "pallet_game_solver/try-runtime",
     "pallet-grandpa/try-runtime",
     "pallet-subtensor-utility/try-runtime",
     "pallet-timestamp/try-runtime",
@@ -119,7 +119,7 @@ log = { version = "0.4.21", default-features = false }
 pallet-admin-utils = { path = "../pallets/admin-utils", default-features = false }
 pallet-aura = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 pallet-balances = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
-pallet_subtensor = { package = "pallet-game-solver", path = "../pallets/game-solver", default-features = false }
+pallet_game_solver = { package = "pallet-game-solver", path = "../pallets/game-solver", default-features = false }
 pallet-grandpa = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 pallet-insecure-randomness-collective-flip = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
 pallet-multisig = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false, optional = true }
@@ -151,7 +151,7 @@ sp-storage = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71
 sp-transaction-pool = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 sp-version = { git = "https://github.com/opentensor/polkadot-sdk.git", rev = "71629fd93b6c12a362a5cfb6331accef9b2b2b61", default-features = false }
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed.git", tag = "v0.6.0", default-features = false }
-subtensor-custom-rpc-runtime-api = { path = "../pallets/game-solver/runtime-api", default-features = false }
+game-solver-rpc-runtime-api = { path = "../pallets/game-solver/runtime-api", default-features = false }
 subtensor-macros = { path = "../support/macros", default-features = false }
 subtensor-runtime-common = { path = "../common", default-features = false }
 subtensor-swap-interface = { path = "../pallets/swap-interface", default-features = false }

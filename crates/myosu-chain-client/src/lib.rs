@@ -509,7 +509,7 @@ impl ChainClient {
 
     /// Returns the currently allocated subnet ids from `NetworksAdded`.
     pub async fn get_existing_subnets(&self) -> Result<Vec<NetUid>, ChainClientError> {
-        let prefix = storage_prefix("SubtensorModule", "NetworksAdded");
+        let prefix = storage_prefix("GameSolver", "NetworksAdded");
         let prefix_hex = format!("0x{}", hex::encode(prefix));
         let keys = self
             .request::<Vec<String>, _>("state_getKeys", rpc_params![prefix_hex])
@@ -534,7 +534,7 @@ impl ChainClient {
 
     /// Returns the active weights version key for one subnet.
     pub async fn get_weights_version_key(&self, netuid: NetUid) -> Result<u64, ChainClientError> {
-        let key = map_identity_storage_key("SubtensorModule", "WeightsVersionKey", &netuid);
+        let key = map_identity_storage_key("GameSolver", "WeightsVersionKey", &netuid);
         Ok(self
             .state_get_storage_decoded::<u64>("state_getStorage", &key)
             .await?
@@ -546,7 +546,7 @@ impl ChainClient {
         &self,
         netuid: NetUid,
     ) -> Result<u64, ChainClientError> {
-        let key = map_identity_storage_key("SubtensorModule", "WeightsSetRateLimit", &netuid);
+        let key = map_identity_storage_key("GameSolver", "WeightsSetRateLimit", &netuid);
         Ok(self
             .state_get_storage_decoded::<u64>("state_getStorage", &key)
             .await?
@@ -555,7 +555,7 @@ impl ChainClient {
 
     /// Returns the current subnet tempo.
     pub async fn get_subnet_tempo(&self, netuid: NetUid) -> Result<u16, ChainClientError> {
-        let key = map_identity_storage_key("SubtensorModule", "Tempo", &netuid);
+        let key = map_identity_storage_key("GameSolver", "Tempo", &netuid);
         Ok(self
             .state_get_storage_decoded::<u16>("state_getStorage", &key)
             .await?
@@ -564,7 +564,7 @@ impl ChainClient {
 
     /// Returns the global admin freeze window length.
     pub async fn get_admin_freeze_window(&self) -> Result<u16, ChainClientError> {
-        let key = storage_prefix("SubtensorModule", "AdminFreezeWindow");
+        let key = storage_prefix("GameSolver", "AdminFreezeWindow");
         Ok(self
             .state_get_storage_decoded::<u16>("state_getStorage", &key)
             .await?
@@ -573,7 +573,7 @@ impl ChainClient {
 
     /// Returns the global network registration rate limit.
     pub async fn get_network_rate_limit(&self) -> Result<u64, ChainClientError> {
-        let key = storage_prefix("SubtensorModule", "NetworkRateLimit");
+        let key = storage_prefix("GameSolver", "NetworkRateLimit");
         Ok(self
             .state_get_storage_decoded::<u64>("state_getStorage", &key)
             .await?
@@ -585,7 +585,7 @@ impl ChainClient {
         &self,
         block_hash: H256,
     ) -> Result<u64, ChainClientError> {
-        let key = storage_prefix("SubtensorModule", "NetworkRateLimit");
+        let key = storage_prefix("GameSolver", "NetworkRateLimit");
         Ok(self
             .state_get_storage_decoded_at::<u64>("state_getStorage", &key, block_hash)
             .await?
@@ -615,7 +615,7 @@ impl ChainClient {
 
     /// Returns the global subnet limit.
     pub async fn get_subnet_limit(&self) -> Result<u16, ChainClientError> {
-        let key = storage_prefix("SubtensorModule", "SubnetLimit");
+        let key = storage_prefix("GameSolver", "SubnetLimit");
         Ok(self
             .state_get_storage_decoded::<u16>("state_getStorage", &key)
             .await?
@@ -628,7 +628,7 @@ impl ChainClient {
         netuid: NetUid,
         uid: u16,
     ) -> Result<bool, ChainClientError> {
-        let key = map_identity_storage_key("SubtensorModule", "ValidatorPermit", &netuid);
+        let key = map_identity_storage_key("GameSolver", "ValidatorPermit", &netuid);
         let permits = self
             .state_get_storage_decoded::<Vec<bool>>("state_getStorage", &key)
             .await?
@@ -651,11 +651,8 @@ impl ChainClient {
 
     /// Returns the current subnet incentive vector.
     pub async fn get_incentives(&self, netuid: NetUid) -> Result<Vec<u16>, ChainClientError> {
-        let key = map_identity_storage_key(
-            "SubtensorModule",
-            "Incentive",
-            &NetUidStorageIndex::from(netuid),
-        );
+        let key =
+            map_identity_storage_key("GameSolver", "Incentive", &NetUidStorageIndex::from(netuid));
         Ok(self
             .state_get_storage_decoded::<Vec<u16>>("state_getStorage", &key)
             .await?
@@ -704,7 +701,7 @@ impl ChainClient {
 
     /// Returns the current subnet dividend vector.
     pub async fn get_dividends(&self, netuid: NetUid) -> Result<Vec<u16>, ChainClientError> {
-        let key = map_identity_storage_key("SubtensorModule", "Dividends", &netuid);
+        let key = map_identity_storage_key("GameSolver", "Dividends", &netuid);
         Ok(self
             .state_get_storage_decoded::<Vec<u16>>("state_getStorage", &key)
             .await?
@@ -716,7 +713,7 @@ impl ChainClient {
         &self,
         netuid: NetUid,
     ) -> Result<Vec<AlphaCurrency>, ChainClientError> {
-        let key = map_identity_storage_key("SubtensorModule", "Emission", &netuid);
+        let key = map_identity_storage_key("GameSolver", "Emission", &netuid);
         Ok(self
             .state_get_storage_decoded::<Vec<AlphaCurrency>>("state_getStorage", &key)
             .await?
@@ -728,8 +725,7 @@ impl ChainClient {
         &self,
         netuid: NetUid,
     ) -> Result<bool, ChainClientError> {
-        let key =
-            map_identity_storage_key("SubtensorModule", "CommitRevealWeightsEnabled", &netuid);
+        let key = map_identity_storage_key("GameSolver", "CommitRevealWeightsEnabled", &netuid);
         Ok(self
             .state_get_storage_decoded::<bool>("state_getStorage", &key)
             .await?
@@ -738,7 +734,7 @@ impl ChainClient {
 
     /// Returns whether subnet staking is enabled for one subnet.
     pub async fn get_subtoken_enabled(&self, netuid: NetUid) -> Result<bool, ChainClientError> {
-        let key = map_identity_storage_key("SubtensorModule", "SubtokenEnabled", &netuid);
+        let key = map_identity_storage_key("GameSolver", "SubtokenEnabled", &netuid);
         Ok(self
             .state_get_storage_decoded::<bool>("state_getStorage", &key)
             .await?
@@ -776,12 +772,11 @@ impl ChainClient {
             });
         }
 
-        let call = runtime::RuntimeCall::SubtensorModule(
-            GameSolverCall::<runtime::Runtime>::burned_register {
+        let call =
+            runtime::RuntimeCall::GameSolver(GameSolverCall::<runtime::Runtime>::burned_register {
                 netuid,
                 hotkey: hotkey.clone(),
-            },
-        );
+            });
         let extrinsic_hash = self.submit_signed_call(signer_uri, call).await?;
         let uid = self
             .poll_for_uid(netuid, &hotkey, timeout)
@@ -828,7 +823,7 @@ impl ChainClient {
         }
 
         let call =
-            runtime::RuntimeCall::SubtensorModule(GameSolverCall::<runtime::Runtime>::serve_axon {
+            runtime::RuntimeCall::GameSolver(GameSolverCall::<runtime::Runtime>::serve_axon {
                 netuid,
                 version,
                 ip,
@@ -861,7 +856,7 @@ impl ChainClient {
     ) -> Result<NetworkRegistrationReport, ChainClientError> {
         let hotkey = Self::account_id_from_uri(signer_uri)?;
         let before = self.get_existing_subnets().await?;
-        let call = runtime::RuntimeCall::SubtensorModule(
+        let call = runtime::RuntimeCall::GameSolver(
             GameSolverCall::<runtime::Runtime>::register_network {
                 hotkey: hotkey.clone(),
             },
@@ -937,7 +932,7 @@ impl ChainClient {
 
         let added_stake = requested_minimum_stake.saturating_sub(current_stake);
         let call =
-            runtime::RuntimeCall::SubtensorModule(GameSolverCall::<runtime::Runtime>::add_stake {
+            runtime::RuntimeCall::GameSolver(GameSolverCall::<runtime::Runtime>::add_stake {
                 hotkey: hotkey.clone(),
                 netuid,
                 amount_staked: TaoCurrency::from(added_stake),
@@ -1004,7 +999,7 @@ impl ChainClient {
         }
 
         let call =
-            runtime::RuntimeCall::SubtensorModule(GameSolverCall::<runtime::Runtime>::start_call {
+            runtime::RuntimeCall::GameSolver(GameSolverCall::<runtime::Runtime>::start_call {
                 netuid,
             });
         let extrinsic_hash = self.submit_signed_call(signer_uri, call).await?;
@@ -1110,7 +1105,7 @@ impl ChainClient {
                 .await?;
             self.wait_for_reveal_block(commit_window.first_reveal_block, timeout)
                 .await?;
-            let call = runtime::RuntimeCall::SubtensorModule(
+            let call = runtime::RuntimeCall::GameSolver(
                 GameSolverCall::<runtime::Runtime>::reveal_weights {
                     netuid,
                     uids: vec![target_uid],
@@ -1136,14 +1131,13 @@ impl ChainClient {
             });
         }
 
-        let call = runtime::RuntimeCall::SubtensorModule(
-            GameSolverCall::<runtime::Runtime>::set_weights {
+        let call =
+            runtime::RuntimeCall::GameSolver(GameSolverCall::<runtime::Runtime>::set_weights {
                 netuid,
                 dests: vec![target_uid],
                 weights: vec![u16::MAX],
                 version_key,
-            },
-        );
+            });
         let extrinsic_hash = self.submit_signed_call(signer_uri, call).await?;
         self.poll_for_weights(netuid, validator_uid, &desired_weights, timeout)
             .await?;
@@ -1573,9 +1567,10 @@ impl ChainClient {
                 continue;
             }
             match record.event {
-                runtime::RuntimeEvent::SubtensorModule(
-                    pallet_game_solver::Event::NetworkAdded(netuid, _),
-                ) => {
+                runtime::RuntimeEvent::GameSolver(pallet_game_solver::Event::NetworkAdded(
+                    netuid,
+                    _,
+                )) => {
                     return Ok(netuid);
                 }
                 runtime::RuntimeEvent::System(frame_system::Event::ExtrinsicFailed {
@@ -1668,12 +1663,11 @@ impl ChainClient {
             request.salt,
             request.version_key,
         );
-        let call = runtime::RuntimeCall::SubtensorModule(
-            GameSolverCall::<runtime::Runtime>::commit_weights {
+        let call =
+            runtime::RuntimeCall::GameSolver(GameSolverCall::<runtime::Runtime>::commit_weights {
                 netuid: request.netuid,
                 commit_hash,
-            },
-        );
+            });
         let _ = self.submit_signed_call(request.signer_uri, call).await?;
         self.poll_for_commit_window(request.netuid, request.hotkey, commit_hash, timeout)
             .await
@@ -1809,11 +1803,11 @@ fn decode_hex_payload(method: &'static str, value: &str) -> Result<Vec<u8>, Chai
 }
 
 fn uid_storage_key(netuid: NetUid, hotkey: &AccountId32) -> Vec<u8> {
-    double_map_identity_blake2_storage_key("SubtensorModule", "Uids", &netuid, hotkey)
+    double_map_identity_blake2_storage_key("GameSolver", "Uids", &netuid, hotkey)
 }
 
 fn key_storage_key(netuid: NetUid, uid: u16) -> Vec<u8> {
-    double_map_identity_identity_storage_key("SubtensorModule", "Keys", &netuid, &uid)
+    double_map_identity_identity_storage_key("GameSolver", "Keys", &netuid, &uid)
 }
 
 fn storage_prefix(pallet: &str, storage: &str) -> Vec<u8> {
@@ -1824,12 +1818,12 @@ fn storage_prefix(pallet: &str, storage: &str) -> Vec<u8> {
 }
 
 fn axon_storage_key(netuid: NetUid, hotkey: &AccountId32) -> Vec<u8> {
-    double_map_identity_blake2_storage_key("SubtensorModule", "Axons", &netuid, hotkey)
+    double_map_identity_blake2_storage_key("GameSolver", "Axons", &netuid, hotkey)
 }
 
 fn weights_storage_key(netuid: NetUid, uid: u16) -> Vec<u8> {
     double_map_identity_identity_storage_key(
-        "SubtensorModule",
+        "GameSolver",
         "Weights",
         &NetUidStorageIndex::from(netuid),
         &uid,
@@ -1837,12 +1831,12 @@ fn weights_storage_key(netuid: NetUid, uid: u16) -> Vec<u8> {
 }
 
 fn hotkey_alpha_storage_key(hotkey: &AccountId32, netuid: NetUid) -> Vec<u8> {
-    double_map_blake2_identity_storage_key("SubtensorModule", "TotalHotkeyAlpha", hotkey, &netuid)
+    double_map_blake2_identity_storage_key("GameSolver", "TotalHotkeyAlpha", hotkey, &netuid)
 }
 
 fn weight_commits_storage_key(netuid: NetUid, hotkey: &AccountId32) -> Vec<u8> {
     double_map_twox64_twox64_storage_key(
-        "SubtensorModule",
+        "GameSolver",
         "WeightCommits",
         &NetUidStorageIndex::from(netuid),
         hotkey,
@@ -1851,7 +1845,7 @@ fn weight_commits_storage_key(netuid: NetUid, hotkey: &AccountId32) -> Vec<u8> {
 
 fn network_last_registered_storage_key() -> Vec<u8> {
     map_identity_storage_key(
-        "SubtensorModule",
+        "GameSolver",
         "LastRateLimitedBlock",
         &pallet_game_solver::RateLimitKey::<AccountId32>::NetworkLastRegistered,
     )
@@ -2056,7 +2050,7 @@ mod tests {
         let weights_key = weights_storage_key(NetUid::from(1_u16), 7);
         let stake_key = hotkey_alpha_storage_key(&hotkey, NetUid::from(1_u16));
         let version_key =
-            map_identity_storage_key("SubtensorModule", "WeightsVersionKey", &NetUid::from(1_u16));
+            map_identity_storage_key("GameSolver", "WeightsVersionKey", &NetUid::from(1_u16));
 
         assert_ne!(uid_key, axon_key);
         assert_ne!(key_key, uid_key);
@@ -2109,14 +2103,14 @@ mod tests {
 
     #[test]
     fn storage_prefix_matches_map_prefix_length() {
-        let prefix = storage_prefix("SubtensorModule", "NetworksAdded");
+        let prefix = storage_prefix("GameSolver", "NetworksAdded");
         assert_eq!(prefix.len(), 32);
     }
 
     #[test]
     fn network_last_registered_storage_key_matches_pallet() {
         let client_key = map_identity_storage_key(
-            "SubtensorModule",
+            "GameSolver",
             "LastRateLimitedBlock",
             &RateLimitKey::<AccountId32>::NetworkLastRegistered,
         );

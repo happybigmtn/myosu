@@ -9,7 +9,7 @@ use super::mock::*;
 fn test_zero_tempo() {
     new_test_ext(1).execute_with(|| {
         assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(1.into(), 0, 100),
+            GameSolver::blocks_until_next_epoch(1.into(), 0, 100),
             u64::MAX
         );
     });
@@ -21,15 +21,9 @@ fn test_zero_tempo() {
 #[test]
 fn test_regular_case() {
     new_test_ext(1).execute_with(|| {
-        assert_eq!(SubtensorModule::blocks_until_next_epoch(1.into(), 10, 5), 3);
-        assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(2.into(), 20, 15),
-            2
-        );
-        assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(3.into(), 30, 25),
-            1
-        );
+        assert_eq!(GameSolver::blocks_until_next_epoch(1.into(), 10, 5), 3);
+        assert_eq!(GameSolver::blocks_until_next_epoch(2.into(), 20, 15), 2);
+        assert_eq!(GameSolver::blocks_until_next_epoch(3.into(), 30, 25), 1);
     });
 }
 
@@ -40,11 +34,11 @@ fn test_regular_case() {
 fn test_boundary_conditions() {
     new_test_ext(1).execute_with(|| {
         assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(u16::MAX.into(), u16::MAX, u64::MAX),
+            GameSolver::blocks_until_next_epoch(u16::MAX.into(), u16::MAX, u64::MAX),
             0
         );
         assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(u16::MAX.into(), u16::MAX, 0),
+            GameSolver::blocks_until_next_epoch(u16::MAX.into(), u16::MAX, 0),
             u16::MAX as u64
         );
     });
@@ -57,7 +51,7 @@ fn test_boundary_conditions() {
 fn test_overflow_handling() {
     new_test_ext(1).execute_with(|| {
         assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(u16::MAX.into(), u16::MAX, u64::MAX - 1),
+            GameSolver::blocks_until_next_epoch(u16::MAX.into(), u16::MAX, u64::MAX - 1),
             1
         );
     });
@@ -69,14 +63,8 @@ fn test_overflow_handling() {
 #[test]
 fn test_epoch_alignment() {
     new_test_ext(1).execute_with(|| {
-        assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(1.into(), 10, 9),
-            10
-        );
-        assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(2.into(), 20, 21),
-            17
-        );
+        assert_eq!(GameSolver::blocks_until_next_epoch(1.into(), 10, 9), 10);
+        assert_eq!(GameSolver::blocks_until_next_epoch(2.into(), 20, 21), 17);
     });
 }
 
@@ -86,9 +74,9 @@ fn test_epoch_alignment() {
 #[test]
 fn test_different_network_ids() {
     new_test_ext(1).execute_with(|| {
-        assert_eq!(SubtensorModule::blocks_until_next_epoch(1.into(), 10, 5), 3);
-        assert_eq!(SubtensorModule::blocks_until_next_epoch(2.into(), 10, 5), 2);
-        assert_eq!(SubtensorModule::blocks_until_next_epoch(3.into(), 10, 5), 1);
+        assert_eq!(GameSolver::blocks_until_next_epoch(1.into(), 10, 5), 3);
+        assert_eq!(GameSolver::blocks_until_next_epoch(2.into(), 10, 5), 2);
+        assert_eq!(GameSolver::blocks_until_next_epoch(3.into(), 10, 5), 1);
     });
 }
 
@@ -99,7 +87,7 @@ fn test_different_network_ids() {
 fn test_large_tempo_values() {
     new_test_ext(1).execute_with(|| {
         assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(1.into(), u16::MAX - 1, 100),
+            GameSolver::blocks_until_next_epoch(1.into(), u16::MAX - 1, 100),
             u16::MAX as u64 - 103
         );
     });
@@ -113,9 +101,9 @@ fn test_consecutive_blocks() {
     new_test_ext(1).execute_with(|| {
         let tempo = 10;
         let netuid = NetUid::from(1);
-        let mut last_result = SubtensorModule::blocks_until_next_epoch(netuid, tempo, 0);
+        let mut last_result = GameSolver::blocks_until_next_epoch(netuid, tempo, 0);
         for i in 1..tempo - 1 {
-            let current_result = SubtensorModule::blocks_until_next_epoch(netuid, tempo, i as u64);
+            let current_result = GameSolver::blocks_until_next_epoch(netuid, tempo, i as u64);
             assert_eq!(current_result, last_result - 1);
             last_result = current_result;
         }
@@ -129,11 +117,11 @@ fn test_consecutive_blocks() {
 fn test_wrap_around_behavior() {
     new_test_ext(1).execute_with(|| {
         assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(1.into(), 10, u64::MAX),
+            GameSolver::blocks_until_next_epoch(1.into(), 10, u64::MAX),
             9
         );
         assert_eq!(
-            SubtensorModule::blocks_until_next_epoch(1.into(), 10, u64::MAX - 1),
+            GameSolver::blocks_until_next_epoch(1.into(), 10, u64::MAX - 1),
             10
         );
     });
