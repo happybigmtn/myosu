@@ -1,5 +1,17 @@
 # COMPLETED
 
+- `F-007` Re-verified the remaining miner-quality work as blocked instead of
+  leaving it falsely runnable in
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md). The
+  live proof surfaces still split by game: Liar's Dice has a truthful
+  exploitability ladder and `512`-iteration recommendation, while poker still
+  depends on an operator-supplied full encoder from robopoker/PostgreSQL and
+  cannot honestly publish a minimum from the checked-in sparse bootstrap
+  artifacts. This increment converts `F-007` to `- [!]` so the active queue no
+  longer implies the poker side can be closed from repo-local evidence alone.
+  Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- quality_benchmark`; `cargo test -p myosu-games-poker --quiet benchmark_reports_sparse_encoder_failure_cleanly`; `bash .github/scripts/check_plan_quality.sh`.
+  Commit: `PENDING`
+
 - `RES-003` Closed the poker-only quality-benchmark follow-up by adding a
   repo-owned full-encoder path instead of pretending the sparse bootstrap
   artifacts are sufficient. The poker crate now has
