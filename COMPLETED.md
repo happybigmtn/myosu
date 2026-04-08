@@ -13,7 +13,7 @@
   task from
   [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `! grep -q "fabro run" README.md && grep -q "Prerequisites" README.md && grep -q "myosu-games-kuhn" README.md`; `cargo test -p myosu-games-kuhn --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`; `printf 'quit\n' | SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- pipe`.
-  Commit: `PENDING`
+  Commit: `28f4041`
 
 - `GATE-003` Verified the Phase 2 hardening gate against the live repo state,
   recorded the decision in
