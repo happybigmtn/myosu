@@ -20,7 +20,7 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Research Gates (externally blocked or long-horizon)
 
-- [ ] `RES-001` Token economics decision document
+- [!] `RES-001` Token economics decision document
 
   Spec: `specs/070426-emission-yuma-consensus.md`
   Why now: The token-economics spec is a research spec. It identifies 8 design axes that must be decided before `NoOpSwap` can be replaced. ADR 008 exists as `Proposed` but requires multi-contributor review. This is the correct next step but is externally blocked.
@@ -32,24 +32,13 @@ Specs: gen-20260408-013810/specs/080426-*.md
   Verification: Review-based (no code commands).
   Required tests: None (research task).
   Dependencies: None (runs independently of all phases).
-  Blocker: External human review. Cannot be self-closed by automated work.
+  Blocker (2026-04-08, re-verified 2026-04-08): `docs/adr/008-future-token-economics-direction.md`
+  still says `Status: Proposed` and `Deciders: pending maintainer review required by
+  specs/050426-token-economics.md`. A repo search across `docs/adr/README.md`,
+  `ops/decision_log.md`, and `.github/` still finds no recorded two-contributor review, so the
+  acceptance criteria cannot be closed by automated work.
   Estimated scope: L
   Completion signal: Decision document accepted, NoOpSwap replacement work allowed to start.
-
-- [ ] `RES-002` Polkadot SDK fork patch classification
-
-  Spec: `specs/070426-runtime-architecture.md`
-  Why now: The opentensor polkadot-sdk fork (rev `71629fd`) has 21 fork-only commits touching consensus-critical paths. ADR 009 documents the delta but individual patches are not classified. Classification must happen before any migration attempt.
-  Codebase evidence: `docs/adr/009-polkadot-sdk-migration-feasibility.md` (8.8K). WORKLIST.md `CHAIN-SDK-001` recommends starting with patch classification. `Cargo.toml` pins to opentensor fork.
-  Owns: Classify each of the 21 fork-only commits as: "Needed by myosu" (with rationale), "Subtensor-specific" (safe to drop), or "Uncertain" (needs investigation). Propose migration timeline. Update ADR 009.
-  Integration touchpoints: `docs/adr/009-polkadot-sdk-migration-feasibility.md`, WORKLIST.md `CHAIN-SDK-001`.
-  Scope boundary: Research and classification only. Do not change polkadot-sdk pin. Do not attempt migration.
-  Acceptance criteria: (1) Each of 21 commits classified. (2) Migration timeline proposed. (3) ADR 009 updated with classification table. (4) WORKLIST.md `CHAIN-SDK-001` resolved.
-  Verification: Research task — verify ADR 009 has classification table.
-  Required tests: None.
-  Dependencies: None (runs independently).
-  Estimated scope: M
-  Completion signal: Each fork commit is classified, migration path is clear.
 
 - [ ] `RES-003` Poker quality benchmark (blocked on encoder artifacts)
 
@@ -69,7 +58,7 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ---
 
-- [ ] `F-003` Token economics decision document
+- [!] `F-003` Token economics decision document
 
   Spec: `specs/050426-token-economics.md`
   Why now: The token-economics spec is explicitly a research spec, not an implementation spec. It identifies 8+ design axes (single vs dual token, AMM type, fee model, registration cost, emission schedule) that must be decided before `NoOpSwap` can be replaced. No implementation work should begin until this decision document exists.
@@ -81,7 +70,13 @@ Specs: gen-20260408-013810/specs/080426-*.md
   Verification: Review-based.
   Required tests: None (research task).
   Dependencies: P-002 (emission understanding informs economic model).
-  Blocker (2026-04-05, re-verified 2026-04-05): `docs/adr/008-future-token-economics-direction.md` now records the repo-local recommendation, but it still says `Status: Proposed` and `Deciders: pending maintainer review required by specs/050426-token-economics.md`. A repo search found no recorded multi-contributor signoff in `docs/adr/README.md`, `ops/decision_log.md`, or `.github/`. The spec requires review by at least two contributors with context before `F-003` can be removed from the queue, so this remains blocked on external review rather than code changes.
+  Blocker (2026-04-05, re-verified 2026-04-08): `docs/adr/008-future-token-economics-direction.md`
+  records the repo-local recommendation, but it still says `Status: Proposed` and
+  `Deciders: pending maintainer review required by specs/050426-token-economics.md`. A repo
+  search found no recorded multi-contributor signoff in `docs/adr/README.md`,
+  `ops/decision_log.md`, or `.github/`. The spec requires review by at least two contributors
+  with context before `F-003` can be removed from the queue, so this remains blocked on external
+  review rather than code changes.
   Estimated scope: L
   Completion signal: Decision document exists, the multi-contributor review is recorded, and only then is `NoOpSwap` replacement work allowed to start.
 

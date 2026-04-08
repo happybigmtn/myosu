@@ -1,5 +1,21 @@
 # COMPLETED
 
+- `RES-002` Classified the 21 fork-only `opentensor/polkadot-sdk` commits in
+  [ADR 009](/home/r/coding/myosu/docs/adr/009-polkadot-sdk-migration-feasibility.md)
+  against `upstream/stable2506`, refreshed the audit counts from the live fork
+  checkout (`21` fork-only / `49` upstream-only as of 2026-04-08), and turned
+  the old feasibility note into a commit-level migration map: `10` patches are
+  currently needed by myosu, `8` are safe-drop candidates, and `3` remain
+  uncertain. The increment also resolved
+  `WORKLIST.md` `CHAIN-SDK-001`, recorded the classification outcome in
+  [ops/decision_log.md](/home/r/coding/myosu/ops/decision_log.md), and made
+  the active queue truthful by marking the externally blocked token-economics
+  review tasks `RES-001` and `F-003` as blocked in
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md) instead
+  of leaving them as runnable.
+  Validation: `git -C /tmp/polkadot-sdk-audit rev-list --left-right --count 71629fd93b6c12a362a5cfb6331accef9b2b2b61...upstream/stable2506`; `base=$(git -C /tmp/polkadot-sdk-audit merge-base 71629fd93b6c12a362a5cfb6331accef9b2b2b61 upstream/stable2506) && git -C /tmp/polkadot-sdk-audit log --reverse --format='%H%x09%s' ${base}..71629fd93b6c12a362a5cfb6331accef9b2b2b61`; `rg -n "DispatchGuard =|copy_keys\\(|raw_public_keys|key_phrase_by_type|initial_consensus|HardForks::new_initial_set_id|skip_block_justifications|SingleState" crates/myosu-chain -g '!target'`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`.
+  Commit: `0c40de1`
+
 - `OPS-003` Added a repo-owned container packaging path for the stage-0
   operator workflow with a multi-stage
   [Dockerfile](/home/r/coding/myosu/Dockerfile), a single-host

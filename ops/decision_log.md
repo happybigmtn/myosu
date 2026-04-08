@@ -1,5 +1,19 @@
 # Myosu Decision Log
 
+## 2026-04-08: Classify the opentensor polkadot-sdk fork before any migration
+
+Decision: Keep the current `opentensor/polkadot-sdk` pin through stage-0 and
+record a commit-level classification before any upstream re-pin attempt.
+Classification outcome against `upstream/stable2506`: 10 commits are currently
+needed by myosu, 8 are safe-drop candidates, and 3 remain uncertain. The
+needed set is concentrated in four live surfaces already used by this repo:
+GRANDPA warp/block-import patches, `sc-keystore` public helpers, repeated
+`sc-cli` runner creation for Aura/Babe restart flow, and the FRAME
+dispatch-guard support used by `CheckColdkeySwap`. The remaining ambiguity is
+now focused, not broad: decide whether the checked-in Aura->Babe transition
+path is still an owned feature, and settle the non-local txpool replacement
+policy before opening a migration spike.
+
 ## 2026-03-17: Design reimagination — design.md is the vision, codexpoker is the engine
 
 Decision: After initial reconciliation that pulled design toward codexpoker's
