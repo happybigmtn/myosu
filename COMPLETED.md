@@ -17,7 +17,7 @@
   [AGENTS.md](/home/r/coding/myosu/AGENTS.md) now point at that compose-based
   proof surface instead of source-only setup.
   Validation: `docker build --target chain-runtime -t myosu-chain .`; `docker build --target miner-runtime -t myosu-miner .`; `docker build --target validator-runtime -t myosu-validator .`; `docker compose up --build --abort-on-container-exit --exit-code-from validator`; `docker image inspect myosu-chain myosu-miner myosu-validator --format '{{.RepoTags}} {{.Size}}'`; `docker compose down -v`; `bash .github/scripts/check_doctrine_integrity.sh`.
-  Commit: `691bba2`
+  Implementation commit: `4fff63d`
 
 - `OPS-001` Reworked
   [README.md](/home/r/coding/myosu/README.md) into a truthful onboarding
