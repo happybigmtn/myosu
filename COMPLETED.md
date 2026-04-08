@@ -1,5 +1,18 @@
 # COMPLETED
 
+- `EMIT-001` Closed the stage-0 emission dust policy with
+  [ADR 011](/home/r/coding/myosu/docs/adr/011-emission-dust-policy.md): the
+  coinbase split now closes its integer remainder in the validator bucket
+  instead of dropping up to 2 rao per accrued block, the `try_state`
+  `TotalIssuance` alert delta tightened from `1_000` rao to `1`, and the
+  pallet/E2E emission proofs now enforce the exact-budget contract rather than
+  a wide rounding tolerance. Updated
+  [WORKLIST.md](/home/r/coding/myosu/WORKLIST.md) to resolve `EM-DUST-001` and
+  removed `EMIT-001` from
+  [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `test -f docs/adr/011-emission-dust-policy.md`; `cargo test -p pallet-game-solver --quiet -- truncation`; `cargo test -p pallet-game-solver --quiet -- stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget`; `bash tests/e2e/emission_flow.sh`; `bash .github/scripts/check_doctrine_integrity.sh`.
+  Commit: `PENDING`
+
 - `GATE-001` Verified the Phase 1 cleanup gate and recorded the decision in
   [ops/evidence/gate-001-phase-1-checkpoint-2026-04-08.md](/home/r/coding/myosu/ops/evidence/gate-001-phase-1-checkpoint-2026-04-08.md):
   Phase 1 is complete and Phase 2 can begin. The gate surfaced two truthful

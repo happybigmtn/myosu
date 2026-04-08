@@ -96,4 +96,5 @@ without cause.
 - `008-future-token-economics-direction.md`: proposed post-stage-0 token-economics direction and migration away from the noop swap
 - `009-polkadot-sdk-migration-feasibility.md`: hold the opentensor polkadot-sdk fork through stage-0 until the fork-only patch set and the 4-authority finality proof are understood
 - `010-inv-004-stage0-ci-enforcement.md`: keep the solver-gameplay boundary enforced by CI and invariant tests for stage-0
+- `011-emission-dust-policy.md`: close the stage-0 coinbase split remainder in the validator bucket instead of dropping it as dust
 - `stage-2-roadmap.md`: supporting roadmap for the next major architecture decisions after stage 1

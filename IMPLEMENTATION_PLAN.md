@@ -12,27 +12,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 2: Harden and Measure
 
-- [ ] `EMIT-001` Emission dust policy decision
-
-  Spec: `specs/070426-emission-yuma-consensus.md`
-  Why now: U96F32 to u64 floor conversion loses up to 2 rao per accrued block (6 rao per default tempo-2 epoch). The `try_state` threshold is set to 1000 rao intentionally above the measured drift. WORKLIST.md `EM-DUST-001` defers this decision. The three options are: accept and document, accumulate in dust account, or round-robin rounding.
-  Codebase evidence: `tou64!` macro in `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs` uses `saturating_to_num::<u64>()` (floors). `cargo test -p pallet-game-solver -- truncation` exercises the sweep. `try_state` threshold at 1000 rao in game-solver. WORKLIST.md `EM-DUST-001` tracks the deferral.
-  Owns: (1) Choose one of the three options (or propose a fourth). (2) Write ADR 011 documenting the decision with rationale. (3) If option 1 (accept): tighten `try_state` threshold from 1000 rao to a value justified by measured drift. (4) If option 2/3: implement with unit tests proving sum(distributions) == block_emission * epochs within 1 rao. (5) Resolve WORKLIST.md `EM-DUST-001`.
-  Integration touchpoints: `pallets/game-solver/src/coinbase/run_coinbase.rs`, `try_state` hook in game-solver, WORKLIST.md.
-  Scope boundary: Dust policy only. Do not change emission distribution logic, NoOpSwap behavior, or epoch mechanics.
-  Acceptance criteria: (1) ADR 011 exists with chosen option and rationale. (2) `try_state` threshold is justified by measured data. (3) `cargo test -p pallet-game-solver -- truncation --quiet` passes. (4) `bash tests/e2e/emission_flow.sh` passes. (5) WORKLIST.md `EM-DUST-001` resolved.
-  Verification:
-  ```bash
-  test -f docs/adr/011-emission-dust-policy.md
-  cargo test -p pallet-game-solver -- truncation --quiet
-  bash tests/e2e/emission_flow.sh
-  grep -q "EM-DUST-001" WORKLIST.md && grep "EM-DUST-001" WORKLIST.md | grep -qi "resolved\|closed\|decided"
-  ```
-  Required tests: Truncation sweep tests pass. E2E emission flow passes. If option 2/3: new unit tests proving sum invariant.
-  Dependencies: GATE-001.
-  Estimated scope: S
-  Completion signal: Dust is accounted for, threshold is justified.
-
 - [ ] `TEST-001` HTTP axon security tests
 
   Spec: `specs/070426-miner-subsystem.md`

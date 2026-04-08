@@ -15,6 +15,7 @@ type DividendDistribution<AccountId> = (
     BTreeMap<AccountId, AlphaCurrency>,
     (BTreeMap<AccountId, U96F32>, BTreeMap<AccountId, U96F32>),
 );
+type IntegerEmissionSplit = (AlphaCurrency, AlphaCurrency, AlphaCurrency, AlphaCurrency);
 
 pub struct CoinbaseSummary {
     pub current_block: u64,
@@ -34,14 +35,33 @@ macro_rules! asfloat {
     };
 }
 
-// Stage-0 floors every U96F32 -> u64 storage write here instead of carrying dust
-// forward. The truncation sweep in `stage_0_coinbase_truncation_drift_stays_below_two_rao_per_block_sweep`
-// currently measures a worst case of 2 rao lost per accrued block on the live
-// owner/server/validator split, which is 6 rao over the default tempo-2 epoch.
+// Stage-0 still floors individual fixed-point writes, but the emission split
+// closes its integer remainder explicitly so those floors do not silently leak
+// whole rao out of the accrued epoch budget.
 macro_rules! tou64 {
     ($val:expr) => {
         $val.saturating_to_num::<u64>()
     };
+}
+
+pub(crate) fn close_integer_emission_split(
+    alpha_created: AlphaCurrency,
+    owner_cut: U96F32,
+    server_alpha: U96F32,
+    root_alpha: U96F32,
+) -> IntegerEmissionSplit {
+    let owner_cut = AlphaCurrency::from(tou64!(owner_cut));
+    let server_alpha = AlphaCurrency::from(tou64!(server_alpha));
+    let root_alpha = AlphaCurrency::from(tou64!(root_alpha));
+    let pre_validator_total = owner_cut
+        .saturating_add(server_alpha)
+        .saturating_add(root_alpha);
+
+    debug_assert!(pre_validator_total <= alpha_created);
+
+    let validator_alpha = alpha_created.saturating_sub(pre_validator_total);
+
+    (owner_cut, server_alpha, validator_alpha, root_alpha)
 }
 
 impl<T: Config> Pallet<T> {
@@ -228,7 +248,6 @@ impl<T: Config> Pallet<T> {
         for netuid_i in subnets_to_emit_to.iter() {
             // Get alpha_out for this block.
             let mut alpha_out_i: U96F32 = *alpha_out.get(netuid_i).unwrap_or(&asfloat!(0));
-
             let alpha_created: AlphaCurrency = AlphaCurrency::from(tou64!(alpha_out_i));
             SubnetAlphaOutEmission::<T>::insert(*netuid_i, alpha_created);
             SubnetAlphaOut::<T>::mutate(*netuid_i, |total| {
@@ -240,10 +259,6 @@ impl<T: Config> Pallet<T> {
             log::debug!("owner_cut_i: {owner_cut_i:?}");
             // Deduct owner cut from alpha_out.
             alpha_out_i = alpha_out_i.saturating_sub(owner_cut_i);
-            // Accumulate the owner cut in pending.
-            PendingOwnerCut::<T>::mutate(*netuid_i, |total| {
-                *total = total.saturating_add(tou64!(owner_cut_i).into());
-            });
 
             // Get root proportional dividends.
             let root_proportion = Self::root_proportion(*netuid_i);
@@ -265,24 +280,38 @@ impl<T: Config> Pallet<T> {
             // The alpha validators don't get the root alpha.
             let pending_validator_alpha = total_validator_alpha.saturating_sub(root_alpha);
             log::debug!("pending_validator_alpha: {pending_validator_alpha:?}");
+            let (
+                owner_cut_distributed,
+                server_alpha_distributed,
+                validator_alpha_distributed,
+                root_alpha_distributed,
+            ) = close_integer_emission_split(
+                alpha_created,
+                owner_cut_i,
+                pending_server_alpha,
+                root_alpha,
+            );
 
             // Accumulate the server alpha emission.
             PendingServerEmission::<T>::mutate(*netuid_i, |total| {
-                *total = total.saturating_add(tou64!(pending_server_alpha).into());
+                *total = total.saturating_add(server_alpha_distributed);
             });
             // Accumulate the validator alpha emission.
             PendingValidatorEmission::<T>::mutate(*netuid_i, |total| {
-                *total = total.saturating_add(tou64!(pending_validator_alpha).into());
+                *total = total.saturating_add(validator_alpha_distributed);
+            });
+            PendingOwnerCut::<T>::mutate(*netuid_i, |total| {
+                *total = total.saturating_add(owner_cut_distributed);
             });
 
             if root_sell_flag {
                 // Only accumulate root alpha divs if root sell is allowed.
                 PendingRootAlphaDivs::<T>::mutate(*netuid_i, |total| {
-                    *total = total.saturating_add(tou64!(root_alpha).into());
+                    *total = total.saturating_add(root_alpha_distributed);
                 });
             } else {
                 // If we are not selling the root alpha, we should recycle it.
-                Self::recycle_subnet_alpha(*netuid_i, AlphaCurrency::from(tou64!(root_alpha)));
+                Self::recycle_subnet_alpha(*netuid_i, root_alpha_distributed);
             }
         }
     }

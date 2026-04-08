@@ -69,11 +69,10 @@ pub const MAX_ROOT_CLAIM_THRESHOLD: u64 = 10_000_000;
 
 pub const MAX_CRV3_COMMIT_SIZE_BYTES: u32 = 5000;
 
-// Stage-0 intentionally floors coinbase writes instead of carrying dust
-// forward. `try_state` uses this as an alert threshold until EM-DUST-001 lands
-// a real dust-accounting policy.
+// Stage-0 now closes the coinbase split remainder explicitly, so try_state only
+// leaves a single-rao alert margin for unexpected accounting drift.
 #[cfg_attr(not(any(test, feature = "try-runtime")), allow(dead_code))]
-pub(crate) const TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA: u64 = 1_000;
+pub(crate) const TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA: u64 = 1;
 
 /// Operator-visible reasons an epoch pass was skipped instead of mutating state.
 #[derive(Encode, Decode, DecodeWithMemTracking, Clone, Copy, PartialEq, Eq, Debug, TypeInfo)]

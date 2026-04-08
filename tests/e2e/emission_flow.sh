@@ -329,7 +329,7 @@ expected_emission_sum=$((server_alpha_distributed + validator_alpha_distributed)
 actual_total_distribution=$((expected_emission_sum + owner_cut_distributed))
 accrual_blocks=$((tempo + 1))
 expected_epoch_distribution=$((block_emission * accrual_blocks))
-rounding_tolerance=$((accrual_blocks * 8))
+rounding_tolerance=1
 
 if (( emission_sum != expected_emission_sum )); then
   echo "emission sum mismatch: storage=${emission_sum} log=${expected_emission_sum}" >&2

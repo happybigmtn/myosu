@@ -273,16 +273,17 @@ fn stage_0_pending_distribution_loss(block_emission: u64, blocks: u64) -> u64 {
         let owner_cut_amount = block_emission.saturating_mul(owner_cut);
         let remaining = block_emission.saturating_sub(owner_cut_amount);
         let server_amount = remaining.saturating_mul(miner_split);
-        let validator_amount = remaining.saturating_sub(server_amount);
+        let owner_cut_rao = owner_cut_amount.saturating_to_num::<u64>();
+        let server_rao = server_amount.saturating_to_num::<u64>();
+        let validator_rao = block_emission
+            .saturating_to_num::<u64>()
+            .saturating_sub(owner_cut_rao)
+            .saturating_sub(server_rao);
 
         distributed = distributed
-            .saturating_add(U96F32::from_num(
-                owner_cut_amount.saturating_to_num::<u64>(),
-            ))
-            .saturating_add(U96F32::from_num(server_amount.saturating_to_num::<u64>()))
-            .saturating_add(U96F32::from_num(
-                validator_amount.saturating_to_num::<u64>(),
-            ));
+            .saturating_add(U96F32::from_num(owner_cut_rao))
+            .saturating_add(U96F32::from_num(server_rao))
+            .saturating_add(U96F32::from_num(validator_rao));
     }
 
     block_emission
@@ -595,35 +596,26 @@ fn stage_0_coinbase_zero_dividend_distribution_falls_back_to_weighted_stake() {
 }
 
 #[test]
-fn stage_0_coinbase_truncation_drift_stays_below_two_rao_per_block_sweep() {
+fn stage_0_coinbase_truncation_dust_is_closed_exactly_sweep() {
     let block_counts = [1_u64, 3, 100, 1_000, 10_000];
 
     for block_count in block_counts {
-        let mut observed_max_drift = 0_u64;
-
         for block_emission in (1_u64..=128).chain([1_000_003_u64, 100_000_001].into_iter()) {
             let drift = stage_0_pending_distribution_loss(block_emission, block_count);
-            observed_max_drift = observed_max_drift.max(drift);
 
             assert!(
-                drift <= block_count.saturating_mul(2),
-                "truncation drift exceeded sweep budget: emission={} blocks={} drift={}",
+                drift == 0,
+                "dust policy should close the split remainder exactly: emission={} blocks={} drift={}",
                 block_emission,
                 block_count,
                 drift
             );
         }
-
-        assert_eq!(
-            observed_max_drift,
-            block_count.saturating_mul(2),
-            "sweep should keep measuring the live worst-case drift envelope"
-        );
     }
 }
 
 #[test]
-fn stage_0_try_state_delta_stays_well_above_default_epoch_drift() {
+fn stage_0_try_state_delta_matches_exact_accounting_policy() {
     let default_epoch_blocks = 3_u64;
     let measured_worst_case = (1_u64..=128)
         .chain([1_000_003_u64, 100_000_001])
@@ -634,12 +626,12 @@ fn stage_0_try_state_delta_stays_well_above_default_epoch_drift() {
         .expect("sweep should produce a measured drift");
 
     assert_eq!(
-        measured_worst_case, 6,
-        "default tempo-2 epochs should keep measuring the live 6-rao dust envelope"
+        measured_worst_case, 0,
+        "the accepted dust policy should close the split remainder across the default epoch"
     );
     assert!(
-        crate::TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA >= measured_worst_case.saturating_mul(5),
-        "try-state alert threshold should stay comfortably above the measured default-epoch drift"
+        crate::TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA <= 1,
+        "try-state should stay tight once stage-0 dust is explicitly accounted for"
     );
 }
 
@@ -779,24 +771,12 @@ fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
         let actual_total_distribution =
             expected_emission_sum.saturating_add(u64::from(summary.owner_cut_distributed));
         let expected_epoch_distribution = block_emission.saturating_mul(accrual_blocks);
-        let rounding_tolerance = accrual_blocks.saturating_mul(2);
-
         assert_eq!(summary.drained_epoch_count, 1);
         assert_eq!(u64::from(summary.root_alpha_distributed), 0);
         assert_eq!(emission_sum, expected_emission_sum);
-        assert!(
-            actual_total_distribution <= expected_epoch_distribution,
-            "distribution exceeded accrued budget: actual={} expected={}",
-            actual_total_distribution,
-            expected_epoch_distribution
-        );
-        assert!(
-            expected_epoch_distribution.saturating_sub(actual_total_distribution)
-                <= rounding_tolerance,
-            "distribution drift exceeded tolerance: actual={} expected={} tolerance={}",
-            actual_total_distribution,
-            expected_epoch_distribution,
-            rounding_tolerance
+        assert_eq!(
+            actual_total_distribution, expected_epoch_distribution,
+            "distribution should close the accrued budget exactly"
         );
         assert!(
             Incentive::<Test>::get(NetUidStorageIndex::from(netuid))
