@@ -171,7 +171,7 @@ for the actual current system proof:
 
 ```bash
 SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
-env SKIP_WASM_BUILD=1 target/debug/myosu-chain --stage0-local-loop-smoke
+env SKIP_WASM_BUILD=1 "${CARGO_TARGET_DIR:-target}/debug/myosu-chain" --stage0-local-loop-smoke
 ```
 
 ## What The Key Surface Means Today

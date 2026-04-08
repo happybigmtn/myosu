@@ -6,6 +6,8 @@ helpers_dir="$repo_root/tests/e2e/helpers"
 runtime_dir="${MYOSU_E2E_DIR:-$repo_root/target/e2e/devnet}"
 state_file="$runtime_dir/devnet.env"
 work_parent="$repo_root/target/e2e"
+cargo_target_dir="${CARGO_TARGET_DIR:-$repo_root/target}"
+cargo_bin_dir="$cargo_target_dir/debug"
 driver_examples_dir="$repo_root/crates/myosu-chain-client/examples"
 driver_example_name="local_loop_driver_$$"
 driver_source="$driver_examples_dir/${driver_example_name}.rs"
@@ -281,7 +283,7 @@ echo "running miner bootstrap"
 miner_output="$(
   run_logged \
     "miner_bootstrap" \
-    env SKIP_WASM_BUILD=1 "$repo_root/target/debug/myosu-miner" \
+    env SKIP_WASM_BUILD=1 "$cargo_bin_dir/myosu-miner" \
     --chain "$chain_endpoint" \
     --subnet "$subnet" \
     --key "$miner_key" \
@@ -311,7 +313,7 @@ echo "enabling subnet staking"
 owner_validator_output="$(
   run_logged \
     "owner_enable_subtoken" \
-    env SKIP_WASM_BUILD=1 "$repo_root/target/debug/myosu-validator" \
+    env SKIP_WASM_BUILD=1 "$cargo_bin_dir/myosu-validator" \
     --chain "$chain_endpoint" \
     --subnet "$subnet" \
     --key "$owner_key" \
@@ -324,7 +326,7 @@ echo "running validator scoring and weight submission"
 validator_output="$(
   run_logged \
     "validator_bootstrap" \
-    env SKIP_WASM_BUILD=1 "$repo_root/target/debug/myosu-validator" \
+    env SKIP_WASM_BUILD=1 "$cargo_bin_dir/myosu-validator" \
     --chain "$chain_endpoint" \
     --subnet "$subnet" \
     --key "$validator_key" \
@@ -352,7 +354,7 @@ assert_contains "$verification_output" "weights=[(${miner_uid}, 65535)]" "verify
 echo "starting live miner HTTP axon"
 (
   cd "$repo_root"
-  env SKIP_WASM_BUILD=1 "$repo_root/target/debug/myosu-miner" \
+  env SKIP_WASM_BUILD=1 "$cargo_bin_dir/myosu-miner" \
     --chain "$chain_endpoint" \
     --subnet "$subnet" \
     --key "$miner_key" \
@@ -369,7 +371,7 @@ echo "running gameplay smoke"
 play_output="$(
   run_logged \
     "play_smoke" \
-    env SKIP_WASM_BUILD=1 "$repo_root/target/debug/myosu-play" \
+    env SKIP_WASM_BUILD=1 "$cargo_bin_dir/myosu-play" \
     --smoke-test \
     --chain "$chain_endpoint" \
     --subnet "$subnet" \

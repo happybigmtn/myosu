@@ -4,6 +4,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 helpers_dir="$repo_root/tests/e2e/helpers"
 work_parent="$repo_root/target/e2e"
+cargo_target_dir="${CARGO_TARGET_DIR:-$repo_root/target}"
+cargo_bin_dir="$cargo_target_dir/debug"
 driver_examples_dir="$repo_root/crates/myosu-chain-client/examples"
 driver_example_name="validator_determinism_driver_$$"
 driver_source="$driver_examples_dir/${driver_example_name}.rs"
@@ -219,7 +221,7 @@ run_game_case() {
   local miner_command=(
     env
     SKIP_WASM_BUILD=1
-    "$repo_root/target/debug/myosu-miner"
+    "$cargo_bin_dir/myosu-miner"
     --chain "$chain_endpoint"
     --subnet "$subnet"
     --key "$miner_key"
@@ -264,7 +266,7 @@ run_game_case() {
   owner_validator_output="$(
     run_logged \
       "${game_slug}_owner_enable_subtoken" \
-      env SKIP_WASM_BUILD=1 "$repo_root/target/debug/myosu-validator" \
+      env SKIP_WASM_BUILD=1 "$cargo_bin_dir/myosu-validator" \
       --chain "$chain_endpoint" \
       --subnet "$subnet" \
       --key "$owner_key" \
@@ -277,7 +279,7 @@ run_game_case() {
   local validator_a_command=(
     env
     SKIP_WASM_BUILD=1
-    "$repo_root/target/debug/myosu-validator"
+    "$cargo_bin_dir/myosu-validator"
     --chain "$chain_endpoint"
     --subnet "$subnet"
     --key "$validator_a_key"
@@ -311,7 +313,7 @@ run_game_case() {
   local validator_b_command=(
     env
     SKIP_WASM_BUILD=1
-    "$repo_root/target/debug/myosu-validator"
+    "$cargo_bin_dir/myosu-validator"
     --chain "$chain_endpoint"
     --subnet "$subnet"
     --key "$validator_b_key"

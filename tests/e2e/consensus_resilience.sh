@@ -4,8 +4,9 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 work_parent="$repo_root/target/e2e"
 work_root=""
-node_bin="$repo_root/target/debug/myosu-chain"
-runtime_wasm="$repo_root/target/debug/wbuild/myosu-chain-runtime/myosu_chain_runtime.wasm"
+cargo_target_dir="${CARGO_TARGET_DIR:-$repo_root/target}"
+node_bin="$cargo_target_dir/debug/myosu-chain"
+runtime_wasm="$cargo_target_dir/debug/wbuild/myosu-chain-runtime/myosu_chain_runtime.wasm"
 
 rpc_ready_timeout="${MYOSU_E2E_RPC_READY_TIMEOUT:-120}"
 initial_finality_timeout="${MYOSU_E2E_INITIAL_FINALITY_TIMEOUT:-120}"

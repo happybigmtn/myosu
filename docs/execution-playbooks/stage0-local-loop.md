@@ -24,7 +24,7 @@ SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
 If you need the direct executable proof and summary output:
 
 ```bash
-env SKIP_WASM_BUILD=1 target/debug/myosu-chain --stage0-local-loop-smoke
+env SKIP_WASM_BUILD=1 "${CARGO_TARGET_DIR:-target}/debug/myosu-chain" --stage0-local-loop-smoke
 ```
 
 ## Proof

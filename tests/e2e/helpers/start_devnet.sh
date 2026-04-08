@@ -7,6 +7,8 @@ state_file="$runtime_dir/devnet.env"
 pid_file="$runtime_dir/devnet.pid"
 log_file="$runtime_dir/devnet.log"
 tmp_root="$runtime_dir/tmp"
+cargo_target_dir="${CARGO_TARGET_DIR:-$repo_root/target}"
+node_bin="$cargo_target_dir/debug/myosu-chain"
 rpc_host="${MYOSU_E2E_RPC_HOST:-127.0.0.1}"
 rpc_port="${MYOSU_E2E_RPC_PORT:-9955}"
 p2p_port="${MYOSU_E2E_P2P_PORT:-30444}"
@@ -37,9 +39,14 @@ echo "building myosu-chain runtime wasm cache"
 env -u SKIP_WASM_BUILD cargo build -p myosu-chain-runtime --quiet
 echo "building myosu-chain node (fast-runtime)"
 SKIP_WASM_BUILD=1 cargo build -p myosu-chain --features fast-runtime --quiet
+if [[ ! -x "$node_bin" ]]; then
+  echo "missing built node binary: $node_bin" >&2
+  exit 1
+fi
 
 node_pid="$(
   REPO_ROOT="$repo_root" \
+  NODE_BIN="$node_bin" \
   TMP_ROOT="$tmp_root" \
   LOG_FILE="$log_file" \
   RPC_PORT="$rpc_port" \
@@ -50,6 +57,7 @@ import os
 import subprocess
 
 repo_root = os.environ["REPO_ROOT"]
+node_bin = os.environ["NODE_BIN"]
 tmp_root = os.environ["TMP_ROOT"]
 log_file = os.environ["LOG_FILE"]
 rpc_port = os.environ["RPC_PORT"]
@@ -61,7 +69,7 @@ env["TMPDIR"] = tmp_root
 with open(log_file, "ab", buffering=0) as log_handle:
     process = subprocess.Popen(
         [
-            os.path.join(repo_root, "target/debug/myosu-chain"),
+            node_bin,
             "--dev",
             "--force-authoring",
             "--rpc-port",

@@ -1,5 +1,19 @@
 # COMPLETED
 
+- `GATE-001` Verified the Phase 1 cleanup gate and recorded the decision in
+  [ops/evidence/gate-001-phase-1-checkpoint-2026-04-08.md](/home/r/coding/myosu/ops/evidence/gate-001-phase-1-checkpoint-2026-04-08.md):
+  Phase 1 is complete and Phase 2 can begin. The gate surfaced two truthful
+  fixes needed to finish verification on this machine: the repo-owned E2E shell
+  proofs now resolve binaries from `${CARGO_TARGET_DIR:-$repo_root/target}`
+  instead of assuming a repo-local `target/`, and an unnecessary dead-code
+  warning in [crates/myosu-chain/pallets/utility/src/tests.rs](/home/r/coding/myosu/crates/myosu-chain/pallets/utility/src/tests.rs)
+  was removed so the workspace suite stays warning-clean. The decision artifact
+  also records the current spec/code conflict: the task's authoritative spec
+  still talks about the old `pallet_subtensor` alias, while the live runtime and
+  queue acceptance criteria correctly use `pallet_game_solver` / `GameSolver`.
+  Validation: `test ! -d crates/myosu-chain/pallets/subtensor`; `ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l`; `SKIP_WASM_BUILD=1 cargo check --workspace`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`; `cargo test -p pallet-game-solver --quiet -- stage_0`; `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet`; `bash tests/e2e/local_loop.sh`; `bash tests/e2e/emission_flow.sh`; `bash .github/scripts/check_doctrine_integrity.sh`.
+  Commit: `PENDING`
+
 - `DEBT-005` Cleaned the stale root documentation surfaces so they no longer
   present the nonexistent Fabro/Raspberry control plane as current repo truth:
   [AGENTS.md](/home/r/coding/myosu/AGENTS.md), [OS.md](/home/r/coding/myosu/OS.md),

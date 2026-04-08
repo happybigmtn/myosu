@@ -10,31 +10,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 1: Reduce and Clean
 
-- [ ] `GATE-001` Phase 1 decision gate checkpoint
-
-  Spec: `specs/070426-runtime-architecture.md`
-  Why now: Phase 1 makes structural changes — deleting 90K lines, renaming the core pallet, removing migrations, cleaning docs. Any of these could introduce subtle regressions. No Phase 2 work proceeds until this gate is green. This is a verification-only task, not an implementation task.
-  Codebase evidence: Verification against the state produced by DEBT-001 through DEBT-005.
-  Owns: Run the full verification suite and produce a decision artifact: either "Phase 1 complete, proceed to Phase 2" or "Phase 1 incomplete, rework needed: [list]."
-  Integration touchpoints: All modified files from DEBT-001 through DEBT-005.
-  Scope boundary: Verification only. No code changes. If failures are found, open new tasks — do not fix inline.
-  Acceptance criteria: (1) `pallet-subtensor` directory does not exist. (2) `pallet-game-solver` is the sole game-solving pallet. (3) No `pallet_subtensor` alias in active code paths. (4) Migration file count <= 3. (5) `SKIP_WASM_BUILD=1 cargo check --workspace` succeeds. (6) `SKIP_WASM_BUILD=1 cargo test --workspace --quiet` succeeds. (7) `cargo test -p pallet-game-solver --quiet -- stage_0` passes. (8) No root-level document references nonexistent paths without marking them as planned.
-  Verification:
-  ```bash
-  test ! -d crates/myosu-chain/pallets/subtensor
-  ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l
-  SKIP_WASM_BUILD=1 cargo check --workspace
-  SKIP_WASM_BUILD=1 cargo test --workspace --quiet
-  cargo test -p pallet-game-solver --quiet -- stage_0
-  SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
-  bash tests/e2e/local_loop.sh
-  bash tests/e2e/emission_flow.sh
-  ```
-  Required tests: Full workspace test suite, stage-0 flow, E2E local loop, E2E emission flow.
-  Dependencies: DEBT-001, DEBT-002, DEBT-003, DEBT-004, DEBT-005.
-  Estimated scope: XS
-  Completion signal: Decision artifact produced. Green = proceed to Phase 2.
-
 ### Phase 2: Harden and Measure
 
 - [ ] `EMIT-001` Emission dust policy decision
