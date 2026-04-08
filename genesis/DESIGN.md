@@ -1,224 +1,271 @@
 # Myosu Design
 
-Date: 2026-04-05
-
-This document describes the user-facing surfaces of myosu: the gameplay
-interface, the operator CLI surfaces, and the agent-native text protocol.
+Generated: 2026-04-07
+Source of truth: trunk @ 4e0b37f
 
 ---
 
 ## User-Facing Surfaces
 
-Myosu has four user-facing surfaces:
+Myosu has four distinct user-facing surfaces today, each at a different maturity level.
 
-1. **TUI gameplay** -- interactive terminal poker/game session with solver advisor
-2. **Pipe protocol** -- line-oriented text protocol for agent consumption
-3. **Operator CLI** -- key management, node operation, miner/validator setup
-4. **Chain RPC** -- WebSocket JSON-RPC for programmatic chain interaction
+### 1. Operator CLI Surface
 
----
+**Maturity: Functional, docs exist, packaging missing**
 
-## 1. TUI Gameplay (myosu-play train)
-
-### Screen Flow
+Operators interact with myosu through five binaries:
 
 ```
-Launch → Loading → Lobby → Table → (hand completes) → Lobby
-                     ↓
-              Onboarding (if no artifacts found)
+myosu-chain     — Substrate node (block production, RPC, consensus)
+myosu-miner     — Strategy training and serving
+myosu-validator  — Quality scoring and weight submission
+myosu-play      — Gameplay against trained bots
+myosu-keys      — Cryptographic key management
 ```
 
-### Screens
+Each binary produces structured operator-facing reports to stdout:
 
-| Screen | Content | Interaction |
-|--------|---------|-------------|
-| Loading | Spinner + status message | Automatic transition |
-| Onboarding | First-run guidance | Read-only |
-| Lobby | Session info, log messages | Type `1` to enter table |
-| Table | Game state + solver advisor | Legal actions, `/quit`, `/deal` |
-
-### Solver Advisor Overlay
-
-When artifact-backed strategy is available, the TUI shows:
-- Action distribution for the current information set
-- Recommended action (highest probability)
-- Live miner advice with staleness indicator (Fresh/Stale/Offline)
-
-The advisor is ON by default in train mode. This is the core value proposition:
-learning GTO through play with transparent strategy guidance.
-
-### Game Renderers
-
-Each game implements `GameRenderer`:
-- **Poker (NlheRenderer)**: Street progression (PREFLOP→FLOP→TURN→RIVER),
-  community cards, pot size, player stacks, action history, bet sizing
-- **Kuhn (KuhnRenderer)**: Card display, bet/check actions
-- **Liar's Dice (LiarsDiceRenderer)**: Dice display, bid/challenge actions
-
-### Live Advice Refresh
-
-When chain discovery finds a miner:
-- Background task polls miner axon every 250ms
-- Displays connectivity state: Fresh (green), Stale (yellow), Offline (red)
-- Shows age of last successful refresh
-- Emits `UpdateEvent::Status` and `UpdateEvent::Message` on transitions
-
----
-
-## 2. Pipe Protocol (myosu-play pipe)
-
-### Message Types
-
-| Direction | Prefix | Meaning |
-|-----------|--------|---------|
-| Output | `STATUS` | Startup status with metadata |
-| Output | `STATE` | Current game state |
-| Output | `ACTION` | Accepted action |
-| Output | `CLARIFY` | Ambiguous input with legal actions |
-| Output | `ERROR` | Invalid input with legal actions |
-| Output | `QUIT` | Session ended |
-| Input | action text | e.g. `fold`, `call`, `raise 6`, `bet`, `bid 1x4` |
-| Input | `/quit` or `quit` | End session |
-
-### State Output Format
-
-Poker example:
 ```
-STATE street=PREFLOP pot=3 hero_stack=99 villain_stack=98 actions=fold|call|raise 6|/quit recommend=call advisor=blueprint
+MINER myosu-miner bootstrap ok
+chain_endpoint=ws://127.0.0.1:9944
+subnet=7
+peers=0
+...
 ```
 
-Kuhn example:
+This report format is a stable contract — tests assert against the prefix strings. New operators can parse stdout to confirm each lifecycle step succeeded.
+
+**Current friction:** No pre-built binaries. No Docker images. Operators must compile from source with Rust nightly, WASM target, and protoc installed. Cold compilation takes 10-30 minutes depending on machine.
+
+### 2. TUI Gameplay Surface
+
+**Maturity: Functional, multi-game**
+
+The TUI (`myosu-play train` or `myosu-play`) launches a ratatui-based terminal interface:
+
 ```
-STATE game=kuhn_poker hero_card=K phase=betting actions=bet|check|/quit
+┌─ Game Selection ────────────────────────────┐
+│ Poker (NLHE Heads-Up)                       │
+│ Kuhn Poker                                  │
+│ Liar's Dice                                 │
+└─────────────────────────────────────────────┘
 ```
 
-Liar's Dice example:
+**Architecture:**
+- `myosu-tui` crate owns shell state, screen management, input, rendering, themes
+- Game-specific renderers implement `GameRenderer` trait per game
+- Blueprint files provide bot strategy (mmap'd, <1us lookup)
+- Pipe mode (`myosu-play pipe`) exposes structured JSON for agent consumption
+
+**Screen state machine:**
 ```
-STATE game=liars_dice hero_dice=2,5 total_dice=4 actions=bid 1x4|bid 1x5|challenge|/quit
+Welcome → GameSelect → Playing → HandResult → (next hand or quit)
 ```
 
-### Live Query Metadata
+The TUI uses crossterm for terminal events and ratatui for rendering. Theme tokens provide consistent styling. Shell state tracks game state, hand history, and player decisions.
 
-When chain discovery is active, state output includes:
+**Design decision:** Solver advisor (showing optimal action distributions during play) is intended ON by default in training mode, OFF by default in chain mode (to protect miner strategy privacy). The TUI shell infrastructure supports this but the advisor integration is not independently verified as working end-to-end.
+
+### 3. Pipe / Agent Surface
+
+**Maturity: Functional, protocol stable**
+
+The pipe surface (`myosu-play pipe`) accepts newline-delimited commands on stdin and produces structured JSON on stdout:
+
 ```
-live_query=live_http live_miner_advertised_endpoint=0.0.0.0:8080 live_miner_connect_endpoint=127.0.0.1:8080 live_miner_action_count=3 live_miner_recommended_edge=Call live_miner_recommended_action=call
+→ stdin:  deal
+← stdout: {"type":"deal","cards":["Ah","Ks"],"pot":3,"stack":98}
+→ stdin:  raise 10
+← stdout: {"type":"action","player":"hero","action":"raise","amount":10}
+← stdout: {"type":"action","player":"villain","action":"call","amount":10}
+...
+→ stdin:  quit
 ```
 
-### Agent Integration Pattern
+This surface is designed for AI agents and automated testing. The smoke test (`--smoke-test`) exercises this protocol end-to-end.
 
-An agent consumes myosu-play pipe mode by:
-1. Launching: `printf 'quit\n' | cargo run -p myosu-play -- pipe`
-2. Parsing `STATE` lines for game state
-3. Sending action text on stdin
-4. Parsing `ACTION` responses to confirm execution
-5. Using `recommend=` field for solver-backed advice
-6. Sending `quit` to cleanly exit
+**Design constraint:** Pipe output must be parseable by a stateless consumer. Each line is a complete JSON object. No multi-line messages. No binary framing.
 
----
+### 4. Chain RPC Surface
 
-## 3. Operator CLI Surfaces
+**Maturity: Functional, Substrate-standard**
 
-### myosu-keys
+The chain node exposes standard Substrate JSON-RPC on port 9944 (configurable). Custom RPC methods are inherited from subtensor:
 
-Key management for operator identity:
+- `neuronInfo_getNeuronsLite` — lightweight neuron info for all UIDs
+- `subnetInfo_getSubnetInfo` — subnet metadata
+- `subnetInfo_getSubnetHyperparams` — subnet configuration
+- `stakeInfo_getStakeInfoForColdkey` — stake queries
+- `delegateInfo_getDelegates` — delegation info
 
-| Command | Purpose |
-|---------|---------|
-| `create` | Generate new keypair |
-| `show-active` | Display active key address |
-| `list` | List all keys in keystore |
-| `switch-active` | Change active key |
-| `import-keyfile` | Import from JSON keyfile |
-| `import-mnemonic` | Import from 12-word mnemonic |
-| `import-raw-seed` | Import from raw seed hex |
-| `export-active-keyfile` | Export active key to JSON |
-| `print-bootstrap` | Print bootstrap metadata for subnet |
-| `change-password` | Change keystore password |
+The `myosu-chain-client` crate wraps these into typed Rust methods, but operators can also use any Substrate-compatible client (polkadot.js, subxt).
 
-All password inputs via environment variables (`MYOSU_KEY_PASSWORD`), never
-command-line arguments.
+## Information Architecture
 
-### myosu-miner
+### What operators need to know at each stage
 
-| Flag | Purpose |
-|------|---------|
-| `--chain` | RPC endpoint |
-| `--subnet` | Target subnet ID |
-| `--key` / `--key-config-dir` | Identity source |
-| `--register` | Register neuron on-chain |
-| `--serve-axon` | Publish axon endpoint |
-| `--port` | HTTP axon port |
-| `--data-dir` | Training artifact storage |
-| `--iterations` | MCCFR training iterations |
-| `--checkpoint` | Pre-trained checkpoint path |
-| `--game` | Game type (poker, liars-dice) |
+```
+T0 (First contact)
+├── README.md → "What is this?"
+├── docs/operator-guide/quickstart.md → "How do I run it?"
+└── docs/operator-guide/architecture.md → "How do the pieces fit?"
 
-### myosu-validator
+T1 (Running a node)
+├── myosu-chain --dev → Single authority
+├── Build-spec for devnet/testnet → Named multi-authority
+└── docs/operator-guide/troubleshooting.md → "What went wrong?"
 
-| Flag | Purpose |
-|------|---------|
-| `--chain` | RPC endpoint |
-| `--subnet` | Target subnet ID |
-| `--key` / `--key-config-dir` | Identity source |
-| `--register` | Register validator on-chain |
-| `--stake-amount` | Amount to stake |
-| `--submit-weights` | Submit weights after scoring |
-| `--encoder-dir` | Encoder artifact directory |
-| `--checkpoint` | Solver checkpoint path |
-| `--query-file` / `--response-file` | Wire-encoded artifacts to score |
-| `--game` | Game type (poker, liars-dice) |
+T2 (Running miner/validator)
+├── myosu-keys create → Generate identity
+├── myosu-miner → Register, train, serve
+├── myosu-validator → Score, submit weights
+└── CHANGELOG.md → "What changed since last release?"
 
-### myosu-play
+T3 (Understanding the protocol)
+├── INVARIANTS.md → Hard rules
+├── specs/ → Design decisions
+├── docs/adr/ → Architecture decision records
+└── AGENTS.md → System architecture
+```
 
-| Flag | Purpose |
-|------|---------|
-| `--smoke-test` | Run scripted proof |
-| `--game` | Game selection (poker, kuhn, liars-dice) |
-| `--chain` / `--subnet` | Enable miner discovery |
-| `--checkpoint` / `--encoder-dir` | Artifact-backed strategy |
-| `--require-artifact` | Fail if no artifacts |
-| `--require-discovery` | Fail if no chain miner |
-| `--require-live-query` | Fail if miner unreachable |
-| `train` | Interactive TUI mode |
-| `pipe` | Agent-native text protocol |
+### Documentation gaps in the current T0 path
 
----
+1. README does not list prerequisites (Rust, WASM target, protoc)
+2. README references `fabro run` commands that don't work
+3. The fastest meaningful test (`cargo test -p myosu-games-kuhn`) is not documented
+4. No "hello world" path that works in under 60 seconds
 
-## 4. Chain RPC Surface
+## Visual Design
 
-Stage-0 chain exposes standard Substrate JSON-RPC plus game-solver custom RPCs:
+The TUI uses a simple theme system (`myosu-tui/src/theme.rs`):
 
-| Method | Purpose |
-|--------|---------|
-| `gameSolver_getSubnetInfo` | Subnet metadata |
-| `gameSolver_getNeuronInfo` | Neuron state for a subnet |
-| `gameSolver_getWeights` | Current weight matrix |
-| `gameSolver_getStakeInfo` | Staking state |
+- Consistent color palette across all game renderers
+- Card rendering with suit symbols (unicode)
+- Box-drawing characters for table layout
+- Status bar with game state and hand counter
 
-The shared `myosu-chain-client` crate wraps these with typed helpers:
-- `probe_chain()`: Connectivity and subnet state check
-- `ensure_registered()`: Register neuron if not already registered
-- `ensure_serving()`: Publish axon endpoint
-- `submit_weights()`: Commit-reveal weight submission
+No web frontend exists. No design system beyond TUI theme tokens.
 
----
+## Key Interaction Flows
 
-## Design Principles
+### Miner Registration and Training
 
-1. **Agent = Human**: The pipe protocol and TUI share the same game renderer.
-   Any action a human can take in the TUI, an agent can take via pipe.
+```
+Operator                    Chain                   Miner Binary
+   │                          │                         │
+   ├─ myosu-keys create ──────┤                         │
+   │  (generates keypair)     │                         │
+   │                          │                         │
+   ├─ myosu-miner ────────────┤                         │
+   │                          │◄── probe (system_health)│
+   │                          │──► health response      │
+   │                          │                         │
+   │                          │◄── register (burned_register)
+   │                          │──► uid assigned         │
+   │                          │                         │
+   │                          │◄── serve_axon (set_axon_info)
+   │                          │──► axon published       │
+   │                          │                         │
+   │                          │         [training loop] │
+   │                          │         │ load encoder  │
+   │                          │         │ MCCFR step()  │
+   │                          │         │ checkpoint()  │
+   │                          │         └───────────────│
+   │                          │                         │
+   │◄─── TRAINING report ─────┤                         │
+   │   (epochs, exploitability)                         │
+```
 
-2. **Solver advisor ON by default**: Training mode shows action distributions
-   because learning GTO is the value proposition. Advisor is OFF by default
-   in chain/miner mode (miner privacy).
+### Validator Scoring and Weight Submission
 
-3. **Structured output**: Pipe mode uses key=value structured output parseable
-   by simple text tools. No JSON wrapping, no binary protocols for the
-   agent surface.
+```
+Validator Binary            Chain              Miner (via file or HTTP)
+   │                          │                         │
+   ├── probe ─────────────────┤                         │
+   │                          │                         │
+   ├── register + stake ──────┤                         │
+   │                          │                         │
+   ├── query miner ───────────┤─────────────────────────►│
+   │                          │                         │
+   │◄─ strategy response ─────┤◄────────────────────────│
+   │                          │                         │
+   │  [local scoring]         │                         │
+   │  load checkpoint         │                         │
+   │  decode query/response   │                         │
+   │  compute expected dist.  │                         │
+   │  L1 distance → score     │                         │
+   │                          │                         │
+   ├── submit weights ────────┤                         │
+   │                          │                         │
+   │◄── VALIDATION report ────│                         │
+```
 
-4. **Progressive disclosure**: Smoke test → pipe mode → TUI. Each surface
-   is independently useful and independently testable.
+### Emission Distribution
 
-5. **Multi-game through composition**: New games plug in via GameRenderer +
-   CFR traits. The play surface, miner, and validator are game-agnostic at
-   the orchestration layer.
+```
+Block N authored
+   │
+   ├── on_finalize()
+   │   ├── run_coinbase(block_emission)
+   │   │   ├── get_subnets_to_emit_to()
+   │   │   ├── get_subnet_block_emissions()     ← split by weight
+   │   │   ├── emit_to_subnets()                ← accumulate PendingEmission
+   │   │   ├── drain_pending()                  ← if tempo fires
+   │   │   │   ├── epoch() or epoch_dense()     ← Yuma Consensus
+   │   │   │   │   ├── compute incentives
+   │   │   │   │   ├── compute dividends
+   │   │   │   │   └── compute emissions
+   │   │   │   ├── owner_cut
+   │   │   │   ├── server_distribution          ← to miners by incentive
+   │   │   │   └── validator_distribution       ← to validators by dividend
+   │   │   └── increase TotalIssuance
+   │   └── done
+   │
+   Block N+1 authored...
+```
+
+## Crate Dependency Graph
+
+```
+myosu-games (traits, GameType, registry)
+   ├── myosu-games-poker (robopoker wrapper)
+   ├── myosu-games-kuhn (native MCCFR)
+   └── myosu-games-liars-dice (native MCCFR)
+
+myosu-chain-client (RPC wrapper)
+   └── depends on: runtime-common types
+
+myosu-miner
+   ├── myosu-games, myosu-games-poker, myosu-games-kuhn, myosu-games-liars-dice
+   ├── myosu-chain-client
+   └── myosu-keys
+
+myosu-validator
+   ├── myosu-games, myosu-games-poker, myosu-games-kuhn, myosu-games-liars-dice
+   ├── myosu-chain-client
+   └── myosu-keys
+
+myosu-play (gameplay)     ← NO dependency on myosu-miner (INV-004)
+   ├── myosu-games, myosu-games-poker, myosu-games-kuhn, myosu-games-liars-dice
+   └── myosu-tui
+
+myosu-tui (shell, rendering)
+   ├── ratatui, crossterm
+   └── myosu-games (traits only)
+
+myosu-keys (key management)
+   └── sp-core, sp-keyring (Substrate crypto)
+```
+
+## Design Decisions Worth Noting
+
+| Decision | Rationale |
+|----------|-----------|
+| Enum dispatch, not trait objects | CFR traits require Copy+Sized. No dyn dispatch possible. `GameType` enum switches at runtime boundaries. |
+| bincode for wire codec | Fast serialization. Direct dependency on unmaintained `bincode 1.x` accepted as known debt. |
+| 1 MiB decode budget | Prevents memory exhaustion from malformed payloads. Hardened from original 256 MiB. |
+| mmap for blueprint files | 50MB+ profiles stay on disk. Sub-microsecond lookup via page faults. |
+| Hyperbolic scoring | `1/(1+d)` maps L1 distance to [0,1] score. Smooth, bounded, differentiable. |
+| File-based validator path | Alongside HTTP. Supports games without HTTP axon (Liar's Dice, Kuhn). |
+| Network-namespaced key storage | Prevents devnet/testnet key confusion. Each network gets its own directory. |
+| Structured stdout reports | Machine-parseable operator output. Tests assert against prefix strings. |

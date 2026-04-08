@@ -1,434 +1,297 @@
 # Myosu Assessment
 
-Date: 2026-04-05
-Scope: Full repo review of `/home/r/Coding/myosu` at commit `b1be135` on `trunk`.
+Generated: 2026-04-07
+Codebase snapshot: trunk @ 4e0b37f
+Previous corpus: .auto/fresh-input/genesis-previous-20260407-234710 (historical context only)
 
 ---
 
-## How Might We
+## Problem Statement
 
-**How might we prove that a permissionless, incentive-aligned game-solving network
-can produce, score, and distribute Nash-approximate strategy for imperfect-information
-games -- starting with a single honest local loop that connects chain, miner,
-validator, and gameplay into one verifiable surface?**
+**How might we build a permissionless protocol that turns game-theory computation into a decentralized commodity, starting from the working local loop we already have, without drowning in the inherited complexity of the Bittensor fork?**
 
----
-
-## What the Project Says It Is
-
-Myosu is a decentralized game-solving protocol for imperfect-information games.
-Miners produce Nash-approximate strategies via MCCFR. Validators score quality
-deterministically. Yuma Consensus distributes emissions to the strongest solvers.
-Humans and agents play through the same text interface.
-
-The repo targets "stage 0": proving the full loop works on a single local node
-before claiming any network-level product.
-
-## What the Code Shows It Is
-
-A 267K-line Rust workspace (556 `.rs` files) with a working-but-inherited
-Substrate chain, three game implementations (poker, Liar's Dice, Kuhn poker),
-off-chain miner/validator binaries, a TUI-based gameplay surface, and a
-growing E2E integration harness. The chain layer is a heavily reduced fork of
-Bittensor's `subtensor` pallet, carrying significant inherited complexity.
-
-The local loop is proven: chain authors blocks, miner trains and serves strategy,
-validator scores deterministically, gameplay consumes trained artifacts, and
-E2E scripts validate the full path. Multi-game architecture is proven with
-two additional games requiring zero changes to existing code.
-
----
+The repo has a proven single-machine loop: chain authors blocks, miner trains MCCFR strategy, validator scores deterministically, gameplay consumes it. Three games work. The challenge is no longer "can we build it" but "can we ship it cleanly enough for operators to run it."
 
 ## Target Users and Success Criteria
 
-### Primary Users
+| User | What success looks like |
+|------|----------------------|
+| **Miner operator** | Downloads binary, points at devnet, trains strategy, earns emission within one session |
+| **Validator operator** | Downloads binary, points at devnet, scores miners deterministically, submits weights |
+| **Node operator** | Runs chain node, participates in consensus, sees block production and finality |
+| **Game player** | Launches TUI or pipe, plays poker against trained bot, sees strategy quality |
+| **Game developer** | Adds a new game crate, implements traits, registers on-chain without touching poker code |
+| **Protocol researcher** | Reads specs and ADRs, understands emission mechanics, can reason about economic changes |
 
-1. **Operators** -- run chain nodes, miners, and validators. Success = zero-friction
-   local bootstrap, clear upgrade path, honest diagnostics.
-2. **Game-solver researchers** -- contribute new games or improve strategy quality.
-   Success = clean game trait interface, verifiable deterministic scoring.
-3. **Players/agents** -- consume strategy through TUI, pipe, or HTTP. Success =
-   useful game-theoretic advice with transparent provenance.
+## What the Project Says It Is
 
-### Success Criteria for Stage-0 Exit
+AGENTS.md and OS.md describe myosu as a "decentralized game-solving protocol for imperfect-information games." The architecture diagram shows four layers:
 
-Per `OS.md` and `INVARIANTS.md`:
+1. **Chain** (Substrate) — subnets, neurons, weights, emissions via Yuma Consensus
+2. **Solvers/Miners** — off-chain MCCFR training and strategy serving
+3. **Validators** — off-chain exploitability scoring and weight submission
+4. **Gameplay** — TUI, pipe, and HTTP surfaces for humans and agents
 
-- Chain compiles, authors blocks on local devnet
-- `pallet-game-solver` at runtime index 7 with Yuma Consensus
-- Poker subnet registers and runs solver evaluation
-- Miner produces MCCFR strategy, validator scores deterministically
-- Two validators produce identical scores for same miner (INV-003)
-- Yuma distributes emissions proportional to quality
-- Human can play poker against trained bot
-- Multi-game architecture proven (Liar's Dice + Kuhn)
-- No dependency path between myosu-play and myosu-miner (INV-004)
-- Emission accounting: sum(distributions) == block_emission * epochs
+The project claims stage-0 is mostly proven and the work remaining is hardening, packaging, and research gates.
 
-### Current Status Against Exit Criteria
+## What the Code Actually Shows
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| Chain authors blocks | PROVEN | `stage0_local_loop` test, E2E scripts |
-| Game-solver pallet at index 7 | PROVEN | Runtime construct_runtime! macro |
-| Poker subnet registration | PROVEN | `stage_0_flow.rs` tests |
-| Miner MCCFR training | PROVEN | `myosu-miner` bounded training + checkpoint |
-| Deterministic validator scoring | PROVEN | `inv_003_determinism` test, `validator_determinism.sh` |
-| Two-validator agreement | PARTIALLY PROVEN | Unit test determinism, E2E cross-validator script |
-| Yuma emission distribution | PROVEN WITH CAVEATS | `epoch.rs` tests, but inherited AMM complexity persists |
-| Human poker gameplay | PROVEN | `myosu-play --smoke-test`, TUI train mode |
-| Multi-game architecture | PROVEN | Liar's Dice + Kuhn poker, zero existing code changes |
-| INV-004 separation | PROVEN | CI `cargo tree` gate |
-| Emission accounting | PARTIALLY PROVEN | `stage_0_flow` coinbase assertions |
+### Verified truths
 
----
+- **The local loop works.** `tests/e2e/local_loop.sh` proves chain + miner + validator + gameplay integration for both poker and Liar's Dice as distinct subnets on one devnet.
+- **Multi-game architecture is real.** Liar's Dice was added with zero changes to poker code. Kuhn poker exists as a third-game proof. The `GameType` enum and `CfrGame` trait hierarchy work.
+- **Validator determinism is proven.** `tests/e2e/validator_determinism.sh` covers both poker and Liar's Dice. INV-003 has E2E coverage.
+- **Multi-node consensus works.** `four_node_finality.sh` proves 4-authority GRANDPA finality. `consensus_resilience.sh` proves restart catch-up. `cross_node_emission.sh` proves emission agreement.
+- **CI is substantial.** 9 CI jobs: repo-shape, active-crates (check/test/clippy/fmt), chain-core, E2E integration (7 scripts), doctrine integrity, dependency audit, plan quality, operator-network, chain-clippy.
+- **Key management exists.** `myosu-keys` supports create, import (keyfile/mnemonic/raw-seed), export, switch-active, change-password, list — all with network-namespaced storage.
+- **Operator documentation exists.** Quickstart, architecture, troubleshooting, upgrading guides under `docs/operator-guide/`.
+
+### Structural concerns
+
+- **Duplicated pallet.** `pallet-game-solver` (91.6K lines) and `pallet-subtensor` (90.6K lines) are near-identical copies. The runtime aliases game-solver AS `pallet_subtensor` (`pallet_subtensor = { package = "pallet-game-solver" }`). The original `pallet-subtensor` is dead code. This is ~90K lines of inherited Bittensor code that exists twice.
+- **Inherited complexity behind stubs.** The NoOpSwap identity stub (`Stage0NoopSwap`) papers over 37 swap callsites. AMM, dual-token, root-network, Alpha emission logic all exist behind feature gates and stubs but are not exercised.
+- **~44 inherited migration files** in game-solver — all subtensor-era migrations for a chain state myosu has never had.
+- **Naming confusion.** The active pallet is `pallet-game-solver` but every code reference uses `pallet_subtensor::` because of the Cargo alias. This will confuse every new contributor.
+- **Fabro/Raspberry execution model is aspirational.** AGENTS.md and OS.md reference `fabro/workflows/`, `fabro/run-configs/`, `fabro/programs/`, `.raspberry/` extensively, but the `fabro/` directory does not exist. Only `fabro.toml` exists at root.
 
 ## What Works
 
-### Game Trait System (`myosu-games`)
-- Clean re-export of robopoker CFR traits (`CfrGame`, `CfrEdge`, `CfrInfo`, `Profile`, `Encoder`)
-- `GameType` enum with `NlheHeadsUp`, `KuhnPoker`, `LiarsDice`, `Custom(String)`
-- `StrategyQuery<I>` / `StrategyResponse<E>` wire types with validation
-- Property-based testing via `proptest` for serialization roundtrips
-- Extensible via `#[non_exhaustive]` enums and `Custom` variants
+| Surface | Status | Evidence |
+|---------|--------|----------|
+| Chain block production (local devnet) | Working | `tests/e2e/local_loop.sh`, CI `chain-core` |
+| Aura + GRANDPA consensus | Working | `four_node_finality.sh`, `consensus_resilience.sh` |
+| pallet-game-solver stage-0 flow | Working | `cargo test -p pallet-game-solver stage_0_flow` (26 tests) |
+| Emission coinbase | Working | Coinbase unit tests + `emission_flow.sh` E2E |
+| Yuma epoch/consensus math | Working | `determinism.rs` (2 tests), inherited math suite |
+| Poker solver integration | Working | `myosu-games-poker` wraps robopoker, smoke tests pass |
+| Liar's Dice solver | Working | `myosu-games-liars-dice` complete, tests pass |
+| Kuhn poker solver | Working | `myosu-games-kuhn` complete, tests pass |
+| Miner bounded training | Working | `myosu-miner --train-iterations` for all games |
+| Miner HTTP axon (poker) | Working | `axon.rs` serves strategy over HTTP |
+| Validator deterministic scoring | Working | `validator_determinism.sh`, unit tests |
+| Gameplay smoke (poker + Kuhn) | Working | `myosu-play --smoke-test`, `--game kuhn --smoke-test` |
+| TUI shell with ratatui | Working | `myosu-tui` shell state tests (33 test fns) |
+| Key management CLI | Working | 19 test functions, operator guide |
+| Chain client RPC wrapper | Working | `myosu-chain-client` (2.2K lines, 16 tests) |
+| Cross-node emission agreement | Working | `cross_node_emission.sh` |
+| Operator bundle packaging | Working | `check_operator_network_bootstrap.sh` |
+| Fresh-machine operator proof | Working | `check_operator_network_fresh_machine.sh` |
+| INV-004 dependency separation | Working | CI enforces via `cargo tree` |
 
-### Poker Engine (`myosu-games-poker`)
-- Full `PokerSolver` wrapping robopoker's `NlheProfile` + `NlheEncoder`
-- Binary wire codec for strategy queries/responses
-- Artifact loading from directory (encoder) and file (checkpoint)
-- `NlheRenderer` for TUI and pipe output with solver advisor overlay
-- Blueprint system for demo and artifact-backed gameplay
+## What Is Broken
 
-### Multi-Game Proofs
-- **Liar's Dice**: Complete MCCFR solver (`LiarsDiceSolver<N>` with generic tree count),
-  wire codec, renderer, full test coverage. 2-player, configurable dice/faces.
-- **Kuhn Poker**: Complete analytical solver (closed-form Nash), wire codec,
-  renderer. Simplest possible game for testing the full seam.
+No actively broken surfaces detected. The codebase compiles and tests pass on the default stage-0 build path. Specific known limitations:
 
-### Miner Binary (`myosu-miner`)
-- Chain probe, registration, axon serving
-- Bounded MCCFR training via `run_training_batch`
-- Strategy serving (one-shot file and HTTP axon)
-- Clean CLI with `clap` derive
+| Issue | Impact |
+|-------|--------|
+| Poker training on bootstrap artifacts panics upstream | `isomorphism not found` — by design (sparse artifacts), but blocks F-007 convergence work |
+| Miner HTTP axon is poker-only | Liar's Dice uses file-based query/response path only |
+| `fabro/` directory does not exist | All execution-model references in AGENTS.md/OS.md are aspirational |
 
-### Validator Binary (`myosu-validator`)
-- Deterministic scoring via L1 distance between expected/observed distributions
-- Score normalization: `1.0 / (1.0 + l1_distance)`
-- Multi-game support (poker + Liar's Dice)
-- On-chain weight submission path
-- INV-003 determinism tested
+## What Is Half-Built
 
-### Gameplay Surface (`myosu-play`)
-- Three modes: `--smoke-test`, `train` (TUI), `pipe` (agent-native)
-- Chain discovery of best miner by incentive
-- Live miner query with staleness tracking
-- Multi-game support via `GameSelection` enum
-- Extensive test coverage (pipe responses, smoke reports, discovery, live advice)
-
-### Chain Layer
-- Stripped Substrate runtime with ~9 pallets in default build
-- `pallet-game-solver` (renamed subtensor) with stage-0 extrinsic surface
-- No-op swap stub (`NoOpSwap<B>`) satisfying 37 callsites
-- Devnet/testnet chain specs
-- Node-owned `--stage0-local-loop-smoke` proof
-
-### TUI (`myosu-tui`)
-- Shell with screens (Lobby, Onboarding, Table, Loading)
-- Event system with `UpdateEvent`
-- `PipeMode` for agent-native text interface
-- `GameRenderer` trait for game-agnostic rendering
-
-### Key Management (`myosu-keys`)
-- Create, import (keyfile/mnemonic/raw seed), export, list, switch, change password
-- Network-aware (devnet, testnet)
-- Password via environment variable (not CLI arg)
-
-### CI Pipeline
-- 9 parallel jobs: repo-shape, Python QA, active-crates, chain-core,
-  integration-e2e, doctrine, dependency-audit, plan-quality, operator-network, chain-clippy
-- INV-004 dependency boundary check
-- `cargo audit` with documented ignore list
-- E2E: `local_loop.sh`, `validator_determinism.sh`
-
-### E2E Integration
-- `local_loop.sh`: Full miner/validator/play proof on live devnet
-- `validator_determinism.sh`: Cross-validator scoring agreement
-- `emission_flow.sh`: On-chain emission distribution proof
-- `two_node_sync.sh`: Named-network peer discovery proof
-
----
-
-## What Is Broken or Half-Built
-
-### Inherited Chain Complexity
-- `pallet-game-solver` is a renamed copy of `pallet-subtensor` with ~200+ storage items,
-  only ~80 needed for stage-0. The inherited epoch/coinbase code is ~4000 lines
-  carrying AMM, Alpha/TAO dual-token, root-network, and multi-subnet logic
-  that the stage-0 single-token model does not use.
-- `pallet-subtensor` (the original) still exists alongside `pallet-game-solver`
-  as a parallel copy. Both have identical test directories (44 test files each).
-  This is the single largest source of dead code in the repo.
-- Legacy pallets (`admin-utils`, `drand`, `crowdloan`, `registry`, `proxy`,
-  `swap`, `swap-interface`, `transaction-fee`, `utility`) still exist as
-  source directories even though they are feature-gated out of the default build.
-
-### Emission Accounting Gaps
-- `run_coinbase.rs` carries inherited logic for root-network emission,
-  multi-subnet weighted distribution, and AMM-based token conversion that
-  the stage-0 identity-swap model renders dead.
-- The `NoOpSwap` stub passes all 1:1 amounts through, which means emission
-  distribution "works" but doesn't actually test meaningful economic behavior.
-- `emission_flow.sh` exists but the on-chain emission assertion surface
-  is thinner than the coinbase code complexity suggests it should be.
-
-### Python Research Layer
-- `main.py`, `methods.py`, `runner.py`, `metrics.py`, `data.py` (~125K lines)
-  are a parallel research/simulation layer. CI runs `ruff check` and two test files.
-  This layer is not connected to the Rust codebase.
-- No dependency management (`requirements.txt` or `pyproject.toml` with deps).
-  CI installs `numpy pytest ruff` ad-hoc.
-
-### Documentation Staleness
-- `IMPLEMENTATION_PLAN.md` (78K) is a massive historical artifact. Many items
-  are checked off but the document itself references stale code paths.
-- `THEORY.MD` (97K) is useful historical context but some specific claims
-  are overtaken by code changes.
-- `AGENTS.md` references `pallet_subtensor::Config` dependencies and
-  audit findings that predate the rename to `pallet-game-solver`.
-
-### Operator Experience Gaps
-- No Docker/container packaging
-- No systemd units shipped (though `deploy-bootnode.sh` generates one)
-- `myosu-keys` requires `MYOSU_KEY_PASSWORD` env var but there is no
-  first-run guidance for key creation flow
-- Multi-node devnet requires manual bootnode coordination
-
----
+| Surface | State | Gap |
+|---------|-------|-----|
+| Token economics | Research-only | ADR 008 exists as `Proposed`, needs multi-contributor review (F-003) |
+| Miner convergence quality | No quality benchmark | Validator self-scores miner checkpoint; no independent exploitability metric (F-007) |
+| polkadot-sdk migration | Feasibility study done | ADR 009 shows 21 opentensor-only commits; actual migration not started |
+| Docker/container packaging | Not started | No Dockerfile, no docker-compose |
+| Production deployment | Not started | Devnet-only; no production chain spec, no monitoring |
+| Web gameplay surface | Not started | TUI and pipe only |
+| Python research layer | Disconnected | 3.5K lines of CFR research code (main.py, methods.py, etc.) with no integration into Rust crates |
+| `pallet-subtensor` cleanup | Not done | 90.6K lines of dead code still in tree |
+| Inherited migration cleanup | Not done | 44 subtensor-era migration files still in game-solver |
+| Pallet renaming | Not done | Every code reference uses `pallet_subtensor::` via Cargo alias |
 
 ## Tech Debt Inventory
 
-| Area | Severity | Description |
-|------|----------|-------------|
-| Dual pallet copies | HIGH | `pallet-subtensor` and `pallet-game-solver` are parallel copies with identical test suites |
-| Inherited epoch/coinbase complexity | HIGH | ~4000 lines of AMM/root-network/multi-token logic behind identity swap |
-| Legacy pallet source dirs | MEDIUM | 10 pallet directories still exist even when feature-gated out |
-| Python dependency management | MEDIUM | No `requirements.txt` or lockfile for research layer |
-| `IMPLEMENTATION_PLAN.md` staleness | LOW | 78K historical doc with stale cross-references |
-| `THEORY.MD` size | LOW | 97K single document; useful but unwieldy |
-| Inherited storage items | MEDIUM | ~194 storage items in game-solver pallet, ~80 needed |
-| `cargo audit` ignore list | MEDIUM | 7 RUSTSECs suppressed from inherited Substrate stack |
-| `actions/checkout@v6` without SHA pin | LOW | CI uses tag-based action refs, not SHA-pinned |
-| Test duplication in chain pallets | HIGH | 44 test files duplicated between subtensor and game-solver |
+### Critical (blocks operator confidence)
 
----
+1. **Duplicated pallet** — 90.6K lines of `pallet-subtensor` dead code. Confuses code search, bloats compilation, risks accidentally linking the wrong crate.
+2. **Pallet naming** — `pallet-game-solver` is aliased as `pallet_subtensor` everywhere. New contributors will search for `pallet_subtensor` and find two pallets. No grep for "game-solver" finds runtime usage.
+3. **44 inherited migrations** — All for Bittensor chain state that myosu never had. Dead weight in build and test surface.
+
+### High (affects development velocity)
+
+4. **18+ cargo audit advisories** — Allowlisted in CI. Mix of inherited Substrate deps (`ring`, `proc-macro-error`, `paste`, etc.) and direct usage (`bincode 1.x` in game crates).
+5. **NoOpSwap stub complexity** — 37 callsites pass through an identity stub that returns 1:1 conversion. The swap-interface trait (`SwapEngine`) and V3 AMM implementation both exist but are unused. Token economics decision is deferred.
+6. **Stale doc surfaces** — THEORY.MD (97K), IMPLEMENTATION_PLAN.md (12.5K), and several root .md files contain stale cross-references and historical context mixed with active doctrine.
+7. **Fabro/Raspberry ghost infrastructure** — AGENTS.md and OS.md describe an execution model that doesn't exist on disk. This creates a false impression of operational maturity.
+
+### Medium (ongoing friction)
+
+8. **Inherited pallet test suites** — game-solver has hundreds of inherited subtensor tests behind `legacy-subtensor-tests` feature gate. Many test concepts (Alpha/TAO dual-token, AMM pools, root network, EVM) that myosu doesn't use.
+9. **Python research layer** — 3.5K lines across 5 root-level files with no package management beyond `pip install numpy ruff pytest`. Disconnected from Rust codebase.
+10. **Full-runtime feature gate** — Several pallets (Sudo, Multisig, Preimage, Scheduler, Proxy, SafeMode, AdminUtils) only exist behind `full-runtime`. The stage-0 default build excludes them, but their config impls clutter the runtime file.
+11. **Sparse poker bootstrap artifacts** — Any poker `--train-iterations > 0` fails upstream. This is by design but blocks convergence research.
 
 ## Security Risks
 
-| Risk | Severity | Detail |
+| Risk | Severity | Status |
 |------|----------|--------|
-| No-op swap stub disables slippage protection | HIGH (future) | `max_price` returns `u64::MAX`. Safe for stage-0 identity swaps but must not ship with real AMM |
-| Inherited `unsafe` blocks in Substrate | MEDIUM | Not myosu-authored; inherited from polkadot-sdk fork |
-| 7 suppressed cargo audit advisories | MEDIUM | All in inherited Substrate/opentensor fork deps (ring, wasmtime, tracing-subscriber) |
-| Key password via env var | LOW | Correct approach but env vars can leak via /proc on shared systems |
-| No rate limiting on miner HTTP axon | MEDIUM | Axon serves strategy via HTTP with no auth or rate limiting |
-| Chain spec hardcoded test authorities | LOW | `//Alice`, `//Bob` authority URIs in devnet specs; appropriate for stage-0 |
-| `SKIP_WASM_BUILD=1` in CI | LOW | Acceptable for off-chain crate tests but means CI doesn't verify wasm compilation |
+| 18 cargo audit advisories in allowlist | Medium | Documented in WORKLIST.md SEC-001. Mix of unmaintained deps and known vulnerabilities. `bincode 1.x` is a direct dependency in game crates. |
+| Insecure randomness pallet included in full-runtime | Low | `pallet_insecure_randomness_collective_flip` behind `full-runtime` feature. Not used by stage-0. |
+| NoOpSwap identity has no economic security | Low (stage-0) | By design for single-token stage-0. Real risk only if production deployment uses NoOpSwap. |
+| Mmap checkpoint loading | Low | Documented in SECURITY.md. Checkpoints are local files; no remote loading without operator action. |
+| Wire codec decode budget | Mitigated | Hardened to 1 MiB for poker (C-013). |
+| GRANDPA finality threshold | Documented | 4-authority set requires 3/3 threshold. Well-understood Substrate behavior. |
+| No rate limiting on miner HTTP axon | Medium | `axon.rs` serves strategy over HTTP with no authentication or rate limiting. Devnet-only risk. |
 
----
+## Test Gaps
 
-## Test Coverage Assessment
+| Gap | Current state | Risk |
+|-----|--------------|------|
+| Miner convergence quality | No quality benchmark; validator self-scores | Cannot document minimum training iterations |
+| Emission dust accounting | Measured (2 rao/block) but policy deferred | Dust accumulates unbounded over long epochs |
+| HTTP axon security | No tests for malformed requests, DoS | Devnet-only, but untested surface |
+| Key management edge cases | 19 tests, but no concurrent access or corruption recovery | Single-operator assumed |
+| Runtime upgrade path | One smoke test (`devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis`) | No real migration exercised |
+| Cross-game scoring fairness | No test | Different games may have incomparable quality metrics |
 
-### Well-Tested Areas
-- Game trait serialization (proptest roundtrips)
-- Poker solver wire codec
-- Validator deterministic scoring (INV-003)
-- Gameplay pipe protocol
-- TUI shell state machine
-- Swap stub identity behavior
-- Kuhn poker solver (analytical Nash)
-- Liar's Dice solver convergence
+## Documentation Staleness
 
-### Test Gaps
-- **On-chain emission flow end-to-end**: `emission_flow.sh` exists but assertion surface is thin
-- **Multi-node consensus**: `two_node_sync.sh` tests peer discovery but not consensus finality under adversarial conditions
-- **Miner training convergence**: Bounded training tested but no convergence quality assertion
-- **Live miner HTTP query**: Tested only via mock in `myosu-play`, no integration test against real axon
-- **Key management edge cases**: Basic CLI operations tested, password change and export less so
-- **Chain runtime upgrade**: No upgrade/migration test path
-- **Negative security tests**: No fuzzing, no adversarial input testing on wire codecs
+| Document | Lines | State |
+|----------|-------|-------|
+| THEORY.MD | ~2400 | Historical. 97K bytes of CFR theory. Accurate but not referenced by active code. |
+| IMPLEMENTATION_PLAN.md | ~153 | Partially stale. References specs from `050426-*` generation. Some tasks completed, some blocked. |
+| AGENTS.md | ~374 | Partially stale. References fabro/ paths that don't exist. Core architecture section accurate. |
+| OS.md | ~260 | Mostly current. References fabro/raspberry surfaces that don't exist. Stage-0 truth statements accurate. |
+| WORKLIST.md | ~14 | Current. Active follow-up items with clear ownership. |
+| README.md | ~143 | Current. Accurate proof commands and operator loop. |
+| SPEC.md (root) | ~150 | Current. Meta-spec describing spec types. |
+| PLANS.md (root) | ~149 | Current. ExecPlan format requirements. |
+| INVARIANTS.md | ~88 | Current. All 6 invariants accurately described. |
+| SECURITY.md | ~90 | Current. Disclosure process and scope accurate. |
+| CHANGELOG.md | ~73 | Current. 0.1.0 baseline documented. |
+| LEARNINGS.md | ~22 | Current. Operational wisdom from review cycles. |
 
----
+## Implementation Status Table
 
-## Implementation Status Table (Prior Plans)
+Status of prior claims from AGENTS.md and IMPLEMENTATION_PLAN.md, verified against code:
 
-| Plan | Claimed Status | Verified Against Code |
-|------|---------------|----------------------|
-| 002 - Spec/doctrine sync | Complete | VERIFIED: Doctrine hierarchy consistent |
-| 003 - Runtime reduction | Complete | VERIFIED: 9-pallet default build confirmed |
-| 004 - Minimal devnet node | Complete | VERIFIED: Node builds, authors blocks |
-| 005 - Stage-0 pallet reduction | Complete | VERIFIED: ≤20 extrinsics in default build |
-| 006 - Game boundary hardening | Complete | VERIFIED: INV-004 CI gate exists |
-| 007 - Miner/validator bring-up | Complete | VERIFIED: Both binaries functional |
-| 008 - Artifact/wire hardening | Complete | VERIFIED: Binary wire codec, checkpoint save/load |
-| 009 - Poker play/TUI productization | Complete | VERIFIED: Train + pipe modes, smoke tests |
-| 010 - GitHub Actions proof | Complete | VERIFIED: CI pipeline with 9 jobs |
-| 011 - Security/observability | Complete | VERIFIED: Security audit doc, cargo audit in CI |
-| 012 - Multi-game proof | Complete | VERIFIED: Liar's Dice + Kuhn poker |
-| 013 - Integration harness | Complete | VERIFIED: E2E scripts in `tests/e2e/` |
-| 020 - Second-game subnet proof | Complete | VERIFIED: Multi-subnet local loop |
-| 021 - Operator hardening | In Progress | PARTIALLY VERIFIED: Key management, operator bundle, bootnode prep exist. Multi-node devnet not yet closed. |
+| Claim | Verified | Evidence |
+|-------|----------|----------|
+| Chain produces blocks on local devnet | Yes | `local_loop.sh` |
+| pallet-game-solver at runtime index 7 | Yes | `construct_runtime!` line 1275 (aliased as SubtensorModule) |
+| Poker subnet registration and evaluation | Yes | E2E local loop |
+| Miner MCCFR training | Yes | Bounded training works for all games |
+| Validator deterministic scoring | Yes | `validator_determinism.sh` covers poker + Liar's Dice |
+| Two validators identical scores (INV-003) | Yes | `validator_determinism.sh` |
+| Yuma emission distribution | Yes | `emission_flow.sh`, coinbase unit tests |
+| Human plays poker against bot | Yes | `myosu-play --smoke-test` |
+| TUI training mode with solver advisor | Partial | TUI shell exists (`myosu-tui`), but solver advisor integration not independently verified |
+| Multi-game zero-change extensibility | Yes | Liar's Dice added, Kuhn poker added, zero poker changes |
+| INV-004 solver-gameplay separation | Yes | CI enforces via `cargo tree` |
+| Emission accounting invariant | Partial | Unit tests pass, E2E `emission_flow.sh` passes, but dust policy deferred |
+| Fabro/Raspberry execution model | No | `fabro/` directory does not exist |
+| Four chain spec variants | Yes | localnet, devnet, testnet (test_finney), finney in `chain_spec/` |
+| Operator network bundle | Yes | `check_operator_network_bootstrap.sh`, `check_operator_network_fresh_machine.sh` |
+| Release process | Partial | `ops/release.sh --dry-run` exists but no actual release cut |
+| 82 ACs across 14 stages | Stale | This is the original AGENTS.md master plan count. Actual completion tracked in IMPLEMENTATION_PLAN.md shows 17 completed items (C-001 through C-017). |
 
----
+## Code Review Coverage
 
-## Code-Review Coverage
-
-The following source files were directly read during this assessment:
+Source files directly read during this assessment:
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `Cargo.toml` (workspace) | 201 | Workspace members, dependencies, fork pins |
-| `README.md` | 143 | Entry point and proof commands |
-| `OS.md` | 260 | Operating system document, stage-0 criteria |
-| `INVARIANTS.md` | 86 | Six hard invariants (INV-001 through INV-006) |
-| `AGENTS.md` | 355 | Kernel document with architecture, audit findings, priorities |
-| `SECURITY.md` | 90 | Vulnerability reporting and scope |
-| `SPEC.md` | 151 | Spec type definitions and workflow |
-| `THEORY.MD` | 100 (first) | Stage-0 operating theory and history |
-| `IMPLEMENTATION_PLAN.md` | 100 (first) | Implementation queue with RT-001 through RT-004 |
-| `.github/workflows/ci.yml` | 347 | Full CI pipeline definition |
-| `crates/myosu-chain/pallets/game-solver/src/lib.rs` | 100 (first) | Pallet entry point, Stage0SwapInterface |
-| `crates/myosu-chain/pallets/game-solver/src/swap_stub.rs` | 189 | NoOpSwap implementation |
-| `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs` | 80 (first) | Yuma epoch mechanism |
-| `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs` | 80 (first) | Coinbase emission distribution |
-| `crates/myosu-games/src/traits.rs` | 500 | Game trait system, StrategyQuery/Response |
-| `crates/myosu-miner/src/main.rs` | 93 | Miner entry point |
-| `crates/myosu-validator/src/validation.rs` | 668 | Validator scoring logic |
-| `crates/myosu-play/src/main.rs` | 1780 | Play surface entry point |
+| `Cargo.toml` (root) | 202 | Workspace config, 12 members, opentensor polkadot-sdk fork |
+| `AGENTS.md` | 374 | Kernel OS document |
+| `README.md` | 143 | Project entry point |
+| `INVARIANTS.md` | 88 | 6 hard invariants |
+| `SPEC.md` (root) | 150 | Spec type definitions |
+| `PLANS.md` (root) | 149 | ExecPlan format |
+| `WORKLIST.md` | 14 | Active follow-ups |
+| `OS.md` | 260 | Operating system doctrine |
+| `IMPLEMENTATION_PLAN.md` | 153 | Priority work tracker |
+| `SECURITY.md` | 90 | Disclosure policy |
+| `LEARNINGS.md` | 22 | Operational wisdom |
+| `CHANGELOG.md` | 73 | Release history |
+| `fabro.toml` | 24 | Execution config (MiniMax model) |
+| `.github/workflows/ci.yml` | 419 | CI pipeline |
+| `crates/myosu-games/src/traits.rs` | 500 | Game trait hierarchy |
+| `crates/myosu-games/src/registry.rs` | 160 | Game registry |
+| `crates/myosu-miner/src/lib.rs` | 224 | Miner report formatting |
+| `crates/myosu-validator/src/validation.rs` | 735 | Validator scoring logic |
+| `crates/myosu-chain/runtime/src/lib.rs` | 1400+ | Runtime composition, construct_runtime |
+| `crates/myosu-chain/runtime/Cargo.toml` | 130+ | Runtime dependencies (pallet alias) |
+| `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs` | 80+ | Emission distribution |
+| `crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs` | 80+ | Stage-0 integration tests |
+| `crates/myosu-chain/pallets/game-solver/Cargo.toml` | 10+ | Pallet package name |
+| `crates/myosu-chain/pallets/subtensor/Cargo.toml` | 10+ | Original pallet package name |
 
-Additionally, subagents performed thorough exploration of:
-- All chain pallets (game-solver, subtensor, admin-utils, drand, crowdloan, swap, etc.)
-- All off-chain crates (games, poker, liars-dice, kuhn, play, miner, validator, keys, tui, chain-client)
-- Git history (50 recent commits)
-- E2E test scripts
-- Operator guide and architecture docs
-- Previous genesis planning snapshot
+Additionally, 5 parallel exploration agents read across:
+- All crate entry points (lib.rs, main.rs) for all 11 workspace members
+- Complete test file inventories across all pallets
+- All E2E test scripts
+- All spec files (46 total)
+- All ADR files (10 + template)
+- All operator guide documents
+- All ops/ infrastructure files
+- Previous planning snapshot (14 plan files + 5 corpus files)
 
----
+## Repo Constraints
+
+1. **opentensor polkadot-sdk fork** — Pinned to rev `71629fd`. Not upstream Substrate. Contains subtensor-specific patches. Migration to upstream is a research gate (ADR 009).
+2. **robopoker fork** — `happybigmtn/robopoker` pinned to specific rev. Needs serde, encoder constructors, clustering API, file checkpoints (RF-01 through RF-04 in AGENTS.md). INV-006 tracks fork coherence.
+3. **Single-developer operation** — Commit history shows one contributor. All review and decision gates are self-referential.
+4. **Rust 2024 edition** — `edition = "2024"` in workspace. Requires recent nightly or stable.
+5. **wasm32 target** — Runtime requires `wasm32-unknown-unknown` or `wasm32v1-none` for WASM build.
 
 ## Assumption Ledger
 
-### Verified Assumptions
-- The chain produces blocks on local devnet (E2E proven)
-- The no-op swap stub satisfies all callsites without runtime errors
-- Poker, Liar's Dice, and Kuhn all implement the game trait seam cleanly
-- Validator deterministic scoring works for both poker and Liar's Dice
-- INV-004 (solver-gameplay separation) holds with zero dependency paths
-- The game trait system is extensible via `#[non_exhaustive]` and `Custom` variants
-
-### Assumptions Needing Proof
-- **Emission accounting correctness**: Inherited coinbase logic produces correct
-  distributions under the identity-swap model. The test surface covers basic flow
-  but not edge cases (e.g., what happens with zero-stake subnets, empty epochs).
-- **Two-node consensus**: `two_node_sync.sh` tests peer discovery and block sync
-  but not GRANDPA finality under partition or validator disagreement.
-- **Miner training convergence quality**: The bounded training produces a checkpoint
-  but there is no automated assertion that the strategy has converged to a
-  useful quality level.
-- **Operator bundle completeness**: `prepare_operator_network_bundle.sh` produces
-  a bundle but the bundle has not been tested on a fresh machine.
-
-### Hypotheses (Open Questions)
-- Can the inherited Yuma Consensus code be simplified for single-subnet stage-0
-  without breaking the emission distribution invariant?
-- What is the minimum viable encoder size for meaningful poker strategy quality?
-  (Full encoder is 7-11 GB RAM with 138M entries.)
-- Is the opentensor polkadot-sdk fork essential, or can myosu migrate to
-  upstream polkadot-sdk with acceptable effort?
-
----
+| Assumption | Status | Evidence |
+|-----------|--------|----------|
+| pallet-game-solver is the active pallet | Verified | Runtime Cargo.toml: `pallet_subtensor = { package = "pallet-game-solver" }` |
+| NoOpSwap provides correct stage-0 economics | Verified | `swap_stub.rs` tests, coinbase unit tests |
+| Multi-game architecture requires zero poker changes | Verified | Liar's Dice and Kuhn additions, CI INV-004 check |
+| 4-authority GRANDPA threshold is 3/3 | Verified | `four_node_finality.sh` kills 1, 3 keep finalizing |
+| Sparse poker bootstrap artifacts are intentional | Verified | AGENTS.md, WORKLIST.md MINER-QUAL-001 |
+| Fabro/Raspberry is the execution model | Unverified | Directory does not exist. Config file points to MiniMax model. |
+| 82 ACs across 14 stages is the complete scope | Needs update | Some completed, some stale, numbering from early AGENTS.md |
+| Emission dust is bounded | Measured, not decided | 2 rao/block worst case, but no accumulation policy |
+| robopoker fork tracks v1.0.0 baseline | Assumed | `docs/robopoker-fork-changelog.md` exists, INV-006 CI check is advisory (continue-on-error) |
 
 ## Opportunity Framing
 
-### Strongest Direction: Close Stage-0, Prepare for Multi-Node Devnet
+### Strongest Direction: Close Stage-0, Then Operator Packaging
 
-The repo is remarkably close to stage-0 exit. The local loop is proven. The
-remaining work is:
+The codebase has proven its core thesis: decentralized game-solving with MCCFR works end-to-end. The remaining stage-0 work is primarily cleanup (dead code, naming, stale docs) and research gates (token economics, convergence benchmarks). After stage-0, the highest-leverage work is operator packaging: containers, monitoring, and a multi-node devnet that operators can actually run.
 
-1. **Harden emission accounting** -- simplify inherited coinbase, prove the
-   invariant `sum(distributions) == block_emission * epochs` robustly.
-2. **Multi-node devnet proof** -- two-node sync exists; extend to 3+ nodes
-   with automated finality checks.
-3. **Operator packaging** -- container images, stable chain spec distribution,
-   first-run documentation that works on a fresh machine.
+### Rejected Direction: Expand Game Portfolio Now
 
-This direction is preferred because it builds directly on proven assets and
-closes the gap between "local proof" and "operator-ready devnet."
+Adding more games (beyond the three already working) would not accelerate stage-0 exit or improve operator confidence. The multi-game architecture is already proven. Game expansion is a stage-1 concern.
 
-### Rejected Direction: Broad Game Portfolio Expansion
+### Rejected Direction: Production Chain Deployment
 
-Adding more games now would be premature. The three-game proof (poker, Liar's
-Dice, Kuhn) is sufficient to validate multi-game architecture. Adding games
-before the emission and network layers are solid would spread effort without
-increasing stage-0 confidence.
+Attempting production deployment before the pallet is cleaned, token economics are decided, and the SDK migration path is understood would create irreversible technical debt. The NoOpSwap stub is explicitly not production-ready.
 
-### Rejected Direction: Web/Mobile Gameplay Surface
+### Rejected Direction: Web Gameplay Surface
 
-Building a web or mobile frontend for gameplay is explicitly out of scope for
-stage-0. The TUI and pipe interface serve both human and agent consumption.
-A web surface is a post-stage-0 product decision, not a stage-0 engineering task.
+Building a web frontend before the operator network exists would create a product without infrastructure. TUI and pipe serve stage-0 needs adequately.
 
-### Rejected Direction: Full Chain Rewrite
-
-Rewriting `pallet-game-solver` from scratch instead of continuing to reduce
-the inherited subtensor code would be higher risk with no near-term payoff.
-The reduction strategy (strip, stub, test) has been proven to work and is
-more predictable than a ground-up rewrite.
-
----
-
-## DX Assessment (Developer-Facing Surfaces)
+## DX Assessment (Developer-Facing)
 
 ### First-Run Friction
-- `README.md` has clear proof commands but assumes Rust toolchain + wasm target
-  are already installed. Missing: `rustup target add wasm32-unknown-unknown` in quickstart.
-- `SKIP_WASM_BUILD=1` is required for most commands but not explained until
-  deep in `AGENTS.md`. A developer running bare `cargo test` will wait for a
-  full wasm build.
-- The `fabro` / `raspberry` execution model is referenced throughout `OS.md`
-  and `README.md` but these tools are not standard Rust ecosystem tools and
-  may confuse new contributors.
+
+- **Zero to compile**: Requires Rust nightly/stable 2024 edition, `wasm32-unknown-unknown` target, protobuf compiler. README mentions none of these prerequisites. Quickstart guide covers them but lives in `docs/operator-guide/quickstart.md`, not README.
+- **Zero to running**: `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet` is the fastest proof, but requires a pre-cached runtime WASM. Cold builds take many minutes with no progress indication.
+- **Error clarity**: Build errors from missing `protoc` or wrong WASM target are opaque Substrate errors, not myosu-specific.
 
 ### Copy-Paste Onboarding Honesty
-- The proof commands in `README.md` are honest -- they work as documented.
-- The operator loop commands assume `fabro` and `raspberry` are installed,
-  which a new developer will not have.
-- The E2E test scripts are the most honest runnable surface.
 
-### Error Clarity
-- Error types are well-structured with `thiserror` across miner, validator,
-  and play surfaces.
-- Chain-level errors inherit Substrate's generic dispatch error types, which
-  are less helpful.
+- README proof commands are copy-paste honest. They work.
+- The `fabro run` commands in README do not work (directory missing).
+- Operator guide quickstart is comprehensive and honest about prerequisites.
 
 ### Fastest Path to Success Moment
-- `cargo run -p myosu-play --quiet -- --smoke-test` produces a meaningful
-  success output in seconds (after initial compile). This is a good T0 moment.
-- The compile time for the full workspace is significant due to Substrate
-  dependencies. First build can take 10+ minutes.
 
----
+Running `cargo test -p myosu-games-kuhn --quiet` (Kuhn poker tests) is the fastest meaningful success — ~30s on warm cache, exercises game traits, solver, wire codec. This is not documented as an onboarding path.
 
-## Constraints
+### Uncertainty Reduction
 
-1. **Substrate dependency**: The opentensor polkadot-sdk fork is a hard constraint.
-   Build times, dependency complexity, and upstream divergence risk all flow from this.
-2. **Robopoker fork**: The MCCFR engine comes from a forked repo with documented
-   changes. Core algorithm correctness depends on tracking the fork (INV-006).
-3. **Single developer**: Git history shows primarily automated commits (`myosu: auto bug checkpoint`,
-   `myosu: review completed items`). This is effectively a single-developer project
-   with heavy automation assistance.
-4. **Memory requirements**: Full NLHE encoder is 7-11 GB. This constrains who
-   can run a production-grade miner.
-5. **Stage-0 scope discipline**: The repo has been intentionally aggressive about
-   not expanding scope beyond the local proof. This is a strength, not a constraint,
-   but it means the planning corpus should respect that posture.
+A new developer reading only README + AGENTS.md would be confused by:
+1. Two pallets with near-identical content
+2. Fabro/Raspberry references with no on-disk counterpart
+3. The `pallet_subtensor` naming everywhere for something called game-solver
+4. 97K bytes of THEORY.MD with no clear connection to running code

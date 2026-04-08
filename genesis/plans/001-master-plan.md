@@ -1,88 +1,73 @@
-# 001: Master Plan -- Stage-0 Exit and Devnet Readiness
+# 001 — Master Plan
 
 ## Objective
 
-Close the remaining stage-0 gaps and prepare the system for multi-node devnet
-operation. This plan sequences all work from current state (local loop proven,
-multi-game proven, operator tooling partially hardened) to stage-0 exit and
-initial devnet readiness.
+Sequence the remaining stage-0 work into phases that reduce risk monotonically, deliver verifiable checkpoints, and avoid blocking on external dependencies.
 
 ## Phase Structure
 
-### Phase 1: Reduce and Harden (Plans 002-005)
+### Phase 1: Reduce and Clean (Plans 002–005)
 
-Clean up inherited chain complexity, harden emission accounting, and remove
-the dual-pallet copy. This is prerequisite work that reduces the surface
-area and increases confidence in the core chain behavior.
+Remove dead code, deduplicate pallets, clean naming, and audit inherited complexity. This phase has zero external dependencies and the highest leverage per line changed. Every later phase benefits from a smaller, clearer codebase.
 
-### Phase 2: Network Proof (Plans 006-008)
+### Decision Gate 1 (Plan 006)
 
-Extend from single-node to multi-node devnet. Prove consensus finality,
-peer discovery, and cross-node emission agreement. This is the bridge
-from "local proof" to "operator-ready network."
+Verify trunk compiles, all CI jobs pass, and the reduced codebase matches all existing proof contracts. No new work proceeds until this gate is green.
 
-### Decision Gate: Plan 009
+### Phase 2: Harden and Measure (Plans 007–009)
 
-After Phase 2, evaluate whether the emission model and network behavior
-justify proceeding to operator packaging. If multi-node emission accounting
-does not converge, return to Phase 1 hardening.
+Harden emission accounting, fill test gaps, and establish the quality benchmark surface needed for the miner convergence research gate.
 
-### Phase 3: Operator Packaging (Plans 010-012)
+### Decision Gate 2 (Plan 010)
 
-Container images, stable chain spec distribution, first-run documentation,
-and release process. This makes the system operator-ready rather than
-developer-only.
+Verify emission invariants, test gaps closed, and quality benchmark surface exists. Confirm stage-0 exit criteria readiness.
 
-### Phase 4: Research Gates (Plans 013-014)
+### Phase 3: Package and Document (Plans 011–013)
 
-Open questions that affect post-stage-0 direction but do not block stage-0
-exit. Token economics, upstream SDK migration, and encoder optimization.
+Container packaging, README overhaul, and documentation cleanup to make the operator experience viable.
 
-## Dependency Graph
+### Phase 4: Research Gates (Plans 014–015, independent)
 
-```
-002 (dead code removal) ─────┐
-003 (emission hardening) ────┤
-004 (test duplication) ──────┼─► 005 (pallet storage audit) ─► 009 (gate)
-                             │
-006 (multi-node devnet) ─────┤
-007 (consensus proof) ───────┤
-008 (cross-node emission) ───┘
-                             
-009 (decision gate) ─► 010 (container packaging)
-                    ─► 011 (operator documentation)
-                    ─► 012 (release process)
+Token economics decision and polkadot-sdk migration feasibility. These run in parallel with any phase and do not block stage-0 exit.
 
-013 (token economics research) ─── independent
-014 (SDK migration research) ──── independent
-```
+## Sequencing Rationale
 
-## Why This Sequence
+The previous planning snapshot used the same Phase 1 → Phase 2 → Phase 3 ordering and explicitly rejected a network-first alternative. That reasoning remains valid: debugging network or packaging issues against a codebase with 90K lines of dead pallet code is strictly harder than debugging against a clean codebase. The code-reduction-first ordering has the additional benefit that every subsequent diff is smaller, every code search is faster, and every new contributor's onboarding is simpler.
 
-The obvious alternative is to skip Phase 1 and go directly to multi-node
-devnet (Phase 2). This was rejected because:
+Phase 4 research gates are decoupled because they depend on external human review (F-003) and upstream analysis (CHAIN-SDK-001), neither of which should block mechanical cleanup work.
 
-1. The dual-pallet copy (game-solver + subtensor) means any chain change
-   must be audited against two 200K+ line codebases. Removing the dead copy
-   first dramatically reduces the Phase 2 risk surface.
-2. Emission accounting under identity swap is untested at network scale.
-   Hardening it locally (Plan 003) before testing it across nodes (Plan 008)
-   is cheaper than debugging emission divergence in a distributed system.
-3. The test duplication (44 files × 2 pallets) makes CI slower and creates
-   confusion about which test suite is authoritative.
+## Plan Index
 
-Another alternative would be to start with operator packaging (Phase 3)
-to get external operators testing sooner. This was rejected because packaging
-a system with known inherited complexity and untested network behavior would
-create false confidence. Operators should receive a system that works at
-network scale, not just locally.
+| # | Title | Phase | Depends On | Estimated Scope |
+|---|-------|-------|------------|-----------------|
+| 002 | Dead Pallet Removal | 1 | none | L |
+| 003 | Pallet Naming Normalization | 1 | 002 | M |
+| 004 | Inherited Migration Cleanup | 1 | 002 | M |
+| 005 | Stale Document Cleanup | 1 | none | S |
+| 006 | Phase 1 Decision Gate | gate | 002–005 | S |
+| 007 | Emission Dust Policy | 2 | 006 | S |
+| 008 | Test Gap Closure | 2 | 006 | M |
+| 009 | Miner Quality Benchmark | 2 | 008 | M |
+| 010 | Phase 2 Decision Gate | gate | 007–009 | S |
+| 011 | Container Packaging | 3 | 010 | L |
+| 012 | README and Onboarding Overhaul | 3 | 006 | M |
+| 013 | Fabro Ghost Cleanup | 3 | 006 | S |
+| 014 | Token Economics Research Gate | 4 | none | L (external) |
+| 015 | SDK Migration Research Gate | 4 | none | L (external) |
 
-## Not Doing
+## Acceptance Criteria
 
-- **Game portfolio expansion**: Three games are sufficient for stage-0.
-- **Web/mobile gameplay**: TUI and pipe serve stage-0 users.
-- **Full AMM token economics**: The identity swap is the correct stage-0 model.
-- **Upstream polkadot-sdk migration**: Research gate only (Plan 014).
-- **Production deployment**: Stage-0 is devnet-only.
-- **Governance/upgrade mechanisms**: Post-stage-0 concern.
-- **Benchmarking and weight calibration**: Not needed until production.
+- All 15 plans are written with concrete acceptance criteria and verification steps
+- Sequencing dependencies are explicit and acyclic
+- Each phase boundary has a decision gate plan
+- No plan depends on an unresolved external input without declaring it as a blocker
+
+## Verification
+
+- Read plans 002–015 and confirm each has: title, description, acceptance criteria, verification, dependencies
+- Confirm dependency graph is acyclic
+- Confirm gate plans (006, 010) list all prerequisites
+
+## Dependencies
+
+- None (this is the root plan)

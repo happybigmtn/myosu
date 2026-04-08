@@ -1,84 +1,103 @@
-# Myosu Plan Index
+# Plan Index
 
-Date: 2026-04-05
-
----
-
-## Plan Set
-
-| # | Title | Phase | Status | Dependencies |
-|---|-------|-------|--------|--------------|
-| 001 | [Master Plan](plans/001-master-plan.md) | -- | Active | -- |
-| 002 | [Dead Code Removal](plans/002-dead-code-removal.md) | 1: Reduce | Ready | None |
-| 003 | [Emission Hardening](plans/003-emission-hardening.md) | 1: Reduce | Ready | 002 |
-| 004 | [Test Deduplication](plans/004-test-deduplication.md) | 1: Reduce | Blocked | 002 |
-| 005 | [Pallet Storage Audit](plans/005-pallet-storage-audit.md) | 1: Reduce | Blocked | 002, 003, 004 |
-| 006 | [Multi-Node Devnet](plans/006-multi-node-devnet.md) | 2: Network | Ready | None (prefer 002-005 first) |
-| 007 | [Consensus Finality Proof](plans/007-consensus-finality-proof.md) | 2: Network | Blocked | 006 |
-| 008 | [Cross-Node Emission](plans/008-cross-node-emission.md) | 2: Network | Blocked | 003, 006 |
-| 009 | [Phase 2 Decision Gate](plans/009-phase-2-gate.md) | Gate | Blocked | 002-008 |
-| 010 | [Container Packaging](plans/010-container-packaging.md) | 3: Package | Blocked | 009 |
-| 011 | [Operator Documentation](plans/011-operator-documentation.md) | 3: Package | Partially ready | 010 (multi-node part) |
-| 012 | [Release Process](plans/012-release-process.md) | 3: Package | Blocked | 010, 011 |
-| 013 | [Token Economics Research](plans/013-token-economics-research.md) | 4: Research | Ready | None |
-| 014 | [SDK Migration Research](plans/014-sdk-migration-research.md) | 4: Research | Ready | Prefer 002 first |
+Generated: 2026-04-07
+Source of truth: trunk @ 4e0b37f
 
 ---
+
+## Overview
+
+15 plans across 4 phases plus 2 decision gates. The sequence prioritizes codebase reduction first, hardening second, packaging third, and research gates independently.
 
 ## Sequencing Rationale
 
-### Why Phase 1 before Phase 2
+**Why reduce-first, not network-first or packaging-first?**
 
-The chain carries ~150K lines of duplicated pallet source (game-solver +
-subtensor), ~44 duplicated test files, and ~114 dormant storage items.
-Attempting multi-node proofs against this surface means any failure requires
-auditing twice the code. Reducing first makes network debugging tractable.
+The previous planning snapshot (April 7, 2026) reached the same conclusion and explicitly rejected alternatives. The reasoning is:
 
-### Why Phase 2 before Phase 3
+1. **Code reduction (Phase 1) has zero external dependencies.** Deleting the 90K-line dead pallet, normalizing naming, and cleaning migrations are purely mechanical. Every later phase benefits from a smaller, clearer codebase.
 
-Packaging a system that has not been proven at network scale creates false
-confidence for operators. The multi-node proofs (Plans 006-008) validate
-that the system works beyond the single-node local loop before we invite
-operators to run it.
+2. **Hardening (Phase 2) requires a clean baseline.** Adding emission dust policy or quality benchmarks against a codebase with duplicate pallets and stale naming creates confusion about which code path is being measured.
 
-### Why the Decision Gate (009)
+3. **Packaging (Phase 3) should package the final form.** Docker images and README overhauls should reflect the post-cleanup codebase, not the current one.
 
-Plans 006-008 test hypotheses about cross-node determinism and finality
-that have not been validated. If they fail, the fix may require returning to
-Phase 1 (e.g., fixing emission determinism) rather than proceeding to Phase 3.
-The gate makes this branching explicit rather than burying it in a Phase 3 plan.
+4. **Research gates (Phase 4) are externally blocked.** Token economics needs human review. SDK migration needs patch classification. Neither blocks mechanical work.
 
-### Alternative: Network-First Sequence
+**Alternative considered: Network-first (build multi-node devnet before cleanup).** Rejected because debugging network issues against 182K lines of pallet code (two copies) is strictly harder than debugging against 91K lines (one copy). The multi-node devnet already works (4-authority finality, cross-node emission proven) — the remaining work is packaging, not proving.
 
-An alternative sequence would be:
-- 006 → 007 → 008 → 002 → 003 → 004 → 005 → 009
+**Alternative considered: Packaging-first (Docker images now).** Rejected because the Docker images would need to be rebuilt after Phase 1 renames the pallet and Phase 2 changes emission behavior. Packaging too early creates maintenance burden.
 
-This prioritizes learning about network behavior sooner. It was rejected because
-debugging network issues against a codebase with duplicated pallets and untested
-emission accounting is strictly harder than debugging against a clean codebase.
-The cost of Phase 1 is bounded (mostly deletion and gating), while the cost of
-debugging network issues against inherited complexity is unbounded.
+## Plan Table
 
-### Parallel Work
+| # | Title | Phase | Depends On | Type | Est. |
+|---|-------|-------|------------|------|------|
+| 001 | Master Plan | — | — | index | — |
+| 002 | Dead Pallet Removal | 1 | none | implementation | L |
+| 003 | Pallet Naming Normalization | 1 | 002 | implementation | M |
+| 004 | Inherited Migration Cleanup | 1 | 002 | implementation | M |
+| 005 | Stale Document Cleanup | 1 | none | implementation | S |
+| 006 | Phase 1 Decision Gate | gate | 002–005 | gate | S |
+| 007 | Emission Dust Policy | 2 | 006 | design+impl | S |
+| 008 | Test Gap Closure | 2 | 006 | implementation | M |
+| 009 | Miner Quality Benchmark | 2 | 008 | design+impl | M |
+| 010 | Phase 2 Decision Gate | gate | 007–009 | gate | S |
+| 011 | Container Packaging | 3 | 010 | implementation | L |
+| 012 | README and Onboarding Overhaul | 3 | 006 | implementation | M |
+| 013 | Fabro Ghost Cleanup | 3 | 006 | decision+impl | S |
+| 014 | Token Economics Research Gate | 4 | none | research | L (ext) |
+| 015 | SDK Migration Research Gate | 4 | none | research | L (ext) |
 
-Plans 013 and 014 (research gates) can proceed in parallel with all other work.
-They produce documents, not code changes, so they have no conflict with
-implementation plans.
+## Dependency Graph
 
-Plan 011 (operator documentation) can be partially started before Plan 010
-(the local devnet quickstart path is independent of container packaging).
+```
+002 (dead pallet) ──┬──► 003 (naming) ──┐
+                    ├──► 004 (migrations)├──► 006 (gate 1) ──┬──► 007 (dust) ──┐
+005 (stale docs) ───┘                   │                   ├──► 008 (tests) ──┤
+                                        │                   ├──► 012 (readme)  │
+                                        │                   └──► 013 (fabro)   │
+                                        │                                      │
+                                        │      009 (quality) ◄─── 008 (tests) │
+                                        │           │                          │
+                                        │           ▼                          │
+                                        └──► 010 (gate 2) ──► 011 (containers)│
+                                                                               │
+014 (token econ) ──── independent ─────────────────────────────────────────────┘
+015 (sdk migration) ── independent
+```
 
----
+## Parallel Execution Opportunities
 
-## Starting Points
+For multi-worker teams:
 
-A single focused worker should start with Plan 002 (dead code removal).
-It is the highest-leverage independent action: it removes ~150K lines of
-duplicated source and unblocks Plans 003, 004, and 005.
+- **Worker 1:** 002 → 003 → 004 → (wait for 006) → 007 → 009
+- **Worker 2:** 005 → (wait for 006) → 008 → (wait for 010) → 011
+- **Worker 3:** 014 or 015 (research, any time)
+- **Worker 4:** 012 → 013 (after 006)
 
-If two workers are available:
-- Worker 1: Plan 002 → 003 → 004 → 005
-- Worker 2: Plan 013 (token economics research) or Plan 006 (multi-node devnet)
+Plans 002 and 005 can start immediately in parallel. Plans 014 and 015 can start at any time.
 
-If three workers are available, add Plan 014 (SDK migration research) or
-begin Plan 011 (quickstart documentation for local devnet path).
+## Phase Summaries
+
+### Phase 1: Reduce and Clean
+
+**Goal:** Remove 90K+ lines of dead code, normalize naming, clean migrations, update stale docs.
+**Exit:** Plan 006 gate green.
+**Risk:** Low. All changes are deletion or renaming. No new behavior.
+
+### Phase 2: Harden and Measure
+
+**Goal:** Decide emission dust policy, close test gaps, create quality benchmark.
+**Exit:** Plan 010 gate green.
+**Risk:** Medium. Dust policy and quality benchmark involve design decisions.
+
+### Phase 3: Package and Document
+
+**Goal:** Docker images, README overhaul, fabro/ghost cleanup.
+**Exit:** Operators can run the system without compiling from source.
+**Risk:** Medium. Docker WASM build may require research (noted in Plan 011).
+
+### Phase 4: Research Gates (Independent)
+
+**Goal:** Token economics and SDK migration decisions.
+**Exit:** ADRs updated, decisions recorded.
+**Risk:** High (external). Both depend on human review or upstream analysis that cannot be automated.

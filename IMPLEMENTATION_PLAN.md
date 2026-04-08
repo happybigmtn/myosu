@@ -1,50 +1,413 @@
 # IMPLEMENTATION_PLAN
 
-Generated: 2026-04-05
-Codebase snapshot: trunk @ ba63a7d + local
-Specs: gen-20260405-145446/specs/050426-*.md
+Generated: 2026-04-08
+Codebase snapshot: trunk @ 4e0b37f
+Specs: gen-20260408-013810/specs/080426-*.md
 
 ---
 
 ## Priority Work
 
-### Completed prerequisites
+### Phase 1: Reduce and Clean
 
-- `P-001` is already satisfied by commit `ba63a7d` (`myosu: auto loop checkpoint`), which landed the zero-dividend fallback, epoch consistency guard, validator scoring change, decode budget tightening, INV-004 CI gate, and Cargo.toml de-workspacing that the older queue still described as uncommitted.
-- `P-002` is satisfied in the current local slice: `cargo test -p pallet-game-solver -- truncation` now sweeps 1 / 100 / 1_000 / 10_000 accrued blocks across representative emission rates and measures a worst-case stage-0 drift of 2 rao per accrued block (6 rao over the default tempo-2 epoch). The correction decision is intentionally deferred to `WORKLIST.md`.
+- [ ] `DEBT-001` Relocate RPC and runtime-API crates from dead pallet directory
 
-### Checkpoint: Chain core confidence
+  Spec: `specs/070426-technical-debt-surface.md`
+  Why now: The dead `pallet-subtensor` directory hosts two live subdirectories — `runtime-api/` (14 lines, `subtensor-custom-rpc-runtime-api`) and `rpc/` (82 lines, `subtensor-custom-rpc`) — that the runtime and node still import. These must be moved before the dead pallet can be deleted. This is the single prerequisite for the highest-leverage cleanup task (DEBT-002).
+  Codebase evidence: `Cargo.toml:184-185` defines workspace deps pointing to `crates/myosu-chain/pallets/subtensor/rpc` and `crates/myosu-chain/pallets/subtensor/runtime-api`. `crates/myosu-chain/runtime/Cargo.toml:154` imports `subtensor-custom-rpc-runtime-api`. `crates/myosu-chain/node/Cargo.toml:86-87` imports both. `crates/myosu-chain/node/src/rpc.rs:53` uses `subtensor_custom_rpc::{SubtensorCustom, SubtensorCustomApiServer}`. The runtime-api `lib.rs` already imports from `pallet_game_solver::rpc_info`, not the dead pallet.
+  Owns: Move `pallets/subtensor/runtime-api/` to `pallets/game-solver/runtime-api/` and `pallets/subtensor/rpc/` to `pallets/game-solver/rpc/`. Update all Cargo.toml path references (workspace root, runtime, node). Rename crate packages from `subtensor-custom-rpc*` to `game-solver-rpc*` (or keep names if rename is deferred to DEBT-003).
+  Integration touchpoints: Workspace `Cargo.toml` (lines 184-185), `crates/myosu-chain/runtime/Cargo.toml` (line 154), `crates/myosu-chain/node/Cargo.toml` (lines 86-87), `crates/myosu-chain/node/src/rpc.rs` (line 53).
+  Scope boundary: Move directories and update paths only. Do not rename crate package names yet (that belongs to DEBT-003). Do not modify runtime-api or RPC logic.
+  Acceptance criteria: (1) `pallets/game-solver/runtime-api/` and `pallets/game-solver/rpc/` exist with identical content. (2) No Cargo.toml references `pallets/subtensor/runtime-api` or `pallets/subtensor/rpc`. (3) `SKIP_WASM_BUILD=1 cargo check --workspace` succeeds. (4) `cargo test -p pallet-game-solver --quiet -- stage_0` passes.
+  Verification:
+  ```bash
+  test -d crates/myosu-chain/pallets/game-solver/runtime-api
+  test -d crates/myosu-chain/pallets/game-solver/rpc
+  ! grep -rq "pallets/subtensor/r" Cargo.toml crates/myosu-chain/*/Cargo.toml
+  SKIP_WASM_BUILD=1 cargo check --workspace
+  cargo test -p pallet-game-solver --quiet -- stage_0
+  ```
+  Required tests: Existing stage-0 tests must pass. No new tests needed (logic unchanged).
+  Dependencies: None.
+  Estimated scope: S
+  Completion signal: Workspace compiles with RPC/runtime-API crates living under game-solver.
 
-After P-001 through P-007: emission is measured, E2E tests are wired, CI is hardened, dead code is audited. Pause and verify trunk CI is green, all E2E scripts pass, and no new regressions. Re-evaluate scope before proceeding to multi-node and operator work.
+- [ ] `DEBT-002` Delete dead pallet-subtensor directory
 
----
+  Spec: `specs/070426-technical-debt-surface.md`
+  Why now: 90.6K lines of dead code that confuses search, bloats compilation, and risks accidental linking. The runtime uses `pallet-game-solver` exclusively (aliased as `pallet_subtensor`). After DEBT-001 relocates the live RPC/runtime-API subdirectories, nothing in the build depends on this directory.
+  Codebase evidence: `crates/myosu-chain/pallets/subtensor/src/lib.rs` is 2,750 lines / 92.4K. Not referenced in any `construct_runtime!` call. Not a workspace member. `pallets/subtensor/Cargo.toml` package name is `pallet-subtensor`. After DEBT-001, the only references are `pallets/subtensor/rpc/` and `pallets/subtensor/runtime-api/` which will have been moved.
+  Owns: Delete `crates/myosu-chain/pallets/subtensor/` directory entirely.
+  Integration touchpoints: Workspace Cargo.toml (verify no remaining references), any CI scripts that glob over pallet directories.
+  Scope boundary: Delete only. Do not rename the `pallet_subtensor` alias (that is DEBT-003). Do not modify game-solver code.
+  Acceptance criteria: (1) `crates/myosu-chain/pallets/subtensor/` does not exist. (2) `SKIP_WASM_BUILD=1 cargo check --workspace` succeeds. (3) `cargo test -p pallet-game-solver --quiet -- stage_0` passes. (4) `grep -r "pallets/subtensor" crates/` returns zero results. (5) No Cargo.toml in the workspace references `pallet-subtensor` as a package dependency (the alias `pallet_subtensor = { package = "pallet-game-solver" }` is a different thing and stays).
+  Verification:
+  ```bash
+  test ! -d crates/myosu-chain/pallets/subtensor
+  SKIP_WASM_BUILD=1 cargo check --workspace
+  cargo test -p pallet-game-solver --quiet -- stage_0
+  SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
+  ! grep -rq "pallets/subtensor" crates/
+  ```
+  Required tests: Existing stage-0 and integration tests must pass unchanged.
+  Dependencies: DEBT-001.
+  Estimated scope: S
+  Completion signal: Dead pallet removed, workspace compiles, all tests green.
 
-### Cluster 5: Validation and Scoring Hardening (dependency: P-001)
+- [ ] `DEBT-003` Pallet naming normalization
 
----
+  Spec: `specs/070426-technical-debt-surface.md`
+  Why now: Every code reference uses `pallet_subtensor::` via Cargo alias. New contributors searching for `pallet_subtensor` will no longer find the dead pallet (after DEBT-002) but will still be confused by the naming mismatch. Since myosu has no deployed chain state, renaming the `construct_runtime!` entry is safe for fresh genesis.
+  Codebase evidence: `crates/myosu-chain/runtime/Cargo.toml:248` defines `pallet_subtensor = { package = "pallet-game-solver" }`. `construct_runtime!` at `runtime/src/lib.rs:1250,1275` uses `SubtensorModule: pallet_subtensor = 7`. All imports in runtime, node, admin-utils use `pallet_subtensor::`. The relocated RPC/runtime-API crates (from DEBT-001) still use `subtensor-custom-*` package names.
+  Owns: (1) Change runtime Cargo.toml alias from `pallet_subtensor` to `pallet_game_solver`. (2) Change `construct_runtime!` entry to `GameSolver: pallet_game_solver = 7`. (3) Update all `use pallet_subtensor::` and `pallet_subtensor::` references in runtime, node, runtime-common, admin-utils, chain-client. (4) Rename relocated RPC crate packages from `subtensor-custom-rpc*` to `game-solver-rpc*`. (5) Update workspace Cargo.toml workspace dependency entries.
+  Integration touchpoints: Every file that imports `pallet_subtensor` — runtime `lib.rs`, `check_nonce.rs`, `sudo_wrapper.rs`, `transaction_payment_wrapper.rs`, node `rpc.rs`, `service.rs`, `command.rs`, `chain_spec/*.rs`, admin-utils pallet, chain-client, runtime-common.
+  Scope boundary: Rename identifiers and package names only. Do not change pallet logic, storage layout, or runtime behavior. The pallet index (7) stays the same.
+  Acceptance criteria: (1) `grep -rn "pallet_subtensor" crates/myosu-chain/` returns only comments explaining the rename, not active code. (2) `grep -rn "SubtensorModule" crates/myosu-chain/` returns zero results (replaced by `GameSolver`). (3) `SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime -p myosu-chain` succeeds. (4) `cargo test -p pallet-game-solver --quiet -- stage_0` passes. (5) `SKIP_WASM_BUILD=1 cargo run -p myosu-chain --quiet -- build-spec --chain devnet --raw > /dev/null` succeeds.
+  Verification:
+  ```bash
+  grep -rn "pallet_subtensor" crates/myosu-chain/runtime/src/ crates/myosu-chain/node/src/ | grep -v "^.*:.*//.*pallet_subtensor"
+  # Must return zero results
+  SKIP_WASM_BUILD=1 cargo check -p myosu-chain-runtime -p myosu-chain
+  cargo test -p pallet-game-solver --quiet -- stage_0
+  SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
+  SKIP_WASM_BUILD=1 cargo run -p myosu-chain --quiet -- build-spec --chain devnet --raw > /dev/null
+  ```
+  Required tests: Existing tests pass. Chain spec builds correctly. No new tests (renaming only).
+  Dependencies: DEBT-001, DEBT-002.
+  Estimated scope: M
+  Completion signal: One pallet, one name, zero ambiguity.
 
-### Cluster 6: Miner HTTP Axon Gaps (dependency: P-001)
+- [ ] `DEBT-004` Inherited migration file cleanup
 
----
+  Spec: `specs/070426-technical-debt-surface.md`
+  Why now: 57 `migrate_*.rs` files exist in `pallets/game-solver/src/migrations/`. The `mod.rs` only imports 2 (`migrate_create_root_network`, `migrate_init_total_issuance`). The runtime `Migrations` type only wires `migrate_init_total_issuance`. The other 55 files are dead on disk — not compiled, not referenced. They reference subtensor-era state (Alpha/TAO dual-token, root network, EVM, commit-reveal V2/V3, specific subnet IDs) that myosu has never had.
+  Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/migrations/mod.rs` imports only `migrate_create_root_network` and `migrate_init_total_issuance`. `crates/myosu-chain/runtime/src/lib.rs:1303-1309` wires only `migrate_init_total_issuance`. `ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l` returns 57.
+  Owns: Delete 55 unreferenced `migrate_*.rs` files. Retain `migrate_init_total_issuance.rs` (wired into runtime Migrations) and `migrate_create_root_network.rs` (referenced by mod.rs — verify if actually needed or can also be removed). Add a one-line comment to each retained file explaining why.
+  Integration touchpoints: `pallets/game-solver/src/migrations/mod.rs`, `runtime/src/lib.rs` Migrations type.
+  Scope boundary: Delete unreferenced files only. Do not modify any migration logic. If `migrate_create_root_network` is only retained as a namespace stub, evaluate whether it can be removed.
+  Acceptance criteria: (1) `ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l` returns 2 or 3. (2) `SKIP_WASM_BUILD=1 cargo check --workspace` succeeds. (3) `cargo test -p pallet-game-solver --quiet -- stage_0` passes. (4) `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --features fast-runtime,try-runtime --quiet devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis` passes.
+  Verification:
+  ```bash
+  ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l
+  # Should be <= 3
+  SKIP_WASM_BUILD=1 cargo check --workspace
+  cargo test -p pallet-game-solver --quiet -- stage_0
+  SKIP_WASM_BUILD=1 cargo test -p myosu-chain --features fast-runtime,try-runtime --quiet devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis
+  ```
+  Required tests: Existing migration smoke test must pass.
+  Dependencies: DEBT-002 (avoids confusion about which migrations directory to clean).
+  Estimated scope: S
+  Completion signal: Migration directory contains only actively-wired migrations.
 
-### Checkpoint: Scoring and serving confidence
+- [ ] `DEBT-005` Stale document cleanup
 
-After P-008 through P-010: wire codecs are fuzz-tested, determinism is verified across all games, and the Liar's Dice HTTP gap is resolved. Verify CI green before proceeding to multi-node work.
+  Spec: `specs/070426-operator-infrastructure.md`
+  Why now: AGENTS.md, OS.md, and README.md reference fabro/raspberry paths that do not exist. THEORY.MD (97K) has no connection to running code. New contributors reading these files get a false impression of operational maturity. This is independent of all code changes and can run in parallel with DEBT-001 through DEBT-004.
+  Codebase evidence: `grep -c "fabro" AGENTS.md` returns matches. `grep -c "fabro" OS.md` returns matches. `grep -c "fabro" README.md` returns matches. `test -d fabro` fails. `THEORY.MD` exists at root (97K bytes). `IMPLEMENTATION_PLAN.md` at root references `050426-*` generation specs (stale).
+  Owns: (1) Remove or mark fabro/raspberry references in AGENTS.md, OS.md, README.md as "planned, not implemented." (2) Move THEORY.MD to `archive/` (educational value preserved, not deleted). (3) Reconcile root IMPLEMENTATION_PLAN.md — either remove (superseded by genesis/ plans) or update to reference current generation.
+  Integration touchpoints: `.github/scripts/check_doctrine_integrity.sh` (may validate document presence).
+  Scope boundary: Documentation changes only. Do not create fabro infrastructure. Do not delete THEORY.MD (move it).
+  Acceptance criteria: (1) No root-level .md file references a path that doesn't exist without explicitly noting it is planned. (2) THEORY.MD lives in `archive/` not root. (3) `bash .github/scripts/check_doctrine_integrity.sh` passes. (4) README.md contains no `fabro run` commands.
+  Verification:
+  ```bash
+  for f in AGENTS.md OS.md README.md; do
+    if grep -q "fabro/" "$f" 2>/dev/null; then
+      grep "fabro/" "$f" | grep -v "planned\|not yet\|aspirational" && echo "FAIL: $f has unmarked fabro refs"
+    fi
+  done
+  test ! -f THEORY.MD
+  test -f archive/THEORY.MD
+  bash .github/scripts/check_doctrine_integrity.sh
+  ```
+  Required tests: Doctrine integrity check passes.
+  Dependencies: None.
+  Estimated scope: S
+  Completion signal: Documentation accurately reflects codebase reality.
 
-Ready-state note (2026-04-05): after live repo re-verification, no unchecked task
-in this queue is implementation-ready. `F-003` still depends on external
-multi-contributor review being recorded on ADR 008, and `F-007` still depends
-on a truthful quality benchmark surface; the current validator path reuses the
-miner checkpoint as its oracle, and the checked-in poker bootstrap artifacts are
-still too sparse for positive-iteration training benchmarks.
+- [ ] `GATE-001` Phase 1 decision gate checkpoint
+
+  Spec: `specs/070426-runtime-architecture.md`
+  Why now: Phase 1 makes structural changes — deleting 90K lines, renaming the core pallet, removing migrations, cleaning docs. Any of these could introduce subtle regressions. No Phase 2 work proceeds until this gate is green. This is a verification-only task, not an implementation task.
+  Codebase evidence: Verification against the state produced by DEBT-001 through DEBT-005.
+  Owns: Run the full verification suite and produce a decision artifact: either "Phase 1 complete, proceed to Phase 2" or "Phase 1 incomplete, rework needed: [list]."
+  Integration touchpoints: All modified files from DEBT-001 through DEBT-005.
+  Scope boundary: Verification only. No code changes. If failures are found, open new tasks — do not fix inline.
+  Acceptance criteria: (1) `pallet-subtensor` directory does not exist. (2) `pallet-game-solver` is the sole game-solving pallet. (3) No `pallet_subtensor` alias in active code paths. (4) Migration file count <= 3. (5) `SKIP_WASM_BUILD=1 cargo check --workspace` succeeds. (6) `SKIP_WASM_BUILD=1 cargo test --workspace --quiet` succeeds. (7) `cargo test -p pallet-game-solver --quiet -- stage_0` passes. (8) No root-level document references nonexistent paths without marking them as planned.
+  Verification:
+  ```bash
+  test ! -d crates/myosu-chain/pallets/subtensor
+  ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l
+  SKIP_WASM_BUILD=1 cargo check --workspace
+  SKIP_WASM_BUILD=1 cargo test --workspace --quiet
+  cargo test -p pallet-game-solver --quiet -- stage_0
+  SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
+  bash tests/e2e/local_loop.sh
+  bash tests/e2e/emission_flow.sh
+  ```
+  Required tests: Full workspace test suite, stage-0 flow, E2E local loop, E2E emission flow.
+  Dependencies: DEBT-001, DEBT-002, DEBT-003, DEBT-004, DEBT-005.
+  Estimated scope: XS
+  Completion signal: Decision artifact produced. Green = proceed to Phase 2.
+
+### Phase 2: Harden and Measure
+
+- [ ] `EMIT-001` Emission dust policy decision
+
+  Spec: `specs/070426-emission-yuma-consensus.md`
+  Why now: U96F32 to u64 floor conversion loses up to 2 rao per accrued block (6 rao per default tempo-2 epoch). The `try_state` threshold is set to 1000 rao intentionally above the measured drift. WORKLIST.md `EM-DUST-001` defers this decision. The three options are: accept and document, accumulate in dust account, or round-robin rounding.
+  Codebase evidence: `tou64!` macro in `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs` uses `saturating_to_num::<u64>()` (floors). `cargo test -p pallet-game-solver -- truncation` exercises the sweep. `try_state` threshold at 1000 rao in game-solver. WORKLIST.md `EM-DUST-001` tracks the deferral.
+  Owns: (1) Choose one of the three options (or propose a fourth). (2) Write ADR 011 documenting the decision with rationale. (3) If option 1 (accept): tighten `try_state` threshold from 1000 rao to a value justified by measured drift. (4) If option 2/3: implement with unit tests proving sum(distributions) == block_emission * epochs within 1 rao. (5) Resolve WORKLIST.md `EM-DUST-001`.
+  Integration touchpoints: `pallets/game-solver/src/coinbase/run_coinbase.rs`, `try_state` hook in game-solver, WORKLIST.md.
+  Scope boundary: Dust policy only. Do not change emission distribution logic, NoOpSwap behavior, or epoch mechanics.
+  Acceptance criteria: (1) ADR 011 exists with chosen option and rationale. (2) `try_state` threshold is justified by measured data. (3) `cargo test -p pallet-game-solver -- truncation --quiet` passes. (4) `bash tests/e2e/emission_flow.sh` passes. (5) WORKLIST.md `EM-DUST-001` resolved.
+  Verification:
+  ```bash
+  test -f docs/adr/011-emission-dust-policy.md
+  cargo test -p pallet-game-solver -- truncation --quiet
+  bash tests/e2e/emission_flow.sh
+  grep -q "EM-DUST-001" WORKLIST.md && grep "EM-DUST-001" WORKLIST.md | grep -qi "resolved\|closed\|decided"
+  ```
+  Required tests: Truncation sweep tests pass. E2E emission flow passes. If option 2/3: new unit tests proving sum invariant.
+  Dependencies: GATE-001.
+  Estimated scope: S
+  Completion signal: Dust is accounted for, threshold is justified.
+
+- [ ] `TEST-001` HTTP axon security tests
+
+  Spec: `specs/070426-miner-subsystem.md`
+  Why now: The miner HTTP axon (`crates/myosu-miner/src/axon.rs`, 20.2K) is the only network-exposed surface. No tests exist for malformed requests, oversized payloads, or concurrent access. This is the highest-priority test gap per the ASSESSMENT.
+  Codebase evidence: `crates/myosu-miner/src/axon.rs` serves poker strategy over HTTP. No test file for axon in `myosu-miner`. WORKLIST.md `AXON-HTTP-001` notes Liar's Dice uses file-based path only.
+  Owns: Add at least 3 tests to `myosu-miner`: (1) Malformed request body returns error, does not panic. (2) Oversized request body (>1 MiB) is rejected. (3) Concurrent requests do not deadlock or corrupt shared state.
+  Integration touchpoints: `crates/myosu-miner/src/axon.rs`, any shared state accessed during strategy serving.
+  Scope boundary: Test-only changes to `myosu-miner`. Do not modify axon serving logic unless a test reveals a real bug (then fix minimally).
+  Acceptance criteria: (1) 3+ new tests in myosu-miner covering malformed, oversized, and concurrent HTTP requests. (2) All tests pass. (3) Existing tests unaffected.
+  Verification:
+  ```bash
+  SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet
+  SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet -- axon
+  ```
+  Required tests: 3 new HTTP axon tests as described.
+  Dependencies: GATE-001.
+  Estimated scope: S
+  Completion signal: Axon has basic security coverage.
+
+- [ ] `TEST-002` Key management corruption recovery test
+
+  Spec: `specs/070426-operator-infrastructure.md`
+  Why now: `myosu-keys` has 19 tests but no concurrent access or corruption recovery coverage. Key files are the operator's most sensitive local state.
+  Codebase evidence: `crates/myosu-keys/src/lib.rs` (1,956 lines). Existing tests cover create, import, export, switch, list operations. No test for corrupted key file handling.
+  Owns: Add at least 1 test: corrupted key file (truncated or garbage bytes) is detected and reported with a clear error, does not panic or silently produce wrong keys.
+  Integration touchpoints: `crates/myosu-keys/src/` key loading and parsing logic.
+  Scope boundary: Test-only changes. Fix loading logic only if the test reveals a real panic (then fix minimally).
+  Acceptance criteria: (1) Test exists that writes a corrupted key file and verifies the load path returns an error. (2) No panic on corrupted input. (3) Existing tests pass.
+  Verification:
+  ```bash
+  SKIP_WASM_BUILD=1 cargo test -p myosu-keys --quiet
+  SKIP_WASM_BUILD=1 cargo test -p myosu-keys --quiet -- corrupt
+  ```
+  Required tests: 1 corruption recovery test.
+  Dependencies: GATE-001.
+  Estimated scope: XS
+  Completion signal: Key corruption is handled gracefully.
+
+- [ ] `TEST-003` Cross-game scoring fairness documentation test
+
+  Spec: `specs/070426-validator-subsystem.md`
+  Why now: Different games may produce incomparable quality metrics. The validator uses the same `score_from_l1_distance` formula for all games, but no test verifies that scores are comparable across game types. This is a documentation test — it explicitly records whether scores are comparable or not.
+  Codebase evidence: `crates/myosu-validator/src/validation.rs` — `score_from_l1_distance()` is game-agnostic. No cross-game scoring test exists.
+  Owns: Add at least 1 test that evaluates the same "quality level" (e.g., blueprint vs. trained strategy) for both poker and Liar's Dice and documents whether the resulting scores are in comparable ranges. If they are not, document the discrepancy with a code comment explaining the implications for cross-subnet emission fairness.
+  Integration touchpoints: `crates/myosu-validator/src/validation.rs`, `crates/myosu-games-poker/`, `crates/myosu-games-liars-dice/`.
+  Scope boundary: Test and document only. Do not change scoring formula. If scores are incomparable, document — do not fix (that is a design decision for a future spec).
+  Acceptance criteria: (1) Test exists comparing scoring ranges across at least 2 game types. (2) Test output or comment documents comparability conclusion. (3) Existing tests pass.
+  Verification:
+  ```bash
+  SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet
+  SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- cross_game
+  ```
+  Required tests: 1 cross-game scoring test.
+  Dependencies: GATE-001.
+  Estimated scope: S
+  Completion signal: Cross-game scoring behavior is documented in code.
+
+- [ ] `GATE-002` Checkpoint: Hardening verification
+
+  Spec: `specs/070426-validator-subsystem.md`
+  Why now: After emission dust is decided and test gaps are closed, verify the hardening work before proceeding to the miner quality benchmark (which builds on this foundation). This is a lightweight stop-and-verify, not a full gate.
+  Codebase evidence: Verification against state produced by EMIT-001, TEST-001, TEST-002, TEST-003.
+  Owns: Run test suite and confirm all new tests pass alongside existing suite. Verify WORKLIST.md items are updated.
+  Integration touchpoints: All files modified in Phase 2 tasks.
+  Scope boundary: Verification only. No code changes.
+  Acceptance criteria: (1) `SKIP_WASM_BUILD=1 cargo test --workspace --quiet` passes. (2) `bash tests/e2e/emission_flow.sh` passes. (3) WORKLIST.md `EM-DUST-001` is resolved. (4) HTTP axon tests exist and pass.
+  Verification:
+  ```bash
+  SKIP_WASM_BUILD=1 cargo test --workspace --quiet
+  bash tests/e2e/emission_flow.sh
+  bash tests/e2e/local_loop.sh
+  ```
+  Required tests: Full workspace test suite.
+  Dependencies: EMIT-001, TEST-001, TEST-002, TEST-003.
+  Estimated scope: XS
+  Completion signal: Hardening verified, proceed to benchmark.
+
+- [ ] `BENCH-001` Miner quality benchmark surface for Liar's Dice
+
+  Spec: `specs/070426-miner-subsystem.md`
+  Why now: The current validator self-scores the miner checkpoint — identical checkpoint in and out always produces `exact_match=true, score=1.0`. This is a determinism proof, not a quality benchmark. Liar's Dice has a complete native solver with no external encoder dependency, making it the viable first target for a truthful quality benchmark. Poker is blocked on sparse encoder artifacts (WORKLIST.md `MINER-QUAL-001`).
+  Codebase evidence: `crates/myosu-validator/src/validation.rs` — `score_response()` compares against `solver.answer(query)` from the validator CLI checkpoint. `crates/myosu-games-liars-dice/` has a complete MCCFR implementation with no external dependency. WORKLIST.md `MINER-QUAL-001` documents the self-scoring limitation.
+  Owns: (1) Add a benchmark test or command that trains a Liar's Dice strategy for varying iterations and measures exploitability independent of the self-scoring path. (2) Document minimum recommended training iterations for Liar's Dice based on measured exploitability convergence. (3) Update WORKLIST.md `MINER-QUAL-001` with the chosen approach.
+  Integration touchpoints: `crates/myosu-validator/`, `crates/myosu-games-liars-dice/`, WORKLIST.md, operator guide.
+  Scope boundary: Liar's Dice only. Do not attempt poker benchmark (blocked on encoder). Do not change validator scoring logic. Do not enforce minimum iterations in code (guidance only).
+  Acceptance criteria: (1) A test or command exists that measures Liar's Dice strategy exploitability after N iterations. (2) Exploitability decreases with more iterations (convergence proof). (3) Minimum training iteration recommendation documented for Liar's Dice. (4) WORKLIST.md `MINER-QUAL-001` updated. (5) Poker benchmark explicitly documented as blocked on encoder artifacts.
+  Verification:
+  ```bash
+  SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- quality_benchmark
+  SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet
+  ```
+  Required tests: Quality benchmark test showing exploitability convergence for Liar's Dice.
+  Dependencies: GATE-002, TEST-003.
+  Estimated scope: M
+  Completion signal: Liar's Dice has a truthful quality benchmark with documented minimum iterations.
+
+- [ ] `GATE-003` Phase 2 decision gate
+
+  Spec: `specs/070426-validator-subsystem.md`
+  Why now: Verify that Phase 2 hardening is complete before proceeding to operator packaging. Emission dust decided, test gaps closed, Liar's Dice quality benchmark exists.
+  Codebase evidence: Verification against all Phase 2 task outputs.
+  Owns: Run full verification suite and produce a decision artifact.
+  Integration touchpoints: All Phase 2 outputs.
+  Scope boundary: Verification only.
+  Acceptance criteria: (1) Emission dust policy ADR exists. (2) `try_state` threshold justified. (3) HTTP axon security tests exist. (4) Key corruption test exists. (5) Cross-game scoring documented. (6) Liar's Dice quality benchmark exists with minimum iterations documented. (7) All CI jobs green. (8) All E2E scripts pass. (9) WORKLIST.md `EM-DUST-001` and `MINER-QUAL-001` resolved or have concrete follow-on.
+  Verification:
+  ```bash
+  SKIP_WASM_BUILD=1 cargo test --workspace --quiet
+  bash tests/e2e/local_loop.sh
+  bash tests/e2e/emission_flow.sh
+  bash tests/e2e/validator_determinism.sh
+  test -f docs/adr/011-emission-dust-policy.md
+  ```
+  Required tests: Full suite plus all E2E scripts.
+  Dependencies: EMIT-001, TEST-001, TEST-002, TEST-003, BENCH-001.
+  Estimated scope: XS
+  Completion signal: Decision artifact produced. Green = proceed to Phase 3.
+
+### Phase 3: Package and Document
+
+- [ ] `OPS-001` README and onboarding overhaul
+
+  Spec: `specs/070426-gameplay-advisor-surface.md`
+  Why now: README is the first file a new developer reads. Currently it lacks prerequisites, references broken fabro commands, and doesn't document the fastest path to success. After Phase 1 cleanup, the README should describe the post-cleanup codebase.
+  Codebase evidence: `README.md` (~143 lines). Missing: Rust edition 2024 prerequisite, WASM target, protoc. Contains `fabro run` commands that fail. Fastest meaningful test (`cargo test -p myosu-games-kuhn --quiet`, ~30s warm cache) is not documented.
+  Owns: (1) Add "Prerequisites" section (Rust 2024 edition, WASM target, protoc). (2) Add "Quick Verify" section with fastest passing command. (3) Remove or replace all `fabro run` commands. (4) Separate "Developer" and "Operator" paths. (5) Point operator path to `docs/operator-guide/quickstart.md`.
+  Integration touchpoints: README.md, `docs/operator-guide/quickstart.md` (link target).
+  Scope boundary: README.md only. Do not rewrite operator guide. Do not add new documentation files.
+  Acceptance criteria: (1) Every command in README succeeds on a fresh checkout with prerequisites installed. (2) `cargo test -p myosu-games-kuhn --quiet` is documented as the quick verify. (3) No `fabro run` commands remain. (4) Prerequisites are listed.
+  Verification:
+  ```bash
+  ! grep -q "fabro run" README.md
+  grep -q "Prerequisites\|prerequisites" README.md
+  grep -q "myosu-games-kuhn" README.md
+  cargo test -p myosu-games-kuhn --quiet
+  ```
+  Required tests: Quick verify command must pass.
+  Dependencies: GATE-001 (README describes post-cleanup state).
+  Estimated scope: S
+  Completion signal: New developer can go from README to green test in under 5 minutes.
+
+- [ ] `OPS-002` Fabro ghost infrastructure resolution
+
+  Spec: `specs/070426-operator-infrastructure.md`
+  Why now: After DEBT-005 marks fabro references in docs, a decision must be made: create the minimum execution infrastructure or fully remove all references. DEBT-005 marks them as "planned" — this task resolves the decision.
+  Codebase evidence: `fabro.toml` exists at root (24 lines, references MiniMax model). `fabro/` directory does not exist. AGENTS.md "Bootstrap Lanes" and OS.md "Execution Model" describe a supervision model built on fabro/raspberry.
+  Owns: Decision and execution: (A) If fabro is the intended substrate, create minimal `fabro/programs/myosu-bootstrap.yaml` and one working run config, OR (B) If not, remove all fabro/raspberry references from AGENTS.md, OS.md, and delete `fabro.toml`.
+  Integration touchpoints: AGENTS.md, OS.md, `fabro.toml`, `.github/scripts/check_doctrine_integrity.sh`.
+  Scope boundary: Resolve the ghost. If option A, create only the minimum viable entrypoint. Do not build a full execution framework.
+  Acceptance criteria: Either (A) `fabro run <config>` executes something meaningful, OR (B) `grep -rq "fabro/" AGENTS.md OS.md README.md` returns zero results and `fabro.toml` is deleted.
+  Verification:
+  ```bash
+  # Option B verification (more likely):
+  ! grep -rq "fabro/" AGENTS.md OS.md README.md 2>/dev/null
+  test ! -f fabro.toml
+  bash .github/scripts/check_doctrine_integrity.sh
+  ```
+  Required tests: Doctrine integrity check passes.
+  Dependencies: DEBT-005, GATE-001.
+  Estimated scope: S
+  Completion signal: No ghost infrastructure in documentation.
+
+- [ ] `OPS-003` Container packaging research and implementation
+
+  Spec: `specs/070426-operator-infrastructure.md`
+  Why now: Operators currently must compile from source with Rust nightly, WASM target, and protoc. Cold compilation takes 10-30 minutes. Containerization is the single highest-impact operator experience improvement. However, WASM build inside Docker is untested and may require 8+ GB RAM.
+  Codebase evidence: No Dockerfile, docker-compose, or container configs exist anywhere in the repo. `.github/scripts/check_operator_network_fresh_machine.sh` proves the full operator flow inside `ubuntu:22.04`, so compilation requirements are well-understood.
+  Owns: (1) Research: verify WASM build works inside Docker with acceptable resource requirements. (2) If feasible: create multi-stage Dockerfile(s) for chain, miner, validator. (3) Create docker-compose.yml for single-authority devnet with miner and validator. (4) If WASM build exceeds 16GB RAM or 30 minutes: document the limitation and consider pre-built WASM approach.
+  Integration touchpoints: New files at repo root: `Dockerfile` (or `Dockerfile.chain`, `Dockerfile.miner`), `docker-compose.yml`. Chain spec configuration for containerized devnet.
+  Scope boundary: Devnet containers only. No production deployment. No Kubernetes. No CI Docker image building (follow-on).
+  Acceptance criteria: (1) `docker build` succeeds for at least the chain binary. (2) `docker compose up` produces logs showing chain block production + miner registration + validator scoring. (3) Container images under 500MB each. (4) No secrets baked into images. (5) If WASM build is infeasible inside Docker, the decision is documented in an ADR.
+  Verification:
+  ```bash
+  docker build -t myosu-chain -f Dockerfile.chain .
+  docker compose up --abort-on-container-exit 2>&1 | tail -20
+  docker images myosu-chain --format '{{.Size}}'
+  ```
+  Required tests: `docker compose up` produces the expected lifecycle logs.
+  Dependencies: GATE-003 (binaries should be in final form before containerizing).
+  Estimated scope: M
+  Completion signal: Operator can `docker compose up` and see a working devnet.
 
 ---
 
 ## Follow-On Work
 
-### Operator Tooling and Onboarding
+### Research Gates (externally blocked or long-horizon)
 
-### Token Economics Research Gate
+- [ ] `RES-001` Token economics decision document
+
+  Spec: `specs/070426-emission-yuma-consensus.md`
+  Why now: The token-economics spec is a research spec. It identifies 8 design axes that must be decided before `NoOpSwap` can be replaced. ADR 008 exists as `Proposed` but requires multi-contributor review. This is the correct next step but is externally blocked.
+  Codebase evidence: `docs/adr/008-future-token-economics-direction.md` (14.5K, status: Proposed). `crates/myosu-chain/runtime/src/lib.rs:99-198` implements `Stage0NoopSwap`. WORKLIST.md references no resolution path.
+  Owns: Facilitate the review of ADR 008 by at least two contributors with token-economics context. Record the review outcome. Change ADR status from `Proposed` to `Accepted` or `Rejected`.
+  Integration touchpoints: `docs/adr/008-future-token-economics-direction.md`, `ops/decision_log.md`.
+  Scope boundary: Research and decision only. Do NOT change swap implementation. Do NOT wire V3 AMM into runtime.
+  Acceptance criteria: (1) ADR 008 status is no longer `Proposed`. (2) At least two named reviewers recorded. (3) Each of 8 design axes has a concrete recommendation. (4) Migration path from NoOpSwap to chosen model is sketched.
+  Verification: Review-based (no code commands).
+  Required tests: None (research task).
+  Dependencies: None (runs independently of all phases).
+  Blocker: External human review. Cannot be self-closed by automated work.
+  Estimated scope: L
+  Completion signal: Decision document accepted, NoOpSwap replacement work allowed to start.
+
+- [ ] `RES-002` Polkadot SDK fork patch classification
+
+  Spec: `specs/070426-runtime-architecture.md`
+  Why now: The opentensor polkadot-sdk fork (rev `71629fd`) has 21 fork-only commits touching consensus-critical paths. ADR 009 documents the delta but individual patches are not classified. Classification must happen before any migration attempt.
+  Codebase evidence: `docs/adr/009-polkadot-sdk-migration-feasibility.md` (8.8K). WORKLIST.md `CHAIN-SDK-001` recommends starting with patch classification. `Cargo.toml` pins to opentensor fork.
+  Owns: Classify each of the 21 fork-only commits as: "Needed by myosu" (with rationale), "Subtensor-specific" (safe to drop), or "Uncertain" (needs investigation). Propose migration timeline. Update ADR 009.
+  Integration touchpoints: `docs/adr/009-polkadot-sdk-migration-feasibility.md`, WORKLIST.md `CHAIN-SDK-001`.
+  Scope boundary: Research and classification only. Do not change polkadot-sdk pin. Do not attempt migration.
+  Acceptance criteria: (1) Each of 21 commits classified. (2) Migration timeline proposed. (3) ADR 009 updated with classification table. (4) WORKLIST.md `CHAIN-SDK-001` resolved.
+  Verification: Research task — verify ADR 009 has classification table.
+  Required tests: None.
+  Dependencies: None (runs independently).
+  Estimated scope: M
+  Completion signal: Each fork commit is classified, migration path is clear.
+
+- [ ] `RES-003` Poker quality benchmark (blocked on encoder artifacts)
+
+  Spec: `specs/070426-validator-subsystem.md`
+  Why now: Poker quality measurement requires either richer encoder artifacts (7-11 GB RAM for full encoder) or an independent reference checkpoint. The checked-in bootstrap artifacts are intentionally sparse — positive-iteration poker training fails with `isomorphism not found`. This blocks documenting minimum poker training iterations.
+  Codebase evidence: `crates/myosu-games-poker/examples/bootstrap_artifacts.rs` emits a single preflop lookup. `cargo test -p myosu-games-poker -- step_reports_sparse_encoder_failure_instead_of_panicking` confirms sparse artifact limitation. WORKLIST.md `MINER-QUAL-001` documents this.
+  Owns: Either (a) ship richer poker encoder artifacts as test fixtures and build an exploitability benchmark, or (b) document the hardware requirements for generating full encoder and provide a script for operators to self-generate.
+  Integration touchpoints: `crates/myosu-games-poker/`, `crates/myosu-validator/`, robopoker fork.
+  Scope boundary: Poker encoder artifacts and benchmark only. Do not change robopoker fork algorithm.
+  Acceptance criteria: (1) A path exists to measure poker strategy quality independent of self-scoring. (2) Hardware requirements documented. (3) Minimum poker training iterations documented (or explicitly blocked with requirements).
+  Verification: Research task — verify benchmark or documentation exists.
+  Required tests: Poker quality benchmark test if encoder artifacts are shipped.
+  Dependencies: BENCH-001 (Liar's Dice benchmark proves the pattern first).
+  Blocker: Encoder artifact size and robopoker upstream limitations.
+  Estimated scope: M
+  Completion signal: Poker quality measurement path is documented and actionable.
+
+---
 
 - [ ] `F-003` Token economics decision document
 
@@ -83,70 +446,82 @@ still too sparse for positive-iteration training benchmarks.
 
 ## Completed / Already Satisfied
 
-- [x] `C-001` NoOpSwap identity stub implements all 37 swap callsites
-  Spec: `specs/050426-token-economics.md`
-  Codebase evidence: `runtime/src/lib.rs` lines 89-150 define `Stage0NoopSwap` with 1:1 conversion, zero fees. `swap_stub.rs` documents `max_price()` returning `Balance::max_value()` (with new documentation from working tree).
+- [x] `C-001` NoOpSwap identity stub implements all swap callsites
+  Spec: `specs/070426-emission-yuma-consensus.md`
+  Codebase evidence: `runtime/src/lib.rs` lines 99-198 define `Stage0NoopSwap` with 1:1 conversion, zero fees. Coinbase unit tests and `swap_stub.rs` tests pass.
 
 - [x] `C-002` INV-004 solver-gameplay dependency boundary enforced in CI
-  Spec: `specs/050426-game-trait-interface.md`
-  Codebase evidence: Working tree adds `cargo tree` check to ci.yml verifying `myosu-play` does not depend on `myosu-miner` and vice versa. Confirmed via `cargo tree -p myosu-play` (no myosu-miner in tree).
+  Spec: `specs/070426-game-engine-framework.md`
+  Codebase evidence: CI job "INV-004 solver-gameplay dependency boundary" runs `cargo tree` check. Confirmed via `cargo tree -p myosu-play` (no myosu-miner in tree).
 
 - [x] `C-003` Multi-game architecture with zero-change extensibility
-  Spec: `specs/050426-game-trait-interface.md`
-  Codebase evidence: `GameRegistry::supported()` returns 4 games. Poker, Kuhn, Liar's Dice all implement `CfrGame`/`GameRenderer` traits. Adding Liar's Dice required zero changes to poker code.
+  Spec: `specs/070426-game-engine-framework.md`
+  Codebase evidence: `GameType` enum with `NlheHeadsUp`, `NlheSixMax`, `KuhnPoker`, `LiarsDice`, `Custom(String)`. Adding Liar's Dice required zero changes to poker code. Kuhn poker exists as third-game proof.
 
-- [x] `C-004` Workspace clippy lints enforced (arithmetic_side_effects, expect_used, indexing_slicing, unwrap_used)
-  Spec: `specs/050426-ci-invariant-enforcement.md`
-  Codebase evidence: Workspace `Cargo.toml` `[lints.clippy]` section. CI `chain-clippy` job runs with `-D warnings`.
+- [x] `C-004` Workspace clippy lints enforced
+  Spec: `specs/070426-runtime-architecture.md`
+  Codebase evidence: `Cargo.toml` workspace `[lints.clippy]`: `arithmetic-side-effects = "deny"`, `expect-used = "deny"`, `indexing-slicing = "deny"`, `unwrap-used = "deny"`.
 
-- [x] `C-005` Validator scoring with hyperbolic formula and determinism test
-  Spec: `specs/050426-validation-surface.md`
-  Codebase evidence: Working tree changes `validation.rs` to `score = 1.0 / (1.0 + l1_distance)` with `score_from_l1_distance()` function. 14 unit tests. `validator_determinism.sh` in CI.
+- [x] `C-005` Validator deterministic scoring with hyperbolic formula
+  Spec: `specs/070426-validator-subsystem.md`
+  Codebase evidence: `validation.rs` implements `score = 1.0 / (1.0 + l1_distance)`. 14 unit tests. `validator_determinism.sh` covers poker + Liar's Dice. INV-003 has E2E coverage.
 
-- [x] `C-006` Miner 7-step lifecycle (probe, register, serve, train, checkpoint, file-serve, HTTP-serve)
-  Spec: `specs/050426-mining-surface.md`
-  Codebase evidence: `crates/myosu-miner/src/lib.rs` (~2.2K lines) implements full lifecycle. `axon.rs` handles HTTP serving for poker. Training, checkpointing, and file-based serving work for all games.
+- [x] `C-006` Miner 7-step lifecycle proven
+  Spec: `specs/070426-miner-subsystem.md`
+  Codebase evidence: `crates/myosu-miner/src/` implements probe, register, serve, train, checkpoint, file-serve, HTTP-serve. E2E local loop proves full lifecycle.
 
-- [x] `C-007` Gameplay surface with three modes (smoke-test, TUI, pipe)
-  Spec: `specs/050426-gameplay-surface.md`
-  Codebase evidence: `crates/myosu-play/src/entrypoint.rs` (~3.1K lines). `--smoke-test` flag, `train` subcommand (TUI), pipe protocol. CI runs smoke tests.
+- [x] `C-007` Gameplay surface with three modes
+  Spec: `specs/070426-gameplay-advisor-surface.md`
+  Codebase evidence: `myosu-play` implements smoke-test, TUI (ratatui 0.29), and pipe (newline-delimited JSON) modes. CI runs smoke tests for poker and Liar's Dice.
 
-- [x] `C-008` Key management (`myosu-keys` crate with create, import, export, switch)
-  Spec: `specs/050426-operator-tooling.md`
-  Codebase evidence: `crates/myosu-keys/src/lib.rs` implements all documented commands. Network-namespaced storage.
+- [x] `C-008` Key management CLI with network-namespaced storage
+  Spec: `specs/070426-operator-infrastructure.md`
+  Codebase evidence: `myosu-keys` (1,956 lines) implements create, show-active, print-bootstrap, import (keyfile/mnemonic/raw-seed), list, export, switch, change-password. Network-namespaced via `--network devnet|testnet|finney`.
 
-- [x] `C-009` Two-node block sync proven
-  Spec: `specs/050426-network-consensus.md`
-  Codebase evidence: `tests/e2e/two_node_sync.sh` (8.7K) exists and is referenced in spec as proven.
+- [x] `C-009` Multi-node consensus proven
+  Spec: `specs/070426-runtime-architecture.md`
+  Codebase evidence: `two_node_sync.sh` proves peer-to-peer sync. `four_node_finality.sh` proves 4-authority GRANDPA finality (kill 1, 3 keep finalizing). `consensus_resilience.sh` proves restart catch-up.
 
-- [x] `C-010` Aura + GRANDPA consensus configured with 4 chain spec variants
-  Spec: `specs/050426-chain-runtime-pallet.md`
-  Codebase evidence: Runtime `construct_runtime!` includes `pallet_aura` (3) and `pallet_grandpa` (4). Chain specs: `localnet`, `devnet`, `testnet`, `finney`.
+- [x] `C-010` Aura + GRANDPA consensus with 4 chain spec variants
+  Spec: `specs/070426-runtime-architecture.md`
+  Codebase evidence: `construct_runtime!` includes `pallet_aura` (index 3) and `pallet_grandpa` (index 4). Chain specs: localnet, devnet, testnet (test_finney), finney.
 
-- [x] `C-011` Epoch consistency guard (skip epoch on inconsistent state)
-  Spec: `specs/050426-emission-epoch-mechanism.md`
-  Codebase evidence: Working tree adds `is_epoch_input_state_consistent(netuid)` check at entry of both `epoch()` and `epoch_dense()` in `run_epoch.rs`. Two tests in `epoch.rs` verify the guard.
+- [x] `C-011` Stage-0 emission flow proven end-to-end
+  Spec: `specs/070426-emission-yuma-consensus.md`
+  Codebase evidence: `cargo test -p pallet-game-solver -- stage_0` (26 tests). `tests/e2e/emission_flow.sh`. `tests/e2e/cross_node_emission.sh`. Truncation sweep measures 2 rao/block worst-case drift.
 
-- [x] `C-012` Zero-dividend fallback distributes by stake weight
-  Spec: `specs/050426-emission-epoch-mechanism.md`
-  Codebase evidence: Working tree adds stake-weighted fallback in `run_coinbase.rs` `calculate_dividend_distribution` when `total_dividends == 0`. Test verifies 750/250 distribution for 3:1 stake ratio.
+- [x] `C-012` GameType on-chain encoding with proptest roundtrip
+  Spec: `specs/070426-game-engine-framework.md`
+  Codebase evidence: `GameType::from_bytes` / `to_bytes` with canonical byte encoding. `#[non_exhaustive]` enum. Proptest fuzzing and serde roundtrip tests pass.
 
-- [x] `C-013` Decode budget hardened to 1 MiB for poker wire codec
-  Spec: `specs/050426-game-trait-interface.md`
-  Codebase evidence: Working tree changes `MAX_DECODE_BYTES` from 256 MiB to 1 MiB in both `solver.rs` and `wire.rs`. Tests verify oversized payloads are rejected.
+- [x] `C-013` StrategyResponse wire codec with 1 MiB decode budget
+  Spec: `specs/070426-game-engine-framework.md`
+  Codebase evidence: `MAX_DECODE_BYTES` set to 1 MiB. Probabilities sum check within epsilon 0.001. Tests verify oversized payloads rejected.
 
-- [x] `C-014` Operator guide documentation exists
-  Spec: `specs/050426-operator-tooling.md`
-  Codebase evidence: `docs/operator-guide/quickstart.md`, `docs/operator-guide/upgrading.md`, `docs/operator-guide/troubleshooting.md`, `docs/operator-guide/architecture.md` all exist.
+- [x] `C-014` Robopoker fork tracked with changelog
+  Spec: `specs/070426-game-engine-framework.md`
+  Codebase evidence: `docs/robopoker-fork-changelog.md` (2.2K). Workspace pins to `happybigmtn/robopoker` rev `04716310`. CI `robopoker-fork-coherence` job (advisory, continue-on-error). INV-006 documented.
 
-- [x] `C-015` Six environment variable contracts documented
-  Spec: `specs/050426-operator-tooling.md`
-  Codebase evidence: `MYOSU_KEY_PASSWORD`, `MYOSU_CONFIG_DIR`, `MYOSU_SUBNET`, `MYOSU_WORKDIR`, `MYOSU_CHAIN`, `MYOSU_OPERATOR_CHAIN` referenced in operator tooling spec and code.
+- [x] `C-015` Operator guide documentation
+  Spec: `specs/070426-operator-infrastructure.md`
+  Codebase evidence: `docs/operator-guide/quickstart.md` (10.0K), `architecture.md` (7.2K), `troubleshooting.md` (14.2K), `upgrading.md` (7.8K).
 
-- [x] `C-016` GameType on-chain encoding with proptest roundtrip
-  Spec: `specs/050426-game-trait-interface.md`
-  Codebase evidence: `GameType::from_bytes` / `to_bytes` in `myosu-games` crate with `#[non_exhaustive]` enum.
+- [x] `C-016` CI pipeline with 9+ jobs
+  Spec: `specs/070426-operator-infrastructure.md`
+  Codebase evidence: `.github/workflows/ci.yml` (419 lines). Jobs: repo-shape, active-crates (check/test/clippy/fmt), chain-core, E2E scripts (7), doctrine-integrity, dependency-audit, plan-quality, operator-network, INV-004 boundary.
 
-- [x] `C-017` Structured report types for miner, validator, and key management
-  Spec: `specs/050426-validation-surface.md`
+- [x] `C-017` E2E test suite covering all critical paths
+  Spec: `specs/070426-emission-yuma-consensus.md`
+  Codebase evidence: 7 E2E scripts: `local_loop.sh`, `validator_determinism.sh`, `four_node_finality.sh`, `consensus_resilience.sh`, `cross_node_emission.sh`, `emission_flow.sh`, `two_node_sync.sh`.
+
+- [x] `C-018` Structured report types for miner and validator
+  Spec: `specs/070426-validator-subsystem.md`
   Codebase evidence: 6 report types each in miner and validator (MINER, REGISTRATION, AXON, HTTP, TRAINING, STRATEGY / VALIDATOR, REGISTRATION, SUBTOKEN, PERMIT, VALIDATION, WEIGHTS).
+
+- [x] `C-019` Chain client RPC wrapper
+  Spec: `specs/070426-operator-infrastructure.md`
+  Codebase evidence: `myosu-chain-client` (2,203 lines, 16 tests). Typed Substrate RPC methods for subnet queries, registration, weight submission.
+
+- [x] `C-020` Operator bundle packaging and fresh-machine proof
+  Spec: `specs/070426-operator-infrastructure.md`
+  Codebase evidence: `.github/scripts/prepare_operator_network_bundle.sh` generates bundle with devnet-spec.json, test-finney-spec.json, bundle-manifest.toml. `.github/scripts/check_operator_network_fresh_machine.sh` proves the flow inside ubuntu:22.04.
