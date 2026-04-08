@@ -18,7 +18,7 @@
   poker-only follow-on, so Phase 3 packaging can proceed without bluffing that
   poker quality measurement is solved.
   Validation: `test -f docs/adr/011-emission-dust-policy.md`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`; `bash tests/e2e/local_loop.sh`; `bash tests/e2e/two_node_sync.sh`; `bash tests/e2e/four_node_finality.sh`; `bash tests/e2e/consensus_resilience.sh`; `bash tests/e2e/cross_node_emission.sh`; `bash tests/e2e/validator_determinism.sh`; `bash tests/e2e/emission_flow.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_plan_quality.sh`.
-  Commit: `PENDING`
+  Commit: `24e7247`
 
 - `BENCH-001` Added a truthful Liar's Dice quality benchmark in
   [crates/myosu-validator/src/validation.rs](/home/r/coding/myosu/crates/myosu-validator/src/validation.rs)
