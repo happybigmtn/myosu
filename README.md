@@ -28,8 +28,6 @@ Current top-level entrypoints:
   rollback posture
 - [genesis/plans/001-master-plan.md](genesis/plans/001-master-plan.md) for the
   active plan stack
-- [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml)
-  for the current Raspberry bootstrap program
 - [docs/execution-playbooks/README.md](docs/execution-playbooks/README.md) for
   current execution playbooks
 - [docs/execution-playbooks/operator-network.md](docs/execution-playbooks/operator-network.md)
@@ -55,18 +53,8 @@ What this repo does not yet claim as a first-class operator product:
 
 ## Current Operator Loop
 
-Bootstrap supervision:
-
-```bash
-fabro run fabro/run-configs/bootstrap/game-traits.toml
-fabro run fabro/run-configs/bootstrap/tui-shell.toml
-fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
-fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
-
-raspberry plan --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml
-```
+Fabro/Raspberry bootstrap supervision is planned, not implemented in this
+checkout. Use the direct proof surfaces below.
 
 Node-owned stage-0 proof:
 

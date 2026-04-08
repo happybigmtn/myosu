@@ -1,7 +1,7 @@
 ---
 os_kind: autonomous_kernel
 os_version: "3.0"
-last_updated: "2026-04-05"
+last_updated: "2026-04-08"
 system: myosu
 state: stage_0
 domain: game_solving_chain
@@ -241,62 +241,48 @@ Myosu remains in stage 0 until ALL of the following are true:
 
 | priority | source | controls |
 |----------|--------|----------|
-| 1 | `SPEC.md`, `specs/`, `plans/`, `fabro/programs/` | what system must become and how current lanes are supervised |
+| 1 | `SPEC.md`, `specs/`, `plans/`, `genesis/plans/` | what system must become and how current lanes are supervised |
 | 2 | `INVARIANTS.md` | what must never be violated |
 | 3 | `OS.md` | how the system decides |
 | 4 | `outputs/`, `ops/` | durable lane artifacts plus risk and operating context |
 | 5 | `specsarchive/`, `ralph/IMPLEMENT.md` | historical context only; not the active control plane |
-| 6 | `.raspberry/`, Fabro run state | runtime truth and local supervisory state |
+| 6 | local generated state under `target/` and related temp dirs | machine-local evidence, never top-level doctrine |
 
-## Fabro/Raspberry Execution Model
+## Planned Fabro/Raspberry Control Plane
 
-Fabro is the execution substrate. Raspberry is the control plane.
+Historical docs still mention a Fabro/Raspberry supervision model. As of
+2026-04-08, that control plane is planned, not yet implemented in this repo:
+there is no checked-in Fabro directory tree or Raspberry local state to run
+against.
 
-Execution plane:
-- checked-in workflow graphs live under `fabro/workflows/`
-- checked-in run configs live under `fabro/run-configs/`
-- checked-in prompts live under `fabro/prompts/`
-- proof and readiness helpers live under `fabro/checks/`
-
-Control plane:
-- program manifests live under `fabro/programs/`
-- the current bootstrap entrypoint is `fabro/programs/myosu-bootstrap.yaml`
-- curated lane deliverables live under `outputs/`
-- lane readiness, blockage, proof posture, and operational state should be
-  derived from Raspberry manifests plus Fabro run truth
+Operational rule for current loops:
+- use executable cargo and shell proofs that exist in this checkout
+- keep `outputs/` and `ops/` truthful when repo facts change
+- do not add new Fabro/Raspberry operational guidance until `OPS-002`
+  resolves whether that control plane will be built or removed
 
 Historical-only surfaces:
 - `ralph/IMPLEMENT.md`
 - `specsarchive/`
-
-Deleted Malinka-only surfaces:
-- `project.yaml`
-- `WORKFLOW.md`
-
-Do not recreate deleted Malinka control files. New execution work should land
-as Fabro assets plus Raspberry program updates.
+- deleted Malinka control files such as `project.yaml` and `WORKFLOW.md`
 
 ## Current Operator Loop
 
 Primary local commands:
 
 ```bash
-fabro run fabro/run-configs/bootstrap/game-traits.toml
-fabro run fabro/run-configs/bootstrap/tui-shell.toml
-fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
-fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
-
-raspberry plan --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml
+bash .github/scripts/check_doctrine_integrity.sh
+SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet
+SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test
 ```
 
 Preferred runtime truth sources:
-- Fabro inspect surfaces and stable run metadata
-- Raspberry program state under `.raspberry/`
+- executable proof commands and nearby playbooks
+- checked-in docs under `docs/operator-guide/` and `docs/execution-playbooks/`
+- curated evidence under `outputs/` and `ops/`
 
-Avoid building control-plane logic around raw Fabro run-directory layout unless
-there is no stable inspection surface available yet.
+Avoid inventing new control-plane machinery in docs when a direct proof command
+or existing playbook already carries the truth.
 
 Runtime wasm cache for node smoke proofs:
 - `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --test stage0_local_loop --quiet` still requires a cached runtime wasm at `target/debug/wbuild/myosu-chain-runtime/myosu_chain_runtime.wasm`
@@ -326,6 +312,7 @@ Runtime wasm cache for node smoke proofs:
 - `bash .github/scripts/prepare_operator_network_bundle.sh <bundle-dir> <config-dir>` reuses the existing operator keystore when you pass the second `config-dir` argument; omitting it makes the helper use a bundle-local config tree instead
 - `bash ops/release.sh --dry-run v0.1.0` now materializes a versioned operator bundle and `release-notes.md` under `target/releases/v0.1.0/`, injects release metadata into the generated `bundle-manifest.toml`, auto-seeds a temporary password env only for dry-run, and does not mutate git state
 - `bash .github/scripts/check_robopoker_fork_status.sh` is the truthful advisory proof for INV-006: it reads the workspace pin plus `docs/robopoker-fork-changelog.md`, compares them with upstream `krukah/robopoker`, and reports baseline/pinned/upstream divergence counts without gating merges
+- `bash .github/scripts/check_stage0_repo_shape.sh` hard-codes the current `genesis/plans/` filenames that define the active stage-0 plan stack; when those plan filenames change, update the script in the same increment or the repo-shape gate will fail before any build runs
 - `cargo run -p myosu-miner --quiet -- --help` and `cargo run -p myosu-validator --quiet -- --help` currently compile inherited chain/runtime crates and may print unused-code warnings before the real Clap usage text; treat the exit status plus the trailing `Usage:` block as the truthful CLI-help proof surface
 - `SKIP_WASM_BUILD=1 cargo test -p myosu-miner -p myosu-validator --quiet` can cold-build `wasm-opt-sys` and stay quiet for several minutes; do not treat the silence as a hang while `cargo` still has active compiler children
 - `bash tests/e2e/consensus_resilience.sh` is the truthful restart-catch-up proof: it starts the 4-authority `devnet`, waits for shared finality, stops `authority-4`, waits for authorities 1-3 to finalize onward, restarts `authority-4` on the same base path, and requires all four nodes to agree on the offline block hash plus a later finalized head
@@ -343,32 +330,34 @@ Runtime wasm cache for node smoke proofs:
 
 ## Bootstrap Lanes
 
-The current bootstrap program intentionally stays narrow:
+Historical bootstrap lane names remain useful as planning labels:
 
 - `games:traits` — trusted leaf crate, continue
 - `tui:shell` — trusted leaf crate, continue
 - `chain:runtime` — restart lane
 - `chain:pallet` — restart lane, blocked on runtime review
 
-Do not widen the bootstrap manifest until:
+There is no checked-in bootstrap manifest for these lanes today, so do not
+present them as runnable Fabro units. Do not widen the conceptual lane set
+until:
 - doctrine cutover is complete
 - the trusted lanes have produced curated `spec.md` and `review.md` artifacts
-- the Fabro-to-Raspberry run-truth bridge is more stable
+- the repo has a truthful replacement for the planned control plane
 
 ## Current Expectations
 
 When adding or changing active supervisory work:
 
-- add or update a workflow graph in `fabro/workflows/`
-- add or update a run config in `fabro/run-configs/`
-- add or update prompt files in `fabro/prompts/` if the workflow needs them
-- add or update the Raspberry program manifest in `fabro/programs/`
-- add or update curated artifact roots in `outputs/`
+- add or update checked-in specs, plans, docs, or scripts that actually exist
+- add or update curated artifact roots in `outputs/` when a lane produces them
+- add or update nearby proof commands or playbooks when operational truth moves
+- keep planned Fabro/Raspberry references marked as planned until `OPS-002`
+  resolves them
 
 When evaluating whether something is "done":
 
 - code changes alone are not enough
 - the lane should produce curated artifacts under `outputs/`
-- proof should be executable from Fabro/Raspberry entrypoints
+- proof should be executable from existing cargo or shell entrypoints
 - stale references to Malinka-era infrastructure should be removed rather than
   normalized

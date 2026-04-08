@@ -1,5 +1,20 @@
 # COMPLETED
 
+- `DEBT-005` Cleaned the stale root documentation surfaces so they no longer
+  present the nonexistent Fabro/Raspberry control plane as current repo truth:
+  [AGENTS.md](/home/r/coding/myosu/AGENTS.md), [OS.md](/home/r/coding/myosu/OS.md),
+  and [README.md](/home/r/coding/myosu/README.md) now describe Fabro/Raspberry
+  as planned/not implemented and point readers at direct proof commands
+  instead. Moved `THEORY.MD` from repo root to `archive/THEORY.MD`. Also
+  removed the completed task from `IMPLEMENTATION_PLAN.md`; the task's own
+  claim that the plan still referenced `050426-*` was stale, because the live
+  plan already pointed at `gen-20260408-013810/specs/080426-*.md`. A broader
+  regression check exposed stale `genesis/plans/*.md` filenames in
+  `.github/scripts/check_stage0_repo_shape.sh`, so this increment updated that
+  script to the live plan stack and documented the coupling in `AGENTS.md`.
+  Validation: `rg -n "planned, not implemented|planned, not yet implemented" AGENTS.md OS.md README.md`; `! grep -q "fabro run" README.md`; `test ! -f THEORY.MD`; `test -f archive/THEORY.MD`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`.
+  Commit: `PENDING`
+
 - `DEBT-004` Deleted 55 unreferenced subtensor-era migration files from
   `crates/myosu-chain/pallets/game-solver/src/migrations/`, leaving only the
   live runtime migration `migrate_init_total_issuance.rs` and the still-used

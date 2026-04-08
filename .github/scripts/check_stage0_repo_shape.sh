@@ -14,9 +14,9 @@ required_files=(
   "crates/myosu-chain-client/Cargo.toml"
   "crates/myosu-chain/runtime/Cargo.toml"
   "crates/myosu-chain/node/Cargo.toml"
-  "genesis/plans/002-dead-code-removal.md"
-  "genesis/plans/006-multi-node-devnet.md"
-  "genesis/plans/011-operator-documentation.md"
+  "genesis/plans/002-dead-pallet-removal.md"
+  "genesis/plans/006-phase-1-decision-gate.md"
+  "genesis/plans/011-container-packaging.md"
   "specs/031626-00-master-index.md"
 )
 

@@ -1,7 +1,7 @@
 ---
 os_kind: "autonomous_company_os"
 os_version: "0.4"
-last_updated: "2026-03-30"
+last_updated: "2026-04-08"
 company_name: "Myosu"
 company_stage: "stage_0_bootstrap"
 domain_overlay: "platform"
@@ -99,7 +99,7 @@ The canonical detailed invariant surface remains [INVARIANTS.md](INVARIANTS.md).
 
 Use this order when sources disagree:
 
-1. `SPEC.md`, `specs/`, `genesis/plans/`, `fabro/programs/`
+1. `SPEC.md`, `specs/`, `genesis/plans/`
    These define what the system must become and how current supervised work is
    shaped.
 2. `INVARIANTS.md`
@@ -111,68 +111,40 @@ Use this order when sources disagree:
    These hold durable operating context, evidence, and curated lane artifacts.
 5. `specsarchive/` and `ralph/IMPLEMENT.md`
    Historical reference only.
-6. `.raspberry/` and raw Fabro run state
+6. local generated state such as `target/` and helper temp dirs
    Runtime truth for the current machine, not the top-level control doctrine.
 
-## Execution Model
+## Planned Control Plane
 
-Fabro is the execution substrate. Raspberry is the control plane layered over
-it.
+Historical planning material still mentions Fabro/Raspberry. As of 2026-04-08,
+that control plane is planned, not yet implemented in this checkout: there is
+no checked-in Fabro directory tree or Raspberry local state to operate.
 
-Execution plane:
-- workflow graphs live under `fabro/workflows/`
-- run configs live under `fabro/run-configs/`
-- prompts live under `fabro/prompts/`
-- proof/readiness helpers live under `fabro/checks/`
-
-Control plane:
-- program manifests live under `fabro/programs/`
-- the current bootstrap entrypoint is
-  `fabro/programs/myosu-bootstrap.yaml`
-- curated lane outputs live under `outputs/`
+Today the truthful control plane is simpler:
+- specs, plans, and invariants define intent
+- executable cargo and shell proofs define runnable truth
+- `outputs/` and `ops/` hold durable evidence and operating context
 
 Historical-only surfaces:
 - `specsarchive/`
 - `ralph/IMPLEMENT.md`
 - deleted Malinka control files such as `project.yaml` and `WORKFLOW.md`
 
-Do not recreate Malinka control files. New execution work should land as Fabro
-assets plus Raspberry program updates.
-
-## Current Bootstrap Program
-
-The current bootstrap manifest is intentionally narrow. It exists to supervise
-the smallest durable slice of repo truth while the larger stage-0 work keeps
-moving through direct executable proofs.
-
-Current bootstrap units:
-- `games:traits`
-- `tui:shell`
-- `chain:runtime`
-- `chain:pallet`
-
-Do not widen this bootstrap manifest casually. Widening is a later control
-plane step, not the default way to acknowledge that more code exists.
-
 ## Current Operator Loop
 
 The truthful current operator surfaces are:
 
-1. Bootstrap supervision for curated lane artifacts.
+1. Doctrine integrity and repo-shape checks for document truth.
 2. The node-owned stage-0 local loop for end-to-end chain truth.
 3. The local gameplay/advisor surface for human and agent consumption.
 
-Bootstrap supervision:
+Fabro/Raspberry bootstrap supervision remains planned, not implemented in this
+checkout. Use the direct proofs below instead.
+
+Doctrine and operator proof:
 
 ```bash
-fabro run fabro/run-configs/bootstrap/game-traits.toml
-fabro run fabro/run-configs/bootstrap/tui-shell.toml
-fabro run fabro/run-configs/bootstrap/chain-runtime-restart.toml
-fabro run fabro/run-configs/bootstrap/chain-pallet-restart.toml
-
-raspberry plan --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry status --manifest fabro/programs/myosu-bootstrap.yaml
-raspberry execute --manifest fabro/programs/myosu-bootstrap.yaml
+bash .github/scripts/check_doctrine_integrity.sh
 ```
 
 Node-owned stage-0 proof:
@@ -253,7 +225,6 @@ this file or a nearby playbook that proves it.
 - [SPEC.md](SPEC.md)
 - [INVARIANTS.md](INVARIANTS.md)
 - [genesis/plans/001-master-plan.md](genesis/plans/001-master-plan.md)
-- [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml)
 - [docs/execution-playbooks/bootstrap.md](docs/execution-playbooks/bootstrap.md)
 - [docs/execution-playbooks/stage0-local-loop.md](docs/execution-playbooks/stage0-local-loop.md)
 - [docs/execution-playbooks/local-advisor.md](docs/execution-playbooks/local-advisor.md)

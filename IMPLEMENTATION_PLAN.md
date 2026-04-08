@@ -10,31 +10,6 @@ Specs: gen-20260408-013810/specs/080426-*.md
 
 ### Phase 1: Reduce and Clean
 
-- [ ] `DEBT-005` Stale document cleanup
-
-  Spec: `specs/070426-operator-infrastructure.md`
-  Why now: AGENTS.md, OS.md, and README.md reference fabro/raspberry paths that do not exist. THEORY.MD (97K) has no connection to running code. New contributors reading these files get a false impression of operational maturity. This is independent of all code changes and can run in parallel with DEBT-001 through DEBT-004.
-  Codebase evidence: `grep -c "fabro" AGENTS.md` returns matches. `grep -c "fabro" OS.md` returns matches. `grep -c "fabro" README.md` returns matches. `test -d fabro` fails. `THEORY.MD` exists at root (97K bytes). `IMPLEMENTATION_PLAN.md` at root references `050426-*` generation specs (stale).
-  Owns: (1) Remove or mark fabro/raspberry references in AGENTS.md, OS.md, README.md as "planned, not implemented." (2) Move THEORY.MD to `archive/` (educational value preserved, not deleted). (3) Reconcile root IMPLEMENTATION_PLAN.md — either remove (superseded by genesis/ plans) or update to reference current generation.
-  Integration touchpoints: `.github/scripts/check_doctrine_integrity.sh` (may validate document presence).
-  Scope boundary: Documentation changes only. Do not create fabro infrastructure. Do not delete THEORY.MD (move it).
-  Acceptance criteria: (1) No root-level .md file references a path that doesn't exist without explicitly noting it is planned. (2) THEORY.MD lives in `archive/` not root. (3) `bash .github/scripts/check_doctrine_integrity.sh` passes. (4) README.md contains no `fabro run` commands.
-  Verification:
-  ```bash
-  for f in AGENTS.md OS.md README.md; do
-    if grep -q "fabro/" "$f" 2>/dev/null; then
-      grep "fabro/" "$f" | grep -v "planned\|not yet\|aspirational" && echo "FAIL: $f has unmarked fabro refs"
-    fi
-  done
-  test ! -f THEORY.MD
-  test -f archive/THEORY.MD
-  bash .github/scripts/check_doctrine_integrity.sh
-  ```
-  Required tests: Doctrine integrity check passes.
-  Dependencies: None.
-  Estimated scope: S
-  Completion signal: Documentation accurately reflects codebase reality.
-
 - [ ] `GATE-001` Phase 1 decision gate checkpoint
 
   Spec: `specs/070426-runtime-architecture.md`
@@ -224,12 +199,12 @@ Specs: gen-20260408-013810/specs/080426-*.md
   Estimated scope: S
   Completion signal: New developer can go from README to green test in under 5 minutes.
 
-- [ ] `OPS-002` Fabro ghost infrastructure resolution
+- [ ] `OPS-002` Planned Fabro ghost infrastructure resolution
 
   Spec: `specs/070426-operator-infrastructure.md`
-  Why now: After DEBT-005 marks fabro references in docs, a decision must be made: create the minimum execution infrastructure or fully remove all references. DEBT-005 marks them as "planned" — this task resolves the decision.
-  Codebase evidence: `fabro.toml` exists at root (24 lines, references MiniMax model). `fabro/` directory does not exist. AGENTS.md "Bootstrap Lanes" and OS.md "Execution Model" describe a supervision model built on fabro/raspberry.
-  Owns: Decision and execution: (A) If fabro is the intended substrate, create minimal `fabro/programs/myosu-bootstrap.yaml` and one working run config, OR (B) If not, remove all fabro/raspberry references from AGENTS.md, OS.md, and delete `fabro.toml`.
+  Why now: After DEBT-005 marks the planned Fabro references in docs, a decision must be made: create the minimum execution infrastructure or fully remove all references. DEBT-005 marks them as "planned" — this task resolves the decision.
+  Codebase evidence: `fabro.toml` exists at root (24 lines, references MiniMax model). The planned `fabro/` directory does not exist yet. AGENTS.md "Bootstrap Lanes" and OS.md "Planned Control Plane" describe a planned supervision model built on Fabro/Raspberry.
+  Owns: Decision and execution: (A) If Fabro is the intended substrate, create the planned `fabro/programs/myosu-bootstrap.yaml` and one working run config, OR (B) If not, remove all Fabro/Raspberry references from AGENTS.md, OS.md, and delete `fabro.toml`.
   Integration touchpoints: AGENTS.md, OS.md, `fabro.toml`, `.github/scripts/check_doctrine_integrity.sh`.
   Scope boundary: Resolve the ghost. If option A, create only the minimum viable entrypoint. Do not build a full execution framework.
   Acceptance criteria: Either (A) `fabro run <config>` executes something meaningful, OR (B) `grep -rq "fabro/" AGENTS.md OS.md README.md` returns zero results and `fabro.toml` is deleted.
