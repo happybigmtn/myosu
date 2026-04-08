@@ -10,7 +10,7 @@
   `TEST-002` from
   [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-keys --quiet -- corrupt`; `SKIP_WASM_BUILD=1 cargo test -p myosu-keys --quiet`.
-  Commit: `PENDING`
+  Commit: `7026ad1`
 
 - `TEST-001` Added miner HTTP axon security coverage in
   [crates/myosu-miner/src/axon.rs](/home/r/coding/myosu/crates/myosu-miner/src/axon.rs)
