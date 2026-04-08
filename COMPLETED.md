@@ -7,7 +7,7 @@
   default-build code/tests. Added one-line retention comments to both kept
   files.
   Validation: `ls crates/myosu-chain/pallets/game-solver/src/migrations/migrate_*.rs | wc -l`; `SKIP_WASM_BUILD=1 cargo check --workspace`; `cargo test -p pallet-game-solver --quiet -- stage_0`; `SKIP_WASM_BUILD=1 cargo test -p myosu-chain --features fast-runtime,try-runtime --quiet devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis`.
-  Commit: `PENDING`
+  Commit: `db7b5c6`
 
 - `DEBT-001` Relocated the live RPC and runtime-api crates from
   `pallets/subtensor/` to `pallets/game-solver/`, rewired workspace/runtime
