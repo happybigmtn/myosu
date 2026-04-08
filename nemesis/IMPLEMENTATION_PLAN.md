@@ -1,201 +1,203 @@
 # IMPLEMENTATION_PLAN
 
-**Generated:** 2026-04-05  
-**Audit Basis:** Nemesis synthesis pass (nemesis/nemesis-audit.md)  
-**Task ID Prefix:** NEM-
+Generated: 2026-04-08  
+Audit findings: `nemesis/nemesis-audit.md`  
+Codebase snapshot: trunk @ 4e0b37f
 
 ---
 
 ## Priority Work
 
-- [ ] `NEM-001` Fix GRANDPA finality stalling on 3-node devnet after authority stop
+### `- [ ] NEM-001A Document validator score self-reference limitation in E2E scripts`
 
-  Status (2026-04-05): Blocked. Live repro plus `finality-grandpa` threshold
-  math show a 3-authority equal-weight voter set needs 3 votes to finalize, so
-  two surviving authorities can keep importing best blocks but cannot satisfy
-  the requested 2-of-3 finality tolerance without changing authority count or
-  voting weights.
+Spec: INV-003 documentation
+Why now: The `local_loop.sh` and `validator_determinism.sh` happy-path proofs report `score=1.0 exact_match=true` on zero-iteration checkpoints. Without explicit documentation, operators may misread these as quality proofs rather than self-consistency proofs.
+Codebase evidence: `tests/e2e/local_loop.sh:267-290` feeds miner checkpoint back into validator. `crates/myosu-validator/src/validation.rs:217-260` computes `solver.answer(query)` from the same checkpoint the miner produced.
+Owns: Add header comments to `tests/e2e/local_loop.sh` and `tests/e2e/validator_determinism.sh` explaining the self-referential limitation.
+Integration touchpoints: E2E proof surfaces, AGENTS.md operator loop section.
+Scope boundary: Shell script comments only. No code changes.
+Required tests: `grep` for new comments in both shell files.
+Dependencies: None.
+Completion signal: Both scripts have header comments stating the score is a self-consistency proof and that independent quality benchmarking (e.g., `quality_benchmark` for Liar's Dice) is required for genuine quality signal.
 
-  Spec: `WORKLIST.md:NET-FINALITY-001`  
-  Why now: 3-node GRANDPA finality is a stage-0 exit gate. The stalling behavior blocks multi-node production readiness. Operators cannot run production networks.  
-  Codebase evidence: `WORKLIST.md:NET-FINALITY-001` documents stall with repro steps. Node logs show `Backing off claiming new slot for block authorship: finality is lagging`.  
-  Owns: Chain spec, node service GRANDPA configuration, GRANDPA voter setup.  
-  Integration touchpoints: `myosu-chain` node binary, devnet chain spec, GRANDPA finality gadget.  
-  Scope boundary: Diagnose root cause (authority scheduling? voter set configuration?). Implement fix. Verify 3-node finality + 1-node-down tolerance.  
-  Required tests: E2E test proving 2/3 quorum continues finalizing after one authority stops.  
-  Dependencies: None (independent of other NEMs).  
-  Completion signal: `tests/e2e/three_node_finality.sh` passes in CI with finalized height increasing after authority stop and restart.
+---
 
-- [ ] `NEM-002` Verify cross-node emission agreement across 3-node devnet
+### `- [ ] NEM-001B Add independent quality reference test for Poker`
 
-  Status (2026-04-05): Blocked on `NEM-001`. This pass did not add a new
-  cross-node emission proof while the stage-0 multi-node finality contract is
-  still scoped around an unattainable 2-of-3 expectation.
+Spec: INV-003 quality verification
+Why now: The stage-0 validator scoring has no independent quality reference for Poker. The Liar's Dice `quality_benchmark` test serves this role for that game. Poker needs an equivalent so that minimum training iterations research has a truthful surface.
+Codebase evidence: `crates/myosu-validator/src/validation.rs:583-607` has `quality_benchmark_liars_dice_exploitability_converges`. No equivalent exists for poker. `crates/myosu-games-poker/examples/bootstrap_artifacts.rs` emits sparse encoder that fails positive iteration training.
+Owns: Add `quality_benchmark_poker_exploitability_converges` test to `crates/myosu-validator/src/validation.rs` that trains fresh solvers at 0/128/256/512 iterations and measures exploitability improvement.
+Integration touchpoints: `crates/myosu-validator/src/validation.rs`, `myosu-games-poker` solver.
+Scope boundary: Test-only. Does not change validator scoring formula. Does not require full PostgreSQL encoder.
+Required tests: `cargo test -p myosu-validator -- quality_benchmark_poker` passes. Test documents poker exploitability ladder showing measurable quality improvement across iteration counts.
+Dependencies: None (can use hand-crafted fixed-profile reference).
+Completion signal: Test passes and documents exploitability drop from ~0.85 (0 iter) to ~0.70 (512 iter) for poker.
 
-  Spec: `pallet-game-solver` emission mechanism  
-  Why now: INV-003 and INV-005 require that emission accounting is deterministic across nodes. Currently only proven single-node. If nodes disagree on emission, Yuma Consensus breaks.  
-  Codebase evidence: All epoch/coinbase tests run in single-node mock runtime. `pallet-game-solver/src/coinbase/run_coinbase.rs` uses U96F32 throughout.  
-  Owns: E2E test extension comparing TotalIssuance and emission storage values across 3 nodes.  
-  Integration touchpoints: RPC endpoints for reading storage, epoch mechanism, coinbase pipeline.  
-  Scope boundary: Query storage via RPC on all 3 nodes after N epoch transitions. Assert bit-identical values for TotalIssuance, PendingServerEmission, PendingValidatorEmission.  
-  Required tests: E2E script that queries storage on all 3 nodes and diffs.  
-  Dependencies: NEM-001 (3-node devnet must work reliably).  
-  Completion signal: Cross-node emission agreement test passes in CI with identical storage values across all nodes.
+---
 
-- [x] `NEM-003` Tighten TotalIssuance accounting delta or document rationale
+### `- [ ] NEM-002A Add compile-time guard for swap price limit bound`
 
-  Satisfied (2026-04-05): The stage-0 `try_state` delta is now explicitly
-  documented as an alert threshold, not a correctness bound, and default-build
-  tests pin the measured drift against that threshold.
+Spec: INV-005 slippage protection
+Why now: `Stage0NoopSwap::max_price()` returning `C::MAX` is a documented time-bomb. A future AMM substitution that forgets to bound the price limit would silently expose staking to slippage exploitation.
+Codebase evidence: `crates/myosu-chain/runtime/src/lib.rs:94-97` acknowledges risk in prose. `crates/myosu-chain/pallets/game-solver/src/staking/add_stake.rs:78` uses `stage0_max_price()`. `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs:141` uses it in emission swap.
+Owns: Add `MAX_VALID_SWAP_PRICE_LIMIT: u64` associated constant to `Stage0SwapInterface` trait. Default to `u64::MAX` for stage-0. Add static assertion in runtime that any non-NoOpSwap impl must set bound below `u64::MAX / 2`.
+Integration touchpoints: `crates/myosu-chain/pallets/game-solver/src/lib.rs` trait definition, `crates/myosu-chain/runtime/src/lib.rs` impl.
+Scope boundary: Type-level enforcement. No runtime behavior changes.
+Required tests: `cargo build -p myosu-chain-runtime` passes. Attempting to compile a real AMM with unbounded max_price fails at compile time.
+Dependencies: None.
+Completion signal: Compilation fails if any `SwapInterface` impl returns max_price above threshold without explicit `#[allow(unbounded_swap_price)]` attribute.
 
-  Spec: `pallet-game-solver/src/utils/try_state.rs`  
-  Why now: The 1000 RAO tolerance hides whether systematic drift is bounded. `EM-DUST-001` documents 2 rao/block truncation loss.  
-  Codebase evidence: `src/utils/try_state.rs:21` defines `let delta = 1000;`. `run_coinbase.rs` uses `tou64!` macro truncating U96F32 → u64.  
-  Owns: `try_state.rs` delta configuration, documentation.  
-  Integration touchpoints: `pallet-game-solver`, runtime migration, try-runtime feature.  
-  Scope boundary: Either (a) tighten delta to ≤ 10 RAO based on measured truncation bounds, or (b) document why 1000 RAO is stage-0 acceptable in `EM-DUST-001`.  
-  Required tests: Extend truncation sweep test to verify delta is at least 5x worst-case measured drift.  
-  Dependencies: None.  
-  Completion signal: Delta tightened with tests passing, or documented rationale committed to WORKLIST.md `EM-DUST-001`.
+---
 
-- [x] `NEM-004` Emit event when epoch is skipped due to input state inconsistency
+### `- [ ] NEM-003A Add epoch per-UID emission accumulation sweep test`
 
-  Satisfied (2026-04-05): `EpochSkipped { netuid, reason }` now lands on-chain
-  when the epoch guard rejects inconsistent input state, and a regression test
-  proves the event surface.
+Spec: INV-005 emission accounting
+Why now: The `stage_0_coinbase_truncation_dust_is_closed_exactly_sweep` verifies coinbase split closes exactly. It does not verify that `sum(server_emission_per_uid) + sum(validator_emission_per_uid)` equals total epoch allocation after per-UID truncation.
+Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs:490-530` — per-UID `server_emission` and `validator_emission` computed independently with `saturating_to_num::<u64>()`. `crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs:599-633` — existing sweep only covers coinbase split.
+Owns: Add unit test `epoch_per_uid_emission_sum_equals_total` that generates synthetic epoch outputs for n=1..16 miners, n=0..4 validators, sums per-UID emissions, and asserts sum equals total epoch emission minus owner cut within epsilon of (n_miners + n_validators) rao.
+Integration touchpoints: `crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs`.
+Scope boundary: Test-only. No emission math changes.
+Required tests: New test passes covering representative UID counts and epoch emission values.
+Dependencies: None.
+Completion signal: `cargo test -p pallet-game-solver -- epoch_per_uid` passes with documented truncation gap bound.
 
-  Spec: `pallet-game-solver/src/epoch/run_epoch.rs`  
-  Why now: Silent epoch skipping means operators cannot detect when a subnet stops receiving emission.  
-  Codebase evidence: `src/epoch/run_epoch.rs:66-68` — `log::error!` exists but no `deposit_event`. Grep confirms no `EpochSkipped` event variant.  
-  Owns: New `Event` variant in `game-solver`, `deposit_event` call in `run_epoch`.  
-  Integration touchpoints: `pallet-game-solver` events, chain RPC event subscription.  
-  Scope boundary: Add `EpochSkipped { netuid, reason }` event. Deposit event when `is_epoch_input_state_consistent` returns false.  
-  Required tests: Unit test verifying event is deposited when consistency check fails.  
-  Dependencies: None.  
-  Completion signal: Epoch skip produces a chain event observable via RPC.
+---
 
-- [x] `NEM-005` Document L1 distance asymmetry or fix to symmetric
+### `- [ ] NEM-003B Document epoch per-UID truncation in run_epoch.rs`
 
-  Satisfied (2026-04-05): Validator scoring now computes symmetric L1 over the
-  union of expected and observed actions, with regressions covering explicit
-  zero-weight action entries.
+Spec: INV-005 documentation
+Why now: The epoch math uses `I96F32 → u64` truncation per UID. The gap is bounded by the number of UIDs but is not documented. A future maintainer might assume coinbase `close_integer_emission_split` coverage extends to epoch path.
+Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs:490-530` — emission computation without truncation discussion.
+Owns: Add doc comment at emission computation section noting: (1) per-UID truncation floors are bounded by n_validators + n_miners rao per epoch, (2) this path is separate from coinbase split verified by `close_integer_emission_split`, (3) NEM-003A test enforces the bound.
+Integration touchpoints: `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs`.
+Scope boundary: Documentation only.
+Required tests: `cargo doc -p pallet-game-solver` passes with new comments.
+Dependencies: NEM-003A.
+Completion signal: Comments exist explaining truncation boundary and test coverage.
 
-  Spec: `crates/myosu-validator/src/validation.rs`  
-  Why now: The current L1 distance implementation treats "missing from observed" and "unexpected in observed" asymmetrically via the `expected == 0.0` check.  
-  Codebase evidence: `src/validation.rs` — second pass only counts unexpected actions if `expected.probability_for(action) == 0.0`.  
-  Owns: Scoring implementation documentation or fix.  
-  Integration touchpoints: `myosu-validator` scoring, miner scoring fairness.  
-  Scope boundary: Either (a) document the asymmetry as intentional design in code comments, or (b) fix to symmetric L1 where all action set differences contribute equally.  
-  Required tests: Unit test for edge case where miner includes unexpected actions.  
-  Dependencies: None.  
-  Completion signal: Code comment documents asymmetry rationale, or scoring fixed to symmetric L1.
+---
 
-- [x] `NEM-006` Document SwapInterface NoOp stub max_price behavior
+### `- [ ] NEM-004 Add HTTP axon integration test for validator scoring`
 
-  Satisfied (2026-04-05): `Stage0NoopSwap` rustdoc now states that
-  `max_price()` intentionally returns an unbounded value in the stage-0
-  identity-swap runtime.
+Spec: INV-005 end-to-end wiring
+Why now: The miner HTTP axon + validator HTTP scoring path has no automated test. The file-based E2E harness bypasses this path entirely.
+Codebase evidence: `crates/myosu-miner/src/axon.rs` — HTTP axon server. `crates/myosu-validator/src/chain.rs` — chain query for miner discovery. `tests/e2e/local_loop.sh` — file-based, not HTTP, for scoring.
+Owns: Add integration test in `crates/myosu-validator/src/` that: (a) starts mock HTTP server simulating miner axon, (b) exercises validator's miner discovery and HTTP query path, (c) asserts HTTP request/response round-trips correctly. Use `wiremock` or `tiny_http` test server.
+Integration touchpoints: `crates/myosu-validator/src/chain.rs`, `crates/myosu-validator/src/validation.rs`.
+Scope boundary: Integration test within validator crate. Does not require chain binary.
+Required tests: `cargo test -p myosu-validator -- http_axon` passes.
+Dependencies: Add test-only dependency (wiremock or similar).
+Completion signal: Test exercises full miner discovery → HTTP query → strategy decode path.
 
-  Spec: `crates/myosu-chain/runtime/src/lib.rs`  
-  Why now: Stage-0 uses `Stage0NoopSwap` with `C::MAX` for max_price. Future code may assume finite bounds.  
-  Codebase evidence: `runtime/src/lib.rs:89-150` defines `Stage0NoopSwap` with `fn max_price<C: Currency>() -> C { C::MAX }`.  
-  Owns: Runtime documentation, swap interface comments.  
-  Integration touchpoints: Emission calculation, swap pallet interface.  
-  Scope boundary: Add rustdoc comments to `Stage0NoopSwap` documenting that `max_price()` returns unbounded value intentionally.  
-  Required tests: None (documentation task).  
-  Dependencies: None.  
-  Completion signal: `Stage0NoopSwap` rustdoc explains max_price behavior and stage-0 context.
+---
 
-- [x] `NEM-007` Align Liar's Dice decode budget with poker
+### `- [ ] NEM-005 Strengthen INV-004 check to catch transitive deps`
 
-  Satisfied (2026-04-05): Liar's Dice now uses the same 1 MiB decode budget as
-  poker, with oversized-payload regressions for wire responses and checkpoints.
+Spec: INV-004 enforcement
+Why now: Current `cargo tree` check only prevents direct `myosu-play → myosu-miner` edges. Transitive import through shared deps would not be caught.
+Codebase evidence: `crates/myosu-play/tests/invariants.rs:35-48` — only checks for presence of forbidden package name in output.
+Owns: Add secondary check: (a) verify `myosu-chain-client` does not expose any type originating from `myosu-miner` in its public API, (b) add test that imports all `myosu-chain-client` public items and confirms none require `myosu-miner`.
+Integration touchpoints: `crates/myosu-chain-client/Cargo.toml`, `crates/myosu-play/tests/invariants.rs`.
+Scope boundary: Verification test addition. No crate boundary changes.
+Required tests: New `inv_004_chain_client_does_not_re_export_miner_types` test passes. Existing test continues to pass.
+Dependencies: None.
+Completion signal: `cargo test -p myosu-play -- inv_004` passes with both subtests.
 
-  Spec: `crates/myosu-games-liars-dice/src/wire.rs`  
-  Why now: Poker wire codec uses 1 MiB budget. Liar's Dice uses 256 MiB — inconsistent attack surface.  
-  Codebase evidence: `liars-dice/src/wire.rs` — `MAX_DECODE_BYTES: u64 = 256 * 1024 * 1024`. `poker/src/wire.rs` — `MAX_DECODE_BYTES: u64 = 1_048_576`.  
-  Owns: Liar's Dice wire implementation.  
-  Integration touchpoints: `myosu-games-liars-dice`, validator query path.  
-  Scope boundary: Reduce Liar's Dice `MAX_DECODE_BYTES` to 1 MiB to match poker. Update tests.  
-  Required tests: Unit test verifying oversized Liar's Dice payloads are rejected.  
-  Dependencies: None.  
-  Completion signal: Both poker and Liar's Dice use identical 1 MiB decode budgets.
+---
+
+### `- [ ] NEM-006 Improve try_state emission diagnostics`
+
+Spec: INV-005 diagnostic quality
+Why now: `try_state` guard only asserts `diff <= 1` with generic message. If triggered, operators see "diff > 1 rao" without knowing magnitude or root cause.
+Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/utils/try_state.rs:20-30` — minimal diff check. `crates/myosu-chain/pallets/game-solver/src/lib.rs:75` — `TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA = 1`.
+Owns: Change assertion to: (a) compute and log actual diff magnitude when `diff > 0`, (b) include both `expected_total_issuance` and `live_total_issuance` in log, (c) use `log::error!` for visibility. Keep threshold at 1 rao.
+Integration touchpoints: `crates/myosu-chain/pallets/game-solver/src/utils/try_state.rs`.
+Scope boundary: Logging/diagnostics improvement. No logic or threshold changes.
+Required tests: `cargo test -p pallet-game-solver -- try_state` passes. Test with injected 2-rao diff verifies improved diagnostic.
+Dependencies: None.
+Completion signal: Log output for >0 rao diff includes actual diff magnitude, expected, and live values.
+
+---
+
+### `- [ ] NEM-007 Document INV-006 MCCFR review gate as blocking in CI`
+
+Spec: INV-006 enforcement
+Why now: INV-006 states MCCFR algorithm changes require review but enforcement is advisory (`continue-on-error: true`). A silent MCCFR correctness change could ship without review.
+Codebase evidence: `docs/robopoker-fork-changelog.md` — tracking doc. `.github/workflows/ci.yml` — `robopoker-fork-coherence` job with `continue-on-error: true`. `INVARIANTS.md:INV-006` — policy statement.
+Owns: Create ADR at `docs/adr/007-mccfr-review-gate.md` documenting: (a) current advisory enforcement, (b) proposal to make MCCFR divergence a blocking gate, (c) criteria for what constitutes MCCFR-relevant change (regret update, averaging formula, sampling method), (d) review checklist template.
+Integration touchpoints: `docs/adr/`, `docs/robopoker-fork-changelog.md`, CI workflow.
+Scope boundary: Documentation and proposed process hardening. Does not change CI behavior yet.
+Required tests: ADR file exists and is linked from `INVARIANTS.md` INV-006 section.
+Dependencies: None.
+Completion signal: ADR exists at `docs/adr/007-mccfr-review-gate.md` with review checklist and proposed blocking gate criteria.
 
 ---
 
 ## Follow-On Work
 
-- [ ] `NEM-008` Document minimum training iteration recommendations
+### `- [ ] NEM-F01 Evaluate narrower Stage0SwapInterface trait`
 
-  Status (2026-04-05): Deferred. This pass prioritized executable correctness
-  fixes and did not run the iteration-to-score measurements needed to publish a
-  truthful operator recommendation.
+Spec: INV-005 architecture
+Why now: `Stage0SwapInterface` exposes full subtensor AMM contract. Stage-0 only needs identity conversion. A narrower trait would reduce surface area.
+Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/lib.rs:88-168` — full trait. `crates/myosu-chain/runtime/src/lib.rs:108-180` — NoOpSwap impl.
+Owns: Write ADR evaluating: (a) current full contract, (b) narrower stage-0 interface, (c) migration path. Decision: simplify now or defer.
+Integration touchpoints: `lib.rs` trait, runtime impl.
+Scope boundary: Research and ADR only. No implementation.
+Required tests: None (research task).
+Dependencies: RES-001 / F-003 (token economics decision).
+Completion signal: ADR exists with decision recorded in `ops/decision_log.md`.
 
-  Spec: `crates/myosu-miner/src/training.rs`  
-  Why now: A miner can train for 0 iterations and serve garbage. No guidance exists for minimum viable training.  
-  Codebase evidence: `crates/myosu-miner/src/cli.rs` — `train_iterations` defaults to 0 with no minimum enforced.  
-  Owns: Research document, CLI help text.  
-  Integration touchpoints: Miner CLI documentation, operator guide.  
-  Scope boundary: Measure validator scores at varying iteration counts. Document recommended minimums.  
-  Required tests: None (research/documentation task).  
-  Dependencies: None.  
-  Completion signal: `docs/operator-guide/` documents recommended minimum iterations per game type.
+---
 
-- [x] `NEM-009` Evaluate INV-004 runtime enforcement necessity
+### `- [ ] NEM-F02 Audit BlocksSinceLastStep unconditional increment`
 
-  Satisfied (2026-04-05): ADR 010 records the explicit stage-0 decision that
-  compile-time CI and invariant-test enforcement are the truthful INV-004
-  boundary today.
-
-  Spec: `crates/myosu-miner/`, `crates/myosu-play/`  
-  Why now: CI `cargo tree` check catches dependency violations at PR level, but runtime enforcement is unverified.  
-  Codebase evidence: CI workflow runs `cargo tree` check. No runtime assertion exists.  
-  Owns: Potential runtime assertion or documented decision.  
-  Integration touchpoints: CI, runtime architecture decision records.  
-  Scope boundary: Either (a) add runtime check logging boundary crossings, or (b) document explicit decision that CI-only enforcement is stage-0 sufficient.  
-  Required tests: Demonstrate CI check still catches violations.  
-  Dependencies: None.  
-  Completion signal: Runtime enforcement added, or explicit decision documented.
-
-- [x] `NEM-010` Close WORKLIST.md DOC-OPS-001 if stale
-
-  Satisfied (2026-04-05): `WORKLIST.md` no longer tracks `DOC-OPS-001` after
-  confirming the live repo `AGENTS.md` file has no `@RTK.md` reference.
-
-  Spec: `WORKLIST.md:DOC-OPS-001`  
-  Why now: WORKLIST tracks a dangling `@RTK.md` reference but AGENTS.md no longer contains it.  
-  Codebase evidence: `WORKLIST.md:DOC-OPS-001` tracks reference. AGENTS.md verified to not contain `@RTK.md`.  
-  Owns: WORKLIST.md maintenance.  
-  Integration touchpoints: Documentation tracking.  
-  Scope boundary: Remove `DOC-OPS-001` entry from WORKLIST.md if confirmed resolved, or locate and fix the reference if it moved.  
-  Required tests: None.  
-  Dependencies: None.  
-  Completion signal: `DOC-OPS-001` resolved or removed from WORKLIST.md.
+Spec: Performance / Architecture
+Why now: `run_coinbase::drain_pending()` increments `BlocksSinceLastStep` for ALL subnets on every block, including subnets with no activity. At scale this is storage write amplification.
+Codebase evidence: `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs:296-305` — unconditional increment.
+Owns: Evaluate whether unconditional increment can be replaced with conditional (only for subnets with epoch or registration activity). Write findings in ADR.
+Integration touchpoints: `run_coinbase.rs`.
+Scope boundary: Research and ADR only.
+Required tests: None (research task).
+Dependencies: None.
+Completion signal: ADR documents current behavior, proposed optimization, and decision.
 
 ---
 
 ## Completed / Already Satisfied
 
-- [x] `NEM-C01` Checkpoint magic header implemented  
-  Spec: `crates/myosu-games-poker/src/solver.rs`  
-  Evidence: `CHECKPOINT_MAGIC: [u8; 4] = *b"MYOS"` and `CHECKPOINT_VERSION: u32 = 1` defined. `save()`/`load()` implement versioned header. Draft NEM-011 was incorrect.
+- [x] **NEM-CO-01** Emission accounting coinbase split is verified closed  
+  Spec: INV-005  
+  Codebase evidence: `stage_0_coinbase_truncation_dust_is_closed_exactly_sweep` in `crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs:599-633`. `close_integer_emission_split` in `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs:47-65`.
 
-- [x] `NEM-C02` Epoch consistency guard prevents corruption  
-  Spec: `pallet-game-solver/src/epoch/run_epoch.rs`  
-  Evidence: `is_epoch_input_state_consistent()` returns false on duplicate hotkeys. Epoch is skipped (though silently — see NEM-004).
+- [x] **NEM-CO-02** Dense/sparse epoch parity test runs in default build  
+  Spec: INV-003  
+  Codebase evidence: `dense_sparse_epoch_paths_produce_identical_state` in `crates/myosu-chain/pallets/game-solver/src/tests/determinism.rs:217`. Test is NOT behind feature flag and runs in default builds.
 
-- [x] `NEM-C03` INV-004 separation enforced in CI  
-  Spec: `.github/workflows/ci.yml`  
-  Evidence: `cargo tree` check verifies no path from myosu-play → myosu-miner or vice versa.
+- [x] **NEM-CO-03** INV-004 solver-gameplay dependency boundary enforced in CI  
+  Spec: INV-004  
+  Codebase evidence: `crates/myosu-play/tests/invariants.rs:inv_004_solver_and_gameplay_bins_do_not_depend_on_each_other`. CI job runs on every PR.
 
-- [x] `NEM-C04` Validator scoring hyperbolic formula implemented  
-  Spec: `crates/myosu-validator/src/validation.rs`  
-  Evidence: `score = 1.0 / (1.0 + l1_distance)`. Unit tests include `inv_003_determinism`.
+- [x] **NEM-CO-04** No unsafe code in pallet game-solver layer  
+  Spec: INV-005  
+  Codebase evidence: Grep for `unsafe` across all files in `crates/myosu-chain/pallets/game-solver/src/` returns zero matches.
 
-- [x] `NEM-C05` Key password uses environment variable pattern  
-  Spec: `crates/myosu-keys/src/storage.rs`  
-  Evidence: `load_active_secret_uri_from_env()` requires password from env var. Draft NEM-007 (password in CLI args) was incorrect for current implementation.
+- [x] **NEM-CO-05** Epoch inconsistency handled gracefully with skip event  
+  Spec: INV-001, INV-003  
+  Codebase evidence: `EpochSkipReason::InconsistentInputState` in `crates/myosu-chain/pallets/game-solver/src/lib.rs:77-82`. `legacy_epoch_skip_emits_event_when_state_is_inconsistent` test in `stage_0_flow.rs`.
 
----
+- [x] **NEM-CO-06** Subnet dissolution clears all emission pending storage  
+  Spec: INV-005  
+  Codebase evidence: `tests/networks.rs:539-548` confirms `PendingServerEmission`, `PendingValidatorEmission`, `PendingRootAlphaDivs`, `PendingOwnerCut` cleared on `dissolve_network`.
 
-*This plan represents the final Nemesis synthesis pass. Tasks are execution-ready, bounded, and grounded in verified codebase evidence.*
+- [x] **NEM-CO-07** Validator deterministic scoring formula is mathematically sound  
+  Spec: INV-003  
+  Codebase evidence: `score_from_l1_distance()` in `crates/myosu-validator/src/validation.rs:252-254`. 14 unit tests test the formula.
+
+- [x] **NEM-CO-08** Stage0NoopSwap slippage risk is acknowledged  
+  Spec: INV-005  
+  Codebase evidence: `crates/myosu-chain/runtime/src/lib.rs:94-97` comment explicitly documents the unbounded limit caveat.
+
+- [x] **NEM-CO-09** Robopoker fork is tracked with changelog  
+  Spec: INV-006  
+  Codebase evidence: `docs/robopoker-fork-changelog.md` — baseline, workspace pin, commit history, functional summary.
