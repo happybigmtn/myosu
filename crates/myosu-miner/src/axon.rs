@@ -48,7 +48,7 @@ pub enum AxonServeError {
     MissingCheckpoint,
 
     /// Returned when a game has no live HTTP path yet.
-    #[error("--serve-http is not implemented yet for --game liars-dice")]
+    #[error("--serve-http is only implemented for --game poker")]
     UnsupportedGame,
 
     /// Returned when the encoder artifact directory fails to load.
@@ -150,7 +150,7 @@ pub fn axon_plan_from_cli(
         }
         return Err(AxonServeError::UnsupportedGame);
     };
-    if cli.game == GameSelection::LiarsDice {
+    if cli.game != GameSelection::Poker {
         return Err(AxonServeError::UnsupportedGame);
     }
     let checkpoint_path = cli
@@ -466,6 +466,8 @@ fn connect_endpoint_for_bind(endpoint: SocketAddr) -> SocketAddr {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
+
     use std::collections::BTreeMap;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -739,6 +741,31 @@ mod tests {
 
         let error =
             axon_plan_from_cli(&cli, None).expect_err("liar's dice http serving should be gated");
+        assert!(matches!(error, AxonServeError::UnsupportedGame));
+    }
+
+    #[test]
+    fn kuhn_http_plan_is_explicitly_unsupported() {
+        let cli = Cli {
+            chain: "ws://127.0.0.1:9944".to_string(),
+            subnet: 1,
+            key: Some("//Alice".to_string()),
+            key_config_dir: None,
+            key_password_env: "MYOSU_KEY_PASSWORD".to_string(),
+            port: 8080,
+            register: false,
+            serve_axon: false,
+            serve_http: true,
+            data_dir: PathBuf::from("/tmp/miner-data"),
+            game: GameSelection::Kuhn,
+            encoder_dir: None,
+            checkpoint: Some(PathBuf::from("/tmp/checkpoint.bin")),
+            train_iterations: 0,
+            query_file: None,
+            response_file: None,
+        };
+
+        let error = axon_plan_from_cli(&cli, None).expect_err("kuhn http serving should be gated");
         assert!(matches!(error, AxonServeError::UnsupportedGame));
     }
 }

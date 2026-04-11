@@ -29,9 +29,11 @@ INV-004 enforces in CI that `myosu-play` has no dependency on `myosu-miner`.
 | Train | `train` subcommand | Interactive ratatui TUI with solver advisor overlay |
 | Pipe | `pipe` subcommand | Line-oriented text protocol for agent consumption |
 
-**Game support**: Poker (NLHE), Kuhn Poker, and Liar's Dice. Each game
-implements the `GameRenderer` trait providing TUI rendering within the
-five-panel shell. Smoke test exercises all three.
+**Game support**: Poker (NLHE), Kuhn Poker, Liar's Dice, and the
+`research/game-rules` portfolio games. Poker, Kuhn, and Liar's Dice use
+dedicated renderers; portfolio-routed research games use `PortfolioRenderer`.
+Each game implements the `GameRenderer` trait providing TUI rendering within
+the five-panel shell.
 
 **Solver advisor**: ON by default in train mode. Background poll at 250ms
 interval. Displays action distribution, recommended action, and miner liveness
@@ -43,8 +45,9 @@ highest-incentive miner on-chain and queries its axon endpoint.
 **CLI flags**: `--game`, `--chain`, `--subnet`, `--checkpoint`, `--encoder-dir`,
 `--require-artifact`, `--require-discovery`, `--require-live-query`.
 
-**Test coverage**: Pipe responses, smoke reports, discovery flow, and live
-advice all have existing tests.
+**Test coverage**: Pipe responses, smoke reports, discovery flow, live advice,
+and portfolio CLI inventory plus accepted-slug alignment with the Rust-owned
+research manifest all have existing tests.
 
 ## Scope
 
@@ -74,6 +77,9 @@ Game renderers:
   cards, pot, stacks, action history
 - `KuhnRenderer`: Card display, bet/check actions
 - `LiarsDiceRenderer`: Dice display, bid/challenge actions
+- `PortfolioRenderer`: Research portfolio rule-aware typed challenge
+  recommendations with scoped artifact-backed checkpoints for portfolio-routed
+  games
 
 TUI screen flow: Loading -> Lobby -> Table -> (hand completes) -> Lobby.
 An onboarding screen displays if no artifacts are found.
@@ -144,7 +150,8 @@ environments.
 
 ## Acceptance Criteria
 
-- Smoke test passes for all three games (poker, Kuhn, Liar's Dice) via
+- Smoke test passes for the dedicated games (poker, Kuhn, Liar's Dice) and all
+  research game slugs via
   `SKIP_WASM_BUILD=1 cargo run -p myosu-play --quiet -- --smoke-test`.
 - Train mode launches, displays solver advisor overlay, and completes at least
   one hand per game without panics.

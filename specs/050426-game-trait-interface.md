@@ -8,9 +8,10 @@ Supersedes: `specs/031626-02a-game-engine-traits.md` (original draft)
 ## Objective
 
 Define the multi-game abstraction layer that makes myosu a game-agnostic solving
-platform. All game implementations (poker, Liar's Dice, Kuhn) satisfy a shared
-trait surface. The solver (miner), validator, and gameplay layers depend only on
-these traits and never import game-specific types directly.
+platform. The dedicated game implementations (poker, Liar's Dice, Kuhn) and the
+research portfolio rule-aware surface satisfy a shared trait and wire shape. The
+solver (miner), validator, and gameplay layers dispatch by game selection while
+keeping per-game wire parsing in the game crates.
 
 The interface has three concerns:
 
@@ -31,7 +32,7 @@ All items below are verified against code in the repository as of 2026-04-05.
 | Item | Location | Status |
 |------|----------|--------|
 | CFR trait re-exports from `rbp-mccfr` | `crates/myosu-games/src/traits.rs:8-9` | Verified |
-| `GameType` enum (`NlheHeadsUp`, `NlheSixMax`, `KuhnPoker`, `LiarsDice`, `Custom(String)`) | `traits.rs:63-77` | Verified |
+| `GameType` enum (dedicated games plus all research portfolio built-ins and `Custom(String)`) | `traits.rs` | Verified |
 | `GameConfig` with `GameParams` typed variants | `traits.rs:17-57`, `traits.rs:158-181` | Verified |
 | `StrategyQuery<I>` / `StrategyResponse<E>` generics | `traits.rs:187-241` | Verified |
 | `StrategyResponse::is_valid()` epsilon check (0.001) | `traits.rs:220-226` | Verified |
@@ -45,8 +46,8 @@ All items below are verified against code in the repository as of 2026-04-05.
 
 | Item | Location | Status |
 |------|----------|--------|
-| `GameRenderer` trait (Send, 5 methods) | `crates/myosu-tui/src/renderer.rs:24-39` | Verified |
-| Methods: `render_state`, `desired_height`, `declaration`, `completions`, `parse_input` | same file | Verified |
+| `GameRenderer` trait (`Send`, renderer + pipe contract) | `crates/myosu-tui/src/renderer.rs` | Verified |
+| Methods: `render_state`, `desired_height`, `declaration`, `completions`, `parse_input`, `clarify`, `pipe_output`, `game_label`, `context_label` | same file | Verified |
 
 ### Implemented games
 
@@ -55,17 +56,18 @@ All items below are verified against code in the repository as of 2026-04-05.
 | NLHE Poker | `myosu-games-poker` | robopoker `NlheProfile` + `NlheEncoder` | `wire.rs` (bincode, 1 MB limit) | `renderer.rs` (`NlheRenderer`) | `PokerSolver` (MCCFR) |
 | Liar's Dice | `myosu-games-liars-dice` | `LiarsDiceSolver<N>` | per-crate encode/decode | `renderer.rs` | `LiarsDiceSolver<N>` (generic tree count) |
 | Kuhn Poker | `myosu-games-kuhn` | analytical (closed-form Nash) | per-crate encode/decode | `renderer.rs` | analytical |
+| Research portfolio games | `myosu-games-portfolio` | rule-aware portfolio reference engines | per-crate encode/decode | `PortfolioRenderer` | `PortfolioSolver` |
 
 ### Adding a new game (proven path)
 
-Liar's Dice and Kuhn Poker both followed this path with zero changes to existing
-game code:
+Liar's Dice, Kuhn Poker, and the research portfolio surface followed this path
+without changing existing dedicated game crates:
 
 1. Implement CFR traits (`CfrGame`, `CfrTurn`, `CfrInfo`, `CfrEdge`).
 2. Add a `GameType` variant and `GameParams` variant.
 3. Implement `GameRenderer` for TUI/pipe display.
 4. Implement wire codec encode/decode functions.
-5. Register in `GameRegistry::supported()` array.
+5. Register in `GameRegistry::supported()`.
 
 No existing game code needs modification. The `#[non_exhaustive]` attribute on
 `GameType` and `GameParams` ensures downstream consumers already handle unknown
@@ -101,9 +103,10 @@ within 0.001 of 1.0, or the action list is empty (terminal state).
 
 ### AC-GTI-04: New games require zero changes to existing game code
 
-Adding a game requires only: new `GameType`/`GameParams` variants, a new crate
-implementing CFR traits + wire codec + renderer, and a `GameRegistry` entry. No
-modifications to other `myosu-games-*` crates.
+Adding a full game requires only: new `GameType`/`GameParams` variants, a new
+crate implementing CFR traits + wire codec + renderer, and a `GameRegistry`
+entry. Bootstrap-only portfolio games may initially use `GameParams::Custom`
+metadata behind the same `StrategyQuery` / `StrategyResponse` contract.
 
 ### AC-GTI-05: Wire codec decode limits
 
@@ -112,8 +115,9 @@ Each game's wire codec enforces a maximum decode size (poker: 1 MB via
 
 ### AC-GTI-06: `GameRenderer` is decoupled from solving
 
-`GameRenderer` lives in `myosu-tui`, not in `myosu-games`. Renderers depend on
-game crates; game crates never depend on TUI.
+`GameRenderer` lives in `myosu-tui`, not in `myosu-games`. Game implementation
+crates may provide renderer adapters by depending on `myosu-tui`; solver,
+miner, and validator logic stay decoupled from the TUI shell.
 
 ### AC-GTI-07: `#[non_exhaustive]` extensibility
 
@@ -135,9 +139,13 @@ serialization roundtrips. Verified by `proptest` generators
 | Poker wire codec | `cargo test -p myosu-games-poker -- wire` | Encode/decode roundtrip |
 | Liar's Dice wire codec | `cargo test -p myosu-games-liars-dice -- wire` | Encode/decode roundtrip |
 | Kuhn wire codec | `cargo test -p myosu-games-kuhn -- wire` | Encode/decode roundtrip |
-| No direct rbp-mccfr imports | `rg 'use rbp_mccfr' crates/ --glob '!myosu-games/src/*'` | Zero matches outside `myosu-games/src/` |
+| Portfolio wire codec | `cargo test -p myosu-games-portfolio -- wire` | Encode/decode roundtrip |
+| Portfolio corpus + solver manifest | `cargo run -p myosu-games-portfolio --example bootstrap_manifest -- table` | 22 research game identities expose route, rule file, chain id, player count, and solver family; harness checks the dedicated routes and Hearts/Cribbage split mapping |
+| Dedicated solver harnesses | `bash tests/e2e/research_games_harness.sh` | NLHE heads-up, Liar's Dice, and the exact Kuhn benchmark produce checkpoint/query/response artifacts with exact-match scores; the two research-dedicated games also expose `STRENGTH` roundtrip artifacts |
+| Portfolio corpus + solver harness | `bash tests/e2e/research_portfolio_harness.sh` | 20 portfolio-routed games produce checkpoint/query/response artifacts, exact-match scores, and `STRENGTH` roundtrips from the manifest-derived game list; scoped checkpoints reject cross-game query artifacts; strength manifest entries must be `engine_tier=rule-aware` |
+| Direct rbp-mccfr imports scoped to game implementation crates | `rg 'use rbp_mccfr' crates/` | Matches only in shared trait or `myosu-games-*` implementation crates |
 | INV-004 isolation | CI `cargo tree` check | No path between `myosu-play` and `myosu-miner` |
-| Registry completeness | `GameRegistry::supported().len()` equals count of non-Custom `GameType` variants | 4 entries (NLHE HU, NLHE 6max, Kuhn, Liar's Dice) |
+| Registry completeness | `GameRegistry::supported()` roundtrips through `GameType::from_bytes` | Dedicated games plus all research portfolio built-ins |
 
 ## Open Questions
 

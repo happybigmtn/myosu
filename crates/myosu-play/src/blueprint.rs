@@ -9,6 +9,7 @@ use myosu_games_liars_dice::{
     recommended_edge as recommended_liars_dice_edge,
 };
 use myosu_games_poker::{CodexpokerBlueprint, NlheRenderer, PokerSolver, load_encoder_dir};
+use myosu_games_portfolio::{PortfolioRenderer, PortfolioSolver, ResearchGame};
 use myosu_tui::GameRenderer;
 
 use crate::cli::{AdviceArgs, GameSelection};
@@ -25,6 +26,7 @@ pub(crate) enum AdviceSurface {
     Poker { renderer: Arc<NlheRenderer> },
     Kuhn { renderer: Arc<KuhnRenderer> },
     LiarsDice { renderer: Arc<LiarsDiceRenderer> },
+    Portfolio { renderer: Arc<PortfolioRenderer> },
 }
 
 impl AdviceSurface {
@@ -33,6 +35,7 @@ impl AdviceSurface {
             Self::Poker { renderer } => renderer.as_ref(),
             Self::Kuhn { renderer } => renderer.as_ref(),
             Self::LiarsDice { renderer } => renderer.as_ref(),
+            Self::Portfolio { renderer } => renderer.as_ref(),
         }
     }
 
@@ -41,6 +44,7 @@ impl AdviceSurface {
             Self::Poker { renderer } => Some(renderer.as_ref()),
             Self::Kuhn { .. } => None,
             Self::LiarsDice { .. } => None,
+            Self::Portfolio { .. } => None,
         }
     }
 
@@ -49,6 +53,7 @@ impl AdviceSurface {
             Self::Poker { renderer } => Some(renderer.clone()),
             Self::Kuhn { .. } => None,
             Self::LiarsDice { .. } => None,
+            Self::Portfolio { .. } => None,
         }
     }
 }
@@ -168,6 +173,15 @@ fn demo_renderer_with_mode(
         GameSelection::Poker => poker_demo_renderer(args, mode),
         GameSelection::Kuhn => kuhn_demo_renderer(args),
         GameSelection::LiarsDice => liars_dice_demo_renderer(args),
+        _ => {
+            let research_game = game.portfolio_game().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("unsupported game selection {}", game.cli_label()),
+                )
+            })?;
+            portfolio_demo_renderer(game, research_game, args)
+        }
     }
 }
 
@@ -366,6 +380,63 @@ fn kuhn_demo_renderer(args: AdviceArgs) -> io::Result<AdviceSelection> {
         (Some(_), Some(_)) | (Some(_), None) | (None, Some(_)) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "--game kuhn does not use --checkpoint/--encoder-dir",
+        )),
+    }
+}
+
+fn portfolio_demo_renderer(
+    game: GameSelection,
+    research_game: ResearchGame,
+    args: AdviceArgs,
+) -> io::Result<AdviceSelection> {
+    match (args.checkpoint, args.encoder_dir) {
+        (Some(checkpoint), None) => {
+            let solver = PortfolioSolver::load(&checkpoint).map_err(|error| {
+                io::Error::other(format!(
+                    "failed to load portfolio checkpoint `{}`: {error}",
+                    checkpoint.display()
+                ))
+            })?;
+            solver.ensure_supports(research_game).map_err(|error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!(
+                        "portfolio checkpoint `{}` is not compatible with {}: {error}",
+                        checkpoint.display(),
+                        research_game.slug()
+                    ),
+                )
+            })?;
+            Ok(AdviceSelection {
+                game,
+                surface: AdviceSurface::Portfolio {
+                    renderer: Arc::new(PortfolioRenderer::from_solver(research_game, &solver)),
+                },
+                source: "artifact",
+                selection: "explicit",
+                origin: "explicit",
+                reason: "explicit",
+                detail: format!(
+                    "explicit {} checkpoint={}",
+                    research_game.slug(),
+                    checkpoint.display()
+                ),
+            })
+        }
+        (None, None) => Ok(AdviceSelection {
+            game,
+            surface: AdviceSurface::Portfolio {
+                renderer: Arc::new(PortfolioRenderer::demo(research_game)),
+            },
+            source: "demo",
+            selection: "builtin",
+            origin: "builtin",
+            reason: "builtin",
+            detail: format!("built-in {} portfolio demo surface", research_game.slug()),
+        }),
+        (Some(_), Some(_)) | (None, Some(_)) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("--game {} does not use --encoder-dir", research_game.slug()),
         )),
     }
 }
@@ -771,5 +842,87 @@ mod tests {
                 .to_string()
                 .contains("does not use --checkpoint/--encoder-dir")
         );
+    }
+
+    #[test]
+    fn portfolio_demo_renderer_uses_builtin_surface_without_checkpoint() {
+        let selection = demo_renderer(
+            GameSelection::Bridge,
+            AdviceArgs {
+                checkpoint: None,
+                encoder_dir: None,
+            },
+        )
+        .expect("portfolio demo should build");
+
+        assert_eq!(selection.game, GameSelection::Bridge);
+        assert_eq!(selection.source, "demo");
+        assert_eq!(selection.startup_state(), AdviceStartupState::Success);
+        assert!(
+            selection
+                .surface
+                .renderer()
+                .pipe_output()
+                .contains("game=bridge")
+        );
+    }
+
+    #[test]
+    fn portfolio_demo_renderer_uses_artifact_checkpoint() {
+        let checkpoint = std::env::temp_dir().join(format!(
+            "myosu-play-portfolio-checkpoint-{:?}.bin",
+            std::thread::current().id()
+        ));
+        let mut solver = PortfolioSolver::for_game(ResearchGame::Cribbage);
+        solver.train(5);
+        solver
+            .save(&checkpoint)
+            .expect("portfolio checkpoint should save");
+
+        let selection = demo_renderer(
+            GameSelection::Cribbage,
+            AdviceArgs {
+                checkpoint: Some(checkpoint.clone()),
+                encoder_dir: None,
+            },
+        )
+        .expect("portfolio artifact demo should build");
+
+        assert_eq!(selection.game, GameSelection::Cribbage);
+        assert_eq!(selection.source, "artifact");
+        assert_eq!(selection.startup_state(), AdviceStartupState::Success);
+        assert!(
+            selection
+                .surface
+                .renderer()
+                .pipe_output()
+                .contains("game=cribbage")
+        );
+        assert!(
+            selection
+                .surface
+                .renderer()
+                .pipe_output()
+                .contains("recommend=peg-run")
+        );
+
+        let _ = std::fs::remove_file(checkpoint);
+    }
+
+    #[test]
+    fn portfolio_demo_renderer_rejects_encoder_dir() {
+        let error = match demo_renderer(
+            GameSelection::Bridge,
+            AdviceArgs {
+                checkpoint: None,
+                encoder_dir: Some(PathBuf::from("/tmp/encoder-dir")),
+            },
+        ) {
+            Ok(_) => panic!("portfolio games should reject encoder dirs"),
+            Err(error) => error,
+        };
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert!(error.to_string().contains("does not use --encoder-dir"));
     }
 }

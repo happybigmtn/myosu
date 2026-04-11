@@ -30,6 +30,9 @@ pub enum KeyError {
     /// The requested password environment variable was not present.
     #[error("environment variable {env} is not set; cannot unlock the myosu key")]
     MissingPasswordEnv { env: String },
+    /// No operator key source was provided by a caller that bypassed CLI validation.
+    #[error("missing operator key source; pass --key or --key-config-dir")]
+    MissingKeySource,
     /// Creating a config or key directory failed.
     #[error("failed to create directory {path}: {source}")]
     CreateDirectory { path: PathBuf, source: io::Error },

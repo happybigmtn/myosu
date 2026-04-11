@@ -84,7 +84,7 @@ pub fn weight_submission_report(report: &myosu_chain_client::WeightSubmissionRep
 ///     A multi-line plain-text report suitable for stdout.
 pub fn validation_report(report: &crate::validation::ValidationReport) -> String {
     format!(
-        "VALIDATION myosu-validator score ok\ngame={:?}\naction_count={}\nexact_match={}\nl1_distance={:.6}\nscore={:.6}\nexpected_action={}\nobserved_action={}\n",
+        "VALIDATION myosu-validator score ok\ngame={:?}\naction_count={}\nexact_match={}\nl1_distance={:.6}\nscore={:.6}\nexpected_action={}\nobserved_action={}\nquality_summary={}\n",
         report.game,
         report.action_count,
         report.exact_match,
@@ -92,11 +92,14 @@ pub fn validation_report(report: &crate::validation::ValidationReport) -> String
         report.score,
         report.expected_action,
         report.observed_action,
+        report.quality_summary,
     )
 }
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
+
     use myosu_chain_client::RegistrationReport;
     use myosu_chain_client::RpcMethods;
     use myosu_chain_client::SystemHealth;
@@ -202,12 +205,14 @@ mod tests {
             score: 1.0,
             expected_action: "Call".to_string(),
             observed_action: "Call".to_string(),
+            quality_summary: "engine_tier=dedicated-mccfr engine_family=liars-dice-cfr".to_string(),
         };
 
         let report = validation_report(&report);
         assert!(report.contains("VALIDATION myosu-validator score ok"));
         assert!(report.contains("action_count=3"));
         assert!(report.contains("score=1.000000"));
+        assert!(report.contains("quality_summary=engine_tier=dedicated-mccfr"));
     }
 
     #[test]

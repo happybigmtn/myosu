@@ -215,12 +215,12 @@ mod tests {
 
         while tokio::time::Instant::now() < deadline {
             let timeout = deadline - tokio::time::Instant::now();
-            if let Ok(Some(event)) = tokio::time::timeout(timeout, loop_handle.next()).await {
-                if let Event::Update(UpdateEvent::Message(msg)) = &event {
-                    assert_eq!(msg, "test");
-                    found = true;
-                    break;
-                }
+            if let Ok(Some(Event::Update(UpdateEvent::Message(msg)))) =
+                tokio::time::timeout(timeout, loop_handle.next()).await
+            {
+                assert_eq!(msg, "test");
+                found = true;
+                break;
             }
         }
 

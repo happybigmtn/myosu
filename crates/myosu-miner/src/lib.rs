@@ -71,11 +71,12 @@ pub fn http_axon_report(report: &crate::axon::AxonServeReport) -> String {
 ///     A multi-line plain-text report suitable for stdout.
 pub fn training_report(report: &crate::training::TrainingRunReport) -> String {
     format!(
-        "TRAINING myosu-miner batch ok\ngame={:?}\ncheckpoint_path={}\nepochs={}\nexploitability={}\n",
+        "TRAINING myosu-miner batch ok\ngame={:?}\ncheckpoint_path={}\nepochs={}\nexploitability={}\nquality_summary={}\n",
         report.game,
         report.checkpoint_path.display(),
         report.epochs,
         report.exploitability,
+        report.quality_summary,
     )
 }
 
@@ -88,16 +89,19 @@ pub fn training_report(report: &crate::training::TrainingRunReport) -> String {
 ///     A multi-line plain-text report suitable for stdout.
 pub fn strategy_report(report: &crate::strategy::StrategyServeReport) -> String {
     format!(
-        "STRATEGY myosu-miner query ok\ngame={:?}\nresponse_path={}\naction_count={}\nrecommended_action={}\n",
+        "STRATEGY myosu-miner query ok\ngame={:?}\nresponse_path={}\naction_count={}\nrecommended_action={}\nquality_summary={}\n",
         report.game,
         report.response_path.display(),
         report.action_count,
         report.recommended_action,
+        report.quality_summary,
     )
 }
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
+
     use myosu_chain_client::AxonServeReport;
     use myosu_chain_client::RegistrationReport;
     use myosu_chain_client::RpcMethods;
@@ -199,12 +203,14 @@ mod tests {
             checkpoint_path: std::path::PathBuf::from("/tmp/miner/latest.bin"),
             epochs: 12,
             exploitability: "unavailable: sparse encoder".to_string(),
+            quality_summary: "engine_tier=dedicated-mccfr engine_family=robopoker-nlhe".to_string(),
         };
 
         let report = training_report(&report);
         assert!(report.contains("TRAINING myosu-miner batch ok"));
         assert!(report.contains("checkpoint_path=/tmp/miner/latest.bin"));
         assert!(report.contains("epochs=12"));
+        assert!(report.contains("quality_summary=engine_tier=dedicated-mccfr"));
     }
 
     #[test]
@@ -214,11 +220,13 @@ mod tests {
             response_path: std::path::PathBuf::from("/tmp/miner/response.bin"),
             action_count: 3,
             recommended_action: "Raise(1/2)".to_string(),
+            quality_summary: "engine_tier=dedicated-mccfr engine_family=liars-dice-cfr".to_string(),
         };
 
         let report = strategy_report(&report);
         assert!(report.contains("STRATEGY myosu-miner query ok"));
         assert!(report.contains("response_path=/tmp/miner/response.bin"));
         assert!(report.contains("action_count=3"));
+        assert!(report.contains("quality_summary=engine_tier=dedicated-mccfr"));
     }
 }

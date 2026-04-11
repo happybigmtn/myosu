@@ -1,5 +1,9 @@
 # ARCHIVED
 
+## 2026-04-11 planning surface cutover
+
+- Archived the pre-master-plan `execplans/` batch to `archive/execplans_20260411/` and established `plans/001-master-plan.md` as the active planning root for solver promotion and Bitino integration work. This was a documentation and supervision cutover, not a code-behavior change.
+
 ## 2026-04-03 review pass
 
 - `SEC-001` commit `08f00a486a25a4bb16a2ae1e17e973eeb9ca92f1`; review note: the original dependency-audit gate was false green because `cargo audit` exited 0 with warning-class advisories. This pass repaired the workflow to deny warnings, so the CI gate now fails truthfully on non-ignored advisories. Validated with `cargo audit -D warnings --ignore RUSTSEC-2025-0009 --ignore RUSTSEC-2025-0055 --ignore RUSTSEC-2023-0091 --ignore RUSTSEC-2024-0438 --ignore RUSTSEC-2025-0118 --ignore RUSTSEC-2026-0020 --ignore RUSTSEC-2026-0021`

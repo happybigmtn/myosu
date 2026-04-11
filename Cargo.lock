@@ -7861,14 +7861,26 @@ dependencies = [
 name = "myosu-games"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "proptest",
  "rand 0.8.5",
  "rbp-core",
  "rbp-mccfr",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.18",
  "tokio-test",
+]
+
+[[package]]
+name = "myosu-games-canonical"
+version = "0.1.0"
+dependencies = [
+ "myosu-games",
+ "myosu-games-portfolio",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -7921,6 +7933,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "myosu-games-portfolio"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "myosu-games",
+ "myosu-tui",
+ "ratatui",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "myosu-keys"
 version = "0.1.0"
 dependencies = [
@@ -7943,8 +7968,10 @@ dependencies = [
  "clap",
  "myosu-chain-client",
  "myosu-games",
+ "myosu-games-kuhn",
  "myosu-games-liars-dice",
  "myosu-games-poker",
+ "myosu-games-portfolio",
  "myosu-keys",
  "rbp-cards",
  "rbp-gameplay",
@@ -7966,6 +7993,7 @@ dependencies = [
  "myosu-games-kuhn",
  "myosu-games-liars-dice",
  "myosu-games-poker",
+ "myosu-games-portfolio",
  "myosu-tui",
  "ratatui",
  "subtensor-runtime-common",
@@ -7995,8 +8023,10 @@ dependencies = [
  "clap",
  "myosu-chain-client",
  "myosu-games",
+ "myosu-games-kuhn",
  "myosu-games-liars-dice",
  "myosu-games-poker",
+ "myosu-games-portfolio",
  "myosu-keys",
  "rbp-cards",
  "rbp-gameplay",

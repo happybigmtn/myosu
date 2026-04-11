@@ -5,6 +5,8 @@ members = [
     "crates/myosu-games-poker",
     "crates/myosu-games-liars-dice",
     "crates/myosu-games-kuhn",
+    "crates/myosu-games-portfolio",
+    "crates/myosu-games-canonical",
     "crates/myosu-keys",
     "crates/myosu-tui",
     "crates/myosu-play",
@@ -86,6 +88,8 @@ memmap2 = "0.9.8"
 ndarray = { version = "0.16.1", default-features = false }
 myosu-chain-client = { path = "crates/myosu-chain-client" }
 myosu-games = { path = "crates/myosu-games" }
+myosu-games-canonical = { path = "crates/myosu-games-canonical" }
+myosu-games-portfolio = { path = "crates/myosu-games-portfolio" }
 myosu-keys = { path = "crates/myosu-keys" }
 myosu-chain-runtime = { path = "crates/myosu-chain/runtime", default-features = false }
 num-traits = { version = "0.2.19", default-features = false }

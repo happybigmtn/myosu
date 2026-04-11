@@ -4,6 +4,12 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use myosu_games::StrategyResponse;
+use myosu_games_kuhn::KuhnEdge;
+use myosu_games_kuhn::KuhnSolver;
+use myosu_games_kuhn::KuhnSolverError;
+use myosu_games_kuhn::decode_strategy_query as decode_kuhn_strategy_query;
+use myosu_games_kuhn::decode_strategy_response as decode_kuhn_strategy_response;
+use myosu_games_kuhn::recommended_edge as recommended_kuhn_edge;
 use myosu_games_liars_dice::LiarsDiceEdge;
 use myosu_games_liars_dice::LiarsDiceSolver;
 use myosu_games_liars_dice::LiarsDiceSolverError;
@@ -19,6 +25,15 @@ use myosu_games_poker::decode_strategy_query;
 use myosu_games_poker::decode_strategy_response;
 use myosu_games_poker::load_encoder_dir;
 use myosu_games_poker::recommended_edge;
+use myosu_games_portfolio::PortfolioAction;
+use myosu_games_portfolio::PortfolioSolver;
+use myosu_games_portfolio::PortfolioSolverError;
+use myosu_games_portfolio::PortfolioStrategyQuery;
+use myosu_games_portfolio::PortfolioStrengthQuery;
+use myosu_games_portfolio::decode_strategy_query as decode_portfolio_strategy_query;
+use myosu_games_portfolio::decode_strategy_response as decode_portfolio_strategy_response;
+use myosu_games_portfolio::decode_strength_query as decode_portfolio_strength_query;
+use myosu_games_portfolio::recommended_action as recommended_portfolio_action;
 use thiserror::Error;
 use tracing::info;
 
@@ -67,6 +82,13 @@ pub struct ValidationReport {
     pub score: f64,
     pub expected_action: String,
     pub observed_action: String,
+    pub quality_summary: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum PortfolioQuery {
+    Bootstrap(PortfolioStrategyQuery),
+    Strength(PortfolioStrengthQuery),
 }
 
 /// Errors returned while preparing or executing the validator scoring pass.
@@ -132,6 +154,21 @@ pub enum ValidationError {
     #[error("failed to compute liar's dice validator expectation: {0}")]
     LiarsDiceSolver(#[from] LiarsDiceSolverError),
 
+    /// Returned when the Kuhn solver fails to load the checkpoint or answer a query.
+    #[error("failed to compute Kuhn validator expectation: {0}")]
+    KuhnSolver(#[from] KuhnSolverError),
+
+    /// Returned when a research portfolio solver fails to load the checkpoint or answer a query.
+    #[error("failed to compute research portfolio validator expectation: {0}")]
+    PortfolioSolver(#[from] PortfolioSolverError),
+
+    /// Returned when the query belongs to a different portfolio game than the CLI route.
+    #[error("portfolio query game `{query_game}` does not match requested game `{requested_game}`")]
+    PortfolioGameMismatch {
+        requested_game: String,
+        query_game: String,
+    },
+
     /// Returned when the miner response does not form a valid probability distribution.
     #[error("strategy response `{path}` is not a valid distribution")]
     InvalidResponse { path: String },
@@ -150,12 +187,18 @@ pub fn validation_plan_from_cli(cli: &Cli) -> Result<Option<ValidationPlan>, Val
         (None, None) => Ok(None),
         (Some(_), None) | (None, Some(_)) => Err(ValidationError::IncompleteArtifactPair),
         (Some(query_path), Some(response_path)) => {
-            let encoder_dir = match cli.game {
-                GameSelection::Poker => cli
-                    .encoder_dir
-                    .clone()
-                    .ok_or(ValidationError::MissingEncoderDir)?,
-                GameSelection::LiarsDice => cli.encoder_dir.clone().unwrap_or_default(),
+            let encoder_dir = if cli.game.portfolio_game().is_some() {
+                cli.encoder_dir.clone().unwrap_or_default()
+            } else {
+                match cli.game {
+                    GameSelection::Poker => cli
+                        .encoder_dir
+                        .clone()
+                        .ok_or(ValidationError::MissingEncoderDir)?,
+                    GameSelection::Kuhn => cli.encoder_dir.clone().unwrap_or_default(),
+                    GameSelection::LiarsDice => cli.encoder_dir.clone().unwrap_or_default(),
+                    _ => cli.encoder_dir.clone().unwrap_or_default(),
+                }
             };
             let Some(checkpoint_path) = cli.checkpoint.clone() else {
                 return Err(ValidationError::MissingCheckpoint);
@@ -192,31 +235,66 @@ pub fn score_response(plan: &ValidationPlan) -> Result<ValidationReport, Validat
         })?;
     let query_path = plan.query_path.display().to_string();
     let response_path = plan.response_path.display().to_string();
-    let report = match plan.game {
-        GameSelection::Poker => {
-            let encoder =
-                load_encoder_dir(&plan.encoder_dir).map_err(|source| ValidationError::Encoder {
-                    path: plan.encoder_dir.display().to_string(),
-                    source,
+    let report = if plan.game.portfolio_game().is_some() {
+        let solver = PortfolioSolver::load(&plan.checkpoint_path)?;
+        score_portfolio_response_with_solver(
+            &solver,
+            plan.game,
+            &query_path,
+            &response_path,
+            &query_bytes,
+            &response_bytes,
+        )?
+    } else {
+        match plan.game {
+            GameSelection::Poker => {
+                let encoder = load_encoder_dir(&plan.encoder_dir).map_err(|source| {
+                    ValidationError::Encoder {
+                        path: plan.encoder_dir.display().to_string(),
+                        source,
+                    }
                 })?;
-            let solver = PokerSolver::load(&plan.checkpoint_path, encoder)?;
-            score_poker_response_with_solver(
-                &solver,
-                &query_path,
-                &response_path,
-                &query_bytes,
-                &response_bytes,
-            )?
-        }
-        GameSelection::LiarsDice => {
-            let solver = LiarsDiceSolver::<LIARS_DICE_SOLVER_TREES>::load(&plan.checkpoint_path)?;
-            score_liars_dice_response_with_solver(
-                &solver,
-                &query_path,
-                &response_path,
-                &query_bytes,
-                &response_bytes,
-            )?
+                let solver = PokerSolver::load(&plan.checkpoint_path, encoder)?;
+                score_poker_response_with_solver(
+                    &solver,
+                    &query_path,
+                    &response_path,
+                    &query_bytes,
+                    &response_bytes,
+                )?
+            }
+            GameSelection::Kuhn => {
+                let solver = KuhnSolver::load(&plan.checkpoint_path)?;
+                score_kuhn_response_with_solver(
+                    &solver,
+                    &query_path,
+                    &response_path,
+                    &query_bytes,
+                    &response_bytes,
+                )?
+            }
+            GameSelection::LiarsDice => {
+                let solver =
+                    LiarsDiceSolver::<LIARS_DICE_SOLVER_TREES>::load(&plan.checkpoint_path)?;
+                score_liars_dice_response_with_solver(
+                    &solver,
+                    &query_path,
+                    &response_path,
+                    &query_bytes,
+                    &response_bytes,
+                )?
+            }
+            _ => {
+                let solver = PortfolioSolver::load(&plan.checkpoint_path)?;
+                score_portfolio_response_with_solver(
+                    &solver,
+                    plan.game,
+                    &query_path,
+                    &response_path,
+                    &query_bytes,
+                    &response_bytes,
+                )?
+            }
         }
     };
     info!(
@@ -230,6 +308,7 @@ pub fn score_response(plan: &ValidationPlan) -> Result<ValidationReport, Validat
         score = report.score,
         expected_action = %report.expected_action,
         observed_action = %report.observed_action,
+        quality_summary = %report.quality_summary,
         elapsed_ms = started_at.elapsed().as_millis(),
         "scored bounded validator response"
     );
@@ -273,6 +352,7 @@ fn score_poker_response_with_solver(
         score,
         expected_action: describe_recommendation(&expected),
         observed_action: describe_recommendation(&observed),
+        quality_summary: "engine_tier=dedicated-mccfr engine_family=robopoker-nlhe".to_string(),
     })
 }
 
@@ -340,7 +420,198 @@ fn score_liars_dice_response_with_solver(
         score,
         expected_action: describe_liars_dice_recommendation(&expected),
         observed_action: describe_liars_dice_recommendation(&observed),
+        quality_summary: "engine_tier=dedicated-mccfr engine_family=liars-dice-cfr".to_string(),
     })
+}
+
+fn score_kuhn_response_with_solver(
+    solver: &KuhnSolver,
+    query_path: &str,
+    response_path: &str,
+    query_bytes: &[u8],
+    response_bytes: &[u8],
+) -> Result<ValidationReport, ValidationError> {
+    let query =
+        decode_kuhn_strategy_query(query_bytes).map_err(|source| ValidationError::DecodeQuery {
+            path: query_path.to_string(),
+            source: match source {
+                myosu_games_kuhn::WireCodecError::Decode { source, .. } => WireCodecError::Decode {
+                    context: "kuhn strategy query",
+                    source,
+                },
+                myosu_games_kuhn::WireCodecError::Encode { source, .. } => WireCodecError::Encode {
+                    context: "kuhn strategy query",
+                    source,
+                },
+            },
+        })?;
+    let observed = decode_kuhn_strategy_response(response_bytes).map_err(|source| {
+        ValidationError::DecodeResponse {
+            path: response_path.to_string(),
+            source: match source {
+                myosu_games_kuhn::WireCodecError::Decode { source, .. } => WireCodecError::Decode {
+                    context: "kuhn strategy response",
+                    source,
+                },
+                myosu_games_kuhn::WireCodecError::Encode { source, .. } => WireCodecError::Encode {
+                    context: "kuhn strategy response",
+                    source,
+                },
+            },
+        }
+    })?;
+    if !observed.is_valid() {
+        return Err(ValidationError::InvalidResponse {
+            path: response_path.to_string(),
+        });
+    }
+
+    let expected = solver.answer(query);
+    let l1_distance = l1_distance_kuhn(&expected, &observed);
+    let score = score_from_l1_distance(l1_distance);
+    let exact_match = l1_distance < f64::EPSILON;
+
+    Ok(ValidationReport {
+        game: GameSelection::Kuhn,
+        action_count: observed.actions.len(),
+        exact_match,
+        l1_distance,
+        score,
+        expected_action: describe_kuhn_recommendation(&expected),
+        observed_action: describe_kuhn_recommendation(&observed),
+        quality_summary: "engine_tier=exact engine_family=kuhn-poker-exact".to_string(),
+    })
+}
+
+fn score_portfolio_response_with_solver(
+    solver: &PortfolioSolver,
+    game: GameSelection,
+    query_path: &str,
+    response_path: &str,
+    query_bytes: &[u8],
+    response_bytes: &[u8],
+) -> Result<ValidationReport, ValidationError> {
+    let query = decode_portfolio_query(query_path, query_bytes)?;
+    let observed = decode_portfolio_strategy_response(response_bytes).map_err(|source| {
+        ValidationError::DecodeResponse {
+            path: response_path.to_string(),
+            source: portfolio_wire_error("portfolio strategy response", source),
+        }
+    })?;
+    if !observed.is_valid() {
+        return Err(ValidationError::InvalidResponse {
+            path: response_path.to_string(),
+        });
+    }
+
+    let requested_game =
+        game.portfolio_game()
+            .ok_or_else(|| ValidationError::PortfolioGameMismatch {
+                requested_game: format!("{game:?}"),
+                query_game: "unknown".to_string(),
+            })?;
+    let (expected, quality_summary) = match query {
+        PortfolioQuery::Bootstrap(query) => {
+            ensure_portfolio_query_game(requested_game, query.info.game)?;
+            let expected = solver.answer_checked(query)?;
+            let quality_summary = portfolio_quality_summary_for_game(solver, requested_game)?;
+            (expected, quality_summary)
+        }
+        PortfolioQuery::Strength(query) => {
+            ensure_portfolio_query_game(requested_game, query.info.game)?;
+            let expected = solver.answer_strength_checked(query.clone())?;
+            let quality = solver.strength_quality(query)?;
+            (expected, portfolio_quality_summary(&quality))
+        }
+    };
+    let l1_distance = l1_distance_portfolio(&expected, &observed);
+    let score = score_from_l1_distance(l1_distance);
+    let exact_match = l1_distance < f64::EPSILON;
+
+    Ok(ValidationReport {
+        game,
+        action_count: observed.actions.len(),
+        exact_match,
+        l1_distance,
+        score,
+        expected_action: describe_portfolio_recommendation(&expected),
+        observed_action: describe_portfolio_recommendation(&observed),
+        quality_summary,
+    })
+}
+
+fn decode_portfolio_query(
+    query_path: &str,
+    query_bytes: &[u8],
+) -> Result<PortfolioQuery, ValidationError> {
+    match decode_portfolio_strength_query(query_bytes) {
+        Ok(query) => Ok(PortfolioQuery::Strength(query)),
+        Err(strength_error) => match decode_portfolio_strategy_query(query_bytes) {
+            Ok(query) => Ok(PortfolioQuery::Bootstrap(query)),
+            Err(_) => Err(ValidationError::DecodeQuery {
+                path: query_path.to_string(),
+                source: portfolio_wire_error(
+                    "portfolio strategy or strength query",
+                    strength_error,
+                ),
+            }),
+        },
+    }
+}
+
+fn ensure_portfolio_query_game(
+    requested_game: myosu_games_portfolio::ResearchGame,
+    query_game: myosu_games_portfolio::ResearchGame,
+) -> Result<(), ValidationError> {
+    if query_game == requested_game {
+        return Ok(());
+    }
+
+    Err(ValidationError::PortfolioGameMismatch {
+        requested_game: requested_game.to_string(),
+        query_game: query_game.to_string(),
+    })
+}
+
+fn portfolio_quality_summary_for_game(
+    solver: &PortfolioSolver,
+    game: myosu_games_portfolio::ResearchGame,
+) -> Result<String, PortfolioSolverError> {
+    let query = PortfolioSolver::strength_query(game)?;
+    let quality = solver.strength_quality(query)?;
+
+    Ok(portfolio_quality_summary(&quality))
+}
+
+fn portfolio_quality_summary(report: &myosu_games_portfolio::EngineQualityReport) -> String {
+    format!(
+        "engine_tier={} engine_family={} challenge_id={} score={:.6} baseline_l1_distance={:.6} legal_actions={} deterministic={}",
+        report.engine_tier.as_str(),
+        shell_token(&report.engine_family),
+        report.challenge_id,
+        report.score,
+        report.baseline_l1_distance,
+        report.legal_action_count,
+        report.deterministic,
+    )
+}
+
+fn shell_token(value: &str) -> String {
+    value.replace(' ', "_")
+}
+
+fn portfolio_wire_error(
+    context: &'static str,
+    source: myosu_games_portfolio::WireCodecError,
+) -> WireCodecError {
+    match source {
+        myosu_games_portfolio::WireCodecError::Encode { source, .. } => {
+            WireCodecError::Encode { context, source }
+        }
+        myosu_games_portfolio::WireCodecError::Decode { source, .. } => {
+            WireCodecError::Decode { context, source }
+        }
+    }
 }
 
 fn l1_distance(
@@ -363,6 +634,20 @@ fn describe_recommendation(response: &StrategyResponse<RbpNlheEdge>) -> String {
 fn l1_distance_liars_dice(
     expected: &StrategyResponse<LiarsDiceEdge>,
     observed: &StrategyResponse<LiarsDiceEdge>,
+) -> f64 {
+    l1_distance_union(&expected.actions, &observed.actions)
+}
+
+fn l1_distance_kuhn(
+    expected: &StrategyResponse<KuhnEdge>,
+    observed: &StrategyResponse<KuhnEdge>,
+) -> f64 {
+    l1_distance_union(&expected.actions, &observed.actions)
+}
+
+fn l1_distance_portfolio(
+    expected: &StrategyResponse<PortfolioAction>,
+    observed: &StrategyResponse<PortfolioAction>,
 ) -> f64 {
     l1_distance_union(&expected.actions, &observed.actions)
 }
@@ -404,13 +689,28 @@ fn describe_liars_dice_recommendation(response: &StrategyResponse<LiarsDiceEdge>
         .unwrap_or_else(|| "none".to_string())
 }
 
+fn describe_kuhn_recommendation(response: &StrategyResponse<KuhnEdge>) -> String {
+    recommended_kuhn_edge(response)
+        .map(|edge| format!("{edge:?}"))
+        .unwrap_or_else(|| "none".to_string())
+}
+
+fn describe_portfolio_recommendation(response: &StrategyResponse<PortfolioAction>) -> String {
+    recommended_portfolio_action(response)
+        .map(|action| format!("{action:?}"))
+        .unwrap_or_else(|| "none".to_string())
+}
+
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
+
     use std::collections::BTreeMap;
     use std::time::SystemTime;
     use std::time::UNIX_EPOCH;
 
     use myosu_games::CfrGame;
+    use myosu_games_kuhn::KuhnCard;
     use myosu_games_liars_dice::LiarsDiceClaim;
     use myosu_games_poker::encode_strategy_query;
     use myosu_games_poker::encode_strategy_response;
@@ -595,6 +895,62 @@ mod tests {
     }
 
     #[test]
+    fn kuhn_validation_plan_does_not_require_encoder_dir() {
+        let cli = Cli {
+            chain: "ws://127.0.0.1:9944".to_string(),
+            subnet: 1,
+            key: Some("//Bob".to_string()),
+            key_config_dir: None,
+            key_password_env: "MYOSU_KEY_PASSWORD".to_string(),
+            register: false,
+            enable_subtoken: false,
+            submit_weights: false,
+            stake_amount: None,
+            weight_hotkey: None,
+            game: GameSelection::Kuhn,
+            encoder_dir: None,
+            checkpoint: Some(PathBuf::from("/tmp/checkpoint.bin")),
+            query_file: Some(PathBuf::from("/tmp/query.bin")),
+            response_file: Some(PathBuf::from("/tmp/response.bin")),
+        };
+
+        let plan = validation_plan_from_cli(&cli)
+            .expect("kuhn validation plan should build")
+            .expect("validation should be requested");
+
+        assert_eq!(plan.game, GameSelection::Kuhn);
+        assert_eq!(plan.encoder_dir, PathBuf::new());
+    }
+
+    #[test]
+    fn portfolio_validation_plan_does_not_require_encoder_dir() {
+        let cli = Cli {
+            chain: "ws://127.0.0.1:9944".to_string(),
+            subnet: 1,
+            key: Some("//Bob".to_string()),
+            key_config_dir: None,
+            key_password_env: "MYOSU_KEY_PASSWORD".to_string(),
+            register: false,
+            enable_subtoken: false,
+            submit_weights: false,
+            stake_amount: None,
+            weight_hotkey: None,
+            game: GameSelection::Bridge,
+            encoder_dir: None,
+            checkpoint: Some(PathBuf::from("/tmp/checkpoint.bin")),
+            query_file: Some(PathBuf::from("/tmp/query.bin")),
+            response_file: Some(PathBuf::from("/tmp/response.bin")),
+        };
+
+        let plan = validation_plan_from_cli(&cli)
+            .expect("portfolio validation plan should build")
+            .expect("validation should be requested");
+
+        assert_eq!(plan.game, GameSelection::Bridge);
+        assert_eq!(plan.encoder_dir, PathBuf::new());
+    }
+
+    #[test]
     fn liars_dice_exact_match_scores_one() {
         let mut solver = LiarsDiceSolver::<LIARS_DICE_SOLVER_TREES>::new();
         solver.train(8).expect("training should succeed");
@@ -627,6 +983,72 @@ mod tests {
     }
 
     #[test]
+    fn kuhn_exact_match_scores_one() {
+        let solver = KuhnSolver::new();
+        let opening = myosu_games_kuhn::KuhnGame::root().apply(myosu_games_kuhn::KuhnEdge::Deal {
+            p1: KuhnCard::King,
+            p2: KuhnCard::Queen,
+        });
+        let query = myosu_games_kuhn::KuhnStrategyQuery::new(
+            opening
+                .info()
+                .expect("opening player turn should expose info"),
+        );
+        let query_bytes =
+            myosu_games_kuhn::encode_strategy_query(&query).expect("query should encode");
+        let response = solver.answer(query);
+        let response_bytes =
+            myosu_games_kuhn::encode_strategy_response(&response).expect("response should encode");
+
+        let report = score_kuhn_response_with_solver(
+            &solver,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("validation should succeed");
+
+        assert_eq!(report.game, GameSelection::Kuhn);
+        assert!(report.exact_match);
+        assert_eq!(report.score, 1.0);
+        assert_eq!(report.l1_distance, 0.0);
+    }
+
+    #[test]
+    fn portfolio_exact_match_scores_one_for_every_portfolio_game() {
+        for game in portfolio_game_selections() {
+            let research_game = game
+                .portfolio_game()
+                .expect("portfolio selection should map to research game");
+            let solver = PortfolioSolver::for_game(research_game);
+            let query = PortfolioSolver::bootstrap_query(research_game);
+            let query_bytes =
+                myosu_games_portfolio::encode_strategy_query(&query).expect("query should encode");
+            let response = solver.answer(query);
+            let response_bytes = myosu_games_portfolio::encode_strategy_response(&response)
+                .expect("response should encode");
+
+            let report = score_portfolio_response_with_solver(
+                &solver,
+                game,
+                "/tmp/query.bin",
+                "/tmp/response.bin",
+                &query_bytes,
+                &response_bytes,
+            )
+            .expect("validation should succeed");
+
+            assert_eq!(report.game, game);
+            assert!(report.exact_match);
+            assert_eq!(report.score, 1.0);
+            assert_eq!(report.l1_distance, 0.0);
+            assert!(report.quality_summary.contains("engine_tier=rule-aware"));
+            assert!(report.quality_summary.contains("baseline_l1_distance="));
+        }
+    }
+
+    #[test]
     fn liars_dice_l1_distance_does_not_double_count_explicit_zero_weight_actions() {
         let expected = StrategyResponse::new(vec![
             (
@@ -644,6 +1066,28 @@ mod tests {
         ]);
 
         assert!((l1_distance_liars_dice(&expected, &observed) - 2.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn kuhn_l1_distance_does_not_double_count_explicit_zero_weight_actions() {
+        let expected = StrategyResponse::new(vec![(KuhnEdge::Check, 1.0), (KuhnEdge::Bet, 0.0)]);
+        let observed = StrategyResponse::new(vec![(KuhnEdge::Check, 0.0), (KuhnEdge::Bet, 1.0)]);
+
+        assert!((l1_distance_kuhn(&expected, &observed) - 2.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn portfolio_l1_distance_does_not_double_count_explicit_zero_weight_actions() {
+        let expected = StrategyResponse::new(vec![
+            (PortfolioAction::DoubleDummyPlay, 1.0),
+            (PortfolioAction::BidContract, 0.0),
+        ]);
+        let observed = StrategyResponse::new(vec![
+            (PortfolioAction::DoubleDummyPlay, 0.0),
+            (PortfolioAction::BidContract, 1.0),
+        ]);
+
+        assert!((l1_distance_portfolio(&expected, &observed) - 2.0).abs() < 1e-12);
     }
 
     #[test]
@@ -681,6 +1125,171 @@ mod tests {
         .expect("second validation should succeed");
 
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn kuhn_inv_003_determinism() {
+        let solver = KuhnSolver::new();
+        let opening = myosu_games_kuhn::KuhnGame::root().apply(myosu_games_kuhn::KuhnEdge::Deal {
+            p1: KuhnCard::King,
+            p2: KuhnCard::Queen,
+        });
+        let query = myosu_games_kuhn::KuhnStrategyQuery::new(
+            opening
+                .info()
+                .expect("opening player turn should expose info"),
+        );
+        let query_bytes =
+            myosu_games_kuhn::encode_strategy_query(&query).expect("query should encode");
+        let response_bytes = myosu_games_kuhn::encode_strategy_response(&solver.answer(query))
+            .expect("response should encode");
+
+        let first = score_kuhn_response_with_solver(
+            &solver,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("first validation should succeed");
+        let second = score_kuhn_response_with_solver(
+            &solver,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("second validation should succeed");
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn portfolio_inv_003_determinism() {
+        let solver = PortfolioSolver::for_game(myosu_games_portfolio::ResearchGame::Bridge);
+        let query = PortfolioSolver::bootstrap_query(myosu_games_portfolio::ResearchGame::Bridge);
+        let query_bytes =
+            myosu_games_portfolio::encode_strategy_query(&query).expect("query should encode");
+        let response_bytes = myosu_games_portfolio::encode_strategy_response(&solver.answer(query))
+            .expect("response should encode");
+
+        let first = score_portfolio_response_with_solver(
+            &solver,
+            GameSelection::Bridge,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("first validation should succeed");
+        let second = score_portfolio_response_with_solver(
+            &solver,
+            GameSelection::Bridge,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("second validation should succeed");
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn portfolio_typed_strength_query_scores_one() {
+        let solver = PortfolioSolver::for_game(myosu_games_portfolio::ResearchGame::Bridge);
+        let query = PortfolioSolver::strength_query(myosu_games_portfolio::ResearchGame::Bridge)
+            .expect("bridge should have strength query");
+        let expected_quality = solver
+            .strength_quality(query.clone())
+            .expect("bridge quality should compute");
+        let challenge_id = query.info.challenge.spot().challenge_id.clone();
+        let query_bytes =
+            myosu_games_portfolio::encode_strength_query(&query).expect("query should encode");
+        let response_bytes = myosu_games_portfolio::encode_strategy_response(
+            &solver
+                .answer_strength_checked(query)
+                .expect("bridge strength query should answer"),
+        )
+        .expect("response should encode");
+
+        let report = score_portfolio_response_with_solver(
+            &solver,
+            GameSelection::Bridge,
+            "/tmp/strength-query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect("typed validation should succeed");
+
+        assert_eq!(report.game, GameSelection::Bridge);
+        assert!(report.exact_match);
+        assert_eq!(report.score, 1.0);
+        assert!(
+            report
+                .quality_summary
+                .contains(&format!("challenge_id={challenge_id}"))
+        );
+        assert!(report.quality_summary.contains(&format!(
+            "baseline_l1_distance={:.6}",
+            expected_quality.baseline_l1_distance
+        )));
+    }
+
+    #[test]
+    fn portfolio_validation_rejects_mismatched_query_game() {
+        let solver = PortfolioSolver::for_game(myosu_games_portfolio::ResearchGame::Bridge);
+        let query = PortfolioSolver::bootstrap_query(myosu_games_portfolio::ResearchGame::Cribbage);
+        let query_bytes =
+            myosu_games_portfolio::encode_strategy_query(&query).expect("query should encode");
+        let response_bytes = myosu_games_portfolio::encode_strategy_response(&solver.answer(
+            PortfolioSolver::bootstrap_query(myosu_games_portfolio::ResearchGame::Bridge),
+        ))
+        .expect("response should encode");
+
+        let error = score_portfolio_response_with_solver(
+            &solver,
+            GameSelection::Bridge,
+            "/tmp/query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect_err("mismatched portfolio query should fail");
+
+        assert!(matches!(
+            error,
+            ValidationError::PortfolioGameMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn portfolio_validation_rejects_typed_query_game_mismatch() {
+        let solver = PortfolioSolver::for_game(myosu_games_portfolio::ResearchGame::Bridge);
+        let query = PortfolioSolver::strength_query(myosu_games_portfolio::ResearchGame::Cribbage)
+            .expect("cribbage should have strength query");
+        let query_bytes =
+            myosu_games_portfolio::encode_strength_query(&query).expect("query should encode");
+        let response_bytes = myosu_games_portfolio::encode_strategy_response(&solver.answer(
+            PortfolioSolver::bootstrap_query(myosu_games_portfolio::ResearchGame::Bridge),
+        ))
+        .expect("response should encode");
+
+        let error = score_portfolio_response_with_solver(
+            &solver,
+            GameSelection::Bridge,
+            "/tmp/strength-query.bin",
+            "/tmp/response.bin",
+            &query_bytes,
+            &response_bytes,
+        )
+        .expect_err("mismatched typed portfolio query should fail");
+
+        assert!(matches!(
+            error,
+            ValidationError::PortfolioGameMismatch { .. }
+        ));
     }
 
     #[test]
@@ -727,12 +1336,6 @@ mod tests {
         )
         .expect("liar's dice validation should succeed");
 
-        // Documentation test: the current stage-0 validator score only sees
-        // normalized L1 distance. For the same "collapse the policy to one weak
-        // legal action" degradation pattern, the sampled poker and liar's-dice
-        // states stay in the same rough score band. That is encouraging for
-        // stage-0 fairness, but it does not prove full cross-subnet fairness for
-        // different game configs or exploitability units.
         let score_gap = (poker_report.score - liars_dice_report.score).abs();
 
         assert!(!poker_report.exact_match);
@@ -749,8 +1352,6 @@ mod tests {
 
     #[test]
     fn quality_benchmark_liars_dice_exploitability_converges() {
-        // This bypasses the validator self-check path and measures the
-        // solver's exact exploitability directly.
         let benchmark = liars_dice_benchmark_points(&[0, 128, 256, 512]);
 
         assert!(
@@ -779,6 +1380,10 @@ mod tests {
             "expected the benchmark ladder to recommend 512 iterations: {:?}",
             benchmark
         );
+    }
+
+    fn portfolio_game_selections() -> [GameSelection; 20] {
+        GameSelection::PORTFOLIO_SELECTIONS
     }
 
     fn weighted_solver() -> PokerSolver {

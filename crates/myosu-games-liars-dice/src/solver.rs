@@ -21,9 +21,22 @@ const MAX_DECODE_BYTES: u64 = 1_048_576;
 const CHECKPOINT_MAGIC: [u8; 4] = *b"MYOS";
 const CHECKPOINT_VERSION: u32 = 1;
 const CHECKPOINT_HEADER_LEN: usize = 8;
+const EXACT_SELECTION_INTERVAL: usize = 8;
+const EXACT_SELECTION_EPSILON: Utility = 1e-6;
 
 type Encounter = (Probability, Utility, Utility, u32);
 type EncounterMap = BTreeMap<LiarsDiceEdge, Encounter>;
+
+/// Summary returned by exact-exploitability checkpoint selection.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LiarsDiceTrainingSummary {
+    pub start_epochs: usize,
+    pub end_epochs: usize,
+    pub selected_epochs: usize,
+    pub start_exploitability: Utility,
+    pub final_exploitability: Utility,
+    pub selected_exploitability: Utility,
+}
 
 /// Fixed-configuration solver for the minimal Liar's Dice proof game.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -284,6 +297,57 @@ impl<const N: usize> LiarsDiceSolver<N> {
         }
 
         Ok(())
+    }
+
+    /// Run a fixed number of MCCFR iterations and keep the lowest-exploitability checkpoint seen.
+    pub fn train_select_best(
+        &mut self,
+        iterations: usize,
+    ) -> Result<LiarsDiceTrainingSummary, LiarsDiceSolverError> {
+        self.train_select_best_every(iterations, EXACT_SELECTION_INTERVAL)
+    }
+
+    fn train_select_best_every(
+        &mut self,
+        iterations: usize,
+        evaluation_interval: usize,
+    ) -> Result<LiarsDiceTrainingSummary, LiarsDiceSolverError> {
+        let evaluation_interval = evaluation_interval.max(1);
+        let start_epochs = self.epochs();
+        let start_exploitability = self.exact_exploitability();
+        let mut best_solver = self.clone();
+        let mut best_epochs = start_epochs;
+        let mut best_exploitability = start_exploitability;
+
+        for step in 0..iterations {
+            self.step()?;
+            let completed = step + 1;
+            if completed % evaluation_interval != 0 && completed != iterations {
+                continue;
+            }
+
+            let current_exploitability = self.exact_exploitability();
+            if current_exploitability + EXACT_SELECTION_EPSILON < best_exploitability
+                || ((current_exploitability - best_exploitability).abs() <= EXACT_SELECTION_EPSILON
+                    && self.epochs() > best_epochs)
+            {
+                best_solver = self.clone();
+                best_epochs = self.epochs();
+                best_exploitability = current_exploitability;
+            }
+        }
+
+        let final_exploitability = self.exact_exploitability();
+        *self = best_solver;
+
+        Ok(LiarsDiceTrainingSummary {
+            start_epochs,
+            end_epochs: start_epochs + iterations,
+            selected_epochs: best_epochs,
+            start_exploitability,
+            final_exploitability,
+            selected_exploitability: best_exploitability,
+        })
     }
 
     /// Query the current average strategy for a Liar's Dice information set.
@@ -611,7 +675,7 @@ fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
 mod tests {
     use crate::game::{LiarsDiceClaim, LiarsDiceEdge, LiarsDiceGame, LiarsDiceTurn};
     use crate::protocol::LiarsDiceStrategyQuery;
-    use crate::solver::{LiarsDiceSolver, LiarsDiceSolverError};
+    use crate::solver::{EXACT_SELECTION_INTERVAL, LiarsDiceSolver, LiarsDiceSolverError};
     use bincode::Options;
     use myosu_games::{CfrGame, CfrInfo, Profile, StrategyResponse};
     use rbp_mccfr::{CfrPublic, Solver};
@@ -740,6 +804,38 @@ mod tests {
             error,
             LiarsDiceSolverError::CheckpointMagic { .. }
         ));
+    }
+
+    #[test]
+    fn train_select_best_preserves_lowest_seen_exploitability() {
+        let mut solver = LiarsDiceSolver::<TRAINING_TREES>::new();
+        let summary = solver
+            .train_select_best_every(32, EXACT_SELECTION_INTERVAL)
+            .expect("exact checkpoint selection should succeed");
+
+        assert_eq!(summary.start_epochs, 0);
+        assert_eq!(summary.end_epochs, 32);
+        assert!(summary.selected_epochs <= summary.end_epochs);
+        assert!(summary.selected_exploitability <= summary.final_exploitability + 1e-6);
+        assert_eq!(solver.epochs(), summary.selected_epochs);
+        assert!((solver.exact_exploitability() - summary.selected_exploitability).abs() <= 1e-6);
+    }
+
+    #[test]
+    fn train_select_best_handles_zero_iterations() {
+        let mut solver = LiarsDiceSolver::<TRAINING_TREES>::new();
+        let start_exploitability = solver.exact_exploitability();
+        let summary = solver
+            .train_select_best(0)
+            .expect("zero-iteration checkpoint selection should succeed");
+
+        assert_eq!(summary.start_epochs, 0);
+        assert_eq!(summary.end_epochs, 0);
+        assert_eq!(summary.selected_epochs, 0);
+        assert!((summary.start_exploitability - start_exploitability).abs() <= 1e-6);
+        assert!((summary.final_exploitability - start_exploitability).abs() <= 1e-6);
+        assert!((summary.selected_exploitability - start_exploitability).abs() <= 1e-6);
+        assert_eq!(solver.epochs(), 0);
     }
 
     #[test]

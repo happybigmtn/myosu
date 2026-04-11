@@ -11,6 +11,7 @@ use live::LiveMinerStrategy;
 use myosu_games_kuhn::{KuhnRenderer, KuhnSnapshot};
 use myosu_games_liars_dice::{LiarsDiceRenderer, LiarsDiceSnapshot};
 use myosu_games_poker::NlheRenderer;
+use myosu_games_portfolio::PortfolioRenderer;
 use myosu_tui::events::UpdateEvent;
 use myosu_tui::{GameRenderer, InteractionState, PipeMode, Screen, Shell};
 use subtensor_runtime_common::NetUid;
@@ -153,6 +154,12 @@ fn smoke_report(
             require_discovery,
             require_live_query,
         ),
+        _ => portfolio_smoke_report(
+            context,
+            require_artifact,
+            require_discovery,
+            require_live_query,
+        ),
     }
 }
 
@@ -281,6 +288,55 @@ fn liars_dice_smoke_report(
     ))
 }
 
+fn portfolio_smoke_report(
+    context: &RenderContext,
+    require_artifact: bool,
+    require_discovery: bool,
+    require_live_query: bool,
+) -> io::Result<String> {
+    ensure_artifact_selection(&context.advice, require_artifact)?;
+    ensure_discovery_selection(&context.discovery, require_discovery)?;
+    ensure_live_query_selection(&context.live_query, require_live_query)?;
+
+    let research_game = context.advice.game.portfolio_game().ok_or_else(|| {
+        io::Error::other(format!(
+            "smoke expected portfolio game, got {}",
+            context.advice.game.cli_label()
+        ))
+    })?;
+    let initial = context.advice.surface.renderer().pipe_output();
+    if !initial.contains(&format!("game={}", research_game.chain_id())) {
+        return Err(io::Error::other(format!(
+            "smoke expected {} state, got `{initial}`",
+            research_game.slug()
+        )));
+    }
+
+    let action = context
+        .advice
+        .surface
+        .renderer()
+        .completions()
+        .into_iter()
+        .next()
+        .ok_or_else(|| io::Error::other("portfolio smoke expected at least one action"))?;
+    let response = pipe_response(context.advice.surface.renderer(), &action);
+    let expected_action = format!("ACTION {action}");
+    if response.line() != expected_action || !response.advances_state() {
+        return Err(io::Error::other(format!(
+            "smoke expected portfolio action after {action}, got `{}`",
+            response.line()
+        )));
+    }
+
+    Ok(format!(
+        "SMOKE myosu-play ok\ngame={}\nadvice_source={}\nactions={}\nfinal_state=rule_aware_demo\n",
+        research_game.chain_id(),
+        context.advice.source,
+        expected_action,
+    ))
+}
+
 fn ensure_artifact_selection(
     selection: &AdviceSelection,
     require_artifact: bool,
@@ -390,6 +446,13 @@ fn loading_renderer(game: GameSelection) -> Box<dyn GameRenderer> {
         GameSelection::Kuhn => Box::new(KuhnRenderer::new(Some(KuhnSnapshot::demo()))),
         GameSelection::LiarsDice => {
             Box::new(LiarsDiceRenderer::new(Some(LiarsDiceSnapshot::demo())))
+        }
+        _ => {
+            if let Some(research_game) = game.portfolio_game() {
+                Box::new(PortfolioRenderer::demo(research_game))
+            } else {
+                Box::new(NlheRenderer::demo())
+            }
         }
     }
 }
@@ -1223,6 +1286,21 @@ mod tests {
         }
     }
 
+    fn not_requested_portfolio_context() -> RenderContext {
+        RenderContext {
+            advice: demo_renderer(
+                GameSelection::Bridge,
+                AdviceArgs {
+                    checkpoint: None,
+                    encoder_dir: None,
+                },
+            )
+            .expect("portfolio demo should build"),
+            discovery: DiscoverySelection::not_requested(),
+            live_query: LiveQuerySelection::not_requested(),
+        }
+    }
+
     #[test]
     fn pipe_response_accepts_known_actions() {
         let fold_renderer =
@@ -1338,6 +1416,18 @@ mod tests {
         assert!(report.contains("game=kuhn_poker"));
         assert!(report.contains("actions=ACTION bet"));
         assert!(report.contains("final_state=static_demo"));
+    }
+
+    #[test]
+    fn portfolio_smoke_report_proves_local_surface_progression() {
+        let context = not_requested_portfolio_context();
+        let report =
+            smoke_report(&context, false, false, false).expect("smoke report should succeed");
+
+        assert!(report.contains("SMOKE myosu-play ok"));
+        assert!(report.contains("game=bridge"));
+        assert!(report.contains("actions=ACTION double-dummy-play"));
+        assert!(report.contains("final_state=rule_aware_demo"));
     }
 
     #[test]

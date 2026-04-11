@@ -1,0 +1,10 @@
+pub mod backgammon;
+pub mod cribbage;
+pub mod gin_rummy;
+pub mod hanafuda;
+pub mod mahjong;
+pub mod ofc;
+pub mod poker_like;
+pub mod shedding;
+pub mod stratego;
+pub mod trick_taking;

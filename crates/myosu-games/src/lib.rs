@@ -7,10 +7,16 @@
 
 #![doc = include_str!("../README.md")]
 
+pub mod canonical;
 pub mod registry;
 pub mod traits;
 
 // Re-export commonly used types for convenience
+pub use canonical::{
+    CanonicalActionSpec, CanonicalGameSpec, CanonicalStateSnapshot, CanonicalStrategyBinding,
+    CanonicalTransitionTrace, CanonicalTruthError, canonical_hash, validate_action_id,
+    validate_unique_action_ids,
+};
 pub use registry::{GameDescriptor, GameRegistry};
 pub use traits::{
     CfrEdge, CfrGame, CfrInfo, CfrTurn, Encoder, GameConfig, GameParams, GameType, Probability,

@@ -8,8 +8,10 @@ repository.workspace = true
 [dependencies]
 clap.workspace = true
 myosu-chain-client.workspace = true
+myosu-games-kuhn = { path = "../myosu-games-kuhn" }
 myosu-games-liars-dice = { path = "../myosu-games-liars-dice" }
 myosu-games-poker = { path = "../myosu-games-poker" }
+myosu-games-portfolio.workspace = true
 myosu-keys.workspace = true
 subtensor-runtime-common.workspace = true
 thiserror.workspace = true

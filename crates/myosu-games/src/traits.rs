@@ -72,6 +72,44 @@ pub enum GameType {
     KuhnPoker,
     /// Liar's Dice
     LiarsDice,
+    /// Pot-Limit Omaha
+    Plo,
+    /// No-Limit Hold'em tournament
+    NlheTournament,
+    /// Short Deck Hold'em
+    ShortDeck,
+    /// Teen Patti
+    TeenPatti,
+    /// Hanafuda Koi-Koi
+    HanafudaKoiKoi,
+    /// Hwatu Go-Stop
+    HwatuGoStop,
+    /// Riichi Mahjong
+    RiichiMahjong,
+    /// Contract Bridge
+    Bridge,
+    /// Gin Rummy
+    GinRummy,
+    /// Stratego
+    Stratego,
+    /// Open Face Chinese Poker
+    OfcChinesePoker,
+    /// Spades
+    Spades,
+    /// Dou Di Zhu
+    DouDiZhu,
+    /// Pusoy Dos
+    PusoyDos,
+    /// Tien Len
+    TienLen,
+    /// Call Break
+    CallBreak,
+    /// Backgammon
+    Backgammon,
+    /// Hearts
+    Hearts,
+    /// Cribbage
+    Cribbage,
     /// Custom game type identified by string
     Custom(String),
 }
@@ -91,6 +129,7 @@ impl GameType {
     /// assert_eq!(GameType::from_bytes(b"nlhe_6max"), Some(GameType::NlheSixMax));
     /// assert_eq!(GameType::from_bytes(b"kuhn_poker"), Some(GameType::KuhnPoker));
     /// assert_eq!(GameType::from_bytes(b"liars_dice"), Some(GameType::LiarsDice));
+    /// assert_eq!(GameType::from_bytes(b"bridge"), Some(GameType::Bridge));
     /// assert_eq!(GameType::from_bytes(b"unknown"), Some(GameType::Custom("unknown".to_string())));
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
@@ -99,6 +138,25 @@ impl GameType {
             b"nlhe_6max" => Some(Self::NlheSixMax),
             b"kuhn_poker" => Some(Self::KuhnPoker),
             b"liars_dice" => Some(Self::LiarsDice),
+            b"plo" => Some(Self::Plo),
+            b"nlhe_tournament" => Some(Self::NlheTournament),
+            b"short_deck" => Some(Self::ShortDeck),
+            b"teen_patti" => Some(Self::TeenPatti),
+            b"hanafuda_koi_koi" => Some(Self::HanafudaKoiKoi),
+            b"hwatu_go_stop" => Some(Self::HwatuGoStop),
+            b"riichi_mahjong" => Some(Self::RiichiMahjong),
+            b"bridge" => Some(Self::Bridge),
+            b"gin_rummy" => Some(Self::GinRummy),
+            b"stratego" => Some(Self::Stratego),
+            b"ofc_chinese_poker" => Some(Self::OfcChinesePoker),
+            b"spades" => Some(Self::Spades),
+            b"dou_di_zhu" => Some(Self::DouDiZhu),
+            b"pusoy_dos" => Some(Self::PusoyDos),
+            b"tien_len" => Some(Self::TienLen),
+            b"call_break" => Some(Self::CallBreak),
+            b"backgammon" => Some(Self::Backgammon),
+            b"hearts" => Some(Self::Hearts),
+            b"cribbage" => Some(Self::Cribbage),
             _ => {
                 // Try to parse as UTF-8 string for custom types
                 String::from_utf8(bytes.to_vec()).ok().map(Self::Custom)
@@ -123,6 +181,25 @@ impl GameType {
             Self::NlheSixMax => b"nlhe_6max".to_vec(),
             Self::KuhnPoker => b"kuhn_poker".to_vec(),
             Self::LiarsDice => b"liars_dice".to_vec(),
+            Self::Plo => b"plo".to_vec(),
+            Self::NlheTournament => b"nlhe_tournament".to_vec(),
+            Self::ShortDeck => b"short_deck".to_vec(),
+            Self::TeenPatti => b"teen_patti".to_vec(),
+            Self::HanafudaKoiKoi => b"hanafuda_koi_koi".to_vec(),
+            Self::HwatuGoStop => b"hwatu_go_stop".to_vec(),
+            Self::RiichiMahjong => b"riichi_mahjong".to_vec(),
+            Self::Bridge => b"bridge".to_vec(),
+            Self::GinRummy => b"gin_rummy".to_vec(),
+            Self::Stratego => b"stratego".to_vec(),
+            Self::OfcChinesePoker => b"ofc_chinese_poker".to_vec(),
+            Self::Spades => b"spades".to_vec(),
+            Self::DouDiZhu => b"dou_di_zhu".to_vec(),
+            Self::PusoyDos => b"pusoy_dos".to_vec(),
+            Self::TienLen => b"tien_len".to_vec(),
+            Self::CallBreak => b"call_break".to_vec(),
+            Self::Backgammon => b"backgammon".to_vec(),
+            Self::Hearts => b"hearts".to_vec(),
+            Self::Cribbage => b"cribbage".to_vec(),
             Self::Custom(s) => s.as_bytes().to_vec(),
         }
     }
@@ -145,6 +222,25 @@ impl GameType {
             Self::NlheSixMax => 6,
             Self::KuhnPoker => 2,
             Self::LiarsDice => 2,
+            Self::Plo => 6,
+            Self::NlheTournament => 9,
+            Self::ShortDeck => 6,
+            Self::TeenPatti => 6,
+            Self::HanafudaKoiKoi => 2,
+            Self::HwatuGoStop => 3,
+            Self::RiichiMahjong => 4,
+            Self::Bridge => 4,
+            Self::GinRummy => 2,
+            Self::Stratego => 2,
+            Self::OfcChinesePoker => 3,
+            Self::Spades => 4,
+            Self::DouDiZhu => 3,
+            Self::PusoyDos => 4,
+            Self::TienLen => 4,
+            Self::CallBreak => 4,
+            Self::Backgammon => 2,
+            Self::Hearts => 4,
+            Self::Cribbage => 2,
             // Default to 2 for custom games
             Self::Custom(_) => 2,
         }
@@ -294,6 +390,8 @@ mod tests {
             GameType::from_bytes(b"liars_dice"),
             Some(GameType::LiarsDice)
         );
+        assert_eq!(GameType::from_bytes(b"bridge"), Some(GameType::Bridge));
+        assert_eq!(GameType::from_bytes(b"cribbage"), Some(GameType::Cribbage));
     }
 
     #[test]
@@ -311,6 +409,8 @@ mod tests {
             GameType::NlheSixMax,
             GameType::KuhnPoker,
             GameType::LiarsDice,
+            GameType::Bridge,
+            GameType::Cribbage,
             GameType::Custom("my_game".to_string()),
         ];
 
@@ -336,6 +436,8 @@ mod tests {
         assert_eq!(GameType::NlheSixMax.num_players(), 6);
         assert_eq!(GameType::KuhnPoker.num_players(), 2);
         assert_eq!(GameType::LiarsDice.num_players(), 2);
+        assert_eq!(GameType::Bridge.num_players(), 4);
+        assert_eq!(GameType::Cribbage.num_players(), 2);
         assert_eq!(GameType::Custom("anything".to_string()).num_players(), 2);
     }
 

@@ -40,12 +40,31 @@ pub struct GameRegistry;
 
 impl GameRegistry {
     /// Return the built-in game types known to this repo.
-    pub fn supported() -> [GameDescriptor; 4] {
-        [
+    pub fn supported() -> Vec<GameDescriptor> {
+        vec![
             GameDescriptor::builtin(GameType::NlheHeadsUp, "Heads-up no-limit hold'em"),
             GameDescriptor::builtin(GameType::NlheSixMax, "Six-max no-limit hold'em"),
             GameDescriptor::builtin(GameType::KuhnPoker, "Two-player Kuhn poker"),
             GameDescriptor::builtin(GameType::LiarsDice, "Two-player liar's dice"),
+            GameDescriptor::builtin(GameType::Plo, "Pot-limit Omaha"),
+            GameDescriptor::builtin(GameType::NlheTournament, "No-limit hold'em tournament"),
+            GameDescriptor::builtin(GameType::ShortDeck, "Short Deck hold'em"),
+            GameDescriptor::builtin(GameType::TeenPatti, "Teen Patti"),
+            GameDescriptor::builtin(GameType::HanafudaKoiKoi, "Hanafuda Koi-Koi"),
+            GameDescriptor::builtin(GameType::HwatuGoStop, "Hwatu Go-Stop"),
+            GameDescriptor::builtin(GameType::RiichiMahjong, "Riichi Mahjong"),
+            GameDescriptor::builtin(GameType::Bridge, "Contract Bridge"),
+            GameDescriptor::builtin(GameType::GinRummy, "Gin Rummy"),
+            GameDescriptor::builtin(GameType::Stratego, "Stratego"),
+            GameDescriptor::builtin(GameType::OfcChinesePoker, "Open Face Chinese Poker"),
+            GameDescriptor::builtin(GameType::Spades, "Spades"),
+            GameDescriptor::builtin(GameType::DouDiZhu, "Dou Di Zhu"),
+            GameDescriptor::builtin(GameType::PusoyDos, "Pusoy Dos"),
+            GameDescriptor::builtin(GameType::TienLen, "Tien Len"),
+            GameDescriptor::builtin(GameType::CallBreak, "Call Break"),
+            GameDescriptor::builtin(GameType::Backgammon, "Backgammon"),
+            GameDescriptor::builtin(GameType::Hearts, "Hearts"),
+            GameDescriptor::builtin(GameType::Cribbage, "Cribbage"),
         ]
     }
 
@@ -64,6 +83,37 @@ impl GameRegistry {
             GameType::LiarsDice => {
                 GameDescriptor::builtin(GameType::LiarsDice, "Two-player liar's dice")
             }
+            GameType::Plo => GameDescriptor::builtin(GameType::Plo, "Pot-limit Omaha"),
+            GameType::NlheTournament => {
+                GameDescriptor::builtin(GameType::NlheTournament, "No-limit hold'em tournament")
+            }
+            GameType::ShortDeck => {
+                GameDescriptor::builtin(GameType::ShortDeck, "Short Deck hold'em")
+            }
+            GameType::TeenPatti => GameDescriptor::builtin(GameType::TeenPatti, "Teen Patti"),
+            GameType::HanafudaKoiKoi => {
+                GameDescriptor::builtin(GameType::HanafudaKoiKoi, "Hanafuda Koi-Koi")
+            }
+            GameType::HwatuGoStop => {
+                GameDescriptor::builtin(GameType::HwatuGoStop, "Hwatu Go-Stop")
+            }
+            GameType::RiichiMahjong => {
+                GameDescriptor::builtin(GameType::RiichiMahjong, "Riichi Mahjong")
+            }
+            GameType::Bridge => GameDescriptor::builtin(GameType::Bridge, "Contract Bridge"),
+            GameType::GinRummy => GameDescriptor::builtin(GameType::GinRummy, "Gin Rummy"),
+            GameType::Stratego => GameDescriptor::builtin(GameType::Stratego, "Stratego"),
+            GameType::OfcChinesePoker => {
+                GameDescriptor::builtin(GameType::OfcChinesePoker, "Open Face Chinese Poker")
+            }
+            GameType::Spades => GameDescriptor::builtin(GameType::Spades, "Spades"),
+            GameType::DouDiZhu => GameDescriptor::builtin(GameType::DouDiZhu, "Dou Di Zhu"),
+            GameType::PusoyDos => GameDescriptor::builtin(GameType::PusoyDos, "Pusoy Dos"),
+            GameType::TienLen => GameDescriptor::builtin(GameType::TienLen, "Tien Len"),
+            GameType::CallBreak => GameDescriptor::builtin(GameType::CallBreak, "Call Break"),
+            GameType::Backgammon => GameDescriptor::builtin(GameType::Backgammon, "Backgammon"),
+            GameType::Hearts => GameDescriptor::builtin(GameType::Hearts, "Hearts"),
+            GameType::Cribbage => GameDescriptor::builtin(GameType::Cribbage, "Cribbage"),
             GameType::Custom(name) => GameDescriptor::custom(name),
         }
     }
@@ -91,15 +141,21 @@ mod tests {
             GameRegistry::from_bytes(b"kuhn_poker").expect("known game should resolve");
         let liars_dice =
             GameRegistry::from_bytes(b"liars_dice").expect("known game should resolve");
+        let bridge = GameRegistry::from_bytes(b"bridge").expect("known game should resolve");
+        let cribbage = GameRegistry::from_bytes(b"cribbage").expect("known game should resolve");
 
         assert_eq!(heads_up.game_type, GameType::NlheHeadsUp);
         assert_eq!(six_max.game_type, GameType::NlheSixMax);
         assert_eq!(kuhn_poker.game_type, GameType::KuhnPoker);
         assert_eq!(liars_dice.game_type, GameType::LiarsDice);
+        assert_eq!(bridge.game_type, GameType::Bridge);
+        assert_eq!(cribbage.game_type, GameType::Cribbage);
         assert!(heads_up.builtin);
         assert!(six_max.builtin);
         assert!(kuhn_poker.builtin);
         assert!(liars_dice.builtin);
+        assert!(bridge.builtin);
+        assert!(cribbage.builtin);
     }
 
     #[test]
@@ -156,5 +212,11 @@ mod tests {
         assert_eq!(descriptors[1].num_players, 6);
         assert_eq!(descriptors[2].num_players, 2);
         assert_eq!(descriptors[3].num_players, 2);
+        assert!(
+            descriptors
+                .iter()
+                .any(|descriptor| descriptor.game_type == GameType::RiichiMahjong
+                    && descriptor.num_players == 4)
+        );
     }
 }

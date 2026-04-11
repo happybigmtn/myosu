@@ -9,7 +9,7 @@ other, and where known gaps exist.
 
 ## Evidence Status
 
-All claims below are verified against the current codebase as of 2026-04-05.
+All claims below are verified against the current codebase as of 2026-04-10.
 
 | Claim | Source | Status |
 |-------|--------|--------|
@@ -21,6 +21,7 @@ All claims below are verified against the current codebase as of 2026-04-05.
 | Workspace clippy denies arithmetic-side-effects, expect-used, indexing-slicing, unwrap-used | `Cargo.toml` | Verified |
 | 19 RUSTSECs are explicitly allowlisted in the current dependency-audit gate | `.github/workflows/ci.yml` | Verified |
 | 7 runtime/E2E proofs are wired into `integration-e2e` | `.github/workflows/ci.yml`, `tests/e2e/` | Verified |
+| Fast all-corpus research-game solver harness is wired into `active-crates` | `.github/workflows/ci.yml`, `tests/e2e/research_games_harness.sh` | Verified |
 | All mutable GitHub Action refs are SHA-pinned and checkout disables credential persistence | `.github/workflows/ci.yml` | Verified |
 | `SKIP_WASM_BUILD=1` is set on the off-chain jobs that should reuse the cached runtime wasm | `.github/workflows/ci.yml` | Verified |
 
@@ -33,7 +34,7 @@ All claims below are verified against the current codebase as of 2026-04-05.
 | `repo-shape` | Validates workspace structure against doctrine | ubuntu-latest |
 | `robopoker-fork-coherence` | Advisory fork-divergence report for INV-006 | ubuntu-latest |
 | `python-research-qa` | Ruff lint + pytest on research code (numpy, pytest, ruff) | ubuntu-latest |
-| `active-crates` | Cargo check, focused tests, INV-004 boundary, full test suite, clippy, rustfmt | ubuntu-latest |
+| `active-crates` | Cargo check, focused tests, research-game corpus harness, INV-004 boundary, full test suite, clippy, rustfmt | ubuntu-latest |
 | `chain-core` | Runtime/pallet/node check, pallet stage-0 tests, runtime tests, migration smoke | ubuntu-latest |
 | `integration-e2e` | local_loop, sync, finality, restart, emission, determinism proofs | ubuntu-latest |
 | `doctrine` | Canonical spec integrity verification | ubuntu-latest |
@@ -125,6 +126,11 @@ The audit runs with `-D warnings` so any non-ignored advisory fails the gate.
 | `cross_node_emission.sh` | Cross-node emission/state agreement proof | `integration-e2e` |
 | `validator_determinism.sh` | Cross-validator scoring agreement | `integration-e2e` |
 | `emission_flow.sh` | On-chain emission distribution proof | `integration-e2e` |
+| `bootstrap_manifest` | Rust-owned manifest for 22 research game identities, dedicated/portfolio route split, rule files, chain ids, and solver families | consumed by research harnesses |
+| `research_games_harness.sh` | Fast all-corpus proof for 22 research game identities, dedicated solver roundtrips, dedicated `STRENGTH` roundtrips, the exact Kuhn benchmark roundtrip, portfolio solver roundtrips, and play surfaces | `active-crates` |
+| `research_portfolio_harness.sh` | Fast 20-game portfolio checkpoint/query/response/scoring roundtrip, portfolio `STRENGTH` roundtrip, and offline validation proof plus scoped checkpoint/query mismatch rejection | `active-crates` via `research_games_harness.sh` |
+| `research_strength_harness.sh` | Dedicated all-corpus rule-aware strength proof for portfolio, dedicated research, and exact Kuhn benchmark routes, including cross-game and malformed typed-query rejection | `active-crates` |
+| `Clippy (game example binaries)` | Lints the example binaries that produce legacy bootstrap artifacts, strength queries, quality/latency budgets, checkpoints, roundtrips, and manifests | `active-crates` |
 
 ## Acceptance Criteria
 
@@ -141,8 +147,21 @@ The audit runs with `-D warnings` so any non-ignored advisory fails the gate.
 
 ```bash
 # Run the full CI pipeline locally (subset)
-SKIP_WASM_BUILD=1 cargo check -p myosu-games -p myosu-play -p myosu-miner
-SKIP_WASM_BUILD=1 cargo clippy --all-targets -- -D warnings
+SKIP_WASM_BUILD=1 cargo check \
+  -p myosu-games \
+  -p myosu-games-kuhn \
+  -p myosu-games-poker \
+  -p myosu-games-liars-dice \
+  -p myosu-games-portfolio \
+  -p myosu-tui \
+  -p myosu-play \
+  -p myosu-chain-client \
+  -p myosu-miner \
+  -p myosu-validator
+SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-portfolio -- -D warnings
+
+# Research-game corpus proof
+bash tests/e2e/research_games_harness.sh
 
 # INV-004: verify solver-gameplay boundary
 cargo tree -p myosu-play --edges normal | grep -c myosu-miner  # must be 0

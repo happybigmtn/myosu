@@ -19,7 +19,7 @@ validator_a_key="${MYOSU_E2E_VALIDATOR_A_KEY:-//Bob}"
 validator_b_key="${MYOSU_E2E_VALIDATOR_B_KEY:-//Charlie}"
 validator_stake="${MYOSU_E2E_VALIDATOR_STAKE:-100000000000000}"
 score_epsilon="${MYOSU_E2E_SCORE_EPSILON:-0.000001}"
-requested_games_string="${MYOSU_E2E_GAMES:-poker liars-dice}"
+requested_games_string="${MYOSU_E2E_GAMES:-poker liars-dice kuhn}"
 
 read -r -a requested_games <<<"$requested_games_string"
 
@@ -148,15 +148,102 @@ PY
 validator_game_name() {
   local game_key="$1"
   case "$game_key" in
-    poker)
+    poker|nlhe-heads-up|nlhe-hu|nlhe_hu)
       printf 'Poker\n'
       ;;
-    liars-dice)
+    liars-dice|liars_dice)
       printf 'LiarsDice\n'
+      ;;
+    kuhn|kuhn_poker)
+      printf 'Kuhn\n'
+      ;;
+    nlhe-six-max|nlhe_6max)
+      printf 'NlheSixMax\n'
+      ;;
+    plo)
+      printf 'Plo\n'
+      ;;
+    nlhe-tournament|nlhe_tournament)
+      printf 'NlheTournament\n'
+      ;;
+    short-deck|short_deck)
+      printf 'ShortDeck\n'
+      ;;
+    teen-patti|teen_patti)
+      printf 'TeenPatti\n'
+      ;;
+    hanafuda-koi-koi|hanafuda_koi_koi)
+      printf 'HanafudaKoiKoi\n'
+      ;;
+    hwatu-go-stop|hwatu_go_stop)
+      printf 'HwatuGoStop\n'
+      ;;
+    riichi-mahjong|riichi_mahjong)
+      printf 'RiichiMahjong\n'
+      ;;
+    bridge)
+      printf 'Bridge\n'
+      ;;
+    gin-rummy|gin_rummy)
+      printf 'GinRummy\n'
+      ;;
+    stratego)
+      printf 'Stratego\n'
+      ;;
+    ofc-chinese-poker|ofc_chinese_poker)
+      printf 'OfcChinesePoker\n'
+      ;;
+    spades)
+      printf 'Spades\n'
+      ;;
+    dou-di-zhu|dou_di_zhu)
+      printf 'DouDiZhu\n'
+      ;;
+    pusoy-dos|pusoy_dos)
+      printf 'PusoyDos\n'
+      ;;
+    tien-len|tien_len)
+      printf 'TienLen\n'
+      ;;
+    call-break|call_break)
+      printf 'CallBreak\n'
+      ;;
+    backgammon)
+      printf 'Backgammon\n'
+      ;;
+    hearts)
+      printf 'Hearts\n'
+      ;;
+    cribbage)
+      printf 'Cribbage\n'
       ;;
     *)
       echo "unsupported validator determinism game: ${game_key}" >&2
       exit 1
+      ;;
+  esac
+}
+
+is_portfolio_game() {
+  local game_key="$1"
+  case "$game_key" in
+    nlhe-six-max|nlhe_6max|plo|nlhe-tournament|nlhe_tournament|short-deck|short_deck|teen-patti|teen_patti|hanafuda-koi-koi|hanafuda_koi_koi|hwatu-go-stop|hwatu_go_stop|riichi-mahjong|riichi_mahjong|bridge|gin-rummy|gin_rummy|stratego|ofc-chinese-poker|ofc_chinese_poker|spades|dou-di-zhu|dou_di_zhu|pusoy-dos|pusoy_dos|tien-len|tien_len|call-break|call_break|backgammon|hearts|cribbage)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+canonical_manifest_slug() {
+  local game_key="$1"
+  case "$game_key" in
+    nlhe_6max)
+      printf 'nlhe-six-max\n'
+      ;;
+    *)
+      printf '%s\n' "${game_key//_/-}"
       ;;
   esac
 }
@@ -180,12 +267,26 @@ run_game_case() {
   case "$game_key" in
     poker)
       ;;
-    liars-dice)
+    nlhe-heads-up|nlhe-hu|nlhe_hu)
+      validator_game_args=(--game "$game_key")
+      miner_game_args=(--game "$game_key")
+      ;;
+    liars-dice|liars_dice)
+      validator_game_args=(--game "$game_key")
+      miner_game_args=(--game "$game_key")
+      encoder_dir=""
+      ;;
+    kuhn|kuhn_poker)
       validator_game_args=(--game "$game_key")
       miner_game_args=(--game "$game_key")
       encoder_dir=""
       ;;
   esac
+  if is_portfolio_game "$game_key"; then
+    validator_game_args=(--game "$game_key")
+    miner_game_args=(--game "$game_key")
+    encoder_dir=""
+  fi
 
   echo "registering ${game_key} subnet"
   local register_output
@@ -196,7 +297,7 @@ run_game_case() {
   echo "writing ${game_key} bootstrap artifacts"
   local bootstrap_output
   case "$game_key" in
-    poker)
+    poker|nlhe-heads-up|nlhe-hu|nlhe_hu)
       bootstrap_output="$(
         run_logged \
           "${game_slug}_bootstrap_artifacts" \
@@ -206,7 +307,7 @@ run_game_case() {
       assert_contains "$bootstrap_output" "BOOTSTRAP encoder_dir=${encoder_dir}" "${game_slug}_bootstrap_artifacts"
       assert_contains "$bootstrap_output" "BOOTSTRAP query_file=${query_file}" "${game_slug}_bootstrap_artifacts"
       ;;
-    liars-dice)
+    liars-dice|liars_dice)
       bootstrap_output="$(
         run_logged \
           "${game_slug}_bootstrap_query" \
@@ -215,7 +316,29 @@ run_game_case() {
       )"
       assert_contains "$bootstrap_output" "BOOTSTRAP query_file=${query_file}" "${game_slug}_bootstrap_query"
       ;;
+    kuhn|kuhn_poker)
+      bootstrap_output="$(
+        run_logged \
+          "${game_slug}_bootstrap_query" \
+          env SKIP_WASM_BUILD=1 cargo run --quiet -p myosu-games-kuhn --example bootstrap_query -- \
+          "$query_file"
+      )"
+      assert_contains "$bootstrap_output" "BOOTSTRAP query_file=${query_file}" "${game_slug}_bootstrap_query"
+      ;;
   esac
+  if is_portfolio_game "$game_key"; then
+    local expected_bootstrap_game
+    expected_bootstrap_game="$(canonical_manifest_slug "$game_key")"
+    bootstrap_output="$(
+      run_logged \
+        "${game_slug}_strength_query" \
+        env SKIP_WASM_BUILD=1 cargo run --quiet -p myosu-games-portfolio --example strength_query -- \
+        "$game_key" "$query_file"
+    )"
+    assert_contains "$bootstrap_output" "STRENGTH game=${expected_bootstrap_game}" "${game_slug}_strength_query"
+    assert_contains "$bootstrap_output" "STRENGTH query_file=${query_file}" "${game_slug}_strength_query"
+    assert_contains "$bootstrap_output" "STRENGTH challenge_id=" "${game_slug}_strength_query"
+  fi
 
   echo "running ${game_key} miner bootstrap"
   local miner_command=(

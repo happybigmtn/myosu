@@ -79,6 +79,12 @@ Start with the maintained operator guide:
 - [docs/operator-guide/upgrading.md](docs/operator-guide/upgrading.md) for the
   current operator upgrade process, breaking-change communication contract, and
   rollback posture
+- [plans/001-master-plan.md](plans/001-master-plan.md) for the active solver
+  promotion and Bitino-integration plan
+- [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml)
+  for the current Raspberry bootstrap program
+- [docs/execution-playbooks/README.md](docs/execution-playbooks/README.md) for
+  current execution playbooks
 - [docs/execution-playbooks/operator-network.md](docs/execution-playbooks/operator-network.md)
   for the current named-network and key-surface playbook
 

@@ -12,8 +12,10 @@ submits weights to the Myosu chain.
 
 The validator loads a solver checkpoint, recomputes the expected strategy for a
 given game state, measures L1 distance between expected and observed probability
-distributions, and converts that distance into a score. Optionally, it submits
-the resulting weight vector on-chain via commit-reveal.
+distributions, and converts that distance into a score. For portfolio-routed
+research games it also reports the rule-aware strength quality summary for the
+typed challenge surface. Optionally, it submits the resulting weight vector
+on-chain via commit-reveal.
 
 ---
 
@@ -27,12 +29,12 @@ the resulting weight vector on-chain via commit-reveal.
 | Exact match: `l1_distance < f64::EPSILON` yields score 1.0 | `validation.rs:265` | Verified |
 | L1 distance covers both expected and observed action sets | `validation.rs:345-367` | Verified |
 | Observed response validated via `is_valid()` before scoring | `validation.rs:256-259` | Verified |
-| Multi-game: Poker + Liar's Dice via `GameSelection` enum | `cli.rs:7-10` | Verified |
-| Liar's Dice does not require `--encoder-dir` | `validation.rs:157` | Verified |
+| Multi-game: Poker + Kuhn + Liar's Dice + research portfolio games via `GameSelection` enum | `cli.rs` | Verified |
+| Kuhn, Liar's Dice, and research portfolio games do not require `--encoder-dir` | `validation.rs` | Verified |
 | Weight submission via `ensure_weights_set` | `chain.rs:144-160`, `main.rs:65-84` | Verified |
 | INV-003 unit test: `inv_003_determinism` | `validation.rs:512-550` | Verified |
 | E2E test: `validator_determinism.sh` | `tests/e2e/validator_determinism.sh` | Verified |
-| Reports: startup, registration, subtoken, permit, validation, weight | `lib.rs:12-96` | Verified |
+| Reports: startup, registration, subtoken, permit, validation, weight | `lib.rs` | Verified |
 
 ---
 
@@ -69,6 +71,12 @@ response bytes ──► decode ──► is_valid() check ──────►
                                     score = 1.0 / (1.0 + l1)
 ```
 
+For portfolio-routed games, decode accepts both the legacy bootstrap strategy
+query and the typed strength query. The exact-match transport score remains the
+validator score; `quality_summary` adds engine tier, engine family, typed
+challenge id, strength score, legal action count, baseline L1 distance from
+the static compatibility baseline, and determinism.
+
 The L1 distance computation is symmetric: it iterates over actions present in
 the expected distribution, then over actions present only in the observed
 distribution (assigning zero expected probability for novel actions). This
@@ -100,7 +108,7 @@ The CLI requires exactly one key source via a clap `ArgGroup`:
 | `--submit-weights` | bool | No | false | Submit weights after scoring |
 | `--stake-amount` | u64 | No | -- | Minimum stake for permit |
 | `--weight-hotkey` | String | No | self | Target hotkey for weight vector |
-| `--game` | Enum | No | poker | Game contract (poker, liars-dice) |
+| `--game` | Enum | No | poker | Game contract (`poker`, `kuhn`, `liars-dice`, or a research portfolio slug / chain id such as `bridge`, `riichi-mahjong`, `riichi_mahjong`, `dou-di-zhu`, `dou_di_zhu`, `cribbage`) |
 | `--encoder-dir` | Path | Poker only | -- | Encoder artifact directory |
 | `--checkpoint` | Path | With query/response | -- | Solver checkpoint |
 | `--query-file` | Path | With response-file | -- | Wire-encoded strategy query |
@@ -108,7 +116,8 @@ The CLI requires exactly one key source via a clap `ArgGroup`:
 
 Constraints:
 - `--query-file` and `--response-file` must be provided together.
-- `--encoder-dir` is required when `--game poker`, optional for `liars-dice`.
+- `--encoder-dir` is required when `--game poker`, optional for `kuhn`,
+  `liars-dice`, and research portfolio games.
 - `--checkpoint` is required when query/response files are provided.
 - `--weight-hotkey` defaults to the validator's own key (self-weight bootstrap).
 
@@ -177,7 +186,7 @@ All validation errors are typed via `thiserror` and propagate through
 | `Encoder` | Encoder directory fails to load | Check encoder artifacts |
 | `ReadQuery` / `ReadResponse` | File I/O failure | Check file paths and permissions |
 | `DecodeQuery` / `DecodeResponse` | Wire format parse failure | Regenerate artifacts |
-| `Solver` / `LiarsDiceSolver` | Checkpoint load or query failure | Check checkpoint compatibility |
+| `Solver` / `KuhnSolver` / `LiarsDiceSolver` / `PortfolioSolver` | Checkpoint load or query failure | Check checkpoint compatibility |
 | `InvalidResponse` | Response is not a valid distribution | Investigate miner output |
 
 ---
@@ -194,8 +203,16 @@ All validation errors are typed via `thiserror` and propagate through
 | `inv_003_determinism` | Two identical scoring passes produce identical reports |
 | `liars_dice_validation_plan_does_not_require_encoder_dir` | Liar's Dice: encoder-dir optional |
 | `liars_dice_exact_match_scores_one` | Liar's Dice: self-scored response yields score 1.0 |
+| `kuhn_validation_plan_does_not_require_encoder_dir` | Kuhn: encoder-dir optional |
+| `kuhn_exact_match_scores_one` | Kuhn: self-scored response yields score 1.0 |
+| `kuhn_inv_003_determinism` | Kuhn: two identical scoring passes produce identical reports |
+| `portfolio_validation_plan_does_not_require_encoder_dir` | Research portfolio: encoder-dir optional |
+| `portfolio_exact_match_scores_one_for_every_portfolio_game` | Research portfolio: every portfolio-routed game self-scores to 1.0 |
+| `portfolio_inv_003_determinism` | Research portfolio: two identical scoring passes produce identical reports |
 | `cli_parses_stage_zero_flags` | Full CLI flag parsing |
 | `cli_parses_config_backed_key_source` | Config-dir key source parsing |
+| `cli_parses_framework_chain_id_aliases` | Dedicated framework chain ids parse through the CLI |
+| `portfolio_selection_inventory_matches_research_manifest` | Validator portfolio CLI inventory and accepted Clap slugs match the Rust-owned research manifest |
 | `startup_report_includes_probe_summary` | Report format: startup |
 | `registration_report_includes_registration_summary` | Report format: registration |
 | `subtoken_bootstrap_report_includes_enablement_summary` | Report format: subtoken |
@@ -213,19 +230,44 @@ independent validator scoring passes. Asserts:
 
 CI command: `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet`
 
+Fast all-corpus research proof: `bash tests/e2e/research_games_harness.sh`.
+It also runs the compact Kuhn exact-solver checkpoint/query/response
+roundtrip so the original three-game framework stays covered by the same
+devnet-free harness.
+
+Fast portfolio-routed proof: `bash tests/e2e/research_portfolio_harness.sh`.
+It runs a checkpoint/query/response/scoring roundtrip for all 20
+portfolio-routed games and requires exact-match scores. Portfolio checkpoints
+carry their research game scope, and validation rejects query/checkpoint
+mismatches before scoring. The same harness uses the devnet-free
+`myosu-games-portfolio --example bootstrap_validate` surface for all 20
+positive artifact tuples and to prove a Bridge checkpoint rejects a Cribbage
+query.
+
+Typed portfolio strength proof: `bash tests/e2e/research_strength_harness.sh`.
+The live determinism harness uses typed portfolio strength queries when
+`MYOSU_E2E_GAMES` selects portfolio games.
+
+Representative live devnet portfolio proof:
+`MYOSU_E2E_GAMES='bridge' bash tests/e2e/validator_determinism.sh`
+
 ---
 
 ## Acceptance Criteria
 
 - **Scoring correctness**: `score_response` returns `score = 1.0` when the
    observed response exactly matches the validator's local expectation, for
-   both poker and Liar's Dice.
+   poker, Kuhn, Liar's Dice, and every research portfolio game.
 
 - **Scoring monotonicity**: Higher L1 distance produces strictly lower score.
    The formula `1.0 / (1.0 + l1)` is monotonically decreasing for l1 >= 0.
 
 - **Invalid response rejection**: Responses that fail `is_valid()` return
    `ValidationError::InvalidResponse` and are never scored.
+
+- **Portfolio artifact compatibility**: Research portfolio validators reject a
+   query whose research game does not match the requested CLI game or scoped
+   portfolio checkpoint.
 
 - **Determinism (INV-003)**: Two validator processes with identical artifacts
    produce scores that differ by less than 1e-6. Verified by unit test and E2E
@@ -240,9 +282,9 @@ CI command: `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet`
 - **Weight submission**: When `--submit-weights` is set, the validator submits
    a weight vector targeting `--weight-hotkey` (or self) via the chain client.
 
-- **Multi-game support**: The `--game` flag selects between poker and
-   liars-dice. Each game loads its own solver type, encoder requirements, and
-   wire codec.
+- **Multi-game support**: The `--game` flag selects between poker, kuhn,
+   liars-dice, and research portfolio games. Each game loads its own solver
+   type, encoder requirements, and wire codec.
 
 ---
 
@@ -250,14 +292,14 @@ CI command: `SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet`
 
 | Criterion | Method | Artifact |
 |-----------|--------|----------|
-| Scoring correctness | Unit tests: `exact_match_scores_one`, `liars_dice_exact_match_scores_one` | `validation.rs` |
+| Scoring correctness | Unit tests: `exact_match_scores_one`, `kuhn_exact_match_scores_one`, `liars_dice_exact_match_scores_one`, `portfolio_exact_match_scores_one_for_every_portfolio_game` | `validation.rs` |
 | Scoring monotonicity | Unit test: `three_action_mismatch_uses_game_agnostic_normalization` | `validation.rs` |
 | Invalid response rejection | Code path: `is_valid()` check before scoring | `validation.rs:256` |
 | Determinism | Unit test: `inv_003_determinism`; E2E: `validator_determinism.sh` | Both |
 | CLI completeness | Unit tests: `cli_parses_stage_zero_flags`, `cli_parses_config_backed_key_source` | `cli.rs` |
 | Report stability | Unit tests: all `*_report_includes_*` tests | `lib.rs` |
 | Weight submission | E2E test with `--submit-weights` flag | `local_loop.sh` |
-| Multi-game | Unit test: `liars_dice_validation_plan_does_not_require_encoder_dir` | `validation.rs` |
+| Multi-game | Unit tests: `kuhn_validation_plan_does_not_require_encoder_dir`, `liars_dice_validation_plan_does_not_require_encoder_dir`, `portfolio_validation_plan_does_not_require_encoder_dir`; harness: `research_portfolio_harness.sh` | `validation.rs`, `tests/e2e/` |
 
 ---
 

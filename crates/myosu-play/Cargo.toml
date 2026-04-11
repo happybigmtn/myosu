@@ -16,6 +16,7 @@ myosu-games = { path = "../myosu-games" }
 myosu-games-kuhn = { path = "../myosu-games-kuhn" }
 myosu-games-liars-dice = { path = "../myosu-games-liars-dice" }
 myosu-games-poker = { path = "../myosu-games-poker" }
+myosu-games-portfolio.workspace = true
 myosu-tui = { path = "../myosu-tui" }
 ratatui = { workspace = true }
 subtensor-runtime-common.workspace = true

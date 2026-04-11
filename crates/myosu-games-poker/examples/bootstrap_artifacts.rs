@@ -1,14 +1,12 @@
-use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use myosu_games_poker::NlheAbstractionStreet;
 use myosu_games_poker::NlheBlueprint;
+use myosu_games_poker::bootstrap_encoder_streets;
 use myosu_games_poker::encode_strategy_query;
+use myosu_games_poker::load_encoder_bundle;
 use myosu_games_poker::write_encoder_dir;
-use rbp_cards::Isomorphism;
-use rbp_cards::Observation;
 use rbp_gameplay::Abstraction;
 use rbp_gameplay::Edge;
 use rbp_gameplay::Odds;
@@ -28,16 +26,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let encoder_dir = PathBuf::from(encoder_dir);
     let query_file = PathBuf::from(query_file);
-    let preflop_observation = Observation::try_from("AcKh")?;
-    let streets = BTreeMap::from([(
-        NlheAbstractionStreet::Preflop,
-        BTreeMap::from([(
-            Isomorphism::from(preflop_observation),
-            Abstraction::from(42_i16),
-        )]),
-    )]);
+    let streets = bootstrap_encoder_streets();
 
     let manifest = write_encoder_dir(&encoder_dir, streets)?;
+    let artifact_summary = load_encoder_bundle(&encoder_dir)?.summary();
     let query = NlheBlueprint::query_for_info(&sample_info());
     let query_bytes = encode_strategy_query(&query)?;
     let query_parent = query_file
@@ -50,6 +42,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("BOOTSTRAP encoder_dir={}", encoder_dir.display());
     println!("BOOTSTRAP query_file={}", query_file.display());
     println!("BOOTSTRAP total_sha256={}", manifest.total_sha256);
+    println!(
+        "BOOTSTRAP artifact_streets={}",
+        artifact_summary.available_streets_token()
+    );
+    println!(
+        "BOOTSTRAP complete_streets={}",
+        artifact_summary.complete_streets_token()
+    );
+    println!(
+        "BOOTSTRAP sampled_streets={}",
+        artifact_summary.sampled_streets_token()
+    );
+    println!(
+        "BOOTSTRAP missing_streets={}",
+        artifact_summary.missing_streets_token()
+    );
+    println!("BOOTSTRAP coverage={}", artifact_summary.coverage_token());
+    println!("BOOTSTRAP total_entries={}", artifact_summary.total_entries);
+    println!(
+        "BOOTSTRAP preflop_entries={}",
+        artifact_summary.preflop_entries()
+    );
+    println!(
+        "BOOTSTRAP postflop_complete={}",
+        artifact_summary.postflop_complete
+    );
 
     Ok(())
 }

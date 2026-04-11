@@ -104,6 +104,8 @@ jobs:
             -p myosu-games-kuhn \
             -p myosu-games-poker \
             -p myosu-games-liars-dice \
+            -p myosu-games-portfolio \
+            -p myosu-games-canonical \
             -p myosu-tui \
             -p myosu-play \
             -p myosu-chain-client \
@@ -114,10 +116,31 @@ jobs:
         run: |
           cargo test -p myosu-games --quiet serialization_roundtrip
           cargo test -p myosu-games-kuhn --quiet
+          cargo test -p myosu-games-portfolio --quiet core
+          cargo test -p myosu-games-canonical --quiet playtrace
           cargo test -p myosu-tui shell_state
           cargo test -p myosu-play smoke_report_proves_preflop_to_flop_progression --quiet
           cargo run -p myosu-play --quiet -- --smoke-test
           cargo run -p myosu-play --quiet -- --game kuhn --smoke-test
+
+      - name: Canonical manifest and play harness
+        run: |
+          manifest="$(cargo run --quiet -p myosu-games-canonical --example canonical_manifest)"
+          line_count="$(grep -c '^CANONICAL_GAME ' <<<"$manifest")"
+          snapshot_count="$(grep -c 'snapshot=ok' <<<"$manifest")"
+          if [[ "$line_count" -ne 10 || "$snapshot_count" -ne 10 ]]; then
+            echo "canonical manifest expected 10 games and 10 snapshot=ok fields"
+            printf '%s\n' "$manifest"
+            exit 1
+          fi
+          bash tests/e2e/canonical_ten_play_harness.sh
+          bash tests/e2e/research_play_harness.sh
+
+      - name: Research game corpus harness
+        run: bash tests/e2e/research_games_harness.sh
+
+      - name: Research game strength harness
+        run: bash tests/e2e/research_strength_harness.sh
 
       - name: INV-004 solver-gameplay dependency boundary
         run: |
@@ -141,6 +164,8 @@ jobs:
             -p myosu-games-kuhn \
             -p myosu-games-poker \
             -p myosu-games-liars-dice \
+            -p myosu-games-portfolio \
+            -p myosu-games-canonical \
             -p myosu-tui \
             -p myosu-play \
             -p myosu-chain-client \
@@ -154,11 +179,24 @@ jobs:
             -p myosu-games-kuhn \
             -p myosu-games-poker \
             -p myosu-games-liars-dice \
+            -p myosu-games-portfolio \
+            -p myosu-games-canonical \
             -p myosu-tui \
             -p myosu-play \
             -p myosu-chain-client \
             -p myosu-miner \
             -p myosu-validator \
+            -- -D warnings
+
+      - name: Clippy (bootstrap game examples)
+        run: |
+          cargo clippy \
+            -p myosu-games-kuhn \
+            -p myosu-games-poker \
+            -p myosu-games-liars-dice \
+            -p myosu-games-portfolio \
+            -p myosu-games-canonical \
+            --examples \
             -- -D warnings
 
       - name: Rustfmt (all active crates)
@@ -169,6 +207,8 @@ jobs:
             'crates/myosu-games-kuhn/**/*.rs' \
             'crates/myosu-games-poker/**/*.rs' \
             'crates/myosu-games-liars-dice/**/*.rs' \
+            'crates/myosu-games-portfolio/**/*.rs' \
+            'crates/myosu-games-canonical/**/*.rs' \
             'crates/myosu-play/**/*.rs' \
             'crates/myosu-chain-client/**/*.rs' \
             'crates/myosu-miner/**/*.rs' \

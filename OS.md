@@ -220,7 +220,8 @@ this file or a nearby playbook that proves it.
 
 - [SPEC.md](SPEC.md)
 - [INVARIANTS.md](INVARIANTS.md)
-- [genesis/plans/001-master-plan.md](genesis/plans/001-master-plan.md)
+- [plans/001-master-plan.md](plans/001-master-plan.md)
+- [fabro/programs/myosu-bootstrap.yaml](fabro/programs/myosu-bootstrap.yaml)
 - [docs/execution-playbooks/bootstrap.md](docs/execution-playbooks/bootstrap.md)
 - [docs/execution-playbooks/stage0-local-loop.md](docs/execution-playbooks/stage0-local-loop.md)
 - [docs/execution-playbooks/local-advisor.md](docs/execution-playbooks/local-advisor.md)

@@ -19,7 +19,15 @@ All claims below are grounded in source at `crates/myosu-miner/src/`.
 - CLI is clap-derive (`cli.rs`), with `--chain`, `--subnet`, `--key` | `--key-config-dir` (mutually exclusive, one required via `ArgGroup`), `--key-password-env`, `--port`, `--register`, `--serve-axon`, `--serve-http`, `--data-dir`, `--game`, `--encoder-dir`, `--checkpoint`, `--train-iterations`, `--query-file`, `--response-file`.
 - `--chain` defaults to `ws://127.0.0.1:9944`. `--port` defaults to `8080`. `--data-dir` defaults to `./miner-data`. `--game` defaults to `poker`. `--train-iterations` defaults to `0`.
 - Key resolution: `--key` accepts a raw seed/URI; `--key-config-dir` loads via `myosu_keys::load_active_secret_uri_from_env` using the env var named by `--key-password-env` (default `MYOSU_KEY_PASSWORD`).
-- Supported games: `Poker`, `LiarsDice` (via `GameSelection` enum).
+- Supported games: `Poker`, `Kuhn`, `LiarsDice`, plus the research portfolio
+  games wired through `myosu-games-portfolio`: `NlheSixMax`, `Plo`,
+  `NlheTournament`, `ShortDeck`, `TeenPatti`, `HanafudaKoiKoi`,
+  `HwatuGoStop`, `RiichiMahjong`, `Bridge`, `GinRummy`, `Stratego`,
+  `OfcChinesePoker`, `Spades`, `DouDiZhu`, `PusoyDos`, `TienLen`,
+  `CallBreak`, `Backgammon`, `Hearts`, and `Cribbage`.
+- The `--game` parser accepts both display slugs and canonical chain ids where
+  they differ, for example `nlhe-heads-up` / `nlhe_hu`,
+  `riichi-mahjong` / `riichi_mahjong`, and `dou-di-zhu` / `dou_di_zhu`.
 
 ### Lifecycle (main.rs)
 
@@ -41,25 +49,44 @@ All claims below are grounded in source at `crates/myosu-miner/src/`.
 ### Training (training.rs)
 
 - `TrainingPlan { game, encoder_dir, checkpoint, checkpoint_output, iterations }`.
-- Poker training requires `--encoder-dir`; Liar's Dice does not.
+- Poker training requires `--encoder-dir`; Kuhn, Liar's Dice, and research
+  portfolio games do not.
 - Poker: loads `PokerSolver` from checkpoint or creates new, calls `solver.train(iterations)`, saves to `checkpoint_output`.
+- Kuhn: uses `KuhnSolver`, a closed-form exact solver. The training step writes
+  a versioned checkpoint and reports `epochs=0` / `exploitability=0`.
 - Liar's Dice: uses `LiarsDiceSolver<1024>` (const `LIARS_DICE_SOLVER_TREES = 1 << 10`).
+- Research portfolio: uses `PortfolioSolver`, a checkpointable rule-aware
+  reference engine selected from `research/game-rules`. The 21st research file
+  contains both Hearts and Cribbage, so the portfolio exposes both games.
+  Miner-created portfolio checkpoints are scoped to the requested research
+  game, and serving rejects mismatched query/checkpoint pairs.
 - Default checkpoint output: `{data_dir}/checkpoints/latest.bin`.
-- `TrainingRunReport` includes `exploitability` -- Poker may return `"unavailable: {error}"` for sparse encoders; Liar's Dice always returns exact exploitability.
+- `TrainingRunReport` includes `exploitability` and `quality_summary`. Poker
+  may return `"unavailable: {error}"` for sparse encoders; Kuhn and Liar's Dice
+  return exact exploitability; research portfolio games mark exploitability as
+  not applicable and report engine tier, family, challenge id, score, legal
+  action count, baseline L1 distance from the static compatibility baseline,
+  and determinism in `quality_summary`.
 - Bootstrap mode: when `--query-file` is set without `--checkpoint`, a zero-iteration training run is triggered to produce a checkpoint for the strategy step.
 
 ### Strategy Serving (strategy.rs)
 
 - File-based one-shot: `--query-file` + `--response-file` (default `{data_dir}/responses/latest.bin`).
 - Reads wire-encoded query from disk, loads solver from checkpoint, writes wire-encoded response.
-- `StrategyServeReport { game, response_path, action_count, recommended_action }`.
-- Poker queries decoded via `myosu_games_poker::decode_strategy_query`; Liar's Dice via `myosu_games_liars_dice::decode_strategy_query`.
+- `StrategyServeReport { game, response_path, action_count, recommended_action, quality_summary }`.
+- Poker queries decoded via `myosu_games_poker::decode_strategy_query`; Kuhn via
+  `myosu_games_kuhn::decode_strategy_query`; Liar's Dice via
+  `myosu_games_liars_dice::decode_strategy_query`; research portfolio games via
+  `myosu_games_portfolio::decode_strategy_query` or
+  `myosu_games_portfolio::decode_strength_query`.
 - Invalid query bytes produce `StrategyServeError::DecodeQuery` with the file path in context.
 
 ### HTTP Axon (axon.rs)
 
-- Activated by `--serve-http`. Requires `--encoder-dir` and a checkpoint (from `--checkpoint` or training output). Poker only; Liar's Dice returns `AxonServeError::UnsupportedGame`.
-- Stage-0 decision: keep `--serve-http` poker-only for now. Liar's Dice validators use the file-based query/response flow instead of a live HTTP axon.
+- Activated by `--serve-http`. Requires `--encoder-dir` and a checkpoint (from `--checkpoint` or training output). Poker only; Kuhn, Liar's Dice, and research portfolio games return `AxonServeError::UnsupportedGame`.
+- Stage-0 decision: keep `--serve-http` poker-only for now. Kuhn and Liar's
+  Dice plus research portfolio validators use the file-based query/response
+  flow instead of a live HTTP axon.
 - Custom HTTP/1.1 server over raw `TcpListener`/`TcpStream` (no framework).
 - Request size limit: 64 KiB (`REQUEST_LIMIT_BYTES`).
 - Routes: `GET /health` returns JSON `{"status":"ok","epochs":<n>}`; `POST /strategy` accepts wire-encoded body, returns wire-encoded response as `application/octet-stream`.
@@ -84,12 +111,21 @@ All claims below are grounded in source at `crates/myosu-miner/src/`.
 
 - CI: `SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet` (in `.github/workflows/ci.yml`).
 - E2E: `tests/e2e/local_loop.sh` exercises the full miner path.
-- Unit tests cover: CLI parsing (both key sources, all flags), training plan validation (missing encoder, bootstrap mode), training batch execution (zero-iteration save, sparse encoder failure), strategy plan validation (missing checkpoint), strategy serving (round-trip wire codec, bad query bytes), axon plan validation (missing checkpoint, unsupported game), axon server (health + strategy endpoints via TCP).
+- Unit tests cover: CLI parsing (both key sources, all flags, research-manifest alignment for the portfolio selections, and every portfolio slug's Clap parsing), training plan validation (missing encoder, bootstrap mode, Kuhn/Liar's Dice/research-portfolio encoder-free mode), training batch execution (zero-iteration save, sparse encoder failure, Kuhn exact checkpoint, Liar's Dice checkpoint, all 20 research portfolio scoped checkpoints, and scoped-checkpoint mismatch rejection), strategy plan validation (missing checkpoint), strategy serving (round-trip wire codec, bad query bytes, all 20 research portfolio wire responses, and mismatch rejection), axon plan validation (missing checkpoint, unsupported game), axon server (health + strategy endpoints via TCP).
 
 ## Verification
 
 - `SKIP_WASM_BUILD=1 cargo test -p myosu-miner --quiet` -- all unit tests pass.
-- `cargo clippy -p myosu-miner --all-targets -- -D warnings` -- zero warnings.
+- `bash tests/e2e/research_games_harness.sh` -- fast all-corpus research
+  game proof across the dedicated and portfolio-routed solver paths, plus the
+  non-research Kuhn exact-solver roundtrip that guards the original framework
+  benchmark.
+- `bash tests/e2e/research_portfolio_harness.sh` -- fast 20-game
+  portfolio-routed checkpoint/query/response/scoring proof plus scoped
+  checkpoint/query mismatch rejection.
+- `SKIP_WASM_BUILD=1 cargo clippy -p myosu-miner --all-targets -- -D warnings`
+  passes; test-only assertion unwraps are covered by explicit test-module
+  lint allowances while production code stays under the workspace deny lint.
 - Manual: `tests/e2e/local_loop.sh` with a running devnet exercises the full lifecycle.
 
 ## Open Questions

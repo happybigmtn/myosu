@@ -12,7 +12,7 @@ pub use game::{
 };
 pub use protocol::{LiarsDiceStrategyQuery, LiarsDiceStrategyResponse, recommended_edge};
 pub use renderer::{LiarsDiceRenderer, LiarsDiceSnapshot};
-pub use solver::{LiarsDiceSolver, LiarsDiceSolverError};
+pub use solver::{LiarsDiceSolver, LiarsDiceSolverError, LiarsDiceTrainingSummary};
 pub use wire::{
     WireCodecError, decode_info, decode_strategy_query, decode_strategy_response, encode_info,
     encode_strategy_query, encode_strategy_response,

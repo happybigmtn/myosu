@@ -1,0 +1,21 @@
+[package]
+name = "myosu-games-portfolio"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Research-game solver portfolio for myosu"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+bincode = "1.3"
+myosu-games = { path = "../myosu-games" }
+myosu-tui = { path = "../myosu-tui" }
+ratatui = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["alloc"] }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

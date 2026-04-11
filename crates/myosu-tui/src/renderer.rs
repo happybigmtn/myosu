@@ -72,7 +72,7 @@ mod tests {
     impl GameRenderer for MockRenderer {
         fn render_state(&self, area: Rect, buf: &mut Buffer) {
             if self.hand_active && area.width >= 2 && area.height >= 1 {
-                let line = format!("pot: 12bb");
+                let line = "pot: 12bb";
                 let x = area.x;
                 let y = area.y;
                 for (i, ch) in line.chars().enumerate() {

@@ -1,0 +1,18 @@
+[package]
+name = "myosu-games-canonical"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Canonical game truth registry and adapters for myosu"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+myosu-games = { workspace = true }
+myosu-games-portfolio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["alloc"] }
+
+[lints]
+workspace = true

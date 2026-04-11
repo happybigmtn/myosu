@@ -15,8 +15,14 @@ pub mod wire;
 pub use action::NlheAction;
 pub use artifacts::{
     ArtifactCodecError, NlheAbstractionArtifactEntry, NlheAbstractionManifest,
-    NlheAbstractionStreet, NlheEncoderArtifactBundle, decode_encoder, encode_encoder,
-    encoder_from_lookup, load_encoder_bundle, load_encoder_dir, write_encoder_dir,
+    NlheAbstractionStreet, NlheBootstrapScenario, NlheEncoderArtifactBundle,
+    NlheEncoderArtifactSummary, bootstrap_encoder_streets, bootstrap_scenarios, decode_encoder,
+    encode_encoder, encoder_from_lookup, load_encoder_bundle, load_encoder_dir, write_encoder_dir,
+};
+pub use benchmark::{
+    NlheScenarioBenchmarkError, NlheScenarioBenchmarkReport, NlheScenarioBenchmarkRow,
+    benchmark_against_bootstrap_reference, benchmark_solver_against_reference,
+    bootstrap_reference_solver,
 };
 pub use benchmark::{PokerBenchmarkError, PokerBenchmarkPoint, benchmark_points_from_encoder_dir};
 pub use codexpoker::{CodexpokerBlueprint, CodexpokerBlueprintError};
@@ -28,7 +34,7 @@ pub use robopoker::{
     RbpNlheEdge, RbpNlheEncoder, RbpNlheGame, RbpNlheInfo, RbpNlheProfile, RbpNlheStrategy,
     recommended_edge,
 };
-pub use solver::{PokerSolver, PokerSolverError};
+pub use solver::{PokerSolver, PokerSolverError, PokerTrainingSummary};
 pub use state::{NlheActor, NlhePlayerState, NlheSnapshot, NlheStreet, NlheTablePosition};
 pub use wire::{
     WireCodecError, decode_info_key, decode_strategy_query, decode_strategy_response,

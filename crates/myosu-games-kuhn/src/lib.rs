@@ -9,7 +9,7 @@ pub mod wire;
 pub use game::{KuhnCard, KuhnEdge, KuhnGame, KuhnHistory, KuhnInfo, KuhnPublic, KuhnTurn};
 pub use protocol::{KuhnStrategyQuery, KuhnStrategyResponse, recommended_edge};
 pub use renderer::{KuhnRenderer, KuhnSnapshot};
-pub use solver::KuhnSolver;
+pub use solver::{KuhnSolver, KuhnSolverError};
 pub use wire::{
     WireCodecError, decode_info, decode_strategy_query, decode_strategy_response, encode_info,
     encode_strategy_query, encode_strategy_response,

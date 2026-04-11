@@ -20,6 +20,22 @@ const MAX_DECODE_BYTES: u64 = 1_048_576;
 const CHECKPOINT_MAGIC: [u8; 4] = *b"MYOS";
 const CHECKPOINT_VERSION: u32 = 1;
 const CHECKPOINT_HEADER_LEN: usize = 8;
+const EXACT_SELECTION_INTERVAL: usize = 8;
+const EXACT_SELECTION_EPSILON: Utility = 1e-6;
+const CHECKPOINT_SELECTION_EXACT_EXPLOITABILITY: &str = "exact-exploitability";
+const CHECKPOINT_SELECTION_LAST_ITERATE: &str = "last-iterate";
+
+/// Summary returned by poker checkpoint selection.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PokerTrainingSummary {
+    pub start_epochs: usize,
+    pub end_epochs: usize,
+    pub selected_epochs: usize,
+    pub checkpoint_selection: &'static str,
+    pub start_exploitability: Option<Utility>,
+    pub final_exploitability: Option<Utility>,
+    pub selected_exploitability: Option<Utility>,
+}
 
 /// Thin wrapper around robopoker's flagship NLHE solver.
 pub struct PokerSolver {
@@ -159,7 +175,7 @@ impl PokerSolver {
 
     /// Run one MCCFR iteration.
     pub fn step(&mut self) -> Result<(), PokerSolverError> {
-        catch_unwind(AssertUnwindSafe(|| self.solver.step())).map_err(|payload| {
+        catch_unwind_silently(|| self.solver.step()).map_err(|payload| {
             PokerSolverError::UpstreamPanic {
                 operation: "solver step",
                 message: panic_message(payload.as_ref()),
@@ -174,6 +190,75 @@ impl PokerSolver {
         }
 
         Ok(())
+    }
+
+    /// Run a fixed number of MCCFR iterations and keep the best checkpoint when exploitability is available.
+    pub fn train_select_best(
+        &mut self,
+        iterations: usize,
+    ) -> Result<PokerTrainingSummary, PokerSolverError> {
+        self.train_select_best_every(iterations, EXACT_SELECTION_INTERVAL)
+    }
+
+    fn train_select_best_every(
+        &mut self,
+        iterations: usize,
+        evaluation_interval: usize,
+    ) -> Result<PokerTrainingSummary, PokerSolverError> {
+        let evaluation_interval = evaluation_interval.max(1);
+        let start_epochs = self.epochs();
+        let start_exploitability = self.exploitability().ok();
+
+        let Some(mut best_exploitability) = start_exploitability else {
+            self.train(iterations)?;
+            let final_exploitability = self.exploitability().ok();
+            return Ok(PokerTrainingSummary {
+                start_epochs,
+                end_epochs: start_epochs + iterations,
+                selected_epochs: self.epochs(),
+                checkpoint_selection: CHECKPOINT_SELECTION_LAST_ITERATE,
+                start_exploitability: None,
+                final_exploitability,
+                selected_exploitability: final_exploitability,
+            });
+        };
+
+        let encoder = self.snapshot_encoder()?;
+        let mut best_profile = self.snapshot_profile()?;
+        let mut best_epochs = start_epochs;
+
+        for step in 0..iterations {
+            self.step()?;
+            let completed = step + 1;
+            if completed % evaluation_interval != 0 && completed != iterations {
+                continue;
+            }
+
+            let current_exploitability = self.exploitability()?;
+            if prefers_lower_exploitability(
+                current_exploitability,
+                best_exploitability,
+                self.epochs(),
+                best_epochs,
+            ) {
+                best_profile = self.snapshot_profile()?;
+                best_epochs = self.epochs();
+                best_exploitability = current_exploitability;
+            }
+        }
+
+        let final_exploitability = self.exploitability()?;
+        *self = Self::from_parts(best_profile, encoder);
+
+        Ok(PokerTrainingSummary {
+            start_epochs,
+            end_epochs: start_epochs + iterations,
+            selected_epochs: best_epochs,
+            checkpoint_selection: CHECKPOINT_SELECTION_EXACT_EXPLOITABILITY,
+            start_exploitability,
+            final_exploitability: Some(final_exploitability),
+            selected_exploitability: Some(best_exploitability),
+        })
     }
 
     /// Query the current average strategy for a robopoker information set.
@@ -208,7 +293,7 @@ impl PokerSolver {
 
     /// Compute exploitability using the solver's current encoder and profile.
     pub fn exploitability(&self) -> Result<Utility, PokerSolverError> {
-        catch_unwind(AssertUnwindSafe(|| self.solver.exploitability())).map_err(|payload| {
+        catch_unwind_silently(|| self.solver.exploitability()).map_err(|payload| {
             PokerSolverError::UpstreamPanic {
                 operation: "solver exploitability",
                 message: panic_message(payload.as_ref()),
@@ -253,6 +338,18 @@ pub enum PokerSolverError {
     },
 }
 
+fn catch_unwind_silently<T, F>(operation: F) -> Result<T, Box<dyn Any + Send>>
+where
+    F: FnOnce() -> T,
+{
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let result = catch_unwind(AssertUnwindSafe(operation));
+    let _ = std::panic::take_hook();
+    std::panic::set_hook(hook);
+    result
+}
+
 fn clone_with_bincode<T>(value: &T, context: &'static str) -> Result<T, PokerSolverError>
 where
     T: Serialize + DeserializeOwned,
@@ -290,6 +387,16 @@ fn decode_codec(limit: u64) -> impl Options {
         .with_fixint_encoding()
         .with_limit(limit)
         .reject_trailing_bytes()
+}
+
+fn prefers_lower_exploitability(
+    current: Utility,
+    best: Utility,
+    current_epochs: usize,
+    best_epochs: usize,
+) -> bool {
+    current + EXACT_SELECTION_EPSILON < best
+        || ((current - best).abs() <= EXACT_SELECTION_EPSILON && current_epochs > best_epochs)
 }
 
 fn panic_message(payload: &(dyn Any + Send)) -> String {
@@ -377,6 +484,48 @@ mod tests {
 
         assert!(message.contains("solver step failed upstream"));
         assert!(message.contains("isomorphism not found"));
+    }
+
+    #[test]
+    fn train_select_best_zero_iterations_falls_back_when_exploitability_is_unavailable() {
+        let mut solver = PokerSolver::new(sample_encoder());
+
+        let summary = solver
+            .train_select_best(0)
+            .expect("zero-iteration checkpoint selection should succeed");
+
+        assert_eq!(summary.start_epochs, 0);
+        assert_eq!(summary.end_epochs, 0);
+        assert_eq!(summary.selected_epochs, 0);
+        assert_eq!(
+            summary.checkpoint_selection,
+            CHECKPOINT_SELECTION_LAST_ITERATE
+        );
+        assert_eq!(summary.start_exploitability, None);
+        assert_eq!(summary.final_exploitability, None);
+        assert_eq!(summary.selected_exploitability, None);
+        assert_eq!(solver.epochs(), 0);
+    }
+
+    #[test]
+    fn train_select_best_reports_sparse_encoder_failure_cleanly() {
+        let mut solver = PokerSolver::new(sample_encoder());
+
+        let error = solver
+            .train_select_best(1)
+            .expect_err("sparse encoder should fail cleanly");
+        let message = error.to_string();
+
+        assert!(message.contains("solver step failed upstream"));
+        assert!(message.contains("isomorphism not found"));
+    }
+
+    #[test]
+    fn lower_exploitability_selection_prefers_improvement_then_later_tie() {
+        assert!(prefers_lower_exploitability(0.4, 0.5, 8, 0));
+        assert!(prefers_lower_exploitability(0.5, 0.5, 8, 0));
+        assert!(!prefers_lower_exploitability(0.6, 0.5, 8, 0));
+        assert!(!prefers_lower_exploitability(0.5, 0.5, 0, 8));
     }
 
     #[test]

@@ -2,8 +2,14 @@ use crate::game::{KuhnCard, KuhnEdge, KuhnGame, KuhnHistory, KuhnInfo, KuhnTurn}
 use myosu_games::{CfrGame, Probability, StrategyResponse, Utility};
 use rbp_mccfr::{CfrInfo, CfrPublic};
 use std::collections::BTreeMap;
+use std::fs;
+use std::path::Path;
+use thiserror::Error;
 
 const ONE_THIRD: Probability = 1.0 / 3.0;
+const CHECKPOINT_MAGIC: [u8; 4] = *b"MYOK";
+const CHECKPOINT_VERSION: u32 = 1;
+const CHECKPOINT_HEADER_LEN: usize = 8;
 
 /// Closed-form exact solver for standard two-player Kuhn poker.
 #[derive(Clone, Debug, Default)]
@@ -13,6 +19,89 @@ impl KuhnSolver {
     /// Create a new exact Kuhn poker solver.
     pub fn new() -> Self {
         Self
+    }
+
+    /// Load an exact solver checkpoint from disk.
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, KuhnSolverError> {
+        let path = path.as_ref();
+        let bytes = fs::read(path).map_err(|source| KuhnSolverError::Read {
+            path: path.display().to_string(),
+            source,
+        })?;
+
+        Self::from_checkpoint_bytes(&bytes)
+    }
+
+    /// Decode an exact solver from checkpoint bytes.
+    pub fn from_checkpoint_bytes(bytes: &[u8]) -> Result<Self, KuhnSolverError> {
+        if bytes.len() < CHECKPOINT_HEADER_LEN {
+            return Err(KuhnSolverError::CheckpointTooShort { bytes: bytes.len() });
+        }
+
+        let header = bytes
+            .get(..CHECKPOINT_HEADER_LEN)
+            .ok_or(KuhnSolverError::CheckpointTooShort { bytes: bytes.len() })?;
+        let (magic, version) = header.split_at(4);
+        let found_magic: [u8; 4] = magic
+            .try_into()
+            .map_err(|_| KuhnSolverError::CheckpointTooShort { bytes: bytes.len() })?;
+        if found_magic != CHECKPOINT_MAGIC {
+            return Err(KuhnSolverError::CheckpointMagic {
+                found: String::from_utf8_lossy(&found_magic).into_owned(),
+            });
+        }
+
+        let found_version = u32::from_le_bytes(
+            version
+                .try_into()
+                .map_err(|_| KuhnSolverError::CheckpointTooShort { bytes: bytes.len() })?,
+        );
+        if found_version != CHECKPOINT_VERSION {
+            return Err(KuhnSolverError::CheckpointVersion {
+                found: found_version,
+                expected: CHECKPOINT_VERSION,
+            });
+        }
+
+        Ok(Self)
+    }
+
+    /// Save the exact solver checkpoint to disk.
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), KuhnSolverError> {
+        let path = path.as_ref();
+        fs::write(path, self.checkpoint_bytes()).map_err(|source| KuhnSolverError::Write {
+            path: path.display().to_string(),
+            source,
+        })
+    }
+
+    /// Serialize the exact solver checkpoint to bytes.
+    pub fn checkpoint_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(CHECKPOINT_HEADER_LEN);
+        bytes.extend_from_slice(&CHECKPOINT_MAGIC);
+        bytes.extend_from_slice(&CHECKPOINT_VERSION.to_le_bytes());
+        bytes
+    }
+
+    /// Return the fixed epoch count for the closed-form solver.
+    pub const fn epochs(&self) -> usize {
+        0
+    }
+
+    /// Accept a training request for CLI symmetry. The closed-form solver is already exact.
+    pub const fn train(&mut self, _iterations: usize) {}
+
+    /// Answer a wire-safe Kuhn strategy query.
+    pub fn answer(
+        &self,
+        query: crate::protocol::KuhnStrategyQuery,
+    ) -> crate::protocol::KuhnStrategyResponse {
+        self.strategy(query.info)
+    }
+
+    /// Return the highest-probability action for a wire-safe query.
+    pub fn recommend_query(&self, query: crate::protocol::KuhnStrategyQuery) -> Option<KuhnEdge> {
+        crate::protocol::recommended_edge(&self.answer(query))
     }
 
     /// Return the equilibrium strategy for a specific information set.
@@ -85,6 +174,27 @@ impl KuhnSolver {
     }
 }
 
+/// Errors returned by the exact Kuhn solver checkpoint surface.
+#[derive(Debug, Error)]
+pub enum KuhnSolverError {
+    #[error("failed to read checkpoint `{path}`: {source}")]
+    Read {
+        path: String,
+        source: std::io::Error,
+    },
+    #[error("failed to write checkpoint `{path}`: {source}")]
+    Write {
+        path: String,
+        source: std::io::Error,
+    },
+    #[error("checkpoint too short: {bytes} bytes")]
+    CheckpointTooShort { bytes: usize },
+    #[error("checkpoint magic mismatch: found `{found}`, expected `MYOK`")]
+    CheckpointMagic { found: String },
+    #[error("checkpoint version {found} does not match expected version {expected}")]
+    CheckpointVersion { found: u32, expected: u32 },
+}
+
 fn collect_profile(
     solver: &KuhnSolver,
     game: KuhnGame,
@@ -131,6 +241,7 @@ mod tests {
     use super::{KuhnSolver, ONE_THIRD};
     use crate::game::{KuhnCard, KuhnEdge, KuhnGame};
     use myosu_games::{CfrGame, Probability};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn opening_info(card: KuhnCard) -> crate::game::KuhnInfo {
         KuhnGame::root()
@@ -204,5 +315,29 @@ mod tests {
             (solver.expected_value() - expected).abs() < 1e-6,
             "kuhn value should match the closed-form equilibrium"
         );
+    }
+
+    #[test]
+    fn checkpoint_roundtrips_exact_solver() {
+        let root = unique_temp_root();
+        let checkpoint = root.join("kuhn.bin");
+        let solver = KuhnSolver::new();
+
+        std::fs::create_dir_all(&root).expect("temp root should exist");
+        solver.save(&checkpoint).expect("checkpoint should save");
+        let restored = KuhnSolver::load(&checkpoint).expect("checkpoint should load");
+
+        assert_eq!(restored.epochs(), 0);
+        assert_eq!(restored.profile(), solver.profile());
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    fn unique_temp_root() -> std::path::PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("myosu-kuhn-solver-{nanos}"))
     }
 }

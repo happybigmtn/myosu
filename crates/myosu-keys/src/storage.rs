@@ -395,10 +395,16 @@ fn write_keyfile(path: &Path, keyfile: &StoredKeyfile) -> Result<(), KeyError> {
 
 fn write_operator_config(path: &Path, config: &OperatorConfig) -> Result<(), KeyError> {
     let mut doc = DocumentMut::new();
-    doc["version"] = Item::Value(Value::from(CONFIG_VERSION));
-    doc["network"] = Item::Value(Value::from(config.network.as_str()));
-    doc["active_account"] = Item::Value(Value::from(config.active_account.as_str()));
-    doc["key_file"] = Item::Value(Value::from(config.key_file.as_str()));
+    doc.insert("version", Item::Value(Value::from(CONFIG_VERSION)));
+    doc.insert("network", Item::Value(Value::from(config.network.as_str())));
+    doc.insert(
+        "active_account",
+        Item::Value(Value::from(config.active_account.as_str())),
+    );
+    doc.insert(
+        "key_file",
+        Item::Value(Value::from(config.key_file.as_str())),
+    );
     write_private_file(path, doc.to_string().as_bytes())
 }
 

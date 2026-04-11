@@ -64,6 +64,34 @@ impl NlheStrategyRequest {
         }
     }
 
+    /// Create a request from a canonical observation string and replay inputs.
+    pub fn from_observation_text(
+        hero_position: NlheTablePosition,
+        observation_text: &str,
+        action_history: Vec<NlheHistoryAction>,
+        abstraction_bucket: i16,
+    ) -> Result<Self, StrategyRequestError> {
+        Observation::try_from(observation_text).map_err(|message| {
+            StrategyRequestError::Observation {
+                input: observation_text.to_string(),
+                message,
+            }
+        })?;
+        let (hole_text, board_text) = observation_text
+            .split_once('~')
+            .unwrap_or((observation_text, ""));
+        let hero_hole = parse_hero_hole(hole_text)?;
+        let board = split_card_text(board_text, "board")?;
+
+        Ok(Self {
+            hero_position,
+            hero_hole,
+            board,
+            action_history,
+            abstraction_bucket,
+        })
+    }
+
     /// Convert the request into robopoker's card observation.
     pub fn observation(&self) -> Result<Observation, StrategyRequestError> {
         let pocket = self.hero_hole.join("");
@@ -209,6 +237,41 @@ fn parse_cards(cards: &[String], context: &'static str) -> Result<Hand, Strategy
         .map_err(|message| StrategyRequestError::Cards { context, message })
 }
 
+fn parse_hero_hole(text: &str) -> Result<[String; 2], StrategyRequestError> {
+    let cards = split_card_text(text, "hero hole")?;
+    if cards.len() != 2 {
+        return Err(StrategyRequestError::Cards {
+            context: "hero hole",
+            message: format!("expected exactly 2 cards, got {}", cards.len()),
+        });
+    }
+
+    let [first, second] = cards
+        .try_into()
+        .expect("hero hole length already checked above");
+    Ok([first, second])
+}
+
+fn split_card_text(text: &str, context: &'static str) -> Result<Vec<String>, StrategyRequestError> {
+    if text.is_empty() {
+        return Ok(Vec::new());
+    }
+    if !text.len().is_multiple_of(2) {
+        return Err(StrategyRequestError::Cards {
+            context,
+            message: format!("expected an even card string length, got {}", text.len()),
+        });
+    }
+
+    let cards = text
+        .as_bytes()
+        .chunks_exact(2)
+        .map(|chunk| String::from_utf8(chunk.to_vec()).expect("card bytes should be ASCII"))
+        .collect::<Vec<_>>();
+    parse_cards(&cards, context)?;
+    Ok(cards)
+}
+
 #[cfg(test)]
 mod tests {
     use rbp_cards::{Isomorphism, Observation};
@@ -218,7 +281,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
-    use crate::artifacts::encoder_from_lookup;
+    use crate::artifacts::{bootstrap_encoder_streets, bootstrap_scenarios, encoder_from_lookup};
     use crate::robopoker::NlheBlueprint;
     use crate::state::{NlheActor, NlhePlayerState, NlheStreet};
 
@@ -301,6 +364,33 @@ mod tests {
             .expect("known profile should have action");
 
         assert_eq!(recommended, NlheEdge::from(Edge::Call));
+    }
+
+    #[test]
+    fn bootstrap_scenarios_query_with_encoder() {
+        let merged_lookup = bootstrap_encoder_streets()
+            .into_values()
+            .flat_map(|lookup| lookup.into_iter())
+            .collect();
+        let encoder = encoder_from_lookup(merged_lookup).expect("encoder should build");
+
+        for scenario in bootstrap_scenarios() {
+            let request = NlheStrategyRequest::from_observation_text(
+                NlheTablePosition::Button,
+                scenario.observation,
+                Vec::new(),
+                0,
+            )
+            .unwrap_or_else(|error| panic!("scenario {} should parse: {error:?}", scenario.label));
+            let query = request
+                .query_with_encoder(&encoder)
+                .expect("bootstrap scenario should derive a query");
+            assert!(
+                !query.info.bucket.is_negative(),
+                "scenario {} should derive a non-negative bucket",
+                scenario.label
+            );
+        }
     }
 
     #[test]
