@@ -2,6 +2,7 @@
 
 mod games;
 pub mod playtrace;
+pub mod policy;
 
 use myosu_games::{
     CanonicalActionSpec, CanonicalGameSpec, CanonicalStateSnapshot, CanonicalStrategyBinding,
@@ -16,6 +17,11 @@ pub use playtrace::{
     PlaytraceError, PlaytracePolicy, PlaytraceReport, PlaytraceRequest,
     canonical_ten_playtrace_requests, research_playtrace_requests, run_playtrace,
     validate_transition_trace,
+};
+pub use policy::{
+    CanonicalPolicyBenchmarkSummary, CanonicalPolicyBundle, CanonicalPolicyDistributionEntry,
+    CanonicalPolicyProvenance, CanonicalPolicySamplingProof, PolicyPromotionTier,
+    compute_bundle_hash, sample_policy_action, verify_policy_bundle,
 };
 
 /// First migration batch for canonical game truth.

@@ -1356,7 +1356,7 @@ fn generate_genesis_json() -> Vec<u8> {
       "sudo": {
         "key": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
       },
-      "gameSolver": {
+      "subtensorModule": {
         "balancesIssuance": 0,
         "stakes": []
       }

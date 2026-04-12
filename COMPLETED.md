@@ -1,5 +1,21 @@
 # COMPLETED
 
+- `POLICY-001` Added the canonical policy bundle surface in
+  [policy.rs](/home/r/Coding/myosu/crates/myosu-games-canonical/src/policy.rs):
+  promotion tiers, policy distribution/provenance/benchmark/bundle/proof types,
+  deterministic sorted-JSON SHA-256 bundle hashing, bundle verification, and
+  deterministic PPM-weighted sampling. The module is re-exported from
+  [lib.rs](/home/r/Coding/myosu/crates/myosu-games-canonical/src/lib.rs), and
+  the canonical crate now declares the direct `sha2`/`hex` hashing dependencies.
+  During the broad workspace gate, fixed the unrelated devnet chain-spec
+  regression where genesis patches used `gameSolver` even though the current
+  default-build runtime still deserializes that inherited genesis field as
+  `subtensorModule`.
+  Removed `POLICY-001` from
+  [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `test -f crates/myosu-games-canonical/src/policy.rs && echo EXISTS`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-canonical -- -D warnings`.
+  Commit: `PENDING`
+
 - `F-007` Re-verified the remaining miner-quality work as blocked instead of
   leaving it falsely runnable in
   [IMPLEMENTATION_PLAN.md](/home/r/coding/myosu/IMPLEMENTATION_PLAN.md). The

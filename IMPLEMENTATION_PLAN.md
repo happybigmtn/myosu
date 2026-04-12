@@ -8,21 +8,6 @@ Specs: gen-20260411-205202/specs/110426-*.md
 
 ## Priority Work
 
-- [ ] `POLICY-001` Add canonical policy types and verification to myosu-games-canonical
-
-  Spec: `specs/110426-canonical-truth-promotion.md`
-  Why now: The policy bundle is the foundation type for the entire promotion pipeline defined in `plans/001-master-plan.md`. Every subsequent task (promotion ledger, artifact dossiers, game promotions, Bitino integration) depends on these types existing. The master plan defines the exact type signatures.
-  Codebase evidence: `crates/myosu-games-canonical/src/lib.rs` exports `CanonicalStateSnapshot`, `CanonicalStrategyBinding`, `CanonicalGameSpec`, `CanonicalActionSpec`, `canonical_hash`, and `validate_unique_action_ids`. No `policy.rs` file exists (`find crates/myosu-games-canonical/src/policy.rs` returns nothing). `plans/001-master-plan.md:186-241` specifies the exact type signatures: `PolicyPromotionTier`, `CanonicalPolicyDistributionEntry`, `CanonicalPolicyBenchmarkSummary`, `CanonicalPolicyProvenance`, `CanonicalPolicyBundle`, `CanonicalPolicySamplingProof`, `verify_policy_bundle()`, `sample_policy_action()`.
-  Owns: `crates/myosu-games-canonical/src/policy.rs` (new file), re-export from `crates/myosu-games-canonical/src/lib.rs`.
-  Integration touchpoints: `crates/myosu-games-canonical/src/lib.rs` (re-export), `crates/myosu-games-canonical/Cargo.toml` (sha2 dep for bundle hash), `crates/myosu-games/src/lib.rs` (canonical types already re-exported from here).
-  Scope boundary: Define types, `verify_policy_bundle()`, `sample_policy_action()`, `compute_bundle_hash()`, and >= 6 unit tests. Do NOT add promotion ledger, manifest binary, or CI harness (those are PROMO-001/002). Do NOT modify any existing canonical types. Probability representation: PPM (u32, parts per million) as specified in master plan. Bundle hash: SHA-256 over a documented deterministic byte representation; do not rely on implicit map iteration or prose-only "canonical" encoding.
-  Acceptance criteria: (1) `crates/myosu-games-canonical/src/policy.rs` exists and compiles. (2) All types from `plans/001-master-plan.md:186-234` are defined. (3) `verify_policy_bundle()` rejects bundles where PPM values do not sum to 1_000_000. (4) `verify_policy_bundle()` rejects bundles with empty distributions. (5) `sample_policy_action()` returns the same action for the same entropy bytes (deterministic). (6) `sample_policy_action()` selects actions proportional to their PPM weights. (7) `compute_bundle_hash()` is deterministic (two calls on identical input produce identical SHA-256). (8) The deterministic bundle encoding is documented in code comments or tests and is insensitive to unordered map iteration. (9) >= 6 unit tests pass. (10) `cargo clippy -p myosu-games-canonical -- -D warnings` passes.
-  Verification: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-canonical -- -D warnings`; `test -f crates/myosu-games-canonical/src/policy.rs && echo EXISTS`.
-  Required tests: (a) PPM sum validation (accept 1_000_000, reject 999_999 and 1_000_001). (b) Empty distribution rejection. (c) Deterministic sampling with fixed entropy. (d) Sampling proportionality over N draws. (e) Bundle hash determinism. (f) Encoding-order stability for bundle hash inputs. (g) Verify-then-sample roundtrip (verify passes, then sample succeeds).
-  Dependencies: None.
-  Estimated scope: M
-  Completion signal: `policy.rs` exists with all types, functions, and >= 6 passing tests. Clippy clean.
-
 - [ ] `PROMO-001` Create solver promotion ledger and manifest binary
 
   Spec: `specs/110426-canonical-truth-promotion.md`

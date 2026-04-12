@@ -7877,10 +7877,12 @@ dependencies = [
 name = "myosu-games-canonical"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "myosu-games",
  "myosu-games-portfolio",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
 ]
 
 [[package]]

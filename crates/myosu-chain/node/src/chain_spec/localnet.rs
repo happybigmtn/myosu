@@ -107,7 +107,9 @@ pub(super) fn genesis_patch(
         genesis
             .as_object_mut()
             .expect("genesis patch must stay as an object")
-            .insert("gameSolver".into(), game_solver);
+            // The default-build runtime still deserializes this inherited
+            // genesis field name even though live storage is under GameSolver.
+            .insert("subtensorModule".into(), game_solver);
     }
 
     genesis
