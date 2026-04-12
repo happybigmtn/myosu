@@ -8,27 +8,6 @@ Specs: gen-20260411-205202/specs/110426-*.md
 
 ## Priority Work
 
-- [ ] `DOSSIER-002` Liar's Dice checkpoint dossier with exact exploitability
-
-  Spec: `specs/110426-game-solver-core.md`
-  Why now: Promoting `liars-dice` to `promotable_local` requires a checkpoint dossier with exact exploitability evidence. Liar's Dice already has `exact_exploitability()` on the solver, so the benchmark surface exists. What's missing is the dossier wrapper that records provenance and benchmark results in a format the promotion ledger can consume.
-  Codebase evidence: `crates/myosu-games-liars-dice/src/solver.rs` implements `exact_exploitability()` on `LiarsDiceSolver<N>`. `crates/myosu-miner/src/training.rs` uses `train_select_best()` which returns `LiarsDiceTrainingSummary` with `selected_exploitability`. Checkpoint format uses `MYOS` magic + v1 + bincode. `LIARS_DICE_SOLVER_TREES = 1 << 10` in training.rs.
-  Owns: `LiarsDiceArtifactDossier` and `LiarsDiceBenchmarkDossier` types in `crates/myosu-games-liars-dice/src/` (new module or extension to solver.rs).
-  Integration touchpoints: `crates/myosu-games-liars-dice/src/solver.rs` (exploit API), `crates/myosu-games-canonical/src/policy.rs` (CanonicalPolicyBenchmarkSummary).
-  Scope boundary: Dossier types and builder that captures: checkpoint hash, tree count, training epochs, exact exploitability value, pass/fail against threshold. Do NOT change the solver or training pipeline. Do NOT change checkpoint format. Plan 006 says Liar's Dice uses exact exploitability (not scenario pack).
-  Acceptance criteria: (1) Dossier type exists with checkpoint_hash, tree_count, epochs, exploitability, threshold, passing fields. (2) Building a dossier from a zero-iteration solver reports high exploitability and `passing: false`. (3) Building a dossier from a trained solver with low exploitability reports `passing: true`. (4) Dossier serializes to JSON for `outputs/solver-promotion/liars-dice/`.
-  Verification: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-liars-dice -- -D warnings`.
-  Required tests: (a) Zero-iteration dossier fails threshold. (b) Trained solver dossier passes threshold. (c) Dossier JSON serialization roundtrip.
-  Dependencies: POLICY-001 (CanonicalPolicyBenchmarkSummary type).
-  Estimated scope: S
-  Completion signal: Dossier types exist. Tests pass. Clippy clean.
-
-### Checkpoint: Dossier infrastructure verified
-
-After DOSSIER-001, DOSSIER-002: both dedicated games have dossier types and negative/positive test fixtures. Verify: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker -p myosu-games-liars-dice --quiet` passes, `bash tests/e2e/research_strength_harness.sh` still passes (no regressions). Re-evaluate whether the promotion tasks should proceed or if the dossier contracts need adjustment.
-
----
-
 - [ ] `PROMOTE-001` Promote nlhe-heads-up to promotable_local
 
   Spec: `specs/110426-canonical-truth-promotion.md`

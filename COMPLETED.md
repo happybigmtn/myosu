@@ -1,5 +1,20 @@
 # COMPLETED
 
+- `DOSSIER-002` Added exact-exploitability checkpoint dossier support for
+  Liar's Dice in
+  [dossier.rs](/home/r/Coding/myosu/crates/myosu-games-liars-dice/src/dossier.rs).
+  The Liar's Dice crate now exposes `LiarsDiceArtifactDossier`,
+  `LiarsDiceBenchmarkDossier`, `LiarsDiceDossierError`, and JSON read/write
+  helpers for `outputs/solver-promotion/liars-dice/`. The dossier hashes the
+  existing `MYOS` v1 checkpoint bytes, records tree count, selected epoch count,
+  exact exploitability, threshold, pass/fail state, and a benchmark summary
+  shaped for canonical policy provenance. Added negative, positive, and JSON
+  roundtrip fixtures without changing the solver, training loop, or checkpoint
+  format. Removed `DOSSIER-002` and its dossier-infrastructure checkpoint from
+  [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet dossier`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-liars-dice -- -D warnings`; `cargo fmt --check`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker -p myosu-games-liars-dice --quiet`; `bash tests/e2e/research_strength_harness.sh`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
+  Commit: `PENDING`
+
 - `DOSSIER-001` Added NLHE artifact and benchmark dossier support in
   [artifacts.rs](/home/r/Coding/myosu/crates/myosu-games-poker/src/artifacts.rs).
   The poker crate now exposes `NlheArtifactDossier`,

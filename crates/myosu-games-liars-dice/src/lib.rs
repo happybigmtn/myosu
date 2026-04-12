@@ -1,11 +1,16 @@
 //! Minimal additive Liar's Dice proof crate for myosu.
 
+pub mod dossier;
 pub mod game;
 pub mod protocol;
 pub mod renderer;
 pub mod solver;
 pub mod wire;
 
+pub use dossier::{
+    LiarsDiceArtifactDossier, LiarsDiceBenchmarkDossier, LiarsDiceDossierError,
+    read_liars_dice_artifact_dossier, write_liars_dice_artifact_dossier,
+};
 pub use game::{
     LiarsDiceClaim, LiarsDiceEdge, LiarsDiceGame, LiarsDiceInfo, LiarsDicePublic, LiarsDiceSecret,
     LiarsDiceTurn,

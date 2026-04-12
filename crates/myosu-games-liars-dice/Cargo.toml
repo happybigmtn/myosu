@@ -16,6 +16,8 @@ rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "047163101
 rbp-transport = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
 ratatui = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true, features = ["alloc"] }
+sha2 = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
