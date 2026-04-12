@@ -13,7 +13,7 @@
   format. Removed `DOSSIER-002` and its dossier-infrastructure checkpoint from
   [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet dossier`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-liars-dice -- -D warnings`; `cargo fmt --check`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker -p myosu-games-liars-dice --quiet`; `bash tests/e2e/research_strength_harness.sh`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
-  Commit: `PENDING`
+  Commit: `480777b6ba`
 
 - `DOSSIER-001` Added NLHE artifact and benchmark dossier support in
   [artifacts.rs](/home/r/Coding/myosu/crates/myosu-games-poker/src/artifacts.rs).
