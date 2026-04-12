@@ -18,7 +18,7 @@
   [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `bash tests/e2e/promotion_manifest.sh`; manual negative test with
   a temp ledger changing `cribbage` to `tier: promotable_local`; `bash -n tests/e2e/promotion_manifest.sh`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet`; `bash tests/e2e/canonical_ten_play_harness.sh`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
-  Commit: `PENDING`
+  Commit: `7d65e69e54`
 
 - `PROMO-001` Added the solver promotion ledger in
   [ops/solver_promotion.yaml](/home/r/Coding/myosu/ops/solver_promotion.yaml)
