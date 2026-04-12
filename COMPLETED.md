@@ -12,7 +12,7 @@
   Removed `CI-001` from
   [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `grep 'promotion_manifest' .github/workflows/ci.yml`; `bash tests/e2e/promotion_manifest.sh`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`.
-  Commit: `PENDING`
+  Commit: `8d16bff07f`
 
 - `PROMO-002` Added
   [promotion_manifest.sh](/home/r/Coding/myosu/tests/e2e/promotion_manifest.sh)
