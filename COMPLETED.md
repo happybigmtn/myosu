@@ -1,5 +1,19 @@
 # COMPLETED
 
+- `CI-001` Wired the repo-owned promotion manifest harness into the
+  `active-crates` GitHub Actions job immediately after the research strength
+  harness. The workflow now runs
+  [promotion_manifest.sh](/home/r/Coding/myosu/tests/e2e/promotion_manifest.sh)
+  on every CI push and pull request path covered by
+  [.github/workflows/ci.yml](/home/r/Coding/myosu/.github/workflows/ci.yml),
+  so unsupported over-promotion in
+  [ops/solver_promotion.yaml](/home/r/Coding/myosu/ops/solver_promotion.yaml)
+  fails the active-crates gate instead of relying on human review.
+  Removed `CI-001` from
+  [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `grep 'promotion_manifest' .github/workflows/ci.yml`; `bash tests/e2e/promotion_manifest.sh`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`.
+  Commit: `PENDING`
+
 - `PROMO-002` Added
   [promotion_manifest.sh](/home/r/Coding/myosu/tests/e2e/promotion_manifest.sh)
   as the repo-owned E2E gate for the solver promotion ledger. The harness runs

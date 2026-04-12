@@ -8,21 +8,6 @@ Specs: gen-20260411-205202/specs/110426-*.md
 
 ## Priority Work
 
-- [ ] `CI-001` Wire promotion manifest harness into CI pipeline
-
-  Spec: `specs/110426-ci-quality-gates.md`
-  Why now: Without CI enforcement, the promotion ledger can drift from code truth between human reviews. Plan 002 explicitly proposes `tests/e2e/promotion_manifest.sh` as a new CI gate.
-  Codebase evidence: `.github/workflows/ci.yml:136-143` runs four E2E harnesses in the `active-crates` job: `canonical_ten_play_harness.sh`, `research_play_harness.sh`, `research_games_harness.sh`, `research_strength_harness.sh`. The promotion manifest harness should join this group.
-  Owns: One new step in `.github/workflows/ci.yml` under the `active-crates` job.
-  Integration touchpoints: `.github/workflows/ci.yml` (active-crates job).
-  Scope boundary: Add `bash tests/e2e/promotion_manifest.sh` as a new CI step. Place it after the existing `Research game strength harness` step. Do NOT change job dependencies or add a new job.
-  Acceptance criteria: (1) CI runs `promotion_manifest.sh` on every PR and push. (2) CI fails if the harness exits nonzero. (3) No other CI steps are modified.
-  Verification: `grep 'promotion_manifest' .github/workflows/ci.yml` finds the new step.
-  Required tests: None (CI integration only).
-  Dependencies: PROMO-002 (harness must exist).
-  Estimated scope: XS
-  Completion signal: `promotion_manifest.sh` appears in CI workflow.
-
 - [ ] `DOSSIER-001` NLHE artifact dossier and benchmark reader
 
   Spec: `specs/110426-game-solver-core.md`

@@ -142,6 +142,9 @@ jobs:
       - name: Research game strength harness
         run: bash tests/e2e/research_strength_harness.sh
 
+      - name: Promotion manifest harness
+        run: bash tests/e2e/promotion_manifest.sh
+
       - name: INV-004 solver-gameplay dependency boundary
         run: |
           play_tree="$(cargo tree -p myosu-play --edges normal)"
