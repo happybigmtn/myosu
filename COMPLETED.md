@@ -20,7 +20,7 @@
   [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md);
   `PROMOTE-001` remains blocked on a missing promotion-grade NLHE dossier.
   Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet policy_bundle`; `SKIP_WASM_BUILD=1 cargo run -p myosu-games-liars-dice --quiet --example liars_dice_policy_bundle -- --output outputs/solver-promotion/liars-dice/bundle.json`; `bash tests/e2e/promotion_manifest.sh`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet`; `cargo fmt --check`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-liars-dice -p myosu-games-canonical -- -D warnings`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
-  Commit: `b793cce261`
+  Commit: `5507f50edf`
 
 - `DOSSIER-002` Added exact-exploitability checkpoint dossier support for
   Liar's Dice in
