@@ -13,6 +13,7 @@ myosu-games = { workspace = true }
 myosu-games-portfolio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["alloc"] }
+serde_yaml.workspace = true
 sha2 = { workspace = true }
 hex = { workspace = true, features = ["alloc"] }
 

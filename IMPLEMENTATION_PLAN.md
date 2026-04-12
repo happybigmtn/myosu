@@ -8,21 +8,6 @@ Specs: gen-20260411-205202/specs/110426-*.md
 
 ## Priority Work
 
-- [ ] `PROMO-001` Create solver promotion ledger and manifest binary
-
-  Spec: `specs/110426-canonical-truth-promotion.md`
-  Why now: The promotion ledger is the single source of truth for which games are at which tier. The manifest binary joins the static ledger with live code-reported bundle support, making promotion claims machine-verifiable. Without this, promotion is ad hoc and uncheckable.
-  Codebase evidence: `ops/` directory exists (contains `kpi_registry.yaml`). No `ops/solver_promotion.yaml` exists. No `crates/myosu-games-canonical/examples/promotion_manifest.rs` exists. `crates/myosu-games-portfolio/src/lib.rs` defines `ResearchGame` enum with 22 entries. `cargo run -p myosu-games-portfolio --example bootstrap_manifest -- table` already prints the 22-game research manifest with route, player count, rule file, chain id, solver family.
-  Owns: `ops/solver_promotion.yaml` (new file), `crates/myosu-games-canonical/examples/promotion_manifest.rs` (new file).
-  Integration touchpoints: `crates/myosu-games-canonical/Cargo.toml` (add example), `crates/myosu-games-canonical/src/policy.rs` (read promotion tiers), `crates/myosu-games-portfolio/` (ResearchGame enum as game inventory source).
-  Scope boundary: Create the YAML ledger with 22 entries (one per `ResearchGame` variant). Initial tiers: all `routed` except NLHE and Liar's Dice which start at `benchmarked` per plan 002 recommendation. Manifest binary prints table and machine-readable output. Do NOT create the E2E harness or CI gate (those are PROMO-002 and CI-001). Do NOT promote any game to `promotable_local` (that requires dossier work in DOSSIER-001/002 and PROMOTE-001/002).
-  Acceptance criteria: (1) `ops/solver_promotion.yaml` has exactly 22 entries. (2) Each entry has fields: route, tier, benchmark_surface, benchmark_threshold, artifact_requirement, bundle_support, bitino_target_phase, notes. (3) `nlhe-heads-up` and `liars-dice` entries have `tier: benchmarked`. (4) All other entries have `tier: routed`. (5) `cargo run -p myosu-games-canonical --example promotion_manifest` exits 0 and prints one row per game. (6) Output includes tier from YAML and code-reported bundle support status. (7) Manifest printer rejects YAML entries whose game slug does not match a known `ResearchGame` variant.
-  Verification: `SKIP_WASM_BUILD=1 cargo run -p myosu-games-canonical --example promotion_manifest --quiet`; `test -f ops/solver_promotion.yaml && echo EXISTS`; `grep -c 'tier:' ops/solver_promotion.yaml` (expect 22).
-  Required tests: (a) Manifest binary integration test: exits 0, prints 22 rows. (b) YAML parse test: all 22 entries deserialize without error. (c) Slug validation: reject YAML entry with unknown game slug.
-  Dependencies: POLICY-001 (uses PolicyPromotionTier enum).
-  Estimated scope: M
-  Completion signal: YAML exists with 22 entries. Manifest binary prints all 22 games with code-reported support status.
-
 - [ ] `PROMO-002` Add promotion manifest E2E harness
 
   Spec: `specs/110426-ci-quality-gates.md`

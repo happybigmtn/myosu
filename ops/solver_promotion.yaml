@@ -1,0 +1,199 @@
+games:
+  - game: nlhe-heads-up
+    route: dedicated
+    tier: benchmarked
+    benchmark_surface: repo_owned_reference_pack
+    benchmark_threshold: reference_pack_pass
+    artifact_requirement: full_encoder_manifest_plus_checkpoint
+    bundle_support: benchmarked
+    bitino_target_phase: phase_6_candidate
+    notes: benchmarked_only_sparse_bootstrap_is_not_promotable
+  - game: nlhe-six-max
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: plo
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: nlhe-tournament
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: short-deck
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: teen-patti
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: hanafuda-koi-koi
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: hwatu-go-stop
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: riichi-mahjong
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: bridge
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: gin-rummy
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: stratego
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: ofc-chinese-poker
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: spades
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: liars-dice
+    route: dedicated
+    tier: benchmarked
+    benchmark_surface: exact_exploitability
+    benchmark_threshold: quality_benchmark_512_iteration_floor
+    artifact_requirement: myos_v1_checkpoint
+    bundle_support: benchmarked
+    bitino_target_phase: phase_6_candidate
+    notes: benchmarked_by_exact_exploitability_not_promotable_until_dossier
+  - game: dou-di-zhu
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: pusoy-dos
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: tien-len
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: call-break
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: backgammon
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: hearts
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only
+  - game: cribbage
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none_until_benchmarked
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: portfolio_rule_aware_route_only

@@ -1,11 +1,11 @@
 //! Canonical policy bundle types for solver promotion evidence.
 
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, fs, path::Path};
 
 use myosu_games::{
     CanonicalStateSnapshot, CanonicalTruthError, validate_action_id, validate_unique_action_ids,
 };
-use myosu_games_portfolio::ResearchGame;
+use myosu_games_portfolio::{ALL_RESEARCH_GAMES, ResearchGame};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -20,6 +20,86 @@ pub enum PolicyPromotionTier {
     Benchmarked,
     PromotableLocal,
     PromotableFunded,
+}
+
+impl PolicyPromotionTier {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Routed => "routed",
+            Self::Benchmarked => "benchmarked",
+            Self::PromotableLocal => "promotable_local",
+            Self::PromotableFunded => "promotable_funded",
+        }
+    }
+}
+
+/// Routing surface for one solver promotion ledger entry.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum SolverPromotionRoute {
+    Dedicated,
+    Portfolio,
+}
+
+impl SolverPromotionRoute {
+    pub const fn code_route(game: ResearchGame) -> Self {
+        if game.is_portfolio_routed() {
+            Self::Portfolio
+        } else {
+            Self::Dedicated
+        }
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Dedicated => "dedicated",
+            Self::Portfolio => "portfolio",
+        }
+    }
+}
+
+/// Static promotion ledger parsed from `ops/solver_promotion.yaml`.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SolverPromotionLedger {
+    pub games: Vec<SolverPromotionEntry>,
+}
+
+impl SolverPromotionLedger {
+    pub fn entry_for(&self, game: ResearchGame) -> Option<&SolverPromotionEntry> {
+        self.games.iter().find(|entry| entry.game == game.slug())
+    }
+}
+
+/// One game row in the solver promotion ledger.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SolverPromotionEntry {
+    pub game: String,
+    pub route: SolverPromotionRoute,
+    pub tier: PolicyPromotionTier,
+    pub benchmark_surface: String,
+    pub benchmark_threshold: String,
+    pub artifact_requirement: String,
+    pub bundle_support: PolicyPromotionTier,
+    pub bitino_target_phase: String,
+    pub notes: String,
+}
+
+/// Joined ledger/code row emitted by the promotion manifest example.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct SolverPromotionManifestRow {
+    #[serde(skip)]
+    pub game: ResearchGame,
+    pub slug: String,
+    pub chain_id: String,
+    pub route: SolverPromotionRoute,
+    pub tier: PolicyPromotionTier,
+    pub benchmark_surface: String,
+    pub benchmark_threshold: String,
+    pub artifact_requirement: String,
+    pub declared_bundle_support: PolicyPromotionTier,
+    pub code_bundle_support: PolicyPromotionTier,
+    pub bitino_target_phase: String,
+    pub notes: String,
 }
 
 /// One action probability in a canonical policy distribution.
@@ -71,6 +151,75 @@ pub struct CanonicalPolicySamplingProof {
     pub entropy_hash: String,
     pub draw_u64: u64,
     pub sampled_action_id: String,
+}
+
+/// Parse and validate the solver promotion ledger.
+pub fn parse_solver_promotion_ledger(
+    input: &str,
+) -> Result<SolverPromotionLedger, CanonicalTruthError> {
+    let ledger: SolverPromotionLedger =
+        serde_yaml::from_str(input).map_err(|source| CanonicalTruthError::Serialization {
+            message: format!("failed to parse solver promotion ledger: {source}"),
+        })?;
+    validate_solver_promotion_ledger(&ledger)?;
+
+    Ok(ledger)
+}
+
+/// Read and validate the solver promotion ledger from disk.
+pub fn read_solver_promotion_ledger(
+    path: impl AsRef<Path>,
+) -> Result<SolverPromotionLedger, CanonicalTruthError> {
+    let path = path.as_ref();
+    let input = fs::read_to_string(path).map_err(|source| CanonicalTruthError::Serialization {
+        message: format!(
+            "failed to read solver promotion ledger `{}`: {source}",
+            path.display()
+        ),
+    })?;
+
+    parse_solver_promotion_ledger(&input)
+}
+
+/// Build manifest rows by joining the static ledger with live code support.
+pub fn solver_promotion_manifest_rows(
+    ledger: &SolverPromotionLedger,
+) -> Result<Vec<SolverPromotionManifestRow>, CanonicalTruthError> {
+    validate_solver_promotion_ledger(ledger)?;
+
+    let mut rows = Vec::with_capacity(ledger.games.len());
+    for game in ALL_RESEARCH_GAMES {
+        let entry = ledger.entry_for(game).ok_or_else(|| {
+            policy_error(format!(
+                "promotion ledger is missing game `{}`",
+                game.slug()
+            ))
+        })?;
+        rows.push(SolverPromotionManifestRow {
+            game,
+            slug: game.slug().to_string(),
+            chain_id: game.chain_id().to_string(),
+            route: entry.route,
+            tier: entry.tier,
+            benchmark_surface: entry.benchmark_surface.clone(),
+            benchmark_threshold: entry.benchmark_threshold.clone(),
+            artifact_requirement: entry.artifact_requirement.clone(),
+            declared_bundle_support: entry.bundle_support,
+            code_bundle_support: code_reported_bundle_support(game),
+            bitino_target_phase: entry.bitino_target_phase.clone(),
+            notes: entry.notes.clone(),
+        });
+    }
+
+    Ok(rows)
+}
+
+/// Highest promotion tier currently supported by checked-in code for a game.
+pub const fn code_reported_bundle_support(game: ResearchGame) -> PolicyPromotionTier {
+    match game {
+        ResearchGame::NlheHeadsUp | ResearchGame::LiarsDice => PolicyPromotionTier::Benchmarked,
+        _ => PolicyPromotionTier::Routed,
+    }
 }
 
 #[derive(Serialize)]
@@ -236,6 +385,75 @@ fn validate_unique_ids<'a>(
     Ok(seen)
 }
 
+fn validate_solver_promotion_ledger(
+    ledger: &SolverPromotionLedger,
+) -> Result<(), CanonicalTruthError> {
+    let mut seen = BTreeSet::new();
+
+    for entry in &ledger.games {
+        let game = ResearchGame::parse(&entry.game).map_err(|_| {
+            policy_error(format!(
+                "promotion ledger references unknown game `{}`",
+                entry.game
+            ))
+        })?;
+        if !seen.insert(game.slug()) {
+            return Err(policy_error(format!(
+                "promotion ledger duplicates game `{}`",
+                game.slug()
+            )));
+        }
+
+        let expected_route = SolverPromotionRoute::code_route(game);
+        if entry.route != expected_route {
+            return Err(policy_error(format!(
+                "promotion ledger route for `{}` is `{}`, expected `{}`",
+                game.slug(),
+                entry.route.as_str(),
+                expected_route.as_str()
+            )));
+        }
+
+        let code_support = code_reported_bundle_support(game);
+        if entry.bundle_support != code_support {
+            return Err(policy_error(format!(
+                "promotion ledger bundle support for `{}` is `{}`, expected live code support `{}`",
+                game.slug(),
+                entry.bundle_support.as_str(),
+                code_support.as_str()
+            )));
+        }
+
+        if entry.tier > code_support {
+            return Err(policy_error(format!(
+                "promotion ledger tier for `{}` is `{}`, above live code support `{}`",
+                game.slug(),
+                entry.tier.as_str(),
+                code_support.as_str()
+            )));
+        }
+    }
+
+    for game in ALL_RESEARCH_GAMES {
+        if !seen.contains(game.slug()) {
+            return Err(policy_error(format!(
+                "promotion ledger is missing game `{}`",
+                game.slug()
+            )));
+        }
+    }
+
+    if ledger.games.len() != ALL_RESEARCH_GAMES.len() {
+        return Err(policy_error(format!(
+            "promotion ledger has {} entries, expected {}",
+            ledger.games.len(),
+            ALL_RESEARCH_GAMES.len()
+        )));
+    }
+
+    Ok(())
+}
+
 fn draw_from_entropy(
     bundle: &CanonicalPolicyBundle,
     entropy_source: &str,
@@ -335,9 +553,12 @@ fn policy_error(message: impl Into<String>) -> CanonicalTruthError {
 #[cfg(test)]
 mod tests {
     use myosu_games::{CanonicalActionSpec, CanonicalStateSnapshot};
+    use myosu_games_portfolio::{ALL_RESEARCH_GAMES, ResearchGame};
     use serde_json::{Map, Value, json};
 
     use super::*;
+
+    const PROMOTION_LEDGER: &str = include_str!("../../../ops/solver_promotion.yaml");
 
     #[test]
     fn ppm_sum_validation_accepts_exact_and_rejects_neighbors() {
@@ -428,6 +649,95 @@ mod tests {
                 .legal_action_ids
                 .iter()
                 .any(|action_id| action_id == &proof.sampled_action_id)
+        );
+    }
+
+    #[test]
+    fn promotion_ledger_parses_all_research_games() {
+        let ledger = parse_solver_promotion_ledger(PROMOTION_LEDGER).unwrap_or_else(|error| {
+            panic!("promotion ledger should parse: {error}");
+        });
+
+        assert_eq!(ledger.games.len(), ALL_RESEARCH_GAMES.len());
+
+        for game in ALL_RESEARCH_GAMES {
+            let Some(entry) = ledger.entry_for(game) else {
+                panic!("promotion ledger should include {}", game.slug());
+            };
+            assert_eq!(entry.game, game.slug());
+            assert_eq!(entry.route, SolverPromotionRoute::code_route(game));
+            assert_eq!(
+                entry.bundle_support,
+                code_reported_bundle_support(game),
+                "{} ledger should start from live code support",
+                game.slug()
+            );
+        }
+    }
+
+    #[test]
+    fn promotion_ledger_initial_tiers_are_truthful() {
+        let ledger = parse_solver_promotion_ledger(PROMOTION_LEDGER).unwrap_or_else(|error| {
+            panic!("promotion ledger should parse: {error}");
+        });
+
+        for game in ALL_RESEARCH_GAMES {
+            let entry = ledger.entry_for(game).unwrap_or_else(|| {
+                panic!("promotion ledger should include {}", game.slug());
+            });
+            let expected_tier = match game {
+                ResearchGame::NlheHeadsUp | ResearchGame::LiarsDice => {
+                    PolicyPromotionTier::Benchmarked
+                }
+                _ => PolicyPromotionTier::Routed,
+            };
+
+            assert_eq!(entry.tier, expected_tier, "{} tier mismatch", game.slug());
+        }
+    }
+
+    #[test]
+    fn promotion_manifest_rows_include_code_reported_support() {
+        let ledger = parse_solver_promotion_ledger(PROMOTION_LEDGER).unwrap_or_else(|error| {
+            panic!("promotion ledger should parse: {error}");
+        });
+        let rows = solver_promotion_manifest_rows(&ledger).unwrap_or_else(|error| {
+            panic!("promotion manifest rows should build: {error}");
+        });
+
+        assert_eq!(rows.len(), ALL_RESEARCH_GAMES.len());
+        assert!(rows.iter().any(|row| {
+            row.game == ResearchGame::NlheHeadsUp
+                && row.tier == PolicyPromotionTier::Benchmarked
+                && row.code_bundle_support == PolicyPromotionTier::Benchmarked
+        }));
+        assert!(rows.iter().any(|row| {
+            row.game == ResearchGame::Cribbage
+                && row.tier == PolicyPromotionTier::Routed
+                && row.code_bundle_support == PolicyPromotionTier::Routed
+        }));
+    }
+
+    #[test]
+    fn promotion_ledger_rejects_unknown_game_slug() {
+        let yaml = r#"
+games:
+  - game: not-a-real-game
+    route: portfolio
+    tier: routed
+    benchmark_surface: none
+    benchmark_threshold: none
+    artifact_requirement: none
+    bundle_support: routed
+    bitino_target_phase: future
+    notes: invalid fixture
+"#;
+
+        let error = parse_solver_promotion_ledger(yaml).expect_err("unknown slug should fail");
+
+        assert!(
+            error.to_string().contains("not-a-real-game"),
+            "error should include the rejected slug: {error}"
         );
     }
 

@@ -1,5 +1,23 @@
 # COMPLETED
 
+- `PROMO-001` Added the solver promotion ledger in
+  [ops/solver_promotion.yaml](/home/r/Coding/myosu/ops/solver_promotion.yaml)
+  with exactly 22 `ResearchGame` entries. NLHE heads-up and Liar's Dice start
+  at `benchmarked`; every portfolio-routed research game starts at `routed`.
+  The canonical policy module now parses and validates that ledger against the
+  live `ALL_RESEARCH_GAMES` inventory, rejects unknown slugs and unsupported
+  tier claims, and emits joined manifest rows with code-reported bundle support.
+  Added
+  [promotion_manifest.rs](/home/r/Coding/myosu/crates/myosu-games-canonical/examples/promotion_manifest.rs)
+  with table and JSON output modes, plus unit and integration coverage in
+  [policy.rs](/home/r/Coding/myosu/crates/myosu-games-canonical/src/policy.rs)
+  and
+  [promotion_manifest.rs](/home/r/Coding/myosu/crates/myosu-games-canonical/tests/promotion_manifest.rs).
+  Removed `PROMO-001` from
+  [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-games-canonical --example promotion_manifest --quiet`; `test -f ops/solver_promotion.yaml && echo EXISTS`; `grep -c 'tier:' ops/solver_promotion.yaml`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-canonical -- -D warnings`; `SKIP_WASM_BUILD=1 cargo check -p myosu-games -p myosu-games-kuhn -p myosu-games-poker -p myosu-games-liars-dice -p myosu-games-portfolio -p myosu-games-canonical -p myosu-tui -p myosu-play -p myosu-chain-client -p myosu-miner -p myosu-validator`; `cargo fmt --check`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_plan_quality.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
+  Commit: `PENDING`
+
 - `POLICY-001` Added the canonical policy bundle surface in
   [policy.rs](/home/r/Coding/myosu/crates/myosu-games-canonical/src/policy.rs):
   promotion tiers, policy distribution/provenance/benchmark/bundle/proof types,

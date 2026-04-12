@@ -21,7 +21,10 @@ pub use playtrace::{
 pub use policy::{
     CanonicalPolicyBenchmarkSummary, CanonicalPolicyBundle, CanonicalPolicyDistributionEntry,
     CanonicalPolicyProvenance, CanonicalPolicySamplingProof, PolicyPromotionTier,
-    compute_bundle_hash, sample_policy_action, verify_policy_bundle,
+    SolverPromotionEntry, SolverPromotionLedger, SolverPromotionManifestRow, SolverPromotionRoute,
+    code_reported_bundle_support, compute_bundle_hash, parse_solver_promotion_ledger,
+    read_solver_promotion_ledger, sample_policy_action, solver_promotion_manifest_rows,
+    verify_policy_bundle,
 };
 
 /// First migration batch for canonical game truth.
