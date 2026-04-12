@@ -16,7 +16,7 @@
   Removed `DOSSIER-001` from
   [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet dossier`; `SKIP_WASM_BUILD=1 cargo run -p myosu-games-poker --example benchmark_scenario_pack --quiet -- /tmp/myosu-nlhe-dossier-proof --dossier-output /tmp/myosu-nlhe-dossier-proof/outputs/solver-promotion/nlhe-heads-up/artifact-dossier.json`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-poker -- -D warnings`; `cargo fmt --check`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
-  Commit: `PENDING`
+  Commit: `2a10792cea`
 
 - `CI-001` Wired the repo-owned promotion manifest harness into the
   `active-crates` GitHub Actions job immediately after the research strength
