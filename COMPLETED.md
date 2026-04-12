@@ -16,7 +16,7 @@
   Removed `PROMO-001` from
   [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
   Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet`; `SKIP_WASM_BUILD=1 cargo run -p myosu-games-canonical --example promotion_manifest --quiet`; `test -f ops/solver_promotion.yaml && echo EXISTS`; `grep -c 'tier:' ops/solver_promotion.yaml`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-canonical -- -D warnings`; `SKIP_WASM_BUILD=1 cargo check -p myosu-games -p myosu-games-kuhn -p myosu-games-poker -p myosu-games-liars-dice -p myosu-games-portfolio -p myosu-games-canonical -p myosu-tui -p myosu-play -p myosu-chain-client -p myosu-miner -p myosu-validator`; `cargo fmt --check`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_plan_quality.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
-  Commit: `PENDING`
+  Commit: `0c41057e1e`
 
 - `POLICY-001` Added the canonical policy bundle surface in
   [policy.rs](/home/r/Coding/myosu/crates/myosu-games-canonical/src/policy.rs):
