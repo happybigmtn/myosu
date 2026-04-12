@@ -24,6 +24,7 @@ rank_tier() {
       ;;
   esac
 }
+promotable_local_rank="$(rank_tier promotable_local)"
 
 field_value() {
   local line="$1"
@@ -39,6 +40,19 @@ field_value() {
 
   printf 'missing field %s in line: %s\n' "$key" "$line" >&2
   return 1
+}
+
+assert_promotion_outputs() {
+  local slug="$1"
+  local dir="$repo_root/outputs/solver-promotion/$slug"
+  local file
+
+  for file in bundle.json benchmark-summary.json artifact-manifest.json; do
+    if [[ ! -s "$dir/$file" ]]; then
+      printf '%s declares promotable_local but is missing %s\n' "$slug" "$dir/$file" >&2
+      exit 1
+    fi
+  done
 }
 
 assert_tier_at_least() {
@@ -90,10 +104,14 @@ while IFS= read -r line; do
     printf '%s\n' "$line" >&2
     exit 1
   fi
+  if (( tier_rank >= promotable_local_rank )); then
+    slug="$(field_value "$line" slug)"
+    assert_promotion_outputs "$slug"
+  fi
 done < <(printf '%s\n' "$manifest" | grep '^SOLVER_PROMOTION_GAME ')
 
 assert_tier_at_least nlhe-heads-up benchmarked
-assert_tier_at_least liars-dice benchmarked
+assert_tier_at_least liars-dice promotable_local
 
 printf '%s\n' "$manifest"
 printf 'PROMOTION_MANIFEST_HARNESS myosu e2e ok rows=%s ledger=%s\n' \

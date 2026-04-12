@@ -7906,6 +7906,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "myosu-games",
+ "myosu-games-canonical",
  "myosu-tui",
  "proptest",
  "ratatui",

@@ -1,0 +1,24 @@
+{
+  "checkpoint_hash": "61707f0e14149fff46af6c8e25ac010ee04f34d4c78b1b7ce23f09201274aeb4",
+  "checkpoint_format": "myos-v1-bincode",
+  "solver_family": "liars-dice-cfr",
+  "tree_count": 1024,
+  "epochs": 512,
+  "exploitability": 0.6738117933273315,
+  "threshold": 0.7,
+  "passing": true,
+  "benchmark_summary": {
+    "benchmark_id": "liars-dice-exact-n1024-epochs512",
+    "benchmark_method": "liars-dice-exact-exploitability-v1",
+    "metric_name": "exact_exploitability",
+    "metric_value": 0.6738117933273315,
+    "threshold": 0.7,
+    "passing": true
+  },
+  "provenance_chain": [
+    "checkpoint_bytes_serialized",
+    "checkpoint_sha256_computed",
+    "exact_exploitability_computed",
+    "threshold_evaluated"
+  ]
+}

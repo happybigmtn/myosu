@@ -1,0 +1,7 @@
+{
+  "benchmark_id": "liars-dice-exact-n1024-epochs512",
+  "metric_name": "exact_exploitability",
+  "metric_value": 0.6738117933273315,
+  "threshold": 0.7,
+  "passing": true
+}

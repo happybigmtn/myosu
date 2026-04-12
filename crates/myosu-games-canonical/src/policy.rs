@@ -217,7 +217,8 @@ pub fn solver_promotion_manifest_rows(
 /// Highest promotion tier currently supported by checked-in code for a game.
 pub const fn code_reported_bundle_support(game: ResearchGame) -> PolicyPromotionTier {
     match game {
-        ResearchGame::NlheHeadsUp | ResearchGame::LiarsDice => PolicyPromotionTier::Benchmarked,
+        ResearchGame::NlheHeadsUp => PolicyPromotionTier::Benchmarked,
+        ResearchGame::LiarsDice => PolicyPromotionTier::PromotableLocal,
         _ => PolicyPromotionTier::Routed,
     }
 }
@@ -686,9 +687,8 @@ mod tests {
                 panic!("promotion ledger should include {}", game.slug());
             });
             let expected_tier = match game {
-                ResearchGame::NlheHeadsUp | ResearchGame::LiarsDice => {
-                    PolicyPromotionTier::Benchmarked
-                }
+                ResearchGame::NlheHeadsUp => PolicyPromotionTier::Benchmarked,
+                ResearchGame::LiarsDice => PolicyPromotionTier::PromotableLocal,
                 _ => PolicyPromotionTier::Routed,
             };
 
@@ -710,6 +710,11 @@ mod tests {
             row.game == ResearchGame::NlheHeadsUp
                 && row.tier == PolicyPromotionTier::Benchmarked
                 && row.code_bundle_support == PolicyPromotionTier::Benchmarked
+        }));
+        assert!(rows.iter().any(|row| {
+            row.game == ResearchGame::LiarsDice
+                && row.tier == PolicyPromotionTier::PromotableLocal
+                && row.code_bundle_support == PolicyPromotionTier::PromotableLocal
         }));
         assert!(rows.iter().any(|row| {
             row.game == ResearchGame::Cribbage

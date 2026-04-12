@@ -8,11 +8,10 @@ use myosu_games::{
     CanonicalActionSpec, CanonicalGameSpec, CanonicalStateSnapshot, CanonicalStrategyBinding,
     CanonicalTruthError, canonical_hash, validate_unique_action_ids,
 };
-use myosu_games_portfolio::{
-    PortfolioAction, PortfolioSolver, ResearchGame, answer_typed_challenge,
-};
+use myosu_games_portfolio::{PortfolioAction, PortfolioSolver, answer_typed_challenge};
 use serde_json::json;
 
+pub use myosu_games_portfolio::ResearchGame;
 pub use playtrace::{
     PlaytraceError, PlaytracePolicy, PlaytraceReport, PlaytraceRequest,
     canonical_ten_playtrace_requests, research_playtrace_requests, run_playtrace,

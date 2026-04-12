@@ -127,13 +127,13 @@ games:
     notes: portfolio_rule_aware_route_only
   - game: liars-dice
     route: dedicated
-    tier: benchmarked
+    tier: promotable_local
     benchmark_surface: exact_exploitability
     benchmark_threshold: quality_benchmark_512_iteration_floor
     artifact_requirement: myos_v1_checkpoint
-    bundle_support: benchmarked
+    bundle_support: promotable_local
     bitino_target_phase: phase_6_candidate
-    notes: benchmarked_by_exact_exploitability_not_promotable_until_dossier
+    notes: promotable_local_with_exact_exploitability_checkpoint_dossier
   - game: dou-di-zhu
     route: portfolio
     tier: routed

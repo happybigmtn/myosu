@@ -1,5 +1,27 @@
 # COMPLETED
 
+- `PROMOTE-002` Promoted Liar's Dice to `promotable_local` with a
+  verifier-consumable canonical policy bundle in
+  [policy_bundle.rs](/home/r/Coding/myosu/crates/myosu-games-liars-dice/src/policy_bundle.rs)
+  and a repo-owned artifact generator in
+  [liars_dice_policy_bundle.rs](/home/r/Coding/myosu/crates/myosu-games-liars-dice/examples/liars_dice_policy_bundle.rs).
+  The generator trains the existing stage-0 `1 << 10` solver for 512
+  iterations, rejects zero-iteration checkpoints, verifies and samples the
+  bundle through `myosu-games-canonical`, and writes
+  [bundle.json](/home/r/Coding/myosu/outputs/solver-promotion/liars-dice/bundle.json),
+  [benchmark-summary.json](/home/r/Coding/myosu/outputs/solver-promotion/liars-dice/benchmark-summary.json),
+  and
+  [artifact-manifest.json](/home/r/Coding/myosu/outputs/solver-promotion/liars-dice/artifact-manifest.json).
+  Updated
+  [ops/solver_promotion.yaml](/home/r/Coding/myosu/ops/solver_promotion.yaml)
+  so Liar's Dice declares `promotable_local`, and tightened
+  [promotion_manifest.sh](/home/r/Coding/myosu/tests/e2e/promotion_manifest.sh)
+  to require output files for any local promotion. Removed `PROMOTE-002` from
+  [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md);
+  `PROMOTE-001` remains blocked on a missing promotion-grade NLHE dossier.
+  Validation: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet policy_bundle`; `SKIP_WASM_BUILD=1 cargo run -p myosu-games-liars-dice --quiet --example liars_dice_policy_bundle -- --output outputs/solver-promotion/liars-dice/bundle.json`; `bash tests/e2e/promotion_manifest.sh`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-liars-dice --quiet`; `cargo fmt --check`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-liars-dice -p myosu-games-canonical -- -D warnings`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
+  Commit: `b793cce261`
+
 - `DOSSIER-002` Added exact-exploitability checkpoint dossier support for
   Liar's Dice in
   [dossier.rs](/home/r/Coding/myosu/crates/myosu-games-liars-dice/src/dossier.rs).

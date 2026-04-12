@@ -2,6 +2,7 @@
 
 pub mod dossier;
 pub mod game;
+pub mod policy_bundle;
 pub mod protocol;
 pub mod renderer;
 pub mod solver;
@@ -14,6 +15,10 @@ pub use dossier::{
 pub use game::{
     LiarsDiceClaim, LiarsDiceEdge, LiarsDiceGame, LiarsDiceInfo, LiarsDicePublic, LiarsDiceSecret,
     LiarsDiceTurn,
+};
+pub use policy_bundle::{
+    LIARS_DICE_PROMOTION_THRESHOLD, LiarsDicePolicyBundleError, LiarsDicePolicyBundleEvidence,
+    build_liars_dice_policy_bundle, build_liars_dice_policy_bundle_evidence,
 };
 pub use protocol::{LiarsDiceStrategyQuery, LiarsDiceStrategyResponse, recommended_edge};
 pub use renderer::{LiarsDiceRenderer, LiarsDiceSnapshot};
