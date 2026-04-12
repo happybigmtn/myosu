@@ -8,27 +8,6 @@ Specs: gen-20260411-205202/specs/110426-*.md
 
 ## Priority Work
 
-- [ ] `PROMO-002` Add promotion manifest E2E harness
-
-  Spec: `specs/110426-ci-quality-gates.md`
-  Why now: The promotion ledger must be machine-checked to prevent manual YAML edits that overstate tier. A declared `benchmarked` or `promotable_local` game without supporting code evidence must fail the gate. This is the drift-prevention mechanism identified as an open question in the canonical-truth-promotion spec.
-  Codebase evidence: `tests/e2e/` contains 12 shell harnesses. No `tests/e2e/promotion_manifest.sh` exists. The pattern is: each harness runs a proof command, checks output, and exits nonzero on failure. See `tests/e2e/canonical_ten_play_harness.sh` for the established pattern.
-  Owns: `tests/e2e/promotion_manifest.sh` (new file).
-  Integration touchpoints: `crates/myosu-games-canonical/examples/promotion_manifest.rs` (invoked by harness), `ops/solver_promotion.yaml` (read by manifest binary).
-  Scope boundary: Shell script that runs the promotion manifest binary and validates: (1) exactly 22 rows, (2) no game claims tier higher than code can support, (3) `nlhe-heads-up` and `liars-dice` at `benchmarked` or above. Do NOT add to CI yet (CI-001 handles that).
-  Acceptance criteria: (1) `bash tests/e2e/promotion_manifest.sh` exits 0 on current ledger. (2) If a YAML entry is manually changed to `promotable_local` without code support, the harness exits nonzero. (3) Row count assertion: exactly 22.
-  Verification: `bash tests/e2e/promotion_manifest.sh`.
-  Required tests: Harness itself is the test. Manual negative test: temporarily change a `routed` game to `promotable_local` in YAML, confirm harness fails, then revert.
-  Dependencies: PROMO-001 (ledger and manifest binary must exist).
-  Estimated scope: S
-  Completion signal: `bash tests/e2e/promotion_manifest.sh` exits 0.
-
-### Checkpoint: Promotion infrastructure verified
-
-After POLICY-001, PROMO-001, PROMO-002: policy types exist, promotion ledger exists, manifest is machine-checked. Pause and verify: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet` passes, `bash tests/e2e/promotion_manifest.sh` passes, `bash tests/e2e/canonical_ten_play_harness.sh` passes (no regressions). Re-evaluate scope before proceeding to dossier and promotion work.
-
----
-
 - [ ] `CI-001` Wire promotion manifest harness into CI pipeline
 
   Spec: `specs/110426-ci-quality-gates.md`

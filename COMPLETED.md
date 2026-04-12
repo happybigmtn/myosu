@@ -1,5 +1,25 @@
 # COMPLETED
 
+- `PROMO-002` Added
+  [promotion_manifest.sh](/home/r/Coding/myosu/tests/e2e/promotion_manifest.sh)
+  as the repo-owned E2E gate for the solver promotion ledger. The harness runs
+  the canonical promotion manifest example against
+  [ops/solver_promotion.yaml](/home/r/Coding/myosu/ops/solver_promotion.yaml),
+  asserts exactly 22 promotion rows, rejects any emitted tier above live code
+  support, and requires `nlhe-heads-up` plus `liars-dice` to stay at
+  `benchmarked` or above. The harness also honors
+  `MYOSU_SOLVER_PROMOTION_LEDGER`, so negative ledger fixtures can prove that
+  manual over-promotion fails closed without editing the checked-in YAML.
+  While running the broad local gates, the repo-shape check exposed stale
+  hard-coded `genesis/plans/` filenames in
+  [.github/scripts/check_stage0_repo_shape.sh](/home/r/Coding/myosu/.github/scripts/check_stage0_repo_shape.sh);
+  that script now checks the current 001-011 promotion plan stack.
+  Removed `PROMO-002` and its promotion-infrastructure checkpoint from
+  [IMPLEMENTATION_PLAN.md](/home/r/Coding/myosu/IMPLEMENTATION_PLAN.md).
+  Validation: `bash tests/e2e/promotion_manifest.sh`; manual negative test with
+  a temp ledger changing `cribbage` to `tier: promotable_local`; `bash -n tests/e2e/promotion_manifest.sh`; `SKIP_WASM_BUILD=1 cargo test -p myosu-games-canonical --quiet`; `bash tests/e2e/canonical_ten_play_harness.sh`; `bash .github/scripts/check_plan_quality.sh`; `bash .github/scripts/check_doctrine_integrity.sh`; `bash .github/scripts/check_stage0_repo_shape.sh`; `SKIP_WASM_BUILD=1 cargo test --workspace --quiet`.
+  Commit: `PENDING`
+
 - `PROMO-001` Added the solver promotion ledger in
   [ops/solver_promotion.yaml](/home/r/Coding/myosu/ops/solver_promotion.yaml)
   with exactly 22 `ResearchGame` entries. NLHE heads-up and Liar's Dice start
