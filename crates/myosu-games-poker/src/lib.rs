@@ -15,9 +15,12 @@ pub mod wire;
 pub use action::NlheAction;
 pub use artifacts::{
     ArtifactCodecError, NlheAbstractionArtifactEntry, NlheAbstractionManifest,
-    NlheAbstractionStreet, NlheBootstrapScenario, NlheEncoderArtifactBundle,
-    NlheEncoderArtifactSummary, bootstrap_encoder_streets, bootstrap_scenarios, decode_encoder,
-    encode_encoder, encoder_from_lookup, load_encoder_bundle, load_encoder_dir, write_encoder_dir,
+    NlheAbstractionStreet, NlheArtifactDossier, NlheArtifactManifestReference,
+    NlheBenchmarkDossier, NlheBenchmarkThresholdDirection, NlheBootstrapScenario,
+    NlheEncoderArtifactBundle, NlheEncoderArtifactSummary, bootstrap_encoder_streets,
+    bootstrap_scenarios, decode_encoder, encode_encoder, encoder_from_lookup, load_encoder_bundle,
+    load_encoder_dir, load_nlhe_artifact_dossier, read_nlhe_artifact_dossier, write_encoder_dir,
+    write_nlhe_artifact_dossier,
 };
 pub use benchmark::{
     NlheScenarioBenchmarkError, NlheScenarioBenchmarkReport, NlheScenarioBenchmarkRow,

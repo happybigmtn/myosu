@@ -8,21 +8,6 @@ Specs: gen-20260411-205202/specs/110426-*.md
 
 ## Priority Work
 
-- [ ] `DOSSIER-001` NLHE artifact dossier and benchmark reader
-
-  Spec: `specs/110426-game-solver-core.md`
-  Why now: Promoting `nlhe-heads-up` to `promotable_local` requires pinned artifact provenance and a benchmark dossier. The current repo-owned bootstrap artifacts are explicitly too sparse for promotion (postflop_complete=false). The master plan (milestone 3) says dossier types should support pointing at stronger external artifacts by hash while keeping the repo's sparse artifacts as negative fixtures.
-  Codebase evidence: `crates/myosu-games-poker/src/artifacts.rs` exports `NlheEncoderArtifactBundle`, `NlheAbstractionManifest`, `NlheAbstractionArtifactEntry`. `crates/myosu-games-poker/examples/benchmark_scenario_pack.rs` exists and prints `benchmark_surface=repo-owned-reference-pack`. Bootstrap artifact tests prove the repo-owned encoder shape is sparse: `complete_streets=preflop`, `sampled_streets=flop,turn,river`, `postflop_complete=false`, total entries 241. Positive-iteration poker training rejects incomplete artifacts before solver work starts in `crates/myosu-miner/src/training.rs:223-241`.
-  Owns: `NlheArtifactDossier` and `NlheBenchmarkDossier` types in `crates/myosu-games-poker/src/artifacts.rs`. A dossier reader that can reference external artifact directories by SHA-256 hash.
-  Integration touchpoints: `crates/myosu-games-poker/src/artifacts.rs` (extend), `crates/myosu-games-poker/examples/benchmark_scenario_pack.rs` (reuse as benchmark surface), `crates/myosu-games-canonical/src/policy.rs` (CanonicalPolicyProvenance consumes dossier summary).
-  Scope boundary: Add dossier types and a reader/writer for benchmark summaries. The dossier should carry: artifact manifest hash, benchmark method, benchmark result, pass/fail against threshold, provenance chain. Do NOT check in large external artifacts. Do NOT change checkpoint format. The sparse bootstrap artifacts must remain as negative proof fixtures (a dossier built from them must not claim `promotable_local`). Mock strong-artifact tests only prove the dossier reader/writer; they do not authorize NLHE promotion without a real pinned artifact hash and benchmark output.
-  Acceptance criteria: (1) `NlheArtifactDossier` type exists with artifact_hash, manifest reference, benchmark_summary fields. (2) `NlheBenchmarkDossier` type exists with benchmark_id, metric_name, metric_value, threshold, passing fields. (3) Building a dossier from the sparse bootstrap artifacts reports `passing: false` against any meaningful threshold. (4) A dossier from hypothetical strong artifacts (mocked with known metric values) reports `passing: true`. (5) Dossier serializes to JSON for `outputs/solver-promotion/nlhe-heads-up/`.
-  Verification: `SKIP_WASM_BUILD=1 cargo test -p myosu-games-poker --quiet`; `SKIP_WASM_BUILD=1 cargo clippy -p myosu-games-poker -- -D warnings`.
-  Required tests: (a) Sparse bootstrap dossier fails threshold check. (b) Mock strong-artifact dossier passes threshold check. (c) Dossier JSON serialization roundtrip. (d) Dossier artifact_hash matches NlheAbstractionManifest.total_sha256.
-  Dependencies: POLICY-001 (CanonicalPolicyBenchmarkSummary type for interop).
-  Estimated scope: M
-  Completion signal: Dossier types exist. Sparse bootstrap negative test passes. Clippy clean.
-
 - [ ] `DOSSIER-002` Liar's Dice checkpoint dossier with exact exploitability
 
   Spec: `specs/110426-game-solver-core.md`

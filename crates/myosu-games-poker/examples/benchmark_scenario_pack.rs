@@ -4,16 +4,24 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use myosu_games_poker::{
-    PokerSolver, benchmark_solver_against_reference, bootstrap_encoder_streets,
-    bootstrap_reference_solver, load_encoder_bundle, load_encoder_dir, write_encoder_dir,
+    NlheBenchmarkDossier, PokerSolver, benchmark_solver_against_reference,
+    bootstrap_encoder_streets, bootstrap_reference_solver, load_encoder_bundle, load_encoder_dir,
+    load_nlhe_artifact_dossier, write_encoder_dir, write_nlhe_artifact_dossier,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = env::args().skip(1);
     let output_dir = PathBuf::from(required_arg(&mut args, "<output-dir>")?);
-    let external_candidate_checkpoint = args.next().map(PathBuf::from);
-    if let Some(extra) = args.next() {
-        return Err(format!("unexpected extra argument `{extra}`").into());
+    let mut external_candidate_checkpoint = None;
+    let mut dossier_output = None;
+    while let Some(arg) = args.next() {
+        if arg == "--dossier-output" {
+            dossier_output = Some(PathBuf::from(required_arg(&mut args, "<dossier-output>")?));
+        } else if external_candidate_checkpoint.is_none() {
+            external_candidate_checkpoint = Some(PathBuf::from(arg));
+        } else {
+            return Err(format!("unexpected extra argument `{arg}`").into());
+        }
     }
 
     fs::create_dir_all(&output_dir)?;
@@ -99,6 +107,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     println!("BENCHMARK benchmark_surface=repo-owned-reference-pack");
     println!("BENCHMARK engine_tier=dedicated-reference-pack");
+
+    if let Some(dossier_output) = dossier_output {
+        let benchmark_summary = NlheBenchmarkDossier::at_most(
+            "repo-owned-reference-pack",
+            "mean_l1_distance",
+            report.mean_l1_distance,
+            0.0,
+        );
+        let dossier = load_nlhe_artifact_dossier(
+            &encoder_dir,
+            Some(&artifact_bundle.total_sha256),
+            benchmark_summary,
+        )?;
+        write_nlhe_artifact_dossier(&dossier_output, &dossier)?;
+        println!("BENCHMARK dossier_output={}", display_path(&dossier_output));
+        println!(
+            "BENCHMARK dossier_passing={}",
+            dossier.benchmark_summary.passing
+        );
+    }
 
     Ok(())
 }

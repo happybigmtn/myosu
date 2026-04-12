@@ -606,7 +606,7 @@ impl NlheAbstractionManifest {
 }
 
 /// Operator-facing summary of a manifest-backed artifact set.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NlheEncoderArtifactSummary {
     pub version: u32,
     pub game: String,
@@ -694,6 +694,105 @@ impl NlheEncoderArtifactSummary {
     }
 }
 
+/// Benchmark threshold direction for an NLHE promotion dossier metric.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum NlheBenchmarkThresholdDirection {
+    AtMost,
+    AtLeast,
+}
+
+/// Benchmark evidence attached to an NLHE artifact dossier.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct NlheBenchmarkDossier {
+    pub benchmark_id: String,
+    pub benchmark_method: String,
+    pub metric_name: String,
+    pub metric_value: f64,
+    pub threshold: f64,
+    pub threshold_direction: NlheBenchmarkThresholdDirection,
+    pub passing: bool,
+}
+
+impl NlheBenchmarkDossier {
+    pub fn at_most(
+        benchmark_id: impl Into<String>,
+        metric_name: impl Into<String>,
+        metric_value: f64,
+        threshold: f64,
+    ) -> Self {
+        Self::new(
+            benchmark_id,
+            "nlhe-reference-pack-v1",
+            metric_name,
+            metric_value,
+            threshold,
+            NlheBenchmarkThresholdDirection::AtMost,
+        )
+    }
+
+    pub fn at_least(
+        benchmark_id: impl Into<String>,
+        metric_name: impl Into<String>,
+        metric_value: f64,
+        threshold: f64,
+    ) -> Self {
+        Self::new(
+            benchmark_id,
+            "nlhe-reference-pack-v1",
+            metric_name,
+            metric_value,
+            threshold,
+            NlheBenchmarkThresholdDirection::AtLeast,
+        )
+    }
+
+    pub fn new(
+        benchmark_id: impl Into<String>,
+        benchmark_method: impl Into<String>,
+        metric_name: impl Into<String>,
+        metric_value: f64,
+        threshold: f64,
+        threshold_direction: NlheBenchmarkThresholdDirection,
+    ) -> Self {
+        let passing = metric_value.is_finite()
+            && threshold.is_finite()
+            && match threshold_direction {
+                NlheBenchmarkThresholdDirection::AtMost => metric_value <= threshold,
+                NlheBenchmarkThresholdDirection::AtLeast => metric_value >= threshold,
+            };
+
+        Self {
+            benchmark_id: benchmark_id.into(),
+            benchmark_method: benchmark_method.into(),
+            metric_name: metric_name.into(),
+            metric_value,
+            threshold,
+            threshold_direction,
+            passing,
+        }
+    }
+}
+
+/// Manifest location and hash evidence for an NLHE artifact dossier.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NlheArtifactManifestReference {
+    pub artifact_dir: String,
+    pub manifest_path: String,
+    pub manifest_sha256: String,
+    pub manifest_total_sha256: String,
+}
+
+/// Hash-pinned NLHE artifact and benchmark evidence for promotion workflows.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct NlheArtifactDossier {
+    pub artifact_hash: String,
+    pub manifest_reference: NlheArtifactManifestReference,
+    pub manifest_summary: NlheEncoderArtifactSummary,
+    pub benchmark_summary: NlheBenchmarkDossier,
+    pub provenance_chain: Vec<String>,
+}
+
 /// Verified abstraction bundle loaded from a manifest-backed directory.
 pub struct NlheEncoderArtifactBundle {
     pub encoder: NlheEncoder,
@@ -760,11 +859,25 @@ pub enum ArtifactCodecError {
     },
     #[error("manifest total hash mismatch: expected {expected}, got {actual}")]
     TotalHashMismatch { expected: String, actual: String },
+    #[error("artifact dossier hash mismatch: expected {expected}, got {actual}")]
+    ArtifactHashMismatch { expected: String, actual: String },
     #[error("artifact `{path}` entry count mismatch: expected {expected}, got {actual}")]
     EntryCountMismatch {
         path: String,
         expected: u64,
         actual: u64,
+    },
+    #[error("failed to parse dossier `{path}`: {source}")]
+    DossierParse {
+        path: String,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("failed to serialize dossier `{path}`: {source}")]
+    DossierSerialize {
+        path: String,
+        #[source]
+        source: serde_json::Error,
     },
     #[error("duplicate isomorphism found while merging `{path}`")]
     DuplicateIsomorphism { path: String },
@@ -882,6 +995,96 @@ pub fn load_encoder_bundle(
 /// Load only the encoder from a manifest-backed directory.
 pub fn load_encoder_dir(directory: impl AsRef<Path>) -> Result<NlheEncoder, ArtifactCodecError> {
     load_encoder_bundle(directory).map(|bundle| bundle.encoder)
+}
+
+/// Load, verify, and summarize a manifest-backed artifact directory as a dossier.
+pub fn load_nlhe_artifact_dossier(
+    directory: impl AsRef<Path>,
+    expected_artifact_hash: Option<&str>,
+    benchmark_summary: NlheBenchmarkDossier,
+) -> Result<NlheArtifactDossier, ArtifactCodecError> {
+    let directory = directory.as_ref();
+    let manifest_path = directory.join(MANIFEST_FILE);
+    let manifest_bytes = fs::read(&manifest_path).map_err(|source| ArtifactCodecError::Read {
+        path: manifest_path.display().to_string(),
+        source,
+    })?;
+    let manifest_sha256 = sha256_hex(&manifest_bytes);
+    let bundle = load_encoder_bundle(directory)?;
+    let artifact_hash = bundle.total_sha256.clone();
+
+    if let Some(expected) = expected_artifact_hash {
+        let expected = normalized_hex(expected);
+        if artifact_hash != expected {
+            return Err(ArtifactCodecError::ArtifactHashMismatch {
+                expected,
+                actual: artifact_hash,
+            });
+        }
+    }
+
+    let manifest_summary = bundle.manifest.summary();
+    Ok(NlheArtifactDossier {
+        artifact_hash,
+        manifest_reference: NlheArtifactManifestReference {
+            artifact_dir: directory.display().to_string(),
+            manifest_path: manifest_path.display().to_string(),
+            manifest_sha256,
+            manifest_total_sha256: bundle.manifest.total_sha256,
+        },
+        manifest_summary,
+        benchmark_summary,
+        provenance_chain: vec![
+            "manifest_json_sha256_computed".to_string(),
+            "artifact_files_verified".to_string(),
+            "artifact_hash_verified".to_string(),
+            "benchmark_summary_attached".to_string(),
+        ],
+    })
+}
+
+/// Read a serialized NLHE artifact dossier from disk.
+pub fn read_nlhe_artifact_dossier(
+    path: impl AsRef<Path>,
+) -> Result<NlheArtifactDossier, ArtifactCodecError> {
+    let path = path.as_ref();
+    let bytes = fs::read(path).map_err(|source| ArtifactCodecError::Read {
+        path: path.display().to_string(),
+        source,
+    })?;
+
+    serde_json::from_slice(&bytes).map_err(|source| ArtifactCodecError::DossierParse {
+        path: path.display().to_string(),
+        source,
+    })
+}
+
+/// Write a serialized NLHE artifact dossier to disk.
+pub fn write_nlhe_artifact_dossier(
+    path: impl AsRef<Path>,
+    dossier: &NlheArtifactDossier,
+) -> Result<(), ArtifactCodecError> {
+    let path = path.as_ref();
+    if let Some(parent) = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        fs::create_dir_all(parent).map_err(|source| ArtifactCodecError::Write {
+            path: parent.display().to_string(),
+            source,
+        })?;
+    }
+
+    let bytes = serde_json::to_vec_pretty(dossier).map_err(|source| {
+        ArtifactCodecError::DossierSerialize {
+            path: path.display().to_string(),
+            source,
+        }
+    })?;
+    fs::write(path, bytes).map_err(|source| ArtifactCodecError::Write {
+        path: path.display().to_string(),
+        source,
+    })
 }
 
 /// Repo-owned bootstrap artifact shape used by examples and stage-0 proofs.
@@ -1282,6 +1485,95 @@ mod tests {
             summary.coverage_token(),
             "preflop=169/169,flop=24/1286792,turn=24/13960050,river=24/123156254"
         );
+
+        fs::remove_dir_all(&directory).expect("artifact dir should clean up");
+    }
+
+    #[test]
+    fn sparse_bootstrap_dossier_fails_reference_pack_threshold() {
+        let directory = unique_artifact_dir();
+        let manifest = write_encoder_dir(&directory, bootstrap_encoder_streets())
+            .expect("bootstrap encoder dir should write");
+        let candidate = crate::PokerSolver::new(
+            load_encoder_dir(&directory).expect("bootstrap encoder should load"),
+        );
+        let report = crate::benchmark_against_bootstrap_reference(&candidate)
+            .expect("reference benchmark should run");
+        let benchmark = NlheBenchmarkDossier::at_most(
+            "repo-owned-reference-pack",
+            "mean_l1_distance",
+            report.mean_l1_distance,
+            0.0,
+        );
+
+        let dossier =
+            load_nlhe_artifact_dossier(&directory, Some(&manifest.total_sha256), benchmark)
+                .expect("dossier should load");
+
+        assert_eq!(dossier.artifact_hash, manifest.total_sha256);
+        assert_eq!(
+            dossier.manifest_reference.manifest_total_sha256,
+            manifest.total_sha256
+        );
+        assert_eq!(dossier.manifest_summary.total_entries, 241);
+        assert!(!dossier.manifest_summary.postflop_complete);
+        assert!(!dossier.benchmark_summary.passing);
+
+        fs::remove_dir_all(&directory).expect("artifact dir should clean up");
+    }
+
+    #[test]
+    fn mock_strong_artifact_dossier_passes_reference_pack_threshold() {
+        let directory = unique_artifact_dir();
+        let manifest = write_encoder_dir(&directory, bootstrap_encoder_streets())
+            .expect("bootstrap encoder dir should write");
+        let benchmark = NlheBenchmarkDossier::at_most(
+            "mock-strong-reference-pack",
+            "mean_l1_distance",
+            0.0,
+            0.01,
+        );
+
+        let dossier =
+            load_nlhe_artifact_dossier(&directory, Some(&manifest.total_sha256), benchmark)
+                .expect("dossier should load");
+
+        assert_eq!(dossier.artifact_hash, manifest.total_sha256);
+        assert!(dossier.benchmark_summary.passing);
+        assert!(
+            dossier
+                .provenance_chain
+                .iter()
+                .any(|step| step == "artifact_hash_verified")
+        );
+
+        fs::remove_dir_all(&directory).expect("artifact dir should clean up");
+    }
+
+    #[test]
+    fn dossier_json_roundtrips_for_solver_promotion_output() {
+        let directory = unique_artifact_dir();
+        let output_dir = directory.join("outputs/solver-promotion/nlhe-heads-up");
+        let artifact_dir = directory.join("encoder");
+        let manifest = write_encoder_dir(&artifact_dir, bootstrap_encoder_streets())
+            .expect("bootstrap encoder dir should write");
+        let benchmark = NlheBenchmarkDossier::at_most(
+            "mock-strong-reference-pack",
+            "mean_l1_distance",
+            0.0,
+            0.01,
+        );
+        let dossier =
+            load_nlhe_artifact_dossier(&artifact_dir, Some(&manifest.total_sha256), benchmark)
+                .expect("dossier should load");
+        let dossier_path = output_dir.join("artifact-dossier.json");
+
+        write_nlhe_artifact_dossier(&dossier_path, &dossier)
+            .expect("dossier should write to promotion output");
+        let roundtrip = read_nlhe_artifact_dossier(&dossier_path)
+            .expect("dossier should read from promotion output");
+
+        assert_eq!(roundtrip, dossier);
 
         fs::remove_dir_all(&directory).expect("artifact dir should clean up");
     }
