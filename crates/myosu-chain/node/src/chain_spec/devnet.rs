@@ -110,6 +110,88 @@ mod tests {
     }
 
     #[test]
+    fn devnet_operator_set_endows_both_validators_with_distinct_accounts() {
+        // The stage0 multi-validator compose path depends on TWO endowed
+        // validator accounts (//myosu//devnet//validator-1 and
+        // //myosu//devnet//validator-2) so the second-validator compose
+        // service can register/stake/submit-weights against the same miner
+        // alongside the first. This test guards the operator set shape: both
+        // validator URIs must be present, both must resolve to distinct
+        // sr25519 account ids, and the broader operator set must include the
+        // //myosu//devnet//miner-1 hotkey that both validators will weight
+        // toward. If a future change drops validator-2 from
+        // `DEVNET_OPERATOR_URIS`, the second compose service would have
+        // nothing to register against and the multi-validator proof would
+        // fail to find a target UID for its `set_weights` extrinsic.
+        use frame_system::Account;
+
+        let validator_1_uri = "//myosu//devnet//validator-1";
+        let validator_2_uri = "//myosu//devnet//validator-2";
+        let miner_1_uri = "//myosu//devnet//miner-1";
+
+        assert!(
+            DEVNET_OPERATOR_URIS.contains(&validator_1_uri),
+            "devnet operator URIs must endow //myosu//devnet//validator-1"
+        );
+        assert!(
+            DEVNET_OPERATOR_URIS.contains(&validator_2_uri),
+            "devnet operator URIs must endow //myosu//devnet//validator-2"
+        );
+        assert!(
+            DEVNET_OPERATOR_URIS.contains(&miner_1_uri),
+            "devnet operator URIs must endow //myosu//devnet//miner-1"
+        );
+
+        let validator_1_account =
+            crate::chain_spec::get_account_id_from_uri::<sr25519::Public>(validator_1_uri);
+        let validator_2_account =
+            crate::chain_spec::get_account_id_from_uri::<sr25519::Public>(validator_2_uri);
+        let miner_1_account =
+            crate::chain_spec::get_account_id_from_uri::<sr25519::Public>(miner_1_uri);
+
+        assert_ne!(
+            validator_1_account, validator_2_account,
+            "validator-1 and validator-2 must resolve to distinct sr25519 accounts"
+        );
+        assert_ne!(
+            validator_1_account, miner_1_account,
+            "validator-1 and miner-1 must resolve to distinct sr25519 accounts"
+        );
+        assert_ne!(
+            validator_2_account, miner_1_account,
+            "validator-2 and miner-1 must resolve to distinct sr25519 accounts"
+        );
+
+        // Build the spec and confirm the operator endowments land in the
+        // System account store (Balances delegates `AccountStore = System`).
+        // The endowments flow through `endowed_accounts()` in
+        // `game_solver_spec.rs`; verifying that each operator URI has a
+        // non-zero free balance in the resulting externalities is the
+        // cheapest way to catch a refactor that drops a row.
+        let spec = devnet_config().expect("devnet spec should build");
+        let mut ext = TestExternalities::from(spec.build_storage().expect("storage"));
+
+        ext.execute_with(|| {
+            for (label, account) in [
+                ("validator-1", &validator_1_account),
+                ("validator-2", &validator_2_account),
+                ("miner-1", &miner_1_account),
+                ("subnet-owner", &crate::chain_spec::get_account_id_from_uri::<sr25519::Public>(
+                    DEVNET_SUBNET_OWNER_URI,
+                )),
+            ] {
+                let info = Account::<Runtime>::get(account);
+                assert!(
+                    info.data.free > 0,
+                    "devnet genesis must endow {} ({} rao free) in the System account store",
+                    label,
+                    info.data.free
+                );
+            }
+        });
+    }
+
+    #[test]
     fn devnet_config_bootstraps_subnet_seven_in_storage() {
         let spec = devnet_config().expect("devnet spec should build");
         let mut ext = TestExternalities::from(spec.build_storage().expect("storage"));

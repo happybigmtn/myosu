@@ -61,6 +61,9 @@ services:
     volumes:
       - operator-data:/var/lib/myosu
 
+  # First validator: the long-running --exit-code-from proof source. Registers,
+  # stakes, scores the miner response, and submits on-chain weights for
+  # //myosu//devnet//miner-1 from //myosu//devnet//validator-1.
   validator:
     build:
       context: .
@@ -78,6 +81,37 @@ services:
       MYOSU_SUBNET: "7"
       MYOSU_OWNER_KEY: //myosu//devnet//subnet-owner
       MYOSU_VALIDATOR_KEY: //myosu//devnet//validator-1
+      MYOSU_MINER_HOTKEY: //myosu//devnet//miner-1
+      MYOSU_VALIDATOR_STAKE: "100000000000000"
+      MYOSU_MINER_HTTP_ENDPOINT: http://miner:8080/health
+      MYOSU_RPC_TIMEOUT_SECS: "240"
+    volumes:
+      - operator-data:/var/lib/myosu
+
+  # Second validator: the stage0 multi-validator compose path. Shares the same
+  # miner artifacts (via `operator-data`) and the same chain, but is keyed to
+  # //myosu//devnet//validator-2 (already endowed in `devnet.rs`'s operator set).
+  # Its weight submission lands under a distinct on-chain `Weights` row whose
+  # target UID and weight value must match `validator-1`'s row exactly (this is
+  # the integer-typed analogue of the INV-003 epsilon < 1e-6 agreement the
+  # docs/policy require for two-validator agreement).
+  validator-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: validator-runtime
+    user: "0:0"
+    depends_on:
+      chain:
+        condition: service_healthy
+      miner:
+        condition: service_healthy
+    environment:
+      MYOSU_CHAIN_ENDPOINT: ws://chain:9944
+      MYOSU_CHAIN_HTTP_ENDPOINT: http://chain:9944
+      MYOSU_SUBNET: "7"
+      MYOSU_OWNER_KEY: //myosu//devnet//subnet-owner
+      MYOSU_VALIDATOR_KEY: //myosu//devnet//validator-2
       MYOSU_MINER_HOTKEY: //myosu//devnet//miner-1
       MYOSU_VALIDATOR_STAKE: "100000000000000"
       MYOSU_MINER_HTTP_ENDPOINT: http://miner:8080/health

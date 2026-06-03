@@ -252,6 +252,131 @@ pub struct EpochOutcomeReport {
     pub miner_emission: u64,
 }
 
+/// Report describing the multi-validator agreement evaluation that powers
+/// the stage0 compose proof. Computed from two `Weights` rows plus a target
+/// miner UID; the on-chain `Weights` row is a `Vec<(u16, u16)>` so the
+/// post-quantization agreement check reduces to integer equality (the
+/// `epsilon` is the score-domain tolerance the rest of INV-003 uses, here
+/// floored to 0 weight units because u16 weights cannot be non-finite).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ValidatorAgreementReport {
+    pub miner_uid: u16,
+    pub validator_a_target_weight: u16,
+    pub validator_b_target_weight: u16,
+    pub delta: u16,
+    pub agreement_within_epsilon: bool,
+}
+
+/// Looks up the integer weight one validator assigned to a given miner UID
+/// in the `Weights` row returned by `get_weights_for_uid`. Returns 0 when
+/// the row is empty or does not contain the miner (the on-chain contract
+/// stores absent entries as 0 weight).
+pub fn target_weight_in_row(weights: &[(u16, u16)], target_uid: u16) -> u16 {
+    weights
+        .iter()
+        .find_map(|(uid, weight)| if *uid == target_uid { Some(*weight) } else { None })
+        .unwrap_or(0)
+}
+
+/// Evaluates the two-validator agreement invariant that gates the stage0
+/// multi-validator compose proof: both validators' on-chain `Weights` rows
+/// must agree on the integer weight they assigned to the target miner UID,
+/// and the agreement must hold within the supplied INV-003 epsilon window.
+/// The on-chain row stores `u16` weights, so a non-zero `delta` is the
+/// fail-closed condition.
+pub fn evaluate_validator_agreement(
+    validator_a_weights: &[(u16, u16)],
+    validator_b_weights: &[(u16, u16)],
+    miner_uid: u16,
+    epsilon: f64,
+) -> Result<ValidatorAgreementReport, ValidatorAgreementError> {
+    if !epsilon.is_finite() || epsilon < 0.0 {
+        return Err(ValidatorAgreementError::InvalidEpsilon { epsilon });
+    }
+    let validator_a_target_weight = target_weight_in_row(validator_a_weights, miner_uid);
+    let validator_b_target_weight = target_weight_in_row(validator_b_weights, miner_uid);
+    let a = f64::from(validator_a_target_weight);
+    let b = f64::from(validator_b_target_weight);
+    let delta = (a - b).abs();
+    let agreement_within_epsilon = a == b || delta <= epsilon;
+    if validator_a_target_weight == 0 || validator_b_target_weight == 0 {
+        return Err(ValidatorAgreementError::MissingTargetWeight {
+            miner_uid,
+            validator_a_target_weight,
+            validator_b_target_weight,
+        });
+    }
+    if !agreement_within_epsilon {
+        return Err(ValidatorAgreementError::WeightsDiverge {
+            miner_uid,
+            validator_a_target_weight,
+            validator_b_target_weight,
+            delta,
+            epsilon,
+        });
+    }
+    let delta_u16 = u16::try_from(delta as u64).unwrap_or(u16::MAX);
+    Ok(ValidatorAgreementReport {
+        miner_uid,
+        validator_a_target_weight,
+        validator_b_target_weight,
+        delta: delta_u16,
+        agreement_within_epsilon,
+    })
+}
+
+/// Errors returned by [`evaluate_validator_agreement`].
+#[derive(Clone, Debug, PartialEq)]
+pub enum ValidatorAgreementError {
+    /// The supplied epsilon was not finite or was negative.
+    InvalidEpsilon { epsilon: f64 },
+    /// At least one validator's `Weights` row is missing the miner UID
+    /// (i.e. the integer weight for the target is 0).
+    MissingTargetWeight {
+        miner_uid: u16,
+        validator_a_target_weight: u16,
+        validator_b_target_weight: u16,
+    },
+    /// The two validators' weights diverge beyond the INV-003 epsilon.
+    WeightsDiverge {
+        miner_uid: u16,
+        validator_a_target_weight: u16,
+        validator_b_target_weight: u16,
+        delta: f64,
+        epsilon: f64,
+    },
+}
+
+impl std::fmt::Display for ValidatorAgreementError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ValidatorAgreementError::InvalidEpsilon { epsilon } => {
+                write!(f, "epsilon must be finite and non-negative: {epsilon}")
+            }
+            ValidatorAgreementError::MissingTargetWeight {
+                miner_uid,
+                validator_a_target_weight,
+                validator_b_target_weight,
+            } => write!(
+                f,
+                "validator weights missing miner_uid={miner_uid} entry: validator_a={validator_a_target_weight} validator_b={validator_b_target_weight}"
+            ),
+            ValidatorAgreementError::WeightsDiverge {
+                miner_uid,
+                validator_a_target_weight,
+                validator_b_target_weight,
+                delta,
+                epsilon,
+            } => write!(
+                f,
+                "validator weights diverge beyond INV-003 epsilon: miner_uid={miner_uid} validator_a={validator_a_target_weight} validator_b={validator_b_target_weight} delta={delta} epsilon={epsilon}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ValidatorAgreementError {}
+
 /// Chain-visible miner metadata derived from incentive, key, and axon state.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChainVisibleMiner {
@@ -1999,7 +2124,9 @@ mod tests {
     use super::DEFAULT_NETWORK_RATE_LIMIT;
     use super::DEFAULT_SUBNET_TEMPO;
     use super::RpcMethods;
+    use super::ValidatorAgreementError;
     use super::axon_storage_key;
+    use super::evaluate_validator_agreement;
     use super::extrinsic_hash_hex;
     use super::format_axon_endpoint;
     use super::hotkey_alpha_storage_key;
@@ -2009,6 +2136,7 @@ mod tests {
     use super::normalize_ws_endpoint;
     use super::parse_header_number;
     use super::storage_prefix;
+    use super::target_weight_in_row;
     use super::uid_storage_key;
     use super::weights_storage_key;
     use pallet_game_solver::AxonInfo;
@@ -2193,5 +2321,128 @@ mod tests {
         )
         .expect("extrinsic index should resolve");
         assert_eq!(index, Some(0));
+    }
+
+    #[test]
+    fn target_weight_in_row_returns_zero_for_missing_uid() {
+        let weights = vec![(1_u16, 65535_u16), (2, 32768)];
+        assert_eq!(target_weight_in_row(&weights, 1), 65535);
+        assert_eq!(target_weight_in_row(&weights, 2), 32768);
+        assert_eq!(target_weight_in_row(&weights, 99), 0);
+        assert_eq!(target_weight_in_row(&[], 1), 0);
+    }
+
+    #[test]
+    fn evaluate_validator_agreement_passes_for_identical_rows() {
+        let weights = vec![(1_u16, 65535_u16), (2, 32768)];
+        let report = evaluate_validator_agreement(&weights, &weights, 1, 1.0e-6)
+            .expect("identical rows should agree");
+        assert_eq!(report.miner_uid, 1);
+        assert_eq!(report.validator_a_target_weight, 65535);
+        assert_eq!(report.validator_b_target_weight, 65535);
+        assert_eq!(report.delta, 0);
+        assert!(report.agreement_within_epsilon);
+    }
+
+    #[test]
+    fn evaluate_validator_agreement_passes_when_within_inv_003_epsilon() {
+        // u16 weights are integers, so a within-epsilon agreement is just
+        // exact equality. The epsilon path still resolves to true because
+        // exact equality is the stronger condition.
+        let validator_a = vec![(3_u16, 12_345_u16), (4, 100)];
+        let validator_b = vec![(3_u16, 12_345_u16), (4, 100)];
+        let report = evaluate_validator_agreement(&validator_a, &validator_b, 3, 1.0e-6)
+            .expect("identical integer weights should agree");
+        assert_eq!(report.validator_a_target_weight, 12_345);
+        assert_eq!(report.validator_b_target_weight, 12_345);
+        assert!(report.agreement_within_epsilon);
+    }
+
+    #[test]
+    fn evaluate_validator_agreement_rejects_diverging_weights() {
+        let validator_a = vec![(1_u16, 60_000_u16)];
+        let validator_b = vec![(1_u16, 1_u16)];
+        let error = evaluate_validator_agreement(&validator_a, &validator_b, 1, 1.0e-6)
+            .expect_err("diverging u16 weights must fail closed");
+        match error {
+            ValidatorAgreementError::WeightsDiverge {
+                miner_uid,
+                validator_a_target_weight,
+                validator_b_target_weight,
+                delta,
+                epsilon,
+            } => {
+                assert_eq!(miner_uid, 1);
+                assert_eq!(validator_a_target_weight, 60_000);
+                assert_eq!(validator_b_target_weight, 1);
+                assert!(delta > epsilon);
+            }
+            other => panic!("expected WeightsDiverge, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn evaluate_validator_agreement_rejects_missing_target_weight() {
+        // Empty weight row on validator B → its target weight is 0 →
+        // MissingTargetWeight is the fail-closed condition (the same
+        // failure mode the bash proof treats as `validator_b_target_weight==0`).
+        let validator_a = vec![(1_u16, 12_345_u16)];
+        let validator_b: Vec<(u16, u16)> = vec![];
+        let error = evaluate_validator_agreement(&validator_a, &validator_b, 1, 1.0e-6)
+            .expect_err("missing miner entry must fail closed");
+        match error {
+            ValidatorAgreementError::MissingTargetWeight {
+                miner_uid,
+                validator_a_target_weight,
+                validator_b_target_weight,
+            } => {
+                assert_eq!(miner_uid, 1);
+                assert_eq!(validator_a_target_weight, 12_345);
+                assert_eq!(validator_b_target_weight, 0);
+            }
+            other => panic!("expected MissingTargetWeight, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn evaluate_validator_agreement_rejects_zero_validator_a_weight() {
+        let validator_a: Vec<(u16, u16)> = vec![];
+        let validator_b = vec![(1_u16, 12_345_u16)];
+        let error = evaluate_validator_agreement(&validator_a, &validator_b, 1, 1.0e-6)
+            .expect_err("missing miner entry on validator A must fail closed");
+        assert!(matches!(
+            error,
+            ValidatorAgreementError::MissingTargetWeight { .. }
+        ));
+    }
+
+    #[test]
+    fn evaluate_validator_agreement_rejects_invalid_epsilon() {
+        let weights = vec![(1_u16, 12_345_u16)];
+        assert!(matches!(
+            evaluate_validator_agreement(&weights, &weights, 1, f64::NAN),
+            Err(ValidatorAgreementError::InvalidEpsilon { .. })
+        ));
+        assert!(matches!(
+            evaluate_validator_agreement(&weights, &weights, 1, -1.0),
+            Err(ValidatorAgreementError::InvalidEpsilon { .. })
+        ));
+        assert!(matches!(
+            evaluate_validator_agreement(&weights, &weights, 1, f64::INFINITY),
+            Err(ValidatorAgreementError::InvalidEpsilon { .. })
+        ));
+    }
+
+    #[test]
+    fn evaluate_validator_agreement_ignores_unrelated_uid_rows() {
+        // The agreement check must look up *only* the target UID; other
+        // entries in the row should not move the verdict.
+        let validator_a = vec![(1_u16, 12_345_u16), (7, 99), (8, 0)];
+        let validator_b = vec![(1_u16, 12_345_u16), (7, 1), (8, 50_000)];
+        let report = evaluate_validator_agreement(&validator_a, &validator_b, 1, 1.0e-6)
+            .expect("target UID matches exactly, unrelated rows must not affect verdict");
+        assert_eq!(report.validator_a_target_weight, 12_345);
+        assert_eq!(report.validator_b_target_weight, 12_345);
+        assert!(report.agreement_within_epsilon);
     }
 }
