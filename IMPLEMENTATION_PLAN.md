@@ -1,5 +1,17 @@
 # IMPLEMENTATION_PLAN
 
+## CEO Testnet Roadmap — Immediate P0 (signed 2026-06-03)
+
+North star: A named multi-node Myosu testnet where miners submit strategy, two validators score it identically, emissions flow by measured quality, and a human/agent reads a solved hand through the same gameplay surface against that live chain.
+Full roadmap: genesis/plans/000-ceo-testnet-roadmap.md
+
+- [ ] [P0] Replace the testnet chain-spec stub: make `finney_testnet_config` in `crates/myosu-chain/node/src/chain_spec/testnet.rs` call the full game-solver genesis builder (factor the devnet provisioning in `devnet.rs:95-175` into a shared `genesis_with_game_solver(...)` and invoke it for testnet with testnet authority/owner/operator URIs) so the testnet spec bootstraps subnet 7, a subnet owner, and staking pools.
+- [ ] [P0] Add a `build-spec --chain testnet --raw` proof test under `crates/myosu-chain/node/tests/` asserting the raw genesis JSON contains subnet 7, a non-empty subnet owner, and `SubnetworkN(7)`-backing storage keys (fail-closed if the game-solver patch is absent).
+- [ ] [P0] Extend the stage0 multi-node compose path to a second validator: add a `validator-2` service using `//myosu//devnet//validator-2` (already endowed in devnet genesis) and assert both validators' submitted weights for `miner-1` agree within INV-003 epsilon in the compose proof's exit check.
+- [ ] [P0] Add a testnet operator entrypoint + healthcheck: a `chain-testnet-entrypoint.sh` and a compose profile (or `docker-compose.testnet.yml`) that boots the node from the testnet spec, registers the subnet owner, and exposes a persistent CORS-enabled WS/HTTP RPC endpoint that survives the proof run (not exit-on-validator).
+- [ ] [P0] Add a live-read proof: a `myosu-play --chain-endpoint ws://... --read-solved` mode (or a `myosu-chain-client` example) that connects to a running node, discovers the miner axon, plays one poker hand, and prints `bundle_hash`, `miner_uid`, and `emission` — the externally-verifiable "read a solved result through the same surface" milestone.
+
+
 Generated: 2026-04-11
 Codebase snapshot: trunk @ 4e0b37fbaa + local
 Specs: gen-20260411-205202/specs/110426-*.md
