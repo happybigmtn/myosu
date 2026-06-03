@@ -2,6 +2,7 @@
 
 pub mod devnet;
 pub mod finney;
+pub mod game_solver_spec;
 pub mod localnet;
 pub mod testnet;
 

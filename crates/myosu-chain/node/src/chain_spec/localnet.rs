@@ -107,9 +107,14 @@ pub(super) fn genesis_patch(
         genesis
             .as_object_mut()
             .expect("genesis patch must stay as an object")
-            // The default-build runtime still deserializes this inherited
-            // genesis field name even though live storage is under GameSolver.
-            .insert("subtensorModule".into(), game_solver);
+            // The runtime's `construct_runtime!` registers the pallet under the
+            // name `GameSolver`, and the `#[pallet::genesis_config]` derive
+            // serializes its fields in camelCase. The genesis patch therefore
+            // has to use the matching struct name (`gameSolver`) and the
+            // matching field names; the old `subtensorModule` name is the
+            // pre-restart legacy alias and the deserializer rejects it as an
+            // unknown field.
+            .insert("gameSolver".into(), game_solver);
     }
 
     genesis
