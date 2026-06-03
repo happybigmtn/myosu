@@ -30,7 +30,7 @@ After PROMOTE-001 unblocks, both dedicated games must be at `promotable_local` w
 
 ---
 
-- [ ] `SEC-001` Triage all 19 advisory suppressions
+- [x] `SEC-001` Triage all 19 advisory suppressions
 
   Spec: `specs/110426-security-posture.md`
   Why now: The CI advisory allowlist has grown to 19 entries (up from 7 in the 2026-04-03 review). Plan 008 proposes triage. Each advisory should have an explicit classification (remediate, accept, defer) with documented rationale. This is independent of promotion work and can run in parallel.
