@@ -87,38 +87,3 @@ The upstream dependency review and cve-tracking process lives in
 with the current `cargo audit` ignore list and any upstream pin changes.
 
 This repository does not currently run a bug bounty program.
-
-## SEC-001 Advisory Triage Table (2026-06-03)
-
-All 19 RUSTSEC advisories suppressed in `.github/workflows/ci.yml` have been triaged per the security-posture spec. Classifications:
-
-| Advisory | Classification | Rationale / Justification | Owner |
-|----------|----------------|---------------------------|-------|
-| RUSTSEC-2025-0009 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2025-0055 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2023-0091 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2024-0438 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2025-0118 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2026-0020 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2026-0021 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2025-0141 | accept (direct) | bincode 1.3.3 used for checkpoint/wire serialization in game crates (poker, liars-dice, kuhn). Decision deferred to SEC-002; decode budget limits (1 MiB) already in place as mitigation. See `crates/myosu-games-*/src/{solver,wire,artifacts}.rs`. | myosu (direct) |
-| RUSTSEC-2024-0388 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2025-0057 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2024-0384 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2020-0168 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2022-0061 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2024-0436 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2024-0370 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2025-0010 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2021-0127 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2026-0002 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-| RUSTSEC-2024-0442 | defer (inherited) | From opentensor/polkadot-sdk fork; no direct Myosu code path reaches the affected component. | myosu (inherited) |
-
-**Notes**:
-- 18/19 are inherited chain advisories with "no direct Myosu usage" justification.
-- The single direct advisory (bincode) is accepted pending SEC-002 decision; risk mitigated by existing size limits.
-- No workspace-level advisories (paste, lru) currently appear in the active allowlist.
-- CI allowlist comment updated to reference this table.
-- This unblocks F-004/F-005 bitino integration by satisfying SEC-001 acceptance criteria.
-
-Updated CI allowlist justification comment and added this table to satisfy the triage requirement.
