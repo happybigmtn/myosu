@@ -1,0 +1,108 @@
+# Persistent Myosu testnet entrypoint + healthcheck.
+#
+# Implements the P0 row in IMPLEMENTATION_PLAN.md:
+#   "Add a testnet operator entrypoint + healthcheck: a
+#    `chain-testnet-entrypoint.sh` and a compose profile (or
+#    `docker-compose.testnet.yml`) that boots the node from the testnet
+#    spec, registers the subnet owner, and exposes a persistent
+#    CORS-enabled WS/HTTP RPC endpoint that survives the proof run (not
+#    exit-on-validator)."
+#
+# Topology (mirrors the devnet compose, but the `chain` service is keyed
+# to the testnet spec and the sidecar `subnet-owner-init` service handles
+# the one-shot subnet-owner registration):
+#
+#   [chain (test_finney spec, validator, force-authoring,
+#           rpc-external + rpc-cors all + rpc-methods unsafe)]
+#        |
+#        |   ws:// / http://
+#        +--> [subnet-owner-init (one-shot, runs
+#                myosu-validator --enable-subtoken, exits 0)]
+#
+# After `subnet-owner-init` exits, `chain` keeps running. External
+# `myosu-miner` / `myosu-validator` / `myosu-chain-client` clients connect
+# to ws://localhost:9944 / http://localhost:9944 and find subnet 7 with
+# its testnet owner already registered. The chain's persistent volume
+# (`testnet-chain-data`) survives `docker compose down` so subsequent
+# `docker compose up` runs continue the same chain.
+#
+# Usage:
+#   docker compose -f docker-compose.testnet.yml up -d
+#   curl -fsS -H 'Content-Type: application/json' \
+#     -d '{"jsonrpc":"2.0","id":1,"method":"system_health","params":[]}' \
+#     http://127.0.0.1:9944
+#   docker compose -f docker-compose.testnet.yml logs chain
+#   docker compose -f docker-compose.testnet.yml down
+#
+# The bash proof at `tests/e2e/testnet_entrypoint_compose.sh` exercises
+# the same topology as a process tree (no docker required) and asserts:
+#   1. `chain` reaches block N within T seconds
+#   2. `system_health` returns `isSyncing=false` and `peers>=0`
+#   3. `subnet-owner-init` prints the `SUBTOKEN myosu-validator subnet ok`
+#      success line
+#   4. The on-chain `SubnetOwner(7)` storage key is non-default
+#   5. The chain RPC is still healthy AFTER `subnet-owner-init` exits
+#      (i.e. the chain did not exit-on-validator)
+
+services:
+  chain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: chain-runtime
+    user: "0:0"
+    entrypoint:
+      - /usr/local/bin/chain-testnet-entrypoint.sh
+    environment:
+      MYOSU_NODE_AUTHORITY_SURI: //myosu//testnet//authority-1
+      MYOSU_CHAIN_SPEC: test_finney
+      MYOSU_BASE_PATH: /var/lib/myosu/chain
+      MYOSU_RPC_PORT: "9944"
+      MYOSU_RPC_CORS: "all"
+      MYOSU_RPC_METHODS: "unsafe"
+      MYOSU_PROMETHEUS_PORT: "9615"
+      MYOSU_P2P_PORT: "30333"
+      MYOSU_NODE_NAME: Container Testnet Authority
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          curl -fsS -H 'Content-Type: application/json'
+          -d '{"jsonrpc":"2.0","id":1,"method":"system_health","params":[]}'
+          http://127.0.0.1:9944 >/dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 36
+      start_period: 10s
+    ports:
+      - "9944:9944"
+    volumes:
+      - testnet-chain-data:/var/lib/myosu/chain
+
+  # One-shot subnet-owner registration. Waits for the chain's RPC to be
+  # healthy, runs `myosu-validator --enable-subtoken` to enable subnet 7
+  # staking on the testnet chain, then exits successfully. The chain
+  # service keeps running independently so its CORS-enabled RPC
+  # endpoint remains available to external clients after registration
+  # completes.
+  subnet-owner-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: validator-runtime
+    user: "0:0"
+    depends_on:
+      chain:
+        condition: service_healthy
+    environment:
+      MYOSU_CHAIN_ENDPOINT: ws://chain:9944
+      MYOSU_CHAIN_HTTP_ENDPOINT: http://chain:9944
+      MYOSU_SUBNET: "7"
+      MYOSU_OWNER_KEY: //myosu//testnet//subnet-owner
+      MYOSU_RPC_TIMEOUT_SECS: "180"
+    entrypoint:
+      - /usr/local/bin/chain-testnet-subnet-owner-init.sh
+    restart: "no"
+
+volumes:
+  testnet-chain-data:

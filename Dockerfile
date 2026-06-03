@@ -67,7 +67,10 @@ COPY --from=chain-builder --chown=myosu:myosu \
     /usr/local/bin/myosu-chain
 COPY --chown=myosu:myosu ops/docker/chain-devnet-entrypoint.sh \
     /usr/local/bin/chain-devnet-entrypoint.sh
-RUN chmod +x /usr/local/bin/chain-devnet-entrypoint.sh
+COPY --chown=myosu:myosu ops/docker/chain-testnet-entrypoint.sh \
+    /usr/local/bin/chain-testnet-entrypoint.sh
+RUN chmod +x /usr/local/bin/chain-devnet-entrypoint.sh \
+    /usr/local/bin/chain-testnet-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/myosu-chain"]
 
@@ -99,6 +102,10 @@ COPY --chown=myosu:myosu ops/docker/wait-for-rpc.sh \
     /usr/local/bin/wait-for-rpc.sh
 COPY --chown=myosu:myosu ops/docker/validator-devnet-entrypoint.sh \
     /usr/local/bin/validator-devnet-entrypoint.sh
-RUN chmod +x /usr/local/bin/wait-for-rpc.sh /usr/local/bin/validator-devnet-entrypoint.sh
+COPY --chown=myosu:myosu ops/docker/chain-testnet-subnet-owner-init.sh \
+    /usr/local/bin/chain-testnet-subnet-owner-init.sh
+RUN chmod +x /usr/local/bin/wait-for-rpc.sh \
+    /usr/local/bin/validator-devnet-entrypoint.sh \
+    /usr/local/bin/chain-testnet-subnet-owner-init.sh
 
 ENTRYPOINT ["/usr/local/bin/validator-devnet-entrypoint.sh"]
