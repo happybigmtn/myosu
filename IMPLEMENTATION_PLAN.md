@@ -57,7 +57,7 @@ After PROMOTE-001 unblocks, both dedicated games must be at `promotable_local` w
   Estimated scope: S
   Completion signal: All 19 advisories classified. Allowlist reduced where feasible. CI green.
 
-- [ ] `SEC-002` Bincode 1.3.3 migration decision
+- [x] `SEC-002` Bincode 1.3.3 migration decision
 
   Spec: `specs/110426-security-posture.md`
   Why now: RUSTSEC-2025-0141 is the only directly owned advisory in the allowlist. It affects wire paths in all three dedicated solver crates plus checkpoint/artifact paths in poker and Liar's Dice. The decision (migrate to bincode 2.x/postcard, or accept with documented rationale) must be made before any future payload-bearing checkpoint format changes.
@@ -71,6 +71,8 @@ After PROMOTE-001 unblocks, both dedicated games must be at `promotable_local` w
   Dependencies: None (parallel with promotion work).
   Estimated scope: S
   Completion signal: Decision documented with rationale and blast radius assessment.
+
+  Resolution: ADR 012 in `docs/adr/012-bincode-1.3.3-decision.md` accepts bincode 1.3.3 with hardened decode budgets. The full blast-radius table is in the ADR, including wire formats, poker artifacts, poker checkpoints, Liar's Dice checkpoints, Kuhn exact-solver checkpoints (which do not use a bincode payload), and the robopoker fork (which does not depend on bincode). The kuhn wire decode budget was reduced from 256 MiB to 1 MiB in the same change (`myosu-games-kuhn/src/wire.rs:7-13`) so it matches every other wire and checkpoint site. `SECURITY.md` and `.github/workflows/ci.yml` were updated to cross-link the audit allowlist row to ADR 012. `ops/decision_log.md` records the decision with rationale and alternatives considered.
 
 - [ ] `DX-001` Consolidate critical operator caveats
 

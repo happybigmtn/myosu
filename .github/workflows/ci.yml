@@ -380,7 +380,7 @@ jobs:
           # comment breaks the consistency test.
           cargo audit \
             -D warnings \
-            # --- direct-owned (game crate bincode 1.x; SEC-002 deferral) --- \
+            # --- direct-owned (game crate bincode 1.x; SEC-002 accept per ADR 012) --- \
             --ignore RUSTSEC-2025-0141 \
             # --- inherited-chain (polkadot-sdk fork) --- \
             --ignore RUSTSEC-2025-0009 \

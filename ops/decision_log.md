@@ -233,3 +233,40 @@ Rationale: INV-003 (game verification determinism) is the single most important
 correctness property. VO-03 and VO-04 test determinism in isolation, but no
 existing AC proves two independently initialized validators agree. This is the
 no-ship gate for consensus validity.
+
+## 2026-06-03: SEC-002 — retain bincode 1.3.3 with hardened decode budgets
+
+Decision: Retain `bincode = "1.3"` as the Myosu-owned serialization crate
+for wire codecs, solver checkpoints, encoder/dossier artifacts, and the
+in-process checkpoint clone helper. Acceptance rests on three hardened-decode
+invariants and one knob change:
+
+- every read site already uses `DefaultOptions::new().with_fixint_encoding()
+  .reject_trailing_bytes().with_limit(MAX_DECODE_BYTES)`,
+- the kuhn wire decode budget was reduced from 256 MiB to 1 MiB in the same
+  change (`myosu-games-kuhn/src/wire.rs:7-13`) so it matches every other
+  wire and checkpoint site,
+- the existing `MYOS` + version header (ADR 007) gates every payload before
+  bincode is reached, and the dossier `checkpoint_format` string
+  (`"myos-v1-bincode"`) is the explicit on-disk audit tag,
+- the audit allowlist row for `RUSTSEC-2025-0141` is now backed by a
+  dated, reviewable decision (`docs/adr/012-bincode-1.3.3-decision.md`)
+  rather than a `pending SEC-002` placeholder.
+
+Rationale: the advisory is "unmaintained, may have unfixed bugs," not
+"actively exploitable." With explicit decode budgets and the ADR 007
+`MYOS` + version gate, the realistic attacker model is bounded by
+`MAX_DECODE_BYTES`. The migration to `bincode 2.x` is a real cost
+(breaking API, breaking on-disk payload format, breaking operator
+artifacts) for a non-improving security posture, and the migration to
+`postcard` is the right move **at the next checkpoint-format bump** (a
+future `myos-v2-postcard` reader + `myos-v1-bincode` fallback), not in
+this cycle. The `16 GiB` decode budget on
+`myosu-games-poker/src/artifacts.rs` is operator-local file decode and
+is documented in the ADR as a follow-up hardening pass.
+
+Alternatives considered: `bincode 2.x` (rejected, breaking API and not
+audit-clean), `postcard` (rejected for this cycle, deferred to the next
+checkpoint-format bump), Myosu-owned codec trait (rejected, speculative
+refactor without an actual migration in scope). The full write-up is in
+`docs/adr/012-bincode-1.3.3-decision.md`.

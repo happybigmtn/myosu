@@ -4,7 +4,13 @@ use thiserror::Error;
 use crate::game::KuhnInfo;
 use crate::protocol::{KuhnStrategyQuery, KuhnStrategyResponse};
 
-const MAX_DECODE_BYTES: u64 = 256 * 1024 * 1024;
+// SEC-002 (ADR 012): the kuhn wire decode budget is sized to comfortably
+// exceed any legitimate strategy-query or strategy-response payload (which
+// are sub-KiB) while staying cheap to reject. The previous 256 MiB budget
+// was inherited from a pre-axon measurement and is now aligned with the
+// 1 MiB ceiling used by every other wire and checkpoint site in the
+// Myosu-owned code.
+const MAX_DECODE_BYTES: u64 = 1_048_576;
 
 /// Error returned when Kuhn poker wire encoding or decoding fails.
 #[derive(Debug, Error)]
