@@ -267,6 +267,9 @@ jobs:
       - name: Runtime migration smoke test
         run: cargo test -p myosu-chain --features fast-runtime,try-runtime --quiet devnet_runtime_upgrade_smoke_test_passes_on_fresh_genesis
 
+      - name: Testnet build-spec P0 proof
+        run: cargo test -p myosu-chain --features fast-runtime --test testnet_build_spec --quiet
+
   integration-e2e:
     name: E2E Integration
     runs-on: ubuntu-latest
