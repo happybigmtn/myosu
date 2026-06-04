@@ -94,6 +94,28 @@ Start with the maintained operator guide:
 - [docs/execution-playbooks/operator-network.md](docs/execution-playbooks/operator-network.md)
   for the current named-network and key-surface playbook
 
+### Public testnet
+
+The operator path also publishes a reference public testnet contract
+so an external operator or agent can discover the public Myosu
+testnet without reading prose. The contract is a single
+machine-readable manifest plus an operator-facing doc:
+
+- [docs/operator-guide/public-testnet.md](docs/operator-guide/public-testnet.md)
+  for the public WS/HTTP RPC contract, the `test_finney` chain
+  spec, the four authority URIs, the public subnet (`7`), the
+  public promotable games, and the `system_health` healthcheck
+  body the public endpoints are guaranteed to return
+- [ops/testnet/manifest.yaml](ops/testnet/manifest.yaml) for the
+  machine-readable public contract (the file an external agent
+  `curl`s)
+- [ops/testnet/healthcheck.json](ops/testnet/healthcheck.json) for
+  the canonical `system_health` response body an operator can diff
+  the live response against
+- `bash tests/e2e/public_testnet_manifest.sh` and the
+  `public-testnet-manifest` CI job for the executable contract
+  drift guard
+
 ## Current Runnable Truth
 
 These are the currently proven local surfaces:

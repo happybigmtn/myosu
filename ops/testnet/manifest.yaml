@@ -1,0 +1,99 @@
+# Myosu public testnet manifest (W-01).
+#
+# This file is the machine-readable public contract for the Myosu
+# testnet. External operators and agents can `curl` and parse this
+# file without reading prose, then point their `myosu-play` /
+# `myosu-chain-client` / `myosu-validator` consumers at the
+# `rpc_endpoints` it names. The companion doc
+# `docs/operator-guide/public-testnet.md` is the human-readable
+# surface; the test `tests/e2e/public_testnet_manifest.sh` fail-closes
+# if this manifest, the doc, or the field-shape contract drift apart.
+#
+# Field contract (every field is required and must be present; the
+# `tests/e2e/public_testnet_manifest.sh` harness asserts each one):
+#
+#   chain_spec        : the chain spec the public endpoints serve.
+#                       Must be `test_finney` (the P0 testnet spec the
+#                       operator compose / entrypoint wires; see
+#                       `crates/myosu-chain/node/src/chain_spec/testnet.rs`).
+#
+#   rpc_endpoints     : the public WebSocket / HTTP RPC endpoints. The
+#                       CORS policy is `--rpc-cors all` (so the same
+#                       endpoint works from a browser) and the RPC
+#                       methods policy is `--rpc-methods unsafe` (so
+#                       the full Substrate RPC surface is reachable
+#                       from a public client). The endpoint shape is
+#                       `wss://<host>:<port>` / `https://<host>:<port>`
+#                       and it is the literal contract the persistent
+#                       `chain-testnet-entrypoint.sh` opens.
+#
+#   bootnodes         : the public libp2p multiaddrs the public node
+#                       peers with. The operator rotates this list on
+#                       a 24h schedule and updates `last_rotated_at`;
+#                       a stale peer list is a follow-up W-N+1 finding,
+#                       not a silent override of this contract.
+#
+#   subnet            : the public subnet the public endpoints serve
+#                       scores / weights / axon data for. Must be `7`
+#                       (the only `promotable_local` subnet in the
+#                       current ledger; see `ops/solver_promotion.yaml`).
+#
+#   promotable_games  : the public list of games currently published
+#                       at `tier: promotable_local` or stricter in
+#                       `ops/solver_promotion.yaml`. The list is the
+#                       set a public `myosu-play` consumer can ask
+#                       for; games not on this list are not part of
+#                       the public contract.
+#
+#   authority_uris    : the four testnet authority URIs the public
+#                       chain's Aura / Grandpa consensus is anchored
+#                       to. These are the same URIs
+#                       `crates/myosu-chain/node/src/chain_spec/testnet.rs`
+#                       hard-codes in `testnet_config()`, so the
+#                       public endpoints and the spec must agree.
+#
+#   healthcheck       : the example `system_health` response body
+#                       `ops/testnet/healthcheck.json` carries. The
+#                       public contract guarantees the live response
+#                       carries the same three fields (`peers`,
+#                       `isSyncing`, `shouldHavePeers`); the doc
+#                       embeds the canonical body so an operator can
+#                       diff the live response against it.
+#
+#   last_rotated_at   : ISO 8601 timestamp the operator last rotated
+#                       the bootnode list. Public consumers should
+#                       treat any list older than 24h as advisory
+#                       and refresh from this manifest before
+#                       connecting.
+#
+# The field shape is intentionally the minimal set an external
+# consumer needs to discover the chain + subnet + games + bootnodes.
+# Adding a field is a non-breaking change; removing or renaming one
+# breaks the public contract and must be done in lockstep with the
+# `tests/e2e/public_testnet_manifest.sh` harness.
+
+chain_spec: test_finney
+
+rpc_endpoints:
+  - wss://myosu-testnet.example.com:9944
+  - https://myosu-testnet.example.com:9944
+
+bootnodes:
+  - /dns4/bootnode-1.myosu-testnet.example.com/tcp/30333/p2p/12D3KooWPlaceholderBootnode1PubkeyReplaceMe
+  - /dns4/bootnode-2.myosu-testnet.example.com/tcp/30333/p2p/12D3KooWPlaceholderBootnode2PubkeyReplaceMe
+
+subnet: 7
+
+promotable_games:
+  - liars-dice
+
+authority_uris:
+  - //myosu//testnet//authority-1
+  - //myosu//testnet//authority-2
+  - //myosu//testnet//authority-3
+  - //myosu//testnet//subnet-owner
+
+healthcheck:
+  example: ops/testnet/healthcheck.json
+
+last_rotated_at: "2026-06-04T00:00:00Z"

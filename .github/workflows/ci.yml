@@ -771,3 +771,43 @@ jobs:
         # lockstep with the live benchmark, the live unit
         # test, and the live solver constant.
         run: bash tests/e2e/miner_convergence_doc_keeps_truthful_thresholds.sh
+
+  public-testnet-manifest:
+    name: Public testnet manifest contract drift guard (W-01)
+    runs-on: ubuntu-latest
+    needs: repo-shape
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Verify W-01 public testnet contract drift guard
+        # W-01 contract drift guard: asserts (1) the
+        # machine-readable `ops/testnet/manifest.yaml`
+        # exists, parses as YAML, and carries every
+        # required top-level field with the literal
+        # `test_finney` chain spec, (2) the canonical
+        # `ops/testnet/healthcheck.json` example
+        # `system_health` response body exists and carries
+        # the three `peers` / `isSyncing` / `shouldHavePeers`
+        # fields the public contract guarantees, (3) the
+        # `docs/operator-guide/public-testnet.md` doc exists,
+        # is labeled with W-01, names the CORS+WS contract
+        # (`wss://` / `--rpc-cors all` / `--rpc-methods
+        # unsafe`), the four `//myosu//testnet//authority-*`
+        # URIs, and embeds the example `system_health` body,
+        # (4) the manifest's `promotable_games` list agrees
+        # with the `ops/solver_promotion.yaml` ledger's
+        # `tier: promotable_local` rows, and (5)
+        # `README.md` "Operator Path" links to the new doc.
+        # The harness has no Rust dependency (pure
+        # python3 + bash + grep) so the job is intentionally
+        # minimal — no rust-toolchain, no cache, no
+        # compile step. A drift in any of the five checks
+        # fails the gate with a concrete error message that
+        # names the offending file and the requirement it
+        # broke. See `docs/operator-guide/public-testnet.md`
+        # for the public contract this job pins.
+        run: bash tests/e2e/public_testnet_manifest.sh
