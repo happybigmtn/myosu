@@ -264,10 +264,19 @@ Stage-0 decision: `--serve-http` is intentionally poker-only. For
 cross-validator determinism proof follows that file-based path today.
 
 For Liar's Dice quality work, do not use the current validator
-same-checkpoint path as a convergence metric. The truthful benchmark is:
+same-checkpoint path as a convergence metric. The truthful benchmark is
+the public `liars_dice_benchmark_points` + `QualityBenchmarkReport`
+surface in `crates/myosu-validator/src/validation.rs`, exercised by:
 
 ```bash
+# Operator-facing reproduction of the current recommendation.
+SKIP_WASM_BUILD=1 cargo run -p myosu-validator --example quality_benchmark -- 0 128 256 512
+
+# Unit-test gate (the same source of truth the example reads from).
 SKIP_WASM_BUILD=1 cargo test -p myosu-validator --quiet -- quality_benchmark
+
+# E2E proof harness (CI runs this on every PR / push to trunk).
+bash tests/e2e/quality_benchmark_liars_dice.sh
 ```
 
 The current benchmark ladder measures exact exploitability at 0, 128, 256, and

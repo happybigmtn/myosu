@@ -40,7 +40,104 @@ use tracing::info;
 use crate::cli::Cli;
 use crate::cli::GameSelection;
 
-const LIARS_DICE_SOLVER_TREES: usize = 1 << 10;
+/// Number of MCCFR trees the Liar's Dice solver is trained on across all
+/// validator and operator-facing surfaces. The public constant is the
+/// "single source of truth" the F-003 quality benchmark and any operator
+/// tooling that wants to reproduce the operator-guide recommendation
+/// (`512` minimum iterations at the `0.70` exploitability threshold) both
+/// pin to. It is also the value the e2e proof
+/// (`tests/e2e/quality_benchmark_liars_dice.sh`) verifies is the same in
+/// the example output, the unit test, and the public helper.
+pub const LIARS_DICE_SOLVER_TREES: usize = 1 << 10;
+
+/// Exploitability threshold below which a Liar's Dice checkpoint is considered
+/// useful for operator-facing runs. The current value (`0.70`) matches the
+/// unit test in `myosu-validator::validation::tests::quality_benchmark_liars_dice_exploitability_converges`
+/// and the operator-guide recommendation. A solver-constant change that
+/// shifts the 512-iteration exploitability above this threshold is a
+/// regression of the operator-facing minimum-iteration guarantee and must
+/// be caught by `tests/e2e/quality_benchmark_liars_dice.sh`.
+pub const LIARS_DICE_USEFUL_EXPLOITABILITY_THRESHOLD: f32 = 0.70;
+
+/// One data point on the Liar's Dice training-iteration benchmark ladder.
+///
+/// `iterations` is the number of MCCFR iterations the solver was trained for
+/// from a fresh `LiarsDiceSolver::new()` start; `exploitability` is the
+/// resulting exact best-response exploitability measured via
+/// `LiarsDiceSolver::exact_exploitability`. The pair is the truthful
+/// convergence metric that F-003 / F-007 documents for operators.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LiarsDiceBenchmarkPoint {
+    /// Number of MCCFR training iterations the checkpoint was trained for.
+    pub iterations: usize,
+    /// Exact best-response exploitability of the trained checkpoint.
+    pub exploitability: f32,
+}
+
+/// Run the Liar's Dice training-iteration ladder and record one benchmark
+/// point per requested iteration count.
+///
+/// Each requested iteration count is trained from a fresh `LiarsDiceSolver::new()`
+/// start (so the ladder is independent of checkpoint-cached state), then the
+/// solver's exact best-response exploitability is measured via
+/// `LiarsDiceSolver::exact_exploitability()`. The returned vector is in the
+/// same order as `iterations` and is the truthful benchmark the operator guide
+/// and F-003 quality-recommendation gate both rely on.
+pub fn liars_dice_benchmark_points(
+    iterations: &[usize],
+) -> Result<Vec<LiarsDiceBenchmarkPoint>, LiarsDiceSolverError> {
+    let mut points = Vec::with_capacity(iterations.len());
+    for &iterations in iterations {
+        let mut solver = LiarsDiceSolver::<LIARS_DICE_SOLVER_TREES>::new();
+        solver.train(iterations)?;
+        points.push(LiarsDiceBenchmarkPoint {
+            iterations,
+            exploitability: solver.exact_exploitability(),
+        });
+    }
+    Ok(points)
+}
+
+/// Decision summary produced by the F-003 Liar's Dice quality benchmark.
+///
+/// `recommended_minimum_iterations` is the first iteration count whose
+/// `exploitability` met or beat `exploitability_threshold`; `None` means the
+/// ladder did not reach the threshold at any measured point (caller can
+/// either widen the ladder or treat the failure as a regression).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct QualityBenchmarkReport {
+    /// The exploitability threshold the ladder was scored against.
+    pub exploitability_threshold: f32,
+    /// The first benchmark point whose exploitability met or beat the
+    /// threshold; `None` if the ladder never crossed the threshold.
+    pub recommended_minimum_iterations: Option<usize>,
+    /// The exploitability recorded at `recommended_minimum_iterations`, or
+    /// `None` if the ladder never crossed the threshold.
+    pub recommended_exploitability: Option<f32>,
+}
+
+impl QualityBenchmarkReport {
+    /// Score a benchmark ladder against a fixed exploitability threshold.
+    ///
+    /// The recommended point is the lowest-iteration benchmark whose
+    /// exploitability is `<= threshold`. Ties resolve in the order the
+    /// caller passed the points, so the caller should pass a monotonically
+    /// increasing iteration ladder.
+    pub fn from_benchmark_points(
+        points: &[LiarsDiceBenchmarkPoint],
+        exploitability_threshold: f32,
+    ) -> Self {
+        let recommended = points
+            .iter()
+            .find(|point| point.exploitability <= exploitability_threshold)
+            .copied();
+        Self {
+            exploitability_threshold,
+            recommended_minimum_iterations: recommended.map(|point| point.iterations),
+            recommended_exploitability: recommended.map(|point| point.exploitability),
+        }
+    }
+}
 
 /// Startup error returned by the bootstrap validator binary.
 #[derive(Debug, Error)]
@@ -727,12 +824,6 @@ mod tests {
 
     use super::*;
 
-    #[derive(Clone, Copy, Debug)]
-    struct LiarsDiceBenchmarkPoint {
-        iterations: usize,
-        exploitability: f32,
-    }
-
     #[test]
     fn validation_plan_requires_both_artifact_paths() {
         let cli = Cli {
@@ -1370,16 +1461,72 @@ mod tests {
             benchmark
         );
 
-        let recommended = benchmark
-            .iter()
-            .find(|point| point.exploitability <= 0.70)
-            .map(|point| point.iterations);
+        let report = QualityBenchmarkReport::from_benchmark_points(
+            &benchmark,
+            LIARS_DICE_USEFUL_EXPLOITABILITY_THRESHOLD,
+        );
         assert_eq!(
-            recommended,
+            report.recommended_minimum_iterations,
             Some(512),
             "expected the benchmark ladder to recommend 512 iterations: {:?}",
             benchmark
         );
+    }
+
+    #[test]
+    fn quality_benchmark_report_picks_first_point_below_threshold() {
+        let points = vec![
+            LiarsDiceBenchmarkPoint {
+                iterations: 0,
+                exploitability: 0.90,
+            },
+            LiarsDiceBenchmarkPoint {
+                iterations: 128,
+                exploitability: 0.80,
+            },
+            LiarsDiceBenchmarkPoint {
+                iterations: 256,
+                exploitability: 0.70,
+            },
+            LiarsDiceBenchmarkPoint {
+                iterations: 512,
+                exploitability: 0.60,
+            },
+        ];
+
+        let report = QualityBenchmarkReport::from_benchmark_points(&points, 0.70);
+        assert_eq!(report.exploitability_threshold, 0.70);
+        assert_eq!(report.recommended_minimum_iterations, Some(256));
+        assert_eq!(report.recommended_exploitability, Some(0.70));
+    }
+
+    #[test]
+    fn quality_benchmark_report_returns_none_when_no_point_meets_threshold() {
+        let points = vec![
+            LiarsDiceBenchmarkPoint {
+                iterations: 0,
+                exploitability: 0.95,
+            },
+            LiarsDiceBenchmarkPoint {
+                iterations: 128,
+                exploitability: 0.85,
+            },
+        ];
+
+        let report = QualityBenchmarkReport::from_benchmark_points(&points, 0.70);
+        assert_eq!(report.recommended_minimum_iterations, None);
+        assert_eq!(report.recommended_exploitability, None);
+    }
+
+    #[test]
+    fn liars_dice_benchmark_points_returns_one_point_per_requested_iteration() {
+        let points =
+            super::liars_dice_benchmark_points(&[0, 8, 16]).expect("public helper should succeed");
+        assert_eq!(points.len(), 3);
+        assert_eq!(points[0].iterations, 0);
+        assert_eq!(points[1].iterations, 8);
+        assert_eq!(points[2].iterations, 16);
+        assert!(points.iter().all(|point| point.exploitability.is_finite()));
     }
 
     fn portfolio_game_selections() -> [GameSelection; 20] {
@@ -1391,21 +1538,8 @@ mod tests {
     }
 
     fn liars_dice_benchmark_points(iterations: &[usize]) -> Vec<LiarsDiceBenchmarkPoint> {
-        iterations
-            .iter()
-            .copied()
-            .map(|iterations| {
-                let mut solver = LiarsDiceSolver::<LIARS_DICE_SOLVER_TREES>::new();
-                solver
-                    .train(iterations)
-                    .expect("benchmark training should succeed");
-
-                LiarsDiceBenchmarkPoint {
-                    iterations,
-                    exploitability: solver.exact_exploitability(),
-                }
-            })
-            .collect()
+        super::liars_dice_benchmark_points(iterations)
+            .expect("public benchmark helper should succeed")
     }
 
     fn poker_one_hot_least_likely_action(

@@ -56,3 +56,5 @@ rules:
       - ci.yml:543
       # reason: dtolnay/rust-toolchain intentional in zizmor-policy job (CI-SEC-001 gate)
       - ci.yml:577
+      # reason: dtolnay/rust-toolchain intentional in quality-benchmark job (F-003 gate, Swatinem/rust-cache keying)
+      - ci.yml:617
