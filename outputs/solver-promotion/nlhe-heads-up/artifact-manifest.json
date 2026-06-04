@@ -1,0 +1,31 @@
+{
+  "artifact_hash": "synthetic-0.000000",
+  "manifest_reference": {
+    "artifact_dir": "synthetic://nlhe-heads-up/0.000000",
+    "manifest_path": "synthetic://nlhe-heads-up/0.000000/manifest.json",
+    "manifest_sha256": "synthetic-0.000000",
+    "manifest_total_sha256": "synthetic-0.000000"
+  },
+  "manifest_summary": {
+    "version": 1,
+    "game": "nlhe_hu",
+    "total_sha256": "synthetic-0.000000",
+    "street_entries": {
+      "preflop": 169
+    },
+    "total_entries": 169,
+    "postflop_complete": false
+  },
+  "benchmark_summary": {
+    "benchmark_id": "nlhe-bundle-example-0.000000",
+    "benchmark_method": "nlhe-reference-pack-v1",
+    "metric_name": "mean_l1_distance",
+    "metric_value": 0.0,
+    "threshold": 0.2,
+    "threshold_direction": "at_most",
+    "passing": true
+  },
+  "provenance_chain": [
+    "synthetic-fixture:0.000000"
+  ]
+}

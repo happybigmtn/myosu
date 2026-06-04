@@ -148,6 +148,9 @@ jobs:
       - name: Promotion manifest quality gate (PROMOTE-001-2)
         run: bash tests/e2e/promotion_manifest_quality_gate.sh
 
+      - name: NLHE policy bundle operator-facing CLI (NEM-005B)
+        run: bash tests/e2e/nlhe_policy_bundle.sh
+
       - name: INV-004 solver-gameplay dependency boundary
         run: |
           play_tree="$(cargo tree -p myosu-play --edges normal)"

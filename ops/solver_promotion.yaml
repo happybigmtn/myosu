@@ -7,7 +7,7 @@ games:
     artifact_requirement: full_encoder_manifest_plus_checkpoint
     bundle_support: promotable_local
     bitino_target_phase: phase_6_candidate
-    notes: tier_stays_benchmarked_until_full_artifact_dossier; bundle_builder_is_promotable_local
+    notes: tier_stays_benchmarked_until_full_artifact_dossier; bundle_builder_is_promotable_local; bundle_surface_operator_verifiable_via_nlhe_policy_bundle_example
   - game: nlhe-six-max
     route: portfolio
     tier: routed

@@ -1,0 +1,205 @@
+{
+  "game": "nlhe_heads_up",
+  "decision_id": "nlhe-heads-up:preflop-button-ak-offsuite-open",
+  "public_state": {
+    "game_id": "nlhe-heads-up",
+    "ruleset_version": 1,
+    "trace_id": "nlhe-heads-up:preflop-button-ak-offsuite-open",
+    "phase": "preflop-betting",
+    "actor": 0,
+    "public_state": {
+      "board": [],
+      "hero_hole": [
+        "Ac",
+        "Kh"
+      ],
+      "pot": 1.5,
+      "stacks": [
+        100.0,
+        100.0
+      ],
+      "street": "preflop",
+      "table_position": "button",
+      "to_act": 0
+    },
+    "private_state_commitments": [
+      "nlhe-heads-up.info.sha256:07942e2c37bb40653c5413d43aba7502f9e93718cb8a014b348b8a9f0a481381"
+    ],
+    "legal_actions": [
+      {
+        "game_id": "nlhe-heads-up",
+        "action_id": "nlhe-heads-up.open.2",
+        "family": "nlhe",
+        "display_label": "open.2",
+        "legal_phases": [
+          "preflop-betting",
+          "postflop-betting"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "bb": {
+              "const": 2
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "nlhe-heads-up",
+        "action_id": "nlhe-heads-up.open.3",
+        "family": "nlhe",
+        "display_label": "open.3",
+        "legal_phases": [
+          "preflop-betting",
+          "postflop-betting"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "bb": {
+              "const": 3
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "nlhe-heads-up",
+        "action_id": "nlhe-heads-up.open.4",
+        "family": "nlhe",
+        "display_label": "open.4",
+        "legal_phases": [
+          "preflop-betting",
+          "postflop-betting"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "bb": {
+              "const": 4
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "nlhe-heads-up",
+        "action_id": "nlhe-heads-up.open.8",
+        "family": "nlhe",
+        "display_label": "open.8",
+        "legal_phases": [
+          "preflop-betting",
+          "postflop-betting"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "bb": {
+              "const": 8
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "nlhe-heads-up",
+        "action_id": "nlhe-heads-up.shove",
+        "family": "nlhe",
+        "display_label": "shove",
+        "legal_phases": [
+          "preflop-betting",
+          "postflop-betting"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "nlhe-heads-up",
+        "action_id": "nlhe-heads-up.call",
+        "family": "nlhe",
+        "display_label": "call",
+        "legal_phases": [
+          "preflop-betting",
+          "postflop-betting"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "nlhe-heads-up",
+        "action_id": "nlhe-heads-up.fold",
+        "family": "nlhe",
+        "display_label": "fold",
+        "legal_phases": [
+          "preflop-betting",
+          "postflop-betting"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "type": "object"
+        }
+      }
+    ],
+    "terminal": false
+  },
+  "legal_action_ids": [
+    "nlhe-heads-up.open.2",
+    "nlhe-heads-up.open.3",
+    "nlhe-heads-up.open.4",
+    "nlhe-heads-up.open.8",
+    "nlhe-heads-up.shove",
+    "nlhe-heads-up.call",
+    "nlhe-heads-up.fold"
+  ],
+  "distribution": [
+    {
+      "action_id": "nlhe-heads-up.open.2",
+      "probability_ppm": 700000
+    },
+    {
+      "action_id": "nlhe-heads-up.open.3",
+      "probability_ppm": 20000
+    },
+    {
+      "action_id": "nlhe-heads-up.open.4",
+      "probability_ppm": 20000
+    },
+    {
+      "action_id": "nlhe-heads-up.open.8",
+      "probability_ppm": 20000
+    },
+    {
+      "action_id": "nlhe-heads-up.shove",
+      "probability_ppm": 20000
+    },
+    {
+      "action_id": "nlhe-heads-up.call",
+      "probability_ppm": 200000
+    },
+    {
+      "action_id": "nlhe-heads-up.fold",
+      "probability_ppm": 20000
+    }
+  ],
+  "recommended_action_id": "nlhe-heads-up.open.2",
+  "provenance": {
+    "game_slug": "nlhe-heads-up",
+    "solver_family": "nlhe-blueprint-cfr",
+    "engine_tier": "promotable_local",
+    "artifact_id": "nlhe-checkpoint-synthetic-0.",
+    "artifact_hash": "synthetic-0.000000",
+    "benchmark": {
+      "benchmark_id": "nlhe-bundle-example-0.000000",
+      "metric_name": "mean_l1_distance",
+      "metric_value": 0.0,
+      "threshold": 0.2,
+      "passing": true
+    }
+  },
+  "bundle_hash": "5183dc1d2b6af0e738b086b7c4a4b41abea50404454a1e198b87e79fbc0305f7"
+}

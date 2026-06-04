@@ -1,0 +1,7 @@
+{
+  "benchmark_id": "nlhe-bundle-example-0.000000",
+  "metric_name": "mean_l1_distance",
+  "metric_value": 0.0,
+  "threshold": 0.2,
+  "passing": true
+}
