@@ -3,9 +3,33 @@ use frame_support::traits::fungible::Inspect;
 use super::*;
 
 impl<T: Config> Pallet<T> {
+    /// Stable, grep-friendly error code emitted by
+    /// [`Pallet::check_total_issuance`] when the live `TotalIssuance` differs
+    /// from the expected `currency_issuance + total_stake` by more than
+    /// [`TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA`] rao. The actual magnitude,
+    /// expected total, and live total are recorded via `log::error!` (and
+    /// re-emitted as a debug record on the same target for tailing
+    /// operators), but the returned `TryRuntimeError` itself is a static
+    /// `&'static str` so a wrapper script can `grep try_state failure` and
+    /// still correlate the call site to the NEM-006 plan row. The full
+    /// numeric triple lives in the runtime log under the
+    /// `runtime::game_solver` target — operators can recover it from there
+    /// without re-running the on-chain state through an indexer.
+    #[allow(dead_code)]
+    pub(crate) const TOTAL_ISSUANCE_TRY_STATE_FAILURE: &'static str =
+        "TotalIssuance try_state failure: live != expected (diff > delta); \
+         see runtime::game_solver log for live/expected/diff/delta";
+
     /// Checks [`TotalIssuance`] equals the sum of currency issuance, total stake, and total subnet
     /// locked.
-    #[allow(clippy::expect_used)]
+    ///
+    /// Diagnostic surface (NEM-006): on a non-zero diff, the assertion logs the
+    /// actual magnitude, the expected total, and the live total via
+    /// `log::error!`/`log::warn!` so an operator tailing the runtime log sees
+    /// enough information to triage without re-running the on-chain state
+    /// through an indexer. The healthy path (diff == 0) is logged at debug
+    /// only, so steady-state log volume is unchanged.
+    #[allow(dead_code, clippy::expect_used)]
     pub(crate) fn check_total_issuance() -> Result<(), sp_runtime::TryRuntimeError> {
         // Get the total currency issuance
         let currency_issuance = <T as Config>::Currency::total_issuance();
@@ -30,12 +54,58 @@ impl<T: Config> Pallet<T> {
         }
         .expect("LHS > RHS");
 
-        ensure!(
-            diff <= delta,
-            "TotalIssuance diff greater than allowable delta",
+        if diff == 0 {
+            // Healthy path: live and expected match exactly. Log at debug
+            // (not info/error) so the steady-state log volume is unchanged —
+            // the existing `cargo test` runs and CI logs are not noisier.
+            log::debug!(
+                target: "runtime::game_solver",
+                "TotalIssuance try_state ok: live={} expected={} diff=0",
+                total_issuance,
+                expected_total_issuance,
+            );
+            return Ok(());
+        }
+
+        if diff <= delta {
+            // Within the stage-0 alert envelope (≤ TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA
+            // rao). Still log the magnitude so a future operator who later
+            // tightens the delta can see the historical drift distribution.
+            log::warn!(
+                target: "runtime::game_solver",
+                "TotalIssuance try_state within alert envelope: live={} expected={} diff={} delta={}",
+                total_issuance,
+                expected_total_issuance,
+                diff,
+                delta,
+            );
+            return Ok(());
+        }
+
+        // Hard accounting failure: diff exceeds the stage-0 alert threshold.
+        // Log the full diagnostic triple (live, expected, diff) at error
+        // severity so a tailing operator sees the magnitude, the
+        // expected total, and the live total without needing to re-derive
+        // them from on-chain state.
+        log::error!(
+            target: "runtime::game_solver",
+            "TotalIssuance try_state failure: live={} expected={} diff={} delta={} (diff exceeds TOTAL_ISSUANCE_TRY_STATE_ALERT_DELTA; this is a real accounting drift, not dust)",
+            total_issuance,
+            expected_total_issuance,
+            diff,
+            delta,
         );
 
-        Ok(())
+        // Return a static `&'static str` error code so a wrapper script can
+        // `grep try_state failure` and recover the call site; the
+        // operator-facing magnitude/expected/live triple lives in the
+        // `runtime::game_solver` log target above (and is the only path
+        // substrate exposes for owned-string error data — the
+        // `TryRuntimeError` alias is `DispatchError`, which is a
+        // `&'static str` newtype plus enum variants).
+        Err(sp_runtime::TryRuntimeError::Other(
+            Self::TOTAL_ISSUANCE_TRY_STATE_FAILURE,
+        ))
     }
 
     /// Checks the sum of all stakes matches the [`TotalStake`].

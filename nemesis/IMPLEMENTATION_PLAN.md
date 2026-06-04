@@ -112,7 +112,7 @@ Completion signal: `cargo test -p myosu-play -- inv_004` passes with both subtes
 
 ---
 
-### `- [ ] NEM-006 Improve try_state emission diagnostics`
+### `- [x] NEM-006 Improve try_state emission diagnostics`
 
 Spec: INV-005 diagnostic quality
 Why now: `try_state` guard only asserts `diff <= 1` with generic message. If triggered, operators see "diff > 1 rao" without knowing magnitude or root cause.

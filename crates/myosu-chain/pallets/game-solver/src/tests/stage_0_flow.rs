@@ -2147,3 +2147,169 @@ fn stage_0_register_network_error_indices_snapshot() {
         );
     });
 }
+
+// ===========================================================================
+// NEM-006: try_state emission diagnostics
+// ===========================================================================
+//
+// The stage-0 `check_total_issuance` used to fail with a bare
+// `"TotalIssuance diff greater than allowable delta"` message, which
+// gave operators no way to triage the magnitude or root cause without
+// re-running the on-chain state through an indexer. NEM-006 replaces
+// that with (a) a `log::error!` (or `log::warn!` for the within-envelope
+// case) record that names the live, expected, diff, and delta values
+// directly, and (b) a stable `&'static str` `TOTAL_ISSUANCE_TRY_STATE_FAILURE`
+// constant that a wrapper script can `grep try_state failure` against.
+// These tests exercise both the healthy path (diff == 0), the
+// within-envelope path (diff <= delta), and the hard-failure path
+// (diff > delta). All three paths log at a different severity and the
+// hard-failure path returns the documented static error code.
+
+#[test]
+fn try_state_emission_diagnostics_total_issuance_failure_constant_is_stable() {
+    // The grep-friendly error code is a stable `&'static str` so a wrapper
+    // script can `grep "TotalIssuance try_state failure"` and recover the
+    // call site without parsing a dynamically-built message. The full
+    // numeric triple (live, expected, diff, delta) lives in the
+    // `runtime::game_solver` log target — substrate's `DispatchError` is a
+    // `&'static str` newtype plus enum variants and cannot carry owned
+    // data, so the constant is the static anchor the log records point
+    // back to.
+    let code = <crate::Pallet<Test> as TryStateDiagnosticSurface>::TOTAL_ISSUANCE_TRY_STATE_FAILURE;
+    assert!(
+        code.starts_with("TotalIssuance try_state failure:"),
+        "grep-friendly error code must start with the NEM-006 marker; got {code:?}"
+    );
+    assert!(
+        code.contains("runtime::game_solver"),
+        "grep-friendly error code must point operators at the runtime log target; got {code:?}"
+    );
+}
+
+#[test]
+fn try_state_emission_diagnostics_zero_diff_passes() {
+    // Healthy path: when live == expected, `check_total_issuance` returns
+    // `Ok(())` regardless of any non-zero `TotalStake`. The
+    // `log::debug!(...)` is emitted under the `runtime::game_solver`
+    // target, but the *return value* is the contract the runtime
+    // migration smoke test depends on.
+    new_test_ext(1).execute_with(|| {
+        // Set up: balances TotalIssuance == currency_issuance (no stake,
+        // no extra `TotalIssuance` write). `check_total_issuance` should
+        // pass with diff=0.
+        pallet_balances::TotalIssuance::<Test>::put(0u64);
+        TotalStake::<Test>::put(TaoCurrency::ZERO);
+        crate::TotalIssuance::<Test>::put(TaoCurrency::ZERO);
+
+        let result = GameSolver::check_total_issuance();
+        assert!(
+            result.is_ok(),
+            "zero-diff path must return Ok(()) for the runtime migration smoke test; got {result:?}"
+        );
+    });
+}
+
+#[test]
+fn try_state_emission_diagnostics_within_envelope_passes_with_log() {
+    // Within-envelope path: a 1-rao diff (exactly equal to the stage-0
+    // alert delta) is still considered acceptable. The new code path
+    // emits a `log::warn!` with the full diagnostic triple, but the
+    // return value is still `Ok(())` so the runtime migration smoke
+    // test is not perturbed.
+    new_test_ext(1).execute_with(|| {
+        let currency_issuance = 1_000u64;
+        pallet_balances::TotalIssuance::<Test>::put(currency_issuance);
+        TotalStake::<Test>::put(TaoCurrency::ZERO);
+        // live is 1 rao above expected — diff == 1 == delta.
+        crate::TotalIssuance::<Test>::put(TaoCurrency::from(currency_issuance + 1));
+
+        let result = GameSolver::check_total_issuance();
+        assert!(
+            result.is_ok(),
+            "diff equal to the stage-0 alert delta must still pass; got {result:?}"
+        );
+    });
+}
+
+#[test]
+fn try_state_emission_diagnostics_two_rao_diff_returns_documented_error() {
+    // Hard-failure path: a 2-rao diff (one rao above the stage-0 alert
+    // delta) trips the new diagnostic surface. The returned
+    // `TryRuntimeError` must be the documented `&'static str` constant
+    // so a wrapper script can grep it; the live, expected, and diff
+    // values are recorded via `log::error!` (the substrate
+    // `DispatchError` type does not carry owned data, so the numeric
+    // triple necessarily lives in the log target rather than the
+    // returned error itself).
+    new_test_ext(1).execute_with(|| {
+        let currency_issuance = 1_000u64;
+        pallet_balances::TotalIssuance::<Test>::put(currency_issuance);
+        TotalStake::<Test>::put(TaoCurrency::ZERO);
+        // live is 2 rao above expected — diff = 2 > delta = 1.
+        crate::TotalIssuance::<Test>::put(TaoCurrency::from(currency_issuance + 2));
+
+        let result = GameSolver::check_total_issuance();
+        let err = result.expect_err("2-rao diff must trip the new diagnostic surface");
+        let err_string = format!("{err:?}");
+        assert!(
+            err_string.contains("TotalIssuance try_state failure"),
+            "hard-failure error must include the NEM-006 marker; got {err_string:?}"
+        );
+        // The error variant itself is `DispatchError::Other` and the
+        // contained `&'static str` is the documented constant. Confirm
+        // both the prefix and the `runtime::game_solver` redirect.
+        match err {
+            sp_runtime::DispatchError::Other(msg) => {
+                assert!(
+                    msg.starts_with("TotalIssuance try_state failure:"),
+                    "DispatchError::Other payload must start with the NEM-006 marker; got {msg:?}"
+                );
+                assert!(
+                    msg.contains("runtime::game_solver"),
+                    "DispatchError::Other payload must redirect operators to the log target; got {msg:?}"
+                );
+            }
+            other => panic!("expected DispatchError::Other, got {other:?}"),
+        }
+    });
+}
+
+#[test]
+fn try_state_emission_diagnostics_below_live_diff_returns_documented_error() {
+    // Hard-failure path, mirrored direction: a 2-rao diff *below*
+    // expected also trips the new diagnostic surface, with the same
+    // `&'static str` error code. The diff is `abs(live - expected)`,
+    // so both directions must funnel through the same error path.
+    new_test_ext(1).execute_with(|| {
+        let currency_issuance = 1_000u64;
+        pallet_balances::TotalIssuance::<Test>::put(currency_issuance);
+        TotalStake::<Test>::put(TaoCurrency::ZERO);
+        // live is 2 rao below expected — diff = 2 > delta = 1.
+        crate::TotalIssuance::<Test>::put(TaoCurrency::from(currency_issuance - 2));
+
+        let result = GameSolver::check_total_issuance();
+        let err = result.expect_err("2-rao negative diff must trip the new diagnostic surface");
+        let err_string = format!("{err:?}");
+        assert!(
+            err_string.contains("TotalIssuance try_state failure"),
+            "below-live diff must produce the NEM-006 marker; got {err_string:?}"
+        );
+    });
+}
+
+/// NEM-006 surface: re-exports the `TOTAL_ISSUANCE_TRY_STATE_FAILURE`
+/// constant under a public trait so the test module can `use
+/// TryStateDiagnosticSurface` and reach the constant without depending
+/// on the pallet's private `impl` items. The trait itself is a
+/// documentation-only seam — the underlying constant is still
+/// `pub(crate)` on `Pallet<T>` and the trait re-export is the only
+/// path outside the crate's own tests.
+trait TryStateDiagnosticSurface {
+    const TOTAL_ISSUANCE_TRY_STATE_FAILURE: &'static str;
+}
+
+impl<T: Config> TryStateDiagnosticSurface for crate::Pallet<T> {
+    const TOTAL_ISSUANCE_TRY_STATE_FAILURE: &'static str =
+        <crate::Pallet<T>>::TOTAL_ISSUANCE_TRY_STATE_FAILURE;
+}
+
