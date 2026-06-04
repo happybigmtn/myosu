@@ -26,7 +26,12 @@ pub use artifacts::{
 pub use benchmark::{
     NlheScenarioBenchmarkError, NlheScenarioBenchmarkReport, NlheScenarioBenchmarkRow,
     benchmark_against_bootstrap_reference, benchmark_solver_against_reference,
-    bootstrap_reference_solver,
+    bootstrap_reference_solver, mixed_bootstrap_reference_profile,
+    mixed_bootstrap_reference_solver,
+};
+pub use benchmark::{
+    MIXED_REFERENCE_MIX_MAX, MIXED_REFERENCE_MIX_MIN, POKER_REFERENCE_SCENARIO_COUNT,
+    POKER_REFERENCE_SELF_MATCH_COUNT, POKER_REFERENCE_SELF_MATCH_L1,
 };
 pub use benchmark::{PokerBenchmarkError, PokerBenchmarkPoint, benchmark_points_from_encoder_dir};
 pub use codexpoker::{CodexpokerBlueprint, CodexpokerBlueprintError};

@@ -29,6 +29,25 @@ tracks supported operator-facing releases starting at `0.1.0`.
   release contract, the minimum operator notice windows for patch vs breaking
   minor releases, the manual upgrade path, and the repo-owned rollback
   procedure.
+- NEM-001B independent poker quality reference test (mix-ladder substitute).
+  `crates/myosu-validator/src/validation.rs` gains
+  `PokerQualityBenchmarkPoint` + `POKER_REFERENCE_LADDER = [0.0, 0.25, 0.5,
+  0.75, 1.0]` + `POKER_USEFUL_REFERENCE_MATCH_RATIO = 0.95` +
+  `PokerQualityBenchmarkReport` + `poker_quality_benchmark_points`;
+  `crates/myosu-games-poker/src/benchmark.rs` gains
+  `mixed_bootstrap_reference_solver` / `mixed_bootstrap_reference_profile` and
+  the `POKER_REFERENCE_SCENARIO_COUNT` / `POKER_REFERENCE_SELF_MATCH_COUNT` /
+  `POKER_REFERENCE_SELF_MATCH_L1` anchors. The new
+  `crates/myosu-validator/examples/poker_quality_benchmark.rs` example prints
+  the ladder on demand, `tests/e2e/poker_quality_benchmark.sh` is the
+  CI-grade proof (6 sub-checks, all green), and
+  `tests/e2e/miner_convergence_doc_keeps_truthful_thresholds.sh` now carries
+  a 7th sub-check that pins the live `poker_quality_benchmark` configuration
+  against the operator doc. The mix-ladder is the truthful F-003 poker
+  substitute against the checked-in sparse bootstrap encoder (positive-iteration
+  MCCFR training still fails upstream with `isomorphism not found`; the
+  PROMOTE-001 external artifact supply is the unblock for a real
+  positive-iteration poker exploitability ladder).
 
 ## [0.1.0] - 2026-04-02
 

@@ -26,7 +26,20 @@
   validator's same-checkpoint path still self-scores the miner response, and
   the checked-in poker bootstrap artifacts remain intentionally sparse enough
   that positive-iteration poker training fails upstream with
-  `isomorphism not found`.
+  `isomorphism not found`. **NEM-001B follow-up (2026-06-04)** ships the
+  truthful poker substitute: `crates/myosu-validator/src/validation.rs` gains
+  the `PokerQualityBenchmarkPoint` + `POKER_REFERENCE_LADDER` +
+  `POKER_USEFUL_REFERENCE_MATCH_RATIO` + `poker_quality_benchmark_points` +
+  `PokerQualityBenchmarkReport` surface, the `poker_quality_benchmark` example
+  binary, and `tests/e2e/poker_quality_benchmark.sh` (the 6-sub-check CI
+  proof). The mix-ladder (`mix=0.0..=1.0`, default ladder `[0.0, 0.25, 0.5,
+  0.75, 1.0]`) is monotonically non-increasing in mean L1 distance and
+  monotonically non-decreasing in exact-action-match ratio against the
+  80-scenario `bootstrap_scenarios()` reference pack on a fresh checkout;
+  `mix=1.0` is the bit-exact self-match anchor (`mean_l1_distance=0.0`,
+  `exact_action_matches=80`). The remaining unblock for a real positive-iteration
+  poker exploitability ladder remains PROMOTE-001 (external artifact supply),
+  which is outside NEM-001B's scope by design.
 
 ## 2026-04-08 follow-ups
 

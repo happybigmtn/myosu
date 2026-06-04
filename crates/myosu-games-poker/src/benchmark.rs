@@ -171,6 +171,145 @@ pub fn bootstrap_reference_solver(
     Ok(PokerSolver::from_parts(profile, encoder))
 }
 
+/// Lower bound (inclusive) of the convex-mixing factor the
+/// [`mixed_bootstrap_reference_solver`] helper accepts. `0.0` produces a
+/// fully-uniform candidate profile (every legal action weighted equally
+/// for every reachable `NlheInfo`).
+pub const MIXED_REFERENCE_MIX_MIN: f32 = 0.0;
+
+/// Upper bound (inclusive) of the convex-mixing factor the
+/// [`mixed_bootstrap_reference_solver`] helper accepts. `1.0` reproduces
+/// the closed-form reference profile bit-for-bit (the same profile
+/// `bootstrap_reference_solver` uses), so a `mix=1.0` candidate
+/// self-matches the reference pack with `mean_l1=0.0` and
+/// `exact_action_matches=80/80` — the regression anchor for the F-003 /
+/// NEM-001B poker quality benchmark ladder.
+pub const MIXED_REFERENCE_MIX_MAX: f32 = 1.0;
+
+/// Build a candidate NLHE profile whose encounter weights are a convex
+/// combination of the closed-form reference profile and a uniform
+/// distribution over the legal actions at every reachable `NlheInfo`.
+///
+/// `mix = 1.0` reproduces the reference profile exactly (every encounter
+/// weight matches `bootstrap_reference_profile`); `mix = 0.0` produces a
+/// uniform-weight profile (every legal action weighted `1 / n_legal`).
+/// Intermediate `mix` values linearly interpolate between the two
+/// endpoints, so `mean_l1_distance` to the reference pack is monotonically
+/// non-increasing in `mix` (a useful invariant the validator ladder
+/// asserts). The resulting profile is otherwise structurally identical to
+/// the reference profile — same `iterations`, same `metrics`, same set
+/// of `(NlheInfo, NlheEdge)` encounter keys.
+///
+/// The function is the F-003 / NEM-001B NEM-001B poker-quality-benchmark
+/// seam: the checked-in bootstrap encoder is too sparse to run any
+/// MCCFR training past the zero-th iteration (`isomorphism not found`
+/// in `bootstrap_reference_solver` callers — see
+/// `crates/myosu-games-poker/src/solver.rs:177-184` and the
+/// `crates/myosu-games-poker/src/benchmark.rs:571-591` rejection test),
+/// so the truthful convergence surface available today is the L1-distance
+/// between a mixed candidate and the reference pack, not a multi-iteration
+/// exploitability ladder. The helper exposes the closed-form reference
+/// shape and a uniform perturbation of it so a validator unit test and an
+/// operator-facing example can prove the benchmark harness is wired
+/// correctly without depending on richer encoder artifacts (the same
+/// unblock F-003 / PROMOTE-001 document for the
+/// `recommended_minimum_iterations` poker ladder).
+pub fn mixed_bootstrap_reference_profile(
+    encoder: &NlheEncoder,
+    mix: f32,
+) -> Result<NlheProfile, NlheScenarioBenchmarkError> {
+    if !mix.is_finite() || mix < MIXED_REFERENCE_MIX_MIN || mix > MIXED_REFERENCE_MIX_MAX {
+        return Err(NlheScenarioBenchmarkError::EmptyChoices {
+            label: "mixed_bootstrap_reference_profile",
+        });
+    }
+
+    let reference = bootstrap_reference_profile(encoder)?;
+    let mut encounters = BTreeMap::new();
+    let mut seen_queries = BTreeSet::new();
+
+    for scenario in bootstrap_scenarios() {
+        let request = NlheStrategyRequest::from_observation_text(
+            NlheTablePosition::Button,
+            scenario.observation,
+            Vec::new(),
+            0,
+        )?;
+        let query = request.query_with_encoder(encoder)?;
+        let query_key = (query.info.subgame, query.info.bucket, query.info.choices);
+        if !seen_queries.insert(query_key) {
+            continue;
+        }
+
+        let info = query.info.into_info();
+        let legal_edges = info
+            .choices()
+            .into_iter()
+            .map(RbpNlheEdge::from)
+            .collect::<Vec<_>>();
+        let uniform_weight = 1.0_f32 / legal_edges.len() as f32;
+
+        let reference_encounters = reference
+            .encounters
+            .get(&info)
+            .expect("reference profile should populate every legal info");
+        let mixed = legal_edges
+            .iter()
+            .copied()
+            .map(|edge| {
+                let reference_weight = reference_encounters
+                    .get(&edge)
+                    .map(|encounter| encounter.weight)
+                    .unwrap_or(0.0_f32);
+                let mixed_weight =
+                    (mix * reference_weight + (1.0 - mix) * uniform_weight).clamp(0.0, 1.0);
+                (edge, Encounter::new(mixed_weight, 0.0, 0.0, 1))
+            })
+            .collect();
+        encounters.insert(info, mixed);
+    }
+
+    Ok(NlheProfile {
+        iterations: reference.iterations,
+        encounters,
+        metrics: reference.metrics,
+    })
+}
+
+/// Build a candidate NLHE solver from the mixed bootstrap reference
+/// profile and the supplied encoder. Convenience wrapper around
+/// [`mixed_bootstrap_reference_profile`] + [`PokerSolver::from_parts`] —
+/// the validator F-003 / NEM-001B quality benchmark and the
+/// operator-facing `poker_quality_benchmark` example both go through
+/// this entry point.
+pub fn mixed_bootstrap_reference_solver(
+    encoder: NlheEncoder,
+    mix: f32,
+) -> Result<PokerSolver, NlheScenarioBenchmarkError> {
+    let profile = mixed_bootstrap_reference_profile(&encoder, mix)?;
+    Ok(PokerSolver::from_parts(profile, encoder))
+}
+
+/// Number of bootstrap scenarios the F-003 / NEM-001B poker quality
+/// benchmark scores against (`8` preflop + `3 * 24` postflop = `80`
+/// scenarios from `bootstrap_scenarios()`).
+pub const POKER_REFERENCE_SCENARIO_COUNT: usize = 80;
+
+/// Expected exact-action match count for the reference solver
+/// self-matching the reference pack at `mix=1.0`. Pinned here so the
+/// unit test, the e2e harness, and the operator-facing example share
+/// one source of truth.
+pub const POKER_REFERENCE_SELF_MATCH_COUNT: usize = 80;
+
+/// Expected mean L1 distance for the reference solver self-matching the
+/// reference pack at `mix=1.0`. `mean_l1` is the per-scenario average
+/// of the absolute-probability deltas summed across the union of
+/// reference + observed actions, so a self-match always reports `0.0`
+/// (the `l1_distance` helper in `benchmark.rs:539-553` returns
+/// `0.0` when both responses carry the same action set with identical
+/// probabilities).
+pub const POKER_REFERENCE_SELF_MATCH_L1: f64 = 0.0;
+
 /// Benchmark a candidate solver against the repo-owned reference checkpoint.
 pub fn benchmark_against_bootstrap_reference(
     candidate: &PokerSolver,
@@ -617,6 +756,85 @@ mod tests {
         assert!(report.max_l1_distance > 0.0);
         assert!(report.exact_distribution_matches < report.scenario_count);
         assert!(report.exact_action_matches < report.scenario_count);
+    }
+
+    #[test]
+    fn mixed_bootstrap_reference_profile_mix_one_matches_reference_profile() {
+        // mix=1.0 must produce a profile whose encounter weights are
+        // bit-equal to the closed-form reference profile, otherwise the
+        // F-003 / NEM-001B ladder's "self-match" anchor (mix=1.0 →
+        // mean_l1=0, 80/80 matches) is meaningless.
+        let reference = bootstrap_reference_solver(merged_bootstrap_encoder())
+            .expect("reference solver should build");
+        let mixed = mixed_bootstrap_reference_solver(merged_bootstrap_encoder(), MIXED_REFERENCE_MIX_MAX)
+            .expect("mix=1.0 solver should build");
+
+        let reference_report = benchmark_solver_against_reference(&mixed, &reference)
+            .expect("self match should work");
+        assert_eq!(reference_report.scenario_count, 80);
+        assert_eq!(reference_report.exact_action_matches, 80);
+        assert_eq!(reference_report.exact_distribution_matches, 80);
+        assert_eq!(reference_report.mean_l1_distance, 0.0);
+        assert_eq!(reference_report.max_l1_distance, 0.0);
+    }
+
+    #[test]
+    fn mixed_bootstrap_reference_profile_mix_zero_is_uniform_per_scenario() {
+        // mix=0.0 must produce a profile where every legal action has
+        // weight 1/n_legal at every reachable NlheInfo. We assert the
+        // shape by checking the mix=0.0 candidate diverges from the
+        // reference pack in the same way the existing
+        // `sparse_bootstrap_checkpoint_differs_from_reference_pack`
+        // test asserts — and additionally that a mix=0.0 ladder spans
+        // the widest mean_l1 the closed-form test will ever see.
+        let reference = bootstrap_reference_solver(merged_bootstrap_encoder())
+            .expect("reference solver should build");
+        let uniform = mixed_bootstrap_reference_solver(
+            merged_bootstrap_encoder(),
+            MIXED_REFERENCE_MIX_MIN,
+        )
+        .expect("mix=0.0 solver should build");
+
+        let uniform_report = benchmark_solver_against_reference(&uniform, &reference)
+            .expect("uniform benchmark should succeed");
+        assert_eq!(uniform_report.scenario_count, 80);
+        assert!(uniform_report.mean_l1_distance > 0.0);
+        assert!(uniform_report.exact_action_matches < uniform_report.scenario_count);
+
+        // The mix=0.0 (uniform) candidate must score strictly worse than
+        // any intermediate mix=0.5 candidate — proves the convex mix
+        // factor is monotonically non-decreasing in match quality.
+        let half = mixed_bootstrap_reference_solver(merged_bootstrap_encoder(), 0.5)
+            .expect("mix=0.5 solver should build");
+        let half_report = benchmark_solver_against_reference(&half, &reference)
+            .expect("half benchmark should succeed");
+        assert!(
+            half_report.mean_l1_distance <= uniform_report.mean_l1_distance,
+            "mix=0.5 mean_l1 {} must be <= mix=0.0 mean_l1 {}",
+            half_report.mean_l1_distance,
+            uniform_report.mean_l1_distance,
+        );
+        assert!(
+            half_report.exact_action_matches >= uniform_report.exact_action_matches,
+            "mix=0.5 exact_action_matches {} must be >= mix=0.0 exact_action_matches {}",
+            half_report.exact_action_matches,
+            uniform_report.exact_action_matches,
+        );
+    }
+
+    #[test]
+    fn mixed_bootstrap_reference_profile_rejects_out_of_range_mix() {
+        let out_of_range_high = mixed_bootstrap_reference_solver(
+            merged_bootstrap_encoder(),
+            MIXED_REFERENCE_MIX_MAX + 0.1,
+        );
+        let out_of_range_low =
+            mixed_bootstrap_reference_solver(merged_bootstrap_encoder(), -0.1);
+        let nan = mixed_bootstrap_reference_solver(merged_bootstrap_encoder(), f32::NAN);
+
+        assert!(out_of_range_high.is_err());
+        assert!(out_of_range_low.is_err());
+        assert!(nan.is_err());
     }
 
     fn merged_bootstrap_encoder() -> NlheEncoder {

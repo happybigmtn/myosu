@@ -33,9 +33,15 @@
 #      the source-of-truth executable proof
 #      (`tests/e2e/quality_benchmark_liars_dice.sh`) so the operator can
 #      reproduce it.
-#   3. The new doc marks `nlhe-heads-up` as "blocked" with the
-#      `isomorphism not found` / `postflop_complete=false` rationale
-#      so the operator does not see a placeholder recommendation.
+#   3. The new doc records the NEM-001B / F-003 poker convergence
+#      substitute: the `mix_ladder` from
+#      `myosu_validator::validation::POKER_REFERENCE_LADDER`, the
+#      `0.95` exact-action-match ratio threshold
+#      (`POKER_USEFUL_REFERENCE_MATCH_RATIO`), the
+#      `tests/e2e/poker_quality_benchmark.sh` source-of-truth, and
+#      the `poker_quality_benchmark` example binary — so a future
+#      operator can find the new poker surface on the same page as
+#      the Liar's Dice one.
 #   4. The new doc names `kuhn_poker` as closed-form / 0-iteration so
 #      operators do not try to MCCFR-train a closed-form toy solver.
 #   5. The operator quickstart still links to the new doc from the
@@ -46,6 +52,12 @@
 #      `recommended_minimum_iterations=512` at `threshold=0.700000` and
 #      the live `LIARS_DICE_SOLVER_TREES` constant is still 1024, so
 #      the doc and the live benchmark cannot drift apart silently.
+#   7. The live `poker_quality_benchmark` example's
+#      `POKER_QUALITY_BENCHMARK` lines still emit
+#      `reference_self_match_count=80`, `reference_self_match_l1=0.0`,
+#      `match_ratio_threshold=0.95`, and the
+#      `mix_ladder=0.0,0.25,0.5,0.75,1.0` sequence — so the new poker
+#      surface and the operator doc cannot drift apart silently.
 
 set -euo pipefail
 
@@ -81,14 +93,23 @@ for needle in \
     fi
 done
 
-# -- 3. The new doc marks poker as blocked with the truthful rationale.
+# -- 3. The new doc records the NEM-001B / F-003 poker convergence
+#       substitute: the mix_ladder surface, the 0.95 match-ratio
+#       threshold, the executable proof harness, and the example
+#       binary. The original "blocked on richer encoder artifacts"
+#       rationale is still recorded (as a sub-paragraph) so the
+#       operator sees both why the mix-ladder exists and why it is
+#       not yet a positive-iteration exploitability ladder.
 for needle in \
     'nlhe-heads-up' \
-    'Blocked' \
+    'POKER_REFERENCE_LADDER' \
+    '0.95' \
+    'tests/e2e/poker_quality_benchmark.sh' \
+    'poker_quality_benchmark' \
     'isomorphism not found' \
     'postflop_complete=false'; do
     if ! grep -Fq "$needle" "$doc_path"; then
-        printf 'miner-convergence doc missing poker-blocker marker: %s\n' \
+        printf 'miner-convergence doc missing required poker-surface marker: %s\n' \
             "$needle" >&2
         exit 1
     fi
@@ -162,4 +183,26 @@ if [[ "$trees_check" != 'QUALITY_BENCHMARK solver_trees=1024' ]]; then
     exit 1
 fi
 
-printf 'MINER_CONVERGENCE_HARNESS doc-reg drift guard ok recommended=512 threshold=0.700000 solver_trees=1024\n'
+# -- 7. The live `poker_quality_benchmark` example's
+#       `POKER_QUALITY_BENCHMARK` lines still emit the configuration
+#       the operator doc publishes (catches drift if anyone changes
+#       either side).
+poker_example_output="$(
+    env SKIP_WASM_BUILD=1 \
+        cargo run --quiet -p myosu-validator \
+        --example poker_quality_benchmark 2>/dev/null
+)"
+for needle in \
+    'POKER_QUALITY_BENCHMARK reference_self_match_count=80' \
+    'POKER_QUALITY_BENCHMARK reference_self_match_l1=0.000000' \
+    'POKER_QUALITY_BENCHMARK match_ratio_threshold=0.950000' \
+    'POKER_QUALITY_BENCHMARK mix_ladder=0.000000,0.250000,0.500000,0.750000,1.000000'; do
+    if ! printf '%s\n' "$poker_example_output" | grep -Fxq "$needle"; then
+        printf \
+            'poker_quality_benchmark example drift vs miner-convergence doc: %s\n%s\n' \
+            "$needle" "$poker_example_output" >&2
+        exit 1
+    fi
+done
+
+printf 'MINER_CONVERGENCE_HARNESS doc-reg drift guard ok recommended=512 threshold=0.700000 solver_trees=1024 poker_mix_ladder=5\n'

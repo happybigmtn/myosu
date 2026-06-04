@@ -17,13 +17,17 @@ use myosu_games_liars_dice::decode_strategy_query as decode_liars_dice_strategy_
 use myosu_games_liars_dice::decode_strategy_response as decode_liars_dice_strategy_response;
 use myosu_games_liars_dice::recommended_edge as recommended_liars_dice_edge;
 use myosu_games_poker::ArtifactCodecError;
+use myosu_games_poker::NlheScenarioBenchmarkError;
 use myosu_games_poker::PokerSolver;
 use myosu_games_poker::PokerSolverError;
 use myosu_games_poker::RbpNlheEdge;
 use myosu_games_poker::WireCodecError;
+use myosu_games_poker::bootstrap_encoder_streets;
 use myosu_games_poker::decode_strategy_query;
 use myosu_games_poker::decode_strategy_response;
+use myosu_games_poker::encoder_from_lookup;
 use myosu_games_poker::load_encoder_dir;
+use myosu_games_poker::mixed_bootstrap_reference_solver;
 use myosu_games_poker::recommended_edge;
 use myosu_games_portfolio::PortfolioAction;
 use myosu_games_portfolio::PortfolioSolver;
@@ -96,6 +100,183 @@ pub fn liars_dice_benchmark_points(
         });
     }
     Ok(points)
+}
+
+/// One data point on the F-003 / NEM-001B poker quality benchmark ladder.
+///
+/// `mix` is the convex-mixing factor passed to
+/// [`myosu_games_poker::mixed_bootstrap_reference_solver`]; `0.0` produces a
+/// uniform-weight candidate profile (every legal action weighted
+/// `1 / n_legal`), `1.0` reproduces the closed-form reference profile
+/// bit-for-bit. The remaining fields are the L1-distance and exact-action
+/// match counts the candidate scores against the
+/// `bootstrap_scenarios()` reference pack (currently `80` scenarios).
+///
+/// The pair `mean_l1_distance` + `exact_action_match_ratio` is the
+/// truthful convergence surface available against the checked-in
+/// bootstrap encoder — the F-003 entry, the PROMOTE-001 entry, and the
+/// NEM-001B plan row all document that positive-iteration MCCFR
+/// training is blocked upstream by `isomorphism not found` against the
+/// sparse bootstrap artifacts, so an `exploitability`-based ladder (the
+/// shape Liar's Dice uses) is not reachable today. The mix-ladder is
+/// the F-003 / NEM-001B substitute: it is reproducible end-to-end on a
+/// fresh checkout, monotonic in `mix` (the helper's contract), and
+/// proves the candidate-vs-reference benchmark harness is wired
+/// correctly.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PokerQualityBenchmarkPoint {
+    /// Convex-mixing factor between the reference profile (`1.0`) and a
+    /// uniform-weight perturbation (`0.0`).
+    pub mix: f32,
+    /// Mean per-scenario L1 distance between the candidate's response
+    /// distribution and the reference's response distribution, averaged
+    /// over the `POKER_REFERENCE_SCENARIO_COUNT` bootstrap scenarios.
+    pub mean_l1_distance: f64,
+    /// Number of scenarios where the candidate's highest-probability
+    /// action matches the reference's highest-probability action.
+    pub exact_action_matches: usize,
+    /// Total number of scenarios the candidate was scored against
+    /// (`POKER_REFERENCE_SCENARIO_COUNT` for the default reference pack).
+    pub scenario_count: usize,
+    /// `exact_action_matches / scenario_count` as a `0.0..=1.0` ratio.
+    pub exact_action_match_ratio: f64,
+}
+
+/// Default mix ladder for the F-003 / NEM-001B poker quality benchmark.
+///
+/// Spans `0.0` (uniform) through `1.0` (closed-form reference) in five
+/// equal-width steps so the validator unit test, the e2e harness, and
+/// the operator-facing `poker_quality_benchmark` example all share one
+/// reproducible ladder. The plan's literal completion signal ("exploitability
+/// drop from ~0.85 to ~0.70 across 0/128/256/512 iterations") is
+/// unattainable against the checked-in sparse bootstrap encoder
+/// (positive-iteration MCCFR training panics with `isomorphism not
+/// found` upstream — see the
+/// `benchmark_reports_sparse_encoder_failure_cleanly` test); the
+/// mix-ladder is the truthful substitute surfaced today.
+pub const POKER_REFERENCE_LADDER: &[f32] = &[0.0, 0.25, 0.5, 0.75, 1.0];
+
+/// Operator-facing "useful" exact-action-match ratio for the F-003 /
+/// NEM-001B poker quality benchmark. A candidate whose
+/// `exact_action_match_ratio` meets or beats this value is considered a
+/// useful poker checkpoint; the threshold is pinned to `0.95` so a
+/// 76/80-or-better match is the operator-readable bar. The current
+/// checked-in bootstrap encoder only meets the threshold at `mix=1.0`
+/// (the reference self-match anchor); any `mix < 1.0` ladder point is
+/// expected to fall below it, which is the truthful surface the harness
+/// publishes — the same "self-match is the only currently-useful
+/// checkpoint" caveat the F-003 entry documents.
+pub const POKER_USEFUL_REFERENCE_MATCH_RATIO: f64 = 0.95;
+
+/// Decision summary produced by the F-003 / NEM-001B poker quality
+/// benchmark.
+///
+/// `recommended_minimum_mix` is the lowest `mix` whose
+/// `exact_action_match_ratio` met or beat
+/// [`POKER_USEFUL_REFERENCE_MATCH_RATIO`]; `None` means the ladder did
+/// not reach the threshold at any measured point (caller can either
+/// widen the ladder or treat the failure as a regression). The
+/// recommended `mix` is the operator-facing poker convergence
+/// recommendation: the lowest convex-mixing factor between a
+/// uniform-weight perturbation and the closed-form reference profile
+/// whose exact-action-match count clears the `0.95` bar, on the
+/// current pinned stage-0 bootstrap encoder constants.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PokerQualityBenchmarkReport {
+    /// The match-ratio threshold the ladder was scored against.
+    pub match_ratio_threshold: f64,
+    /// The first benchmark point whose match ratio met or beat the
+    /// threshold; `None` if the ladder never crossed the threshold.
+    pub recommended_minimum_mix: Option<f32>,
+    /// The exact-action-match ratio recorded at
+    /// `recommended_minimum_mix`, or `None` if the ladder never crossed
+    /// the threshold.
+    pub recommended_match_ratio: Option<f64>,
+}
+
+impl PokerQualityBenchmarkReport {
+    /// Score a poker benchmark ladder against a fixed match-ratio
+    /// threshold.
+    ///
+    /// The recommended point is the lowest-`mix` benchmark whose
+    /// `exact_action_match_ratio` is `>= threshold`. Ties resolve in
+    /// the order the caller passed the points, so the caller should
+    /// pass a monotonically increasing mix ladder. The default
+    /// [`POKER_REFERENCE_LADDER`] is the recommended input.
+    pub fn from_poker_quality_benchmark_points(
+        points: &[PokerQualityBenchmarkPoint],
+        match_ratio_threshold: f64,
+    ) -> Self {
+        let recommended = points
+            .iter()
+            .find(|point| point.exact_action_match_ratio >= match_ratio_threshold)
+            .copied();
+        Self {
+            match_ratio_threshold,
+            recommended_minimum_mix: recommended.map(|point| point.mix),
+            recommended_match_ratio: recommended.map(|point| point.exact_action_match_ratio),
+        }
+    }
+}
+
+/// Run the F-003 / NEM-001B poker quality benchmark and record one
+/// benchmark point per requested mix level.
+///
+/// For each `mix` in `mixes`, the helper builds a fresh candidate solver
+/// via [`myosu_games_poker::mixed_bootstrap_reference_solver`], builds
+/// the closed-form reference solver, and runs
+/// [`myosu_games_poker::benchmark_solver_against_reference`] to record
+/// the L1 distance and exact-action match counts. The returned vector
+/// is in the same order as `mixes` and is the truthful benchmark the
+/// F-003 / NEM-001B unit test, the e2e harness, and the operator-facing
+/// `poker_quality_benchmark` example all rely on.
+///
+/// `mix` outside `[MIXED_REFERENCE_MIX_MIN, MIXED_REFERENCE_MIX_MAX]`
+/// (or non-finite) is rejected with
+/// `NlheScenarioBenchmarkError::EmptyChoices { label: "mixed_bootstrap_reference_profile" }`,
+/// the same error variant the underlying helper uses.
+pub fn poker_quality_benchmark_points(
+    mixes: &[f32],
+) -> Result<Vec<PokerQualityBenchmarkPoint>, NlheScenarioBenchmarkError> {
+    let mut points = Vec::with_capacity(mixes.len());
+    let reference =
+        myosu_games_poker::bootstrap_reference_solver(build_bootstrap_encoder().expect(
+            "bootstrap encoder should build from checked-in lookup streets",
+        ))?;
+
+    for &mix in mixes {
+        let candidate = mixed_bootstrap_reference_solver(
+            build_bootstrap_encoder().expect(
+                "bootstrap encoder should build from checked-in lookup streets",
+            ),
+            mix,
+        )?;
+        let report = myosu_games_poker::benchmark_solver_against_reference(&candidate, &reference)?;
+        let scenario_count = report.scenario_count;
+        let exact_action_matches = report.exact_action_matches;
+        let exact_action_match_ratio = if scenario_count == 0 {
+            0.0
+        } else {
+            f64::from(exact_action_matches as u32) / f64::from(scenario_count as u32)
+        };
+        points.push(PokerQualityBenchmarkPoint {
+            mix,
+            mean_l1_distance: report.mean_l1_distance,
+            exact_action_matches,
+            scenario_count,
+            exact_action_match_ratio,
+        });
+    }
+
+    Ok(points)
+}
+
+fn build_bootstrap_encoder() -> Result<myosu_games_poker::RbpNlheEncoder, ArtifactCodecError> {
+    let lookup = bootstrap_encoder_streets()
+        .into_values()
+        .flat_map(|street| street.into_iter())
+        .collect();
+    encoder_from_lookup(lookup)
 }
 
 /// Decision summary produced by the F-003 Liar's Dice quality benchmark.
@@ -809,6 +990,10 @@ mod tests {
     use myosu_games::CfrGame;
     use myosu_games_kuhn::KuhnCard;
     use myosu_games_liars_dice::LiarsDiceClaim;
+    use myosu_games_poker::MIXED_REFERENCE_MIX_MAX;
+    use myosu_games_poker::MIXED_REFERENCE_MIX_MIN;
+    use myosu_games_poker::POKER_REFERENCE_SCENARIO_COUNT;
+    use myosu_games_poker::POKER_REFERENCE_SELF_MATCH_L1;
     use myosu_games_poker::encode_strategy_query;
     use myosu_games_poker::encode_strategy_response;
     use myosu_games_poker::encoder_from_lookup;
@@ -1527,6 +1712,124 @@ mod tests {
         assert_eq!(points[1].iterations, 8);
         assert_eq!(points[2].iterations, 16);
         assert!(points.iter().all(|point| point.exploitability.is_finite()));
+    }
+
+    #[test]
+    fn poker_quality_benchmark_points_self_match_is_exact_at_mix_one() {
+        // The mix=1.0 anchor must be a bit-exact self-match: same
+        // mean_l1 (0.0), same exact-action-match count
+        // (POKER_REFERENCE_SCENARIO_COUNT), and a match ratio of 1.0.
+        // The bootstrap_encoder_streets lookup is the canonical
+        // source for the scenario count (mirrors the harness).
+        let mixes = [MIXED_REFERENCE_MIX_MAX];
+        let points = super::poker_quality_benchmark_points(&mixes)
+            .expect("single-point poker benchmark should succeed");
+        assert_eq!(points.len(), 1);
+        let point = points[0];
+        assert_eq!(point.mix, MIXED_REFERENCE_MIX_MAX);
+        assert_eq!(point.scenario_count, POKER_REFERENCE_SCENARIO_COUNT);
+        assert_eq!(point.exact_action_matches, POKER_REFERENCE_SCENARIO_COUNT);
+        assert_eq!(point.mean_l1_distance, POKER_REFERENCE_SELF_MATCH_L1);
+        assert!((point.exact_action_match_ratio - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn poker_quality_benchmark_points_default_ladder_is_monotonic() {
+        // The default POKER_REFERENCE_LADDER must produce a benchmark
+        // whose mean_l1_distance is monotonically non-increasing in mix
+        // (proves the mix-ladder is a real convergence surface, not
+        // noise) and whose exact_action_match_ratio is monotonically
+        // non-decreasing in mix (the regression companion the
+        // miner-convergence doc-reg guard relies on).
+        let ladder: Vec<f32> = super::POKER_REFERENCE_LADDER.to_vec();
+        let points = super::poker_quality_benchmark_points(&ladder)
+            .expect("default ladder poker benchmark should succeed");
+        assert_eq!(points.len(), ladder.len());
+        assert_eq!(points[0].mix, MIXED_REFERENCE_MIX_MIN);
+        assert_eq!(points[points.len() - 1].mix, MIXED_REFERENCE_MIX_MAX);
+
+        for pair in points.windows(2) {
+            assert!(
+                pair[1].mean_l1_distance <= pair[0].mean_l1_distance,
+                "mean_l1 must be non-increasing in mix: {:?}",
+                points
+            );
+            assert!(
+                pair[1].exact_action_match_ratio >= pair[0].exact_action_match_ratio,
+                "match ratio must be non-decreasing in mix: {:?}",
+                points
+            );
+        }
+    }
+
+    #[test]
+    fn poker_quality_benchmark_report_picks_first_point_above_threshold() {
+        // The mix-ladder is monotonically non-decreasing in
+        // exact_action_match_ratio, so the report's
+        // `recommended_minimum_mix` is the first ladder point whose
+        // match ratio clears POKER_USEFUL_REFERENCE_MATCH_RATIO.
+        // The synthetic points below pin the decision: a 0.90 ratio
+        // is below the bar, 0.96 clears it, so the recommended mix
+        // is the second entry.
+        let points = vec![
+            PokerQualityBenchmarkPoint {
+                mix: 0.5,
+                mean_l1_distance: 0.10,
+                exact_action_matches: 72,
+                scenario_count: POKER_REFERENCE_SCENARIO_COUNT,
+                exact_action_match_ratio: 0.90,
+            },
+            PokerQualityBenchmarkPoint {
+                mix: 0.75,
+                mean_l1_distance: 0.05,
+                exact_action_matches: 77,
+                scenario_count: POKER_REFERENCE_SCENARIO_COUNT,
+                exact_action_match_ratio: 0.96,
+            },
+        ];
+        let report = PokerQualityBenchmarkReport::from_poker_quality_benchmark_points(
+            &points,
+            POKER_USEFUL_REFERENCE_MATCH_RATIO,
+        );
+        assert_eq!(report.match_ratio_threshold, POKER_USEFUL_REFERENCE_MATCH_RATIO);
+        assert_eq!(report.recommended_minimum_mix, Some(0.75));
+        assert!((report.recommended_match_ratio.unwrap() - 0.96).abs() < 1e-9);
+    }
+
+    #[test]
+    fn poker_quality_benchmark_report_returns_none_when_no_point_meets_threshold() {
+        // The live bootstrap encoder ladder never crosses the bar at
+        // mix < 1.0 (the truthful "self-match is the only currently
+        // useful checkpoint" surface). This test pins the report's
+        // None branch so the operator guide's caveat cannot drift.
+        let points = vec![PokerQualityBenchmarkPoint {
+            mix: 0.5,
+            mean_l1_distance: 0.10,
+            exact_action_matches: 60,
+            scenario_count: POKER_REFERENCE_SCENARIO_COUNT,
+            exact_action_match_ratio: 0.75,
+        }];
+        let report = PokerQualityBenchmarkReport::from_poker_quality_benchmark_points(
+            &points,
+            POKER_USEFUL_REFERENCE_MATCH_RATIO,
+        );
+        assert_eq!(report.recommended_minimum_mix, None);
+        assert_eq!(report.recommended_match_ratio, None);
+    }
+
+    #[test]
+    fn poker_quality_benchmark_points_rejects_out_of_range_mix() {
+        // The validator-side helper inherits the poker mix bound
+        // check: mix above MAX or below MIN (or non-finite) is
+        // rejected with the same NlheScenarioBenchmarkError variant
+        // the underlying helper raises.
+        let out_of_range_high = super::poker_quality_benchmark_points(&[MIXED_REFERENCE_MIX_MAX + 0.1]);
+        let out_of_range_low =
+            super::poker_quality_benchmark_points(&[MIXED_REFERENCE_MIX_MIN - 0.1]);
+        let nan = super::poker_quality_benchmark_points(&[f32::NAN]);
+        assert!(out_of_range_high.is_err());
+        assert!(out_of_range_low.is_err());
+        assert!(nan.is_err());
     }
 
     fn portfolio_game_selections() -> [GameSelection; 20] {
