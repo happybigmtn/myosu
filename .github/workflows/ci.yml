@@ -429,6 +429,15 @@ jobs:
       - name: Verify SEC-001 allowlist consistency
         run: bash tests/e2e/sec001_allowlist_consistency.sh
 
+      - name: Verify SEC-001 allowlist is not stale
+        # Defense-in-depth companion to the consistency test: confirms
+        # every entry in the synced allowlist is still suppressing a
+        # real advisory that the live `cargo audit -D warnings` gate
+        # would otherwise deny. Detects the failure mode where the
+        # lockfile has been bumped past a CVE but the corresponding
+        # `--ignore` line was left behind.
+        run: bash tests/e2e/sec001_allowlist_staleness_probe.sh
+
       - name: Verify F-001 Cribbage benchmark dossier
         env:
           SKIP_WASM_BUILD: "1"

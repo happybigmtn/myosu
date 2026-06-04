@@ -97,9 +97,16 @@ All 38 RUSTSEC advisories currently suppressed in
 The table is the source of truth for the per-advisory rationale; the
 two configuration files mirror it. The consistency between the three
 files is enforced by
-[`tests/e2e/sec001_allowlist_consistency.sh`](tests/e2e/sec001_allowlist_consistency.sh),
-which is wired into the `dependency-audit` CI job and runs as part of
-pre-push hygiene.
+[`tests/e2e/sec001_allowlist_consistency.sh`](tests/e2e/sec001_allowlist_consistency.sh)
+is wired into the `dependency-audit` CI job and runs as part of
+pre-push hygiene. A defense-in-depth companion
+[`tests/e2e/sec001_allowlist_staleness_probe.sh`](tests/e2e/sec001_allowlist_staleness_probe.sh)
+also runs in CI; it confirms every entry in the synced allowlist
+is still suppressing a real advisory that the live
+`cargo audit -D warnings` gate would otherwise deny. Together the
+two scripts keep the documentation, the CI workflow, and the
+local `cargo audit` invocation from drifting on what is and is
+not actively blocked.
 
 ### Classification buckets
 
@@ -203,6 +210,9 @@ and not from any Myosu game, miner, validator, or operator code path.
   otherwise.
 - Removing an advisory: do all three in reverse and re-run
   `bash tests/e2e/sec001_allowlist_consistency.sh` to confirm.
+  Re-run `bash tests/e2e/sec001_allowlist_staleness_probe.sh` to
+  confirm the trimmed allowlist still suppresses every advisory
+  the live `cargo audit -D warnings` gate would otherwise deny.
 - The plan 008 acceptance criterion #3 ("Any advisory whose upstream
   crate has been patched is removed from the allowlist") is met by
   re-running `cargo audit --no-fetch` after every dependency update
