@@ -41,7 +41,14 @@ Hard rules for the myosu game-solving subnet chain.
 - Fallback mode: freeze solver emissions until determinism is restored.
 - Multi-host proof: `tests/e2e/validator_determinism.sh` (the on-host
   base surface). Two-host extension: `tests/e2e/multi_host_validator_determinism.sh`
-  (planned under W-04).
+  (W-04; runs the `multi_host_validator_determinism` example twice with
+  two distinct SURI-anchored `MYOSU_OPERATOR_CHAIN`-shaped data dirs
+  and asserts the per-operator integer `weight` values agree, which
+  collapses the floating-point INV-003 epsilon window to `delta == 0`
+  on the on-chain `Weights` row domain — the same invariant
+  `myosu-chain-client::evaluate_validator_agreement` already
+  enforces at the on-chain layer, applied here at the per-operator
+  scoring surface).
 - Scoring-metric determinism proof: `tests/e2e/validator_scoring_metric.sh`
   (W-06). The metric's `percentile` helper uses nearest-rank (no
   interpolation) and the `emit` line protocol is byte-stable across

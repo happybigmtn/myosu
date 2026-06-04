@@ -81,3 +81,5 @@ rules:
       - ci.yml:883
       # reason: dtolnay/rust-toolchain intentional in public-bundles-manifest job (W-02 public policy bundles gate, Swatinem/rust-cache keying)
       - ci.yml:939
+      # reason: dtolnay/rust-toolchain intentional in multi-host-validator-determinism job (W-04 multi-host INV-003 proof gate, Swatinem/rust-cache keying)
+      - ci.yml:1001
