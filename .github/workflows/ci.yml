@@ -145,6 +145,9 @@ jobs:
       - name: Promotion manifest harness
         run: bash tests/e2e/promotion_manifest.sh
 
+      - name: Promotion manifest quality gate (PROMOTE-001-2)
+        run: bash tests/e2e/promotion_manifest_quality_gate.sh
+
       - name: INV-004 solver-gameplay dependency boundary
         run: |
           play_tree="$(cargo tree -p myosu-play --edges normal)"

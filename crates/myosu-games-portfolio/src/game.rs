@@ -118,6 +118,23 @@ impl ResearchGame {
         }
     }
 
+    /// Inverse of `slug`: resolve a CLI / artifact slug back to the
+    /// `ResearchGame` it names, or `None` if the slug is not a known game.
+    /// Used by the promotion quality gate in
+    /// `crates/myosu-games-canonical/examples/verify_promotion_outputs.rs`
+    /// and by the gate's unit tests in
+    /// `crates/myosu-games-canonical/src/policy.rs`.
+    pub fn from_slug(slug: &str) -> Option<Self> {
+        let normalized = slug.trim();
+        if normalized.is_empty() {
+            return None;
+        }
+        ALL_RESEARCH_GAMES
+            .iter()
+            .copied()
+            .find(|game| game.slug() == normalized)
+    }
+
     /// Canonical on-chain game id.
     pub const fn chain_id(self) -> &'static str {
         match self {

@@ -55,6 +55,33 @@ assert_promotion_outputs() {
   done
 }
 
+# Content-level companion gate: for any row at tier=promotable_local (or
+# stricter), the bundle on disk must actually verify and its benchmark
+# summary must record a passing dossier. The previous file-presence check
+# could be satisfied by an empty placeholder; this check calls the shared
+# `verify_promotion_outputs` example which is the same code the dedicated
+# `promotion_manifest_quality_gate.sh` harness uses for its positive and
+# negative proofs.
+assert_promotion_quality_gate() {
+  local slug="$1"
+  local gate_output
+
+  if ! gate_output="$(
+    MYOSU_SOLVER_PROMOTION_LEDGER="$ledger_path" \
+      SKIP_WASM_BUILD=1 cargo run --quiet -p myosu-games-canonical \
+        --example verify_promotion_outputs -- --slug "$slug" 2>&1
+  )"; then
+    printf '%s failed the promotion quality gate:\n%s\n' "$slug" "$gate_output" >&2
+    exit 1
+  fi
+
+  if ! printf '%s\n' "$gate_output" | grep -Fq "PROMOTION_GATE_PASS slug=$slug"; then
+    printf '%s failed the promotion quality gate (no PASS line):\n%s\n' \
+      "$slug" "$gate_output" >&2
+    exit 1
+  fi
+}
+
 assert_tier_at_least() {
   local slug="$1"
   local expected="$2"
@@ -107,6 +134,7 @@ while IFS= read -r line; do
   if (( tier_rank >= promotable_local_rank )); then
     slug="$(field_value "$line" slug)"
     assert_promotion_outputs "$slug"
+    assert_promotion_quality_gate "$slug"
   fi
 done < <(printf '%s\n' "$manifest" | grep '^SOLVER_PROMOTION_GAME ')
 

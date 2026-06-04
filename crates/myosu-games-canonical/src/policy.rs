@@ -748,6 +748,71 @@ games:
         );
     }
 
+    /// Unit-level guard for the `verify_promotion_outputs` example's tier
+    /// logic: any game declared at `tier: promotable_local` (or stricter) in
+    /// the ledger must also be at a tier that the checked-in code actually
+    /// supports, so the bash gate cannot be defeated by raising the YAML
+    /// tier above `code_reported_bundle_support`. This is the canonical
+    /// surface the `promotion_manifest_quality_gate.sh` harness relies on.
+    #[test]
+    fn promotion_gate_required_tier_does_not_exceed_code_support() {
+        let ledger = parse_solver_promotion_ledger(PROMOTION_LEDGER).unwrap_or_else(|error| {
+            panic!("promotion ledger should parse: {error}");
+        });
+
+        for entry in &ledger.games {
+            if entry.tier >= PolicyPromotionTier::PromotableLocal {
+                let game = ResearchGame::from_slug(&entry.game).unwrap_or_else(|| {
+                    panic!("ledger slug `{}` should map to a known game", entry.game)
+                });
+                let code_support = code_reported_bundle_support(game);
+                assert!(
+                    code_support >= entry.tier,
+                    "{} declares tier `{}` but live code support is `{}`; \
+                     the promotion gate would force promotion without a code path",
+                    entry.game,
+                    entry.tier.as_str(),
+                    code_support.as_str()
+                );
+            }
+        }
+    }
+
+    /// The promotion gate SKIPs a row that is below the strictness bar. A
+    /// row at `tier: benchmarked` is not held to the content-level gate,
+    /// because the ledger itself only requires `tier <= code_support` and a
+    /// non-empty outputs dir for that row. This test documents that
+    /// skip-below-threshold behavior at the unit level using the live
+    /// promotion ledger: `nlhe-heads-up` is `benchmarked` (below the gate's
+    /// `promotable_local` threshold) but its `bundle_support` is
+    /// `promotable_local` — the gate must skip it without re-asserting
+    /// content-level rules. Loading the live ledger (rather than a
+    /// hand-rolled fixture) keeps this test self-consistent with the
+    /// complete-game invariant the parser enforces.
+    #[test]
+    fn promotion_gate_skips_below_threshold_rows() {
+        let ledger = parse_solver_promotion_ledger(PROMOTION_LEDGER).unwrap_or_else(|error| {
+            panic!("promotion ledger should parse: {error}");
+        });
+        let entry = ledger
+            .entry_for(ResearchGame::NlheHeadsUp)
+            .expect("nlhe-heads-up row should be present in the live ledger");
+        assert!(
+            entry.tier < PolicyPromotionTier::PromotableLocal,
+            "live nlhe-heads-up tier `{}` must be below the gate threshold so \
+             the test exercises the skip path; if you are trying to raise \
+             the live tier, change this test to pick another below-threshold row",
+            entry.tier.as_str()
+        );
+        assert_eq!(
+            code_reported_bundle_support(ResearchGame::NlheHeadsUp),
+            PolicyPromotionTier::PromotableLocal,
+            "code support for nlhe-heads-up should still advertise \
+             promotable_local so the skip path is the gate that protects the \
+             ledger from a tier claim above code support"
+        );
+    }
+
     fn weighted_bridge_bundle() -> CanonicalPolicyBundle {
         bridge_bundle(vec![
             distribution_entry("bridge.play.follow-suit", 700_000),
