@@ -5,9 +5,9 @@ games:
     benchmark_surface: repo_owned_reference_pack
     benchmark_threshold: reference_pack_pass
     artifact_requirement: full_encoder_manifest_plus_checkpoint
-    bundle_support: benchmarked
+    bundle_support: promotable_local
     bitino_target_phase: phase_6_candidate
-    notes: benchmarked_only_sparse_bootstrap_is_not_promotable
+    notes: tier_stays_benchmarked_until_full_artifact_dossier; bundle_builder_is_promotable_local
   - game: nlhe-six-max
     route: portfolio
     tier: routed

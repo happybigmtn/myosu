@@ -7925,6 +7925,8 @@ dependencies = [
  "bincode",
  "memmap2 0.9.10",
  "myosu-games",
+ "myosu-games-canonical",
+ "myosu-games-portfolio",
  "myosu-tui",
  "proptest",
  "ratatui",

@@ -217,7 +217,7 @@ pub fn solver_promotion_manifest_rows(
 /// Highest promotion tier currently supported by checked-in code for a game.
 pub const fn code_reported_bundle_support(game: ResearchGame) -> PolicyPromotionTier {
     match game {
-        ResearchGame::NlheHeadsUp => PolicyPromotionTier::Benchmarked,
+        ResearchGame::NlheHeadsUp => PolicyPromotionTier::PromotableLocal,
         ResearchGame::LiarsDice => PolicyPromotionTier::PromotableLocal,
         ResearchGame::Cribbage => PolicyPromotionTier::Benchmarked,
         _ => PolicyPromotionTier::Routed,
@@ -711,7 +711,7 @@ mod tests {
         assert!(rows.iter().any(|row| {
             row.game == ResearchGame::NlheHeadsUp
                 && row.tier == PolicyPromotionTier::Benchmarked
-                && row.code_bundle_support == PolicyPromotionTier::Benchmarked
+                && row.code_bundle_support == PolicyPromotionTier::PromotableLocal
         }));
         assert!(rows.iter().any(|row| {
             row.game == ResearchGame::LiarsDice

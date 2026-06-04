@@ -10,6 +10,8 @@ crate-type = ["lib"]
 
 [dependencies]
 myosu-games = { path = "../myosu-games" }
+myosu-games-canonical = { workspace = true }
+myosu-games-portfolio = { workspace = true }
 myosu-tui = { path = "../myosu-tui" }
 bincode = "1.3"
 rbp-cards = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }

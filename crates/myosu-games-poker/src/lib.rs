@@ -5,6 +5,7 @@ pub mod artifacts;
 pub mod benchmark;
 pub mod codexpoker;
 pub mod lookup_dump;
+pub mod policy_bundle;
 pub mod renderer;
 pub mod request;
 pub mod robopoker;
@@ -30,6 +31,10 @@ pub use benchmark::{
 pub use benchmark::{PokerBenchmarkError, PokerBenchmarkPoint, benchmark_points_from_encoder_dir};
 pub use codexpoker::{CodexpokerBlueprint, CodexpokerBlueprintError};
 pub use lookup_dump::{LookupDumpError, write_encoder_dir_from_lookup_dump};
+pub use policy_bundle::{
+    NlhePolicyBundleError, NlhePolicyBundleEvidence, passing_benchmark_dossier,
+    sparse_benchmark_dossier, build_nlhe_policy_bundle, build_nlhe_policy_bundle_evidence,
+};
 pub use renderer::NlheRenderer;
 pub use request::{NlheHistoryAction, NlheStrategyRequest, StrategyRequestError};
 pub use robopoker::{
