@@ -489,6 +489,11 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/call_break_benchmark_dossier.sh
 
+      - name: Verify F-013 Backgammon benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/backgammon_benchmark_dossier.sh
+
   developer-quickstart:
     name: Developer Quickstart
     runs-on: ubuntu-latest

@@ -5,6 +5,7 @@
 //! contract while deeper game-specific engines are built behind the same
 //! surface.
 
+pub mod backgammon_benchmark;
 pub mod bridge_benchmark;
 pub mod call_break_benchmark;
 pub mod cards;
@@ -27,6 +28,7 @@ pub mod spades_benchmark;
 pub mod state;
 pub mod wire;
 
+pub use backgammon_benchmark::{BackgammonBenchmarkDossier, BackgammonDossierError};
 pub use bridge_benchmark::{BridgeBenchmarkDossier, BridgeDossierError};
 pub use call_break_benchmark::{CallBreakBenchmarkDossier, CallBreakDossierError};
 pub use cribbage_benchmark::{CribbageBenchmarkDossier, CribbageDossierError};
