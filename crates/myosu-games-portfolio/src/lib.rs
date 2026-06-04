@@ -28,6 +28,7 @@ pub mod rollout;
 pub mod solver;
 pub mod spades_benchmark;
 pub mod state;
+pub mod stratego_benchmark;
 pub mod wire;
 
 pub use backgammon_benchmark::{BackgammonBenchmarkDossier, BackgammonDossierError};
@@ -52,6 +53,7 @@ pub use renderer::{PortfolioRenderer, PortfolioSnapshot};
 pub use solver::{PortfolioSolver, PortfolioSolverError};
 pub use spades_benchmark::{SpadesBenchmarkDossier, SpadesDossierError};
 pub use state::{PortfolioChallenge, PortfolioChallengeSpot};
+pub use stratego_benchmark::{StrategoBenchmarkDossier, StrategoDossierError};
 pub use wire::{
     WireCodecError, decode_info, decode_strategy_query, decode_strategy_response,
     decode_strength_query, encode_info, encode_strategy_query, encode_strategy_response,

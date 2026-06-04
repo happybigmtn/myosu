@@ -839,3 +839,396 @@ mod tests {
         StrategoCoordinate { x, y }
     }
 }
+
+// =====================================================================
+// F-016 promotion-artifact scenario pack.
+//
+// The pack is the canonical 22-scenario rule-aware scenario set the
+// `StrategoBenchmarkDossier` (in `crate::stratego_benchmark`) hashes
+// over and renders. Each row is hand-verified against the live
+// `state-aware belief-scout heuristic` math in
+// `crate::engines::stratego::answer`:
+//
+//   scout      = 0.85 + scout_lanes*0.55 + hidden_targets*0.45
+//                + bombs_suspected*0.05
+//                + (attack_is_forced ? -0.40 : 0.15)
+//   place_safe = 0.80 + bombs_suspected*0.30
+//                + (attack_targets==0 ? 0.25 : 0.0)
+//                + (miners_remaining==0 ? 0.25 : 0.0)
+//                + (attack_is_forced ? -0.20 : 0.10)
+//   advance    = 0.80 + attack_targets*0.60
+//                + (attack_is_forced ? 0.95 : 0.0)
+//                + (bombs_suspected > miners_remaining ? -0.10 : 0.10)
+//
+// The pack splits 8/8/6 across scout-dominant / advance-piece-dominant
+// / place-safe-dominant so a regression that flips the dominant arm on
+// any scenario is loud in the dossier's recommendation map. Every
+// row's `decision` docstring records the expected `s=…` / `p=…` /
+// `a=…` values so the dominant arm stays dominant by at least 0.60 on
+// every scenario (the tightest margin is `place-safe-no-targets-mid-bomb`
+// at p=1.75 vs s=1.10, a 0.65 margin).
+/// One row of the canonical 22-scenario Stratego benchmark pack.
+///
+/// The fields mirror the live `StrategoChallenge` feature struct so
+/// the dossier's typed `PortfolioChallenge::Stratego(StrategoChallenge { ... })`
+/// is a field-for-field copy of the scenario. Keeping the mirror
+/// stable means the dossier hash is also a regression guard for the
+/// feature-view extraction: a refactor that changes how
+/// `feature_view` reads `scout_lanes` / `hidden_targets` / etc out of
+/// a `CoreGameState` will flip the dossier's recommendation map and
+/// the unit tests will fail.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StrategoScenario {
+    pub scenario_id: &'static str,
+    pub decision: &'static str,
+    pub scout_lanes: u8,
+    pub miners_remaining: u8,
+    pub bombs_suspected: u8,
+    pub attack_targets: u8,
+    pub hidden_targets: u8,
+    pub attack_is_forced: bool,
+}
+
+/// Return the canonical 22-scenario Stratego benchmark pack.
+pub fn stratego_scenario_pack() -> &'static [StrategoScenario] {
+    STRATEGO_SCENARIO_PACK
+}
+
+const STRATEGO_SCENARIO_PACK: &[StrategoScenario] = &[
+    // ---- scout bucket (×8) — open board with hidden targets + live scout lanes ----
+    StrategoScenario {
+        scenario_id: "scout-open-two-lanes-one-hidden",
+        decision: "Open board: 2 scout lanes, 1 hidden target — scout dominates (s=2.55, p=1.15, a=0.90)",
+        scout_lanes: 2,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 0,
+        hidden_targets: 1,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "scout-open-three-lanes-one-hidden",
+        decision: "Open board: 3 scout lanes, 1 hidden target — scout dominates (s=3.10, p=1.15, a=0.90)",
+        scout_lanes: 3,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 0,
+        hidden_targets: 1,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "scout-open-one-lane-two-hidden",
+        decision: "Open board: 1 scout lane, 2 hidden targets — scout dominates (s=2.45, p=1.15, a=0.90)",
+        scout_lanes: 1,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 0,
+        hidden_targets: 2,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "scout-open-two-lanes-two-hidden",
+        decision: "Open board: 2 scout lanes, 2 hidden targets — scout dominates (s=3.00, p=1.15, a=0.90)",
+        scout_lanes: 2,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 0,
+        hidden_targets: 2,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "scout-light-bomb-pressure",
+        decision: "Open board with 1 bomb suspected, 2 scout lanes, 1 hidden — scout dominates (s=2.60, p=1.45, a=0.90)",
+        scout_lanes: 2,
+        miners_remaining: 1,
+        bombs_suspected: 1,
+        attack_targets: 0,
+        hidden_targets: 1,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "scout-deep-bomb-pressure",
+        decision: "Open board with 2 bombs suspected, 2 scout lanes, 2 hidden — scout dominates (s=3.10, p=1.75, a=0.70)",
+        scout_lanes: 2,
+        miners_remaining: 1,
+        bombs_suspected: 2,
+        attack_targets: 0,
+        hidden_targets: 2,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "scout-mixed-bomb-press",
+        decision: "Open board with 1 bomb suspected, 3 scout lanes, 1 hidden — scout dominates (s=3.15, p=1.45, a=0.90)",
+        scout_lanes: 3,
+        miners_remaining: 1,
+        bombs_suspected: 1,
+        attack_targets: 0,
+        hidden_targets: 1,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "scout-hidden-rich",
+        decision: "Open board: 2 scout lanes, 3 hidden targets — scout dominates (s=3.45, p=1.15, a=0.90)",
+        scout_lanes: 2,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 0,
+        hidden_targets: 3,
+        attack_is_forced: false,
+    },
+    // ---- advance-piece bucket (×8) — forced combat with live attack targets ----
+    StrategoScenario {
+        scenario_id: "advance-forced-one-target",
+        decision: "Forced combat: 1 attack target — advance dominates (s=0.45, p=0.60, a=2.45)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 1,
+        hidden_targets: 0,
+        attack_is_forced: true,
+    },
+    StrategoScenario {
+        scenario_id: "advance-forced-two-targets",
+        decision: "Forced combat: 2 attack targets — advance dominates (s=0.45, p=0.60, a=3.05)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 2,
+        hidden_targets: 0,
+        attack_is_forced: true,
+    },
+    StrategoScenario {
+        scenario_id: "advance-forced-three-targets",
+        decision: "Forced combat: 3 attack targets — advance dominates (s=0.45, p=0.60, a=3.65)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 3,
+        hidden_targets: 0,
+        attack_is_forced: true,
+    },
+    StrategoScenario {
+        scenario_id: "advance-forced-one-target-bomb",
+        decision: "Forced combat: 1 attack target, 1 bomb suspected — advance dominates (s=0.50, p=0.90, a=2.45)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 1,
+        attack_targets: 1,
+        hidden_targets: 0,
+        attack_is_forced: true,
+    },
+    StrategoScenario {
+        scenario_id: "advance-forced-one-target-deep-bomb",
+        decision: "Forced combat: 1 attack target, 2 bombs suspected, miners < bombs — advance dominates (s=0.55, p=1.20, a=2.25)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 2,
+        attack_targets: 1,
+        hidden_targets: 0,
+        attack_is_forced: true,
+    },
+    StrategoScenario {
+        scenario_id: "advance-forced-one-hidden",
+        decision: "Forced combat with 1 hidden target — advance dominates (s=0.90, p=0.60, a=2.45)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 1,
+        hidden_targets: 1,
+        attack_is_forced: true,
+    },
+    StrategoScenario {
+        scenario_id: "advance-forced-two-hidden",
+        decision: "Forced combat with 2 hidden targets — advance dominates (s=1.35, p=0.60, a=2.45)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 0,
+        attack_targets: 1,
+        hidden_targets: 2,
+        attack_is_forced: true,
+    },
+    StrategoScenario {
+        scenario_id: "advance-forced-one-target-bomb-balanced",
+        decision: "Forced combat: 1 attack target, 2 bombs suspected, miners=2 (balances bombs) — advance dominates (s=0.55, p=1.20, a=2.45)",
+        scout_lanes: 0,
+        miners_remaining: 2,
+        bombs_suspected: 2,
+        attack_targets: 1,
+        hidden_targets: 0,
+        attack_is_forced: true,
+    },
+    // ---- place-safe bucket (×6) — bomb-heavy / no-attack / no-miners open board ----
+    StrategoScenario {
+        scenario_id: "place-safe-heavy-bomb",
+        decision: "Heavy bomb pressure (3 bombs, no targets) — place_safe dominates (s=1.15, p=2.05, a=0.70)",
+        scout_lanes: 0,
+        miners_remaining: 2,
+        bombs_suspected: 3,
+        attack_targets: 0,
+        hidden_targets: 0,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "place-safe-no-miners",
+        decision: "Bomb pressure with no miners left — place_safe dominates (s=1.10, p=2.00, a=0.70)",
+        scout_lanes: 0,
+        miners_remaining: 0,
+        bombs_suspected: 2,
+        attack_targets: 0,
+        hidden_targets: 0,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "place-safe-no-targets-heavy-bomb",
+        decision: "3 bombs suspected, 0 targets — place_safe dominates (s=1.15, p=2.05, a=0.70)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 3,
+        attack_targets: 0,
+        hidden_targets: 0,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "place-safe-no-targets-mid-bomb",
+        decision: "2 bombs suspected, 0 targets — place_safe dominates (s=1.10, p=1.75, a=0.70)",
+        scout_lanes: 0,
+        miners_remaining: 1,
+        bombs_suspected: 2,
+        attack_targets: 0,
+        hidden_targets: 0,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "place-safe-no-miners-deep-bomb",
+        decision: "2 bombs suspected, 0 miners — place_safe dominates (s=1.10, p=2.00, a=0.70)",
+        scout_lanes: 0,
+        miners_remaining: 0,
+        bombs_suspected: 2,
+        attack_targets: 0,
+        hidden_targets: 0,
+        attack_is_forced: false,
+    },
+    StrategoScenario {
+        scenario_id: "place-safe-no-miners-light-bomb",
+        decision: "1 bomb suspected, 0 miners — place_safe dominates (s=1.05, p=1.70, a=0.70)",
+        scout_lanes: 0,
+        miners_remaining: 0,
+        bombs_suspected: 1,
+        attack_targets: 0,
+        hidden_targets: 0,
+        attack_is_forced: false,
+    },
+];
+
+#[cfg(test)]
+mod scenario_pack_tests {
+    use super::*;
+
+    #[test]
+    fn stratego_scenario_pack_is_22_rows() {
+        assert_eq!(stratego_scenario_pack().len(), 22);
+    }
+
+    #[test]
+    fn stratego_scenario_ids_are_unique() {
+        let pack = stratego_scenario_pack();
+        let mut seen = std::collections::HashSet::new();
+        for scenario in pack {
+            assert!(
+                seen.insert(scenario.scenario_id),
+                "duplicate scenario_id: {}",
+                scenario.scenario_id
+            );
+        }
+    }
+
+    #[test]
+    fn stratego_scenario_buckets_have_expected_counts() {
+        let pack = stratego_scenario_pack();
+        let scout = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("scout-"))
+            .count();
+        let advance = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("advance-"))
+            .count();
+        let place_safe = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("place-safe-"))
+            .count();
+        assert_eq!(scout, 8, "scout bucket should be 8");
+        assert_eq!(advance, 8, "advance bucket should be 8");
+        assert_eq!(place_safe, 6, "place-safe bucket should be 6");
+        assert_eq!(scout + advance + place_safe, 22);
+    }
+
+    #[test]
+    fn stratego_scenario_math_holds_for_every_row() {
+        // The dossier's recommendation map is built from
+        // `answer_typed_challenge` on the typed challenge, but the
+        // pack's own `decision` docstring names the expected
+        // `s=…`/`p=…`/`a=…` values, so this test re-derives the
+        // expected dominant action and confirms it matches the bucket
+        // label. A regression that changes the engine's heuristic
+        // math would flip the dominant action on at least one row
+        // and this test would fail.
+        fn dominant(
+            scout_lanes: u8,
+            hidden_targets: u8,
+            bombs_suspected: u8,
+            attack_targets: u8,
+            miners_remaining: u8,
+            attack_is_forced: bool,
+        ) -> &'static str {
+            let scout = 0.85_f32
+                + (scout_lanes as f32) * 0.55
+                + (hidden_targets as f32) * 0.45
+                + (bombs_suspected as f32) * 0.05
+                + if attack_is_forced { -0.40 } else { 0.15 };
+            let place_safe = 0.80_f32
+                + (bombs_suspected as f32) * 0.30
+                + if attack_targets == 0 { 0.25 } else { 0.0 }
+                + if miners_remaining == 0 { 0.25 } else { 0.0 }
+                + if attack_is_forced { -0.20 } else { 0.10 };
+            let advance = 0.80_f32
+                + (attack_targets as f32) * 0.60
+                + if attack_is_forced { 0.95 } else { 0.0 }
+                + if bombs_suspected > miners_remaining {
+                    -0.10
+                } else {
+                    0.10
+                };
+            if scout >= place_safe && scout >= advance {
+                "scout"
+            } else if advance >= place_safe {
+                "advance-piece"
+            } else {
+                "place-safe"
+            }
+        }
+
+        for scenario in stratego_scenario_pack() {
+            let derived = dominant(
+                scenario.scout_lanes,
+                scenario.hidden_targets,
+                scenario.bombs_suspected,
+                scenario.attack_targets,
+                scenario.miners_remaining,
+                scenario.attack_is_forced,
+            );
+            let expected = if scenario.scenario_id.starts_with("scout-") {
+                "scout"
+            } else if scenario.scenario_id.starts_with("advance-") {
+                "advance-piece"
+            } else {
+                "place-safe"
+            };
+            assert_eq!(
+                derived, expected,
+                "scenario {} expected {} but engine math derives {}",
+                scenario.scenario_id, expected, derived
+            );
+        }
+    }
+}

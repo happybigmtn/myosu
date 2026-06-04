@@ -48,6 +48,35 @@ tracks supported operator-facing releases starting at `0.1.0`.
   MCCFR training still fails upstream with `isomorphism not found`; the
   PROMOTE-001 external artifact supply is the unblock for a real
   positive-iteration poker exploitability ladder).
+- F-016 Stratego benchmark dossier + rule-aware scenario pack (the 10th
+  portfolio-game-promotion slice, first `state-aware belief-scout heuristic`
+  engine family — the previous nine portfolio slices all shared a prior engine
+  family; Stratego is the first dossier slice to open a new family).
+  `crates/myosu-games-portfolio/src/core/stratego.rs` gains `StrategoScenario`
+  (22 rows; coverage buckets `scout×8` / `advance-piece×8` / `place-safe×6` with
+  the tightest margin pinned at 0.65 on `place-safe-no-targets-mid-bomb`) and
+  the const `STRATEGO_SCENARIO_PACK` exposed through `stratego_scenario_pack()`.
+  The new crate module `crates/myosu-games-portfolio/src/stratego_benchmark.rs`
+  defines `StrategoBenchmarkDossier` with the full promotion surface
+  (`benchmark_id`, `benchmark_method`, `metric_name`, `metric_value`,
+  `threshold`, `passing`, `scenario_count`, `recommendation_count`,
+  `engine_family`, `engine_tier`, `rule_file`, `scenario_hash`,
+  `recommendations: BTreeMap<String, String>`) and a deterministic SHA-256 over
+  the canonical scenario/answer table sorted by `scenario_id`. The new example
+  binary `crates/myosu-games-portfolio/examples/stratego_benchmark.rs` runs the
+  live rule-aware engine against the pack and writes the JSON dossier to
+  `outputs/solver-promotion/stratego/stratego-benchmark-dossier.json`
+  (overridable via `MYOSU_STRATEGO_BENCHMARK_OUTPUT`). The new e2e proof
+  harness `tests/e2e/stratego_benchmark_dossier.sh` (5 sub-checks) is wired
+  into `.github/workflows/ci.yml` as a new `Verify F-016 Stratego benchmark
+  dossier` step in the `active-crates` job. `ops/solver_promotion.yaml`
+  advances the `stratego` row from `tier: routed` to `tier: benchmarked`
+  (matching the F-015 HwatuGoStop promotion pattern); the live promotion
+  manifest now shows `slug=stratego tier=benchmarked
+  code_bundle_support=benchmarked benchmark_surface=rule_aware_scenario_pack`.
+  Promotion tier remains `benchmarked` (not `promotable_local`) — the policy
+  bundle builder is designed for dedicated games, the same scope boundary
+  every prior portfolio-game-promotion slice has landed under.
 
 ## [0.1.0] - 2026-04-02
 

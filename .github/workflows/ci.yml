@@ -504,6 +504,11 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/hwatu_go_stop_benchmark_dossier.sh
 
+      - name: Verify F-016 Stratego benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/stratego_benchmark_dossier.sh
+
   developer-quickstart:
     name: Developer Quickstart
     runs-on: ubuntu-latest
