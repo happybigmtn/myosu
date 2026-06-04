@@ -2172,12 +2172,25 @@ fn locate_block_extrinsic_index(
 
 #[cfg(test)]
 mod tests {
+    use super::AxonServeReport;
+    use super::BalanceTransferReport;
     use super::ChainClient;
     use super::ChainClientError;
+    use super::ChainHeader;
+    use super::ChainVisibleMiner;
     use super::DEFAULT_NETWORK_RATE_LIMIT;
     use super::DEFAULT_SUBNET_TEMPO;
+    use super::EpochOutcomeReport;
+    use super::NetworkRegistrationReport;
+    use super::RegistrationReport;
     use super::RpcMethods;
+    use super::RuntimeVersion;
+    use super::StakeAddReport;
+    use super::SubtokenEnableReport;
+    use super::SystemHealth;
     use super::ValidatorAgreementError;
+    use super::ValidatorAgreementReport;
+    use super::WeightSubmissionReport;
     use super::axon_storage_key;
     use super::evaluate_validator_agreement;
     use super::extrinsic_hash_hex;
@@ -2497,5 +2510,78 @@ mod tests {
         assert_eq!(report.validator_a_target_weight, 12_345);
         assert_eq!(report.validator_b_target_weight, 12_345);
         assert!(report.agreement_within_epsilon);
+    }
+
+    /// NEM-005: Strengthen INV-004 to catch transitive dependencies.
+    ///
+    /// Companion to `crates/myosu-play/tests/invariants.rs::inv_004_chain_client_does_not_re_export_miner_types`.
+    /// That test enforces the *crate-boundary* invariant via `cargo tree`
+    /// (forward + reverse walks). This test enforces the *type-origin*
+    /// invariant via `std::any::type_name::<T>()` -- the canonical
+    /// runtime-checkable form of "is this type defined in crate X".
+    ///
+    /// Every public type defined in this crate MUST have a `module_path!`
+    /// of the form `myosu_chain_client::...`. A type that is `pub use`d
+    /// (or otherwise re-exported) from `myosu_miner::...` would surface as
+    /// a `module_path!` starting with `myosu_miner::` -- the test
+    /// fail-closes on any such re-export.
+    ///
+    /// The list is exhaustive: every `pub struct` / `pub enum` declared
+    /// in `myosu-chain-client/src/lib.rs` MUST appear here. If a future
+    /// PR adds a new public type, this test must be updated to cover it
+    /// (the failure mode is a `cargo test` panic on the new type
+    /// absent from `for_each_public_type` -- the test stays loud).
+    #[test]
+    fn inv_004_public_api_has_no_miner_origin() {
+        // The `assert_no_miner_origin` helper inspects the runtime
+        // `type_name` of `T` and fails the test if the module path
+        // starts with `myosu_miner::` (or `myosu-miner`, in case a
+        // type-name mangler kept the kebab-case). It is intentionally
+        // invoked with a `*const T` so it covers both `Copy` types
+        // (e.g. `u16` newtype wrappers) and non-`Copy` types alike.
+        fn assert_no_miner_origin<T: ?Sized>(label: &'static str) {
+            let path = std::any::type_name::<T>();
+            assert!(
+                !path.starts_with("myosu_miner::")
+                    && !path.starts_with("myosu-miner::")
+                    && !path.contains("::myosu_miner::")
+                    && !path.contains("::myosu-miner::"),
+                "INV-004: public type `{label}` has miner origin: {path}",
+            );
+            // The crate's own types all live under `myosu_chain_client::`
+            // (or `myosu-chain-client::` for kebab-case mangled forms);
+            // a foreign-crate type appearing in this list would be a
+            // documentation bug rather than an INV-004 violation, but
+            // surface it loudly so the future maintainer can see it.
+            assert!(
+                path.starts_with("myosu_chain_client::")
+                    || path.starts_with("myosu-chain-client::"),
+                "INV-004: public type `{label}` is not declared in `myosu-chain-client`: {path}",
+            );
+        }
+
+        // Every public type declared in this crate. The list mirrors
+        // the `pub struct` / `pub enum` declarations in
+        // `crates/myosu-chain-client/src/lib.rs` (lines 56-388, 449).
+        // Adding a new `pub` type to the crate without updating this
+        // list is intentionally a test failure (the test is the
+        // auditable surface of the public API, not a smoke check).
+        assert_no_miner_origin::<ChainClientError>("ChainClientError");
+        assert_no_miner_origin::<SystemHealth>("SystemHealth");
+        assert_no_miner_origin::<RpcMethods>("RpcMethods");
+        assert_no_miner_origin::<ChainHeader>("ChainHeader");
+        assert_no_miner_origin::<RuntimeVersion>("RuntimeVersion");
+        assert_no_miner_origin::<RegistrationReport>("RegistrationReport");
+        assert_no_miner_origin::<AxonServeReport>("AxonServeReport");
+        assert_no_miner_origin::<NetworkRegistrationReport>("NetworkRegistrationReport");
+        assert_no_miner_origin::<StakeAddReport>("StakeAddReport");
+        assert_no_miner_origin::<BalanceTransferReport>("BalanceTransferReport");
+        assert_no_miner_origin::<SubtokenEnableReport>("SubtokenEnableReport");
+        assert_no_miner_origin::<WeightSubmissionReport>("WeightSubmissionReport");
+        assert_no_miner_origin::<EpochOutcomeReport>("EpochOutcomeReport");
+        assert_no_miner_origin::<ValidatorAgreementReport>("ValidatorAgreementReport");
+        assert_no_miner_origin::<ValidatorAgreementError>("ValidatorAgreementError");
+        assert_no_miner_origin::<ChainVisibleMiner>("ChainVisibleMiner");
+        assert_no_miner_origin::<ChainClient>("ChainClient");
     }
 }

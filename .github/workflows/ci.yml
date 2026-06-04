@@ -264,6 +264,18 @@ jobs:
       - name: NEM-003A epoch per-UID emission sweep harness
         run: bash tests/e2e/epoch_per_uid_emission_sweep.sh
 
+      - name: NEM-005 INV-004 transitive dependency harness
+        # Verifies (a) no workspace crate depends on `myosu-miner` direct
+        # or transitively, (b) `myosu-chain-client`'s public API does
+        # not re-export any `myosu-miner` type, and (c) both new
+        # unit tests (the cargo-tree walk + the type-name walk) pass.
+        # Closes the transitive gap in INV-004 that the pre-existing
+        # `inv_004_solver_and_gameplay_bins_do_not_depend_on_each_other`
+        # test in `crates/myosu-play/tests/invariants.rs` could not.
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/nem005_inv_004_transitive.sh
+
       - name: Runtime tests
         run: cargo test -p myosu-chain-runtime --quiet
 
