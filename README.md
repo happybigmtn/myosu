@@ -116,6 +116,22 @@ machine-readable manifest plus an operator-facing doc:
   `public-testnet-manifest` CI job for the executable contract
   drift guard
 
+### Agent / operator read-only solver surface
+
+External agents and humans can also dispatch a read-only
+recommendation for every `benchmarked` portfolio game through a
+single JSON-in / line-out binary, no chain RPC, no wallet, no
+token required. The contract and supported-slug table are pinned
+here:
+
+- [docs/operator-guide/agent-api.md](docs/operator-guide/agent-api.md)
+  for the `myosu-solver-read` binary contract, the input JSON
+  shape, the `SOLVER_READ` / `SOLVER_READ_FAIL` line protocol,
+  the supported game slugs (every `benchmarked` portfolio game),
+  and the read-only-by-construction guarantee
+- `bash tests/e2e/solver_read.sh` and the `solver-read` CI job
+  for the executable line-protocol and supported-slug drift guard
+
 ## Current Runnable Truth
 
 These are the currently proven local surfaces:

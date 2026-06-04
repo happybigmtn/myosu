@@ -811,3 +811,53 @@ jobs:
         # broke. See `docs/operator-guide/public-testnet.md`
         # for the public contract this job pins.
         run: bash tests/e2e/public_testnet_manifest.sh
+
+  solver-read:
+    name: Operator read-only solver surface (W-03)
+    runs-on: ubuntu-latest
+    needs: active-crates
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        # Pinned via the same toolchain action the rest of the
+        # workspace uses so the rust-cache key stays coherent
+        # (see `.github/zizmor.yml` `dtolnay/rust-toolchain` rule
+        # with the per-line `# reason:` justification).
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Verify W-03 operator read-only solver surface
+        # W-03 proof harness: asserts (1) the
+        # `myosu_solver_read` binary builds, (2) a
+        # Cribbage challenge round-trip emits a
+        # `SOLVER_READ game=cribbage action=...` line
+        # and exits 0, (3) the same for Hearts
+        # (trick-taking family), (4) the same for
+        # Dou-Di-Zhu (shedding family), (5) an unknown
+        # game slug fails closed with
+        # `SOLVER_READ_FAIL reason=unknown_game: ...`,
+        # (6) a malformed JSON input fails closed with
+        # `SOLVER_READ_FAIL reason=invalid_json: ...`,
+        # (7) an empty stdin fails closed with
+        # `SOLVER_READ_FAIL reason=empty_stdin`, (8) the
+        # bin's 7 unit tests in `mod tests` all pass, and
+        # (9) the full portfolio crate test suite stays
+        # green (no engine, no dossier, no YAML touched
+        # — the only change is the new binary and its
+        # tests). The harness has no chain or runtime
+        # dependency; it is a pure cargo build + cargo
+        # test + process-spawn gate. A drift in any of
+        # the nine checks fails the gate with a concrete
+        # error message that names the failing sub-check.
+        # See `docs/operator-guide/agent-api.md` for the
+        # public contract this job pins.
+        run: bash tests/e2e/solver_read.sh

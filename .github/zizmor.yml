@@ -14,9 +14,9 @@
 # Decision record: see `docs/adr/013-zizmor-policy-decision.md`
 # (CI-SEC-001 in WORKLIST.md / IMPLEMENTATION_PLAN.md). The
 # short version: zizmor's `superfluous-actions` audit flags the
-# `dtolnay/rust-toolchain` action in 9 places because rustup is
+# `dtolnay/rust-toolchain` action in 11 places because rustup is
 # preinstalled on `ubuntu-latest` runners. We carry a per-line
-# ignore for those 9 places instead of switching to a raw
+# ignore for those 11 places instead of switching to a raw
 # `rustup` script step, because (a) `dtolnay/rust-toolchain`
 # is a single-line cache-aware pin that is easier to audit than
 # a hand-rolled `curl https://sh.rustup.rs | sh` invocation,
@@ -38,7 +38,7 @@
 
 rules:
   superfluous-actions:
-    # dtolnay/rust-toolchain is intentionally used in 9 places because
+    # dtolnay/rust-toolchain is intentionally used in 11 places because
     # (a) it is a single-line, fully-pinned action that the audit
     # `unpinned-uses` is happy with, (b) Swatinem/rust-cache keys off
     # the toolchain it installs rather than the rustup default
@@ -58,20 +58,22 @@ rules:
       # reason: dtolnay/rust-toolchain intentional in repo-shape job (caching its install)
       - ci.yml:92
       # reason: dtolnay/rust-toolchain intentional in active-crates job (uses Swatinem/rust-cache keying)
-      - ci.yml:238
+      - ci.yml:241
       # reason: dtolnay/rust-toolchain intentional in chain-core job (Rust toolchain pin)
-      - ci.yml:291
+      - ci.yml:309
       # reason: dtolnay/rust-toolchain intentional in dependency-audit job (cargo-audit needs stable Rust)
-      - ci.yml:352
+      - ci.yml:370
       # reason: dtolnay/rust-toolchain intentional in developer-quickstart job (DX-001 gate)
-      - ci.yml:475
-      # reason: dtolnay/rust-toolchain intentional in operator-network job (operator bundle build)
-      - ci.yml:516
-      # reason: dtolnay/rust-toolchain intentional in chain-clippy job (workspace clippy)
       - ci.yml:548
+      # reason: dtolnay/rust-toolchain intentional in operator-network job (operator bundle build)
+      - ci.yml:589
+      # reason: dtolnay/rust-toolchain intentional in chain-clippy job (workspace clippy)
+      - ci.yml:621
       # reason: dtolnay/rust-toolchain intentional in zizmor-policy job (CI-SEC-001 gate)
-      - ci.yml:582
+      - ci.yml:655
       # reason: dtolnay/rust-toolchain intentional in quality-benchmark job (F-003 gate, Swatinem/rust-cache keying)
-      - ci.yml:622
+      - ci.yml:695
       # reason: dtolnay/rust-toolchain intentional in miner-convergence-doc job (F-003 doc-reg drift guard gate)
-      - ci.yml:670
+      - ci.yml:743
+      # reason: dtolnay/rust-toolchain intentional in solver-read job (W-03 operator read-only solver surface gate, Swatinem/rust-cache keying)
+      - ci.yml:833
