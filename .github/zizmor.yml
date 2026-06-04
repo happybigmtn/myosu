@@ -14,9 +14,9 @@
 # Decision record: see `docs/adr/013-zizmor-policy-decision.md`
 # (CI-SEC-001 in WORKLIST.md / IMPLEMENTATION_PLAN.md). The
 # short version: zizmor's `superfluous-actions` audit flags the
-# `dtolnay/rust-toolchain` action in 11 places because rustup is
+# `dtolnay/rust-toolchain` action in 12 places because rustup is
 # preinstalled on `ubuntu-latest` runners. We carry a per-line
-# ignore for those 11 places instead of switching to a raw
+# ignore for those 12 places instead of switching to a raw
 # `rustup` script step, because (a) `dtolnay/rust-toolchain`
 # is a single-line cache-aware pin that is easier to audit than
 # a hand-rolled `curl https://sh.rustup.rs | sh` invocation,
@@ -38,7 +38,7 @@
 
 rules:
   superfluous-actions:
-    # dtolnay/rust-toolchain is intentionally used in 11 places because
+    # dtolnay/rust-toolchain is intentionally used in 12 places because
     # (a) it is a single-line, fully-pinned action that the audit
     # `unpinned-uses` is happy with, (b) Swatinem/rust-cache keys off
     # the toolchain it installs rather than the rustup default
@@ -79,3 +79,5 @@ rules:
       - ci.yml:833
       # reason: dtolnay/rust-toolchain intentional in validator-scoring-metric job (W-06 first-class observability gate, Swatinem/rust-cache keying)
       - ci.yml:883
+      # reason: dtolnay/rust-toolchain intentional in public-bundles-manifest job (W-02 public policy bundles gate, Swatinem/rust-cache keying)
+      - ci.yml:939

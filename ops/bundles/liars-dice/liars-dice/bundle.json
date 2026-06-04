@@ -1,0 +1,369 @@
+{
+  "game": "liars_dice",
+  "decision_id": "liars-dice:opening-p1-die-2",
+  "public_state": {
+    "game_id": "liars-dice",
+    "ruleset_version": 1,
+    "trace_id": "liars-dice:opening-p1-die-2",
+    "phase": "opening-bid",
+    "actor": 0,
+    "public_state": {
+      "actor": 0,
+      "dice_count": 2,
+      "faces": 6,
+      "history": [],
+      "last_claim": null
+    },
+    "private_state_commitments": [
+      "liars-dice.p1.sha256:273f9199a3afd6a726e3cd7019109d561046058c2b40cb78d85c7db5215d3d6e",
+      "liars-dice.p2.sha256:6bfd70040f49f0e869e70256d921e33a8e3865e8501541ac0e910cd293471728"
+    ],
+    "legal_actions": [
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.1x1",
+        "family": "liars_dice",
+        "display_label": "bid 1x1",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 1
+            },
+            "face": {
+              "const": 1
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.1x2",
+        "family": "liars_dice",
+        "display_label": "bid 1x2",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 1
+            },
+            "face": {
+              "const": 2
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.1x3",
+        "family": "liars_dice",
+        "display_label": "bid 1x3",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 1
+            },
+            "face": {
+              "const": 3
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.1x4",
+        "family": "liars_dice",
+        "display_label": "bid 1x4",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 1
+            },
+            "face": {
+              "const": 4
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.1x5",
+        "family": "liars_dice",
+        "display_label": "bid 1x5",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 1
+            },
+            "face": {
+              "const": 5
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.1x6",
+        "family": "liars_dice",
+        "display_label": "bid 1x6",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 1
+            },
+            "face": {
+              "const": 6
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.2x1",
+        "family": "liars_dice",
+        "display_label": "bid 2x1",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 2
+            },
+            "face": {
+              "const": 1
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.2x2",
+        "family": "liars_dice",
+        "display_label": "bid 2x2",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 2
+            },
+            "face": {
+              "const": 2
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.2x3",
+        "family": "liars_dice",
+        "display_label": "bid 2x3",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 2
+            },
+            "face": {
+              "const": 3
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.2x4",
+        "family": "liars_dice",
+        "display_label": "bid 2x4",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 2
+            },
+            "face": {
+              "const": 4
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.2x5",
+        "family": "liars_dice",
+        "display_label": "bid 2x5",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 2
+            },
+            "face": {
+              "const": 5
+            }
+          },
+          "type": "object"
+        }
+      },
+      {
+        "game_id": "liars-dice",
+        "action_id": "liars-dice.bid.2x6",
+        "family": "liars_dice",
+        "display_label": "bid 2x6",
+        "legal_phases": [
+          "opening-bid",
+          "bidding"
+        ],
+        "params_schema": {
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "const": 2
+            },
+            "face": {
+              "const": 6
+            }
+          },
+          "type": "object"
+        }
+      }
+    ],
+    "terminal": false
+  },
+  "legal_action_ids": [
+    "liars-dice.bid.1x1",
+    "liars-dice.bid.1x2",
+    "liars-dice.bid.1x3",
+    "liars-dice.bid.1x4",
+    "liars-dice.bid.1x5",
+    "liars-dice.bid.1x6",
+    "liars-dice.bid.2x1",
+    "liars-dice.bid.2x2",
+    "liars-dice.bid.2x3",
+    "liars-dice.bid.2x4",
+    "liars-dice.bid.2x5",
+    "liars-dice.bid.2x6"
+  ],
+  "distribution": [
+    {
+      "action_id": "liars-dice.bid.1x1",
+      "probability_ppm": 107664
+    },
+    {
+      "action_id": "liars-dice.bid.1x2",
+      "probability_ppm": 207739
+    },
+    {
+      "action_id": "liars-dice.bid.1x3",
+      "probability_ppm": 28779
+    },
+    {
+      "action_id": "liars-dice.bid.1x4",
+      "probability_ppm": 156060
+    },
+    {
+      "action_id": "liars-dice.bid.1x5",
+      "probability_ppm": 100114
+    },
+    {
+      "action_id": "liars-dice.bid.1x6",
+      "probability_ppm": 239518
+    },
+    {
+      "action_id": "liars-dice.bid.2x1",
+      "probability_ppm": 82371
+    },
+    {
+      "action_id": "liars-dice.bid.2x2",
+      "probability_ppm": 50411
+    },
+    {
+      "action_id": "liars-dice.bid.2x3",
+      "probability_ppm": 3407
+    },
+    {
+      "action_id": "liars-dice.bid.2x4",
+      "probability_ppm": 3722
+    },
+    {
+      "action_id": "liars-dice.bid.2x5",
+      "probability_ppm": 18112
+    },
+    {
+      "action_id": "liars-dice.bid.2x6",
+      "probability_ppm": 2103
+    }
+  ],
+  "recommended_action_id": "liars-dice.bid.1x6",
+  "provenance": {
+    "game_slug": "liars-dice",
+    "solver_family": "liars-dice-cfr",
+    "engine_tier": "promotable_local",
+    "artifact_id": "liars-dice-checkpoint-61707f0e1414",
+    "artifact_hash": "61707f0e14149fff46af6c8e25ac010ee04f34d4c78b1b7ce23f09201274aeb4",
+    "benchmark": {
+      "benchmark_id": "liars-dice-exact-n1024-epochs512",
+      "metric_name": "exact_exploitability",
+      "metric_value": 0.6738117933273315,
+      "threshold": 0.7,
+      "passing": true
+    }
+  },
+  "bundle_hash": "b5e0af16218860d698958a292c6a05201082082d18c250158ba4a8a775fb540c"
+}

@@ -917,3 +917,65 @@ jobs:
         # `docs/operator-guide/observability.md` for the public
         # contract this job pins.
         run: bash tests/e2e/validator_scoring_metric.sh
+
+  public-bundles-manifest:
+    name: Public policy bundles (W-02)
+    runs-on: ubuntu-latest
+    needs: repo-shape
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        # Pinned via the same toolchain action the rest of the
+        # workspace uses so the rust-cache key stays coherent
+        # (see `.github/zizmor.yml` `dtolnay/rust-toolchain` rule
+        # with the per-line `# reason:` justification).
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+
+      - name: Verify W-02 public policy bundles
+        # W-02 proof harness: asserts (1) the public-bundles doc
+        # `docs/operator-guide/public-bundles.md` is present and
+        # non-empty, (2) the canonical triple at
+        # `ops/bundles/liars-dice/liars-dice/{bundle.json,benchmark-summary.json,artifact-manifest.json}`
+        # is present and non-empty (plus the W-02 README), (3) the
+        # canonical triple passes `verify_promotion_outputs
+        # --slug liars-dice --outputs-dir ops/bundles/liars-dice`
+        # with a `PROMOTION_GATE_PASS slug=liars-dice` line
+        # (so a future drift in the bundle, the dossier, or the
+        # verifier fails closed), (4) the canonical
+        # `bundle.provenance.game_slug` is exactly `liars-dice`
+        # (so a future copy-paste that lands the wrong slug's
+        # triple is loud), (5) the canonical bundle is byte-stable
+        # across a clean re-build: the freshly-printed `bundle_hash`
+        # from the `liars_dice_policy_bundle` example must match
+        # the canonical `bundle.bundle_hash` field byte-for-byte
+        # (catches a future solver / builder / dossier refactor
+        # that drifts the canonical triple), and (6) this very CI
+        # job is wired into the workflow (the harness's
+        # meta-assertion that keeps the drift guard honest). The
+        # `bundle_hash` equality test is the canonical-hash field
+        # computed by `compute_bundle_hash` over the bundle's
+        # fields, NOT over the JSON file bytes (the JSON is
+        # non-canonical: serde_json key order / whitespace can
+        # drift, so file-SHA-256 is not the right equality test);
+        # see `tests/e2e/public_bundles_manifest.sh` for the
+        # exact assertion discipline. The harness has no chain or
+        # runtime dependency; it is a pure cargo build + cargo
+        # test + process-spawn + jq + sha256sum gate. A drift in
+        # any of the six checks fails the gate with a concrete
+        # `PUBLIC_BUNDLES_MANIFEST_FAIL` error line that names
+        # the failing sub-check. See
+        # `docs/operator-guide/public-bundles.md` for the public
+        # contract this job pins.
+        run: bash tests/e2e/public_bundles_manifest.sh

@@ -116,6 +116,33 @@ machine-readable manifest plus an operator-facing doc:
   `public-testnet-manifest` CI job for the executable contract
   drift guard
 
+### Public policy bundles
+
+The Liar's Dice `promotable_local` policy bundle is also
+published on-disk as a public artifact an external operator or
+agent can fetch, verify, and feed straight into
+`verify_policy_bundle` without going through the chain RPC, a
+wallet, or a token. The canonical on-disk triple is byte-stable,
+the `bundle_hash` field is the canonical-hash computed by
+`compute_bundle_hash` over the bundle's fields (NOT over the
+JSON file bytes — `serde_json` key order is non-canonical), and
+the verifier rejects any drift in the canonical triple. This is
+the W-02 "Public policy bundles" surface that mirrors the W-01
+public-testnet contract for the solver-artifact half of the
+operator story:
+
+- [docs/operator-guide/public-bundles.md](docs/operator-guide/public-bundles.md)
+  for the Liar's Dice bundle URL contract, the `provenance`
+  field contract, the `verify_policy_bundle` roundtrip, and the
+  read-only-by-construction guarantee
+- [ops/bundles/liars-dice/](ops/bundles/liars-dice/) for the
+  canonical on-disk triple (`bundle.json` /
+  `benchmark-summary.json` / `artifact-manifest.json`) an
+  external agent `curl`s
+- `bash tests/e2e/public_bundles_manifest.sh` and the
+  `public-bundles-manifest` CI job for the executable
+  byte-stability + verifier-roundtrip drift guard
+
 ### Agent / operator read-only solver surface
 
 External agents and humans can also dispatch a read-only
