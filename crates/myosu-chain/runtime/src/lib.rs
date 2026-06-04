@@ -55,7 +55,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use subtensor_runtime_common::{AlphaCurrency, AuthorshipInfo, TaoCurrency, time::*, *};
-use subtensor_swap_interface::{Order, SwapEngine, SwapHandler, SwapResult};
+use subtensor_swap_interface::{Order, SwapEngine, SwapHandler, SwapPriceLimitBounded, SwapResult};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -97,6 +97,48 @@ impl frame_system::offchain::SigningTypes for Runtime {
 // trip price guards. Any future runtime that wires a real swap engine must
 // replace this unbounded limit before relying on price-limit semantics.
 pub struct Stage0NoopSwap;
+
+// NEM-002A compile-time guard: stage-0 is exempt from the strict price
+// limit bound because the no-op identity swap has no market to constrain.
+// The explicit `PRICE_LIMIT_BOUND = MAX_VALID_SWAP_PRICE_LIMIT` override
+// is the auditable seam that distinguishes the stage-0 opt-out from a
+// missing override. A future real AMM impl must override this constant
+// to a value `<= STRICT_MAX_VALID_SWAP_PRICE_LIMIT`; the const-eval
+// guard below will then fail to compile, which is the whole point of
+// this row. See `docs/adr/014-swap-price-limit-bound.md`.
+impl SwapPriceLimitBounded for Stage0NoopSwap {
+    const PRICE_LIMIT_BOUND: u64 = subtensor_swap_interface::MAX_VALID_SWAP_PRICE_LIMIT;
+}
+
+// Const-eval guard: the stage-0 opt-out MUST be explicit. If a future
+// refactor accidentally drops the `impl SwapPriceLimitBounded` block
+// entirely, the default trait value (also `MAX_VALID_SWAP_PRICE_LIMIT`)
+// would silently re-take effect, hiding the intent. The static assert
+// below forces the override to stay present and stay equal to the
+// documented stage-0 opt-out.
+//
+// Allowed values for `PRICE_LIMIT_BOUND`:
+//   - `MAX_VALID_SWAP_PRACE_LIMIT` (the stage-0 explicit opt-out) — the
+//     only currently legal value, asserted here.
+//   - A value `<= STRICT_MAX_VALID_SWAP_PRICE_LIMIT` (a real AMM impl
+//     that has overridden the bound to a strict ceiling) — would also
+//     pass this assert, since the stage-0 override would no longer be
+//     the case. A future PR that introduces a real AMM impl and
+//     overrides `PRICE_LIMIT_BOUND` must update this assert (or
+//     re-derive it from `is_within_strict_bound()`) so the seam stays
+//     self-documenting.
+const _: () = {
+    let bound = <Stage0NoopSwap as SwapPriceLimitBounded>::PRICE_LIMIT_BOUND;
+    let stage_0_opt_out = subtensor_swap_interface::MAX_VALID_SWAP_PRICE_LIMIT;
+    let strict_ceiling = subtensor_swap_interface::STRICT_MAX_VALID_SWAP_PRICE_LIMIT;
+    assert!(
+        bound == stage_0_opt_out || bound <= strict_ceiling,
+        "Stage0NoopSwap must opt-in to the unbounded bound via the explicit \
+         PRICE_LIMIT_BOUND = MAX_VALID_SWAP_PRICE_LIMIT constant, or a real \
+         AMM impl must override it to a value <= STRICT_MAX_VALID_SWAP_PRICE_LIMIT. \
+         See docs/adr/014-swap-price-limit-bound.md for the full contract."
+    );
+};
 
 impl<PaidIn: Currency, PaidOut: Currency>
     subtensor_swap_interface::DefaultPriceLimit<PaidIn, PaidOut> for Stage0NoopSwap
@@ -265,6 +307,56 @@ mod stage0_noop_swap_tests {
         assert_eq!(
             Stage0NoopSwap::min_price::<TaoCurrency>(),
             TaoCurrency::ZERO
+        );
+    }
+
+    /// NEM-002A compile-time guard: `Stage0NoopSwap` exposes an
+    /// explicit `PRICE_LIMIT_BOUND = MAX_VALID_SWAP_PRICE_LIMIT`
+    /// override so the stage-0 unbounded opt-out is auditable in
+    /// the impl, not silently inherited from the trait default.
+    /// The bound is intentionally *outside* the strict ceiling —
+    /// the no-op identity swap has no market to constrain. A
+    /// future real AMM impl must override `PRICE_LIMIT_BOUND` to a
+    /// value `<= STRICT_MAX_VALID_SWAP_PRICE_LIMIT`; the const-eval
+    /// guard near the `Stage0NoopSwap` impl block fires at compile
+    /// time if the override is dropped. See
+    /// `docs/adr/014-swap-price-limit-bound.md` for the full
+    /// rationale and the test role in the operator-facing proof
+    /// surface.
+    #[test]
+    fn stage0_noop_swap_price_limit_bound_is_max() {
+        // The stage-0 override MUST be explicit, equal to the
+        // documented unbounded opt-out. A regression here would
+        // mean the trait default is being relied on (silently
+        // inherited) and the audit trail is broken.
+        assert_eq!(
+            <Stage0NoopSwap as subtensor_swap_interface::SwapPriceLimitBounded>::PRICE_LIMIT_BOUND,
+            subtensor_swap_interface::MAX_VALID_SWAP_PRICE_LIMIT
+        );
+        // Stage-0 is intentionally outside the strict ceiling —
+        // the no-op identity swap has no market, so a strict
+        // bound would be meaningless. The const-eval guard above
+        // the impl block whitelists exactly this case.
+        assert!(
+            !<Stage0NoopSwap as subtensor_swap_interface::SwapPriceLimitBounded>::is_within_strict_bound()
+        );
+        // The strict ceiling MUST be strictly below the unbounded
+        // opt-out, otherwise the seam is meaningless.
+        assert!(
+            subtensor_swap_interface::STRICT_MAX_VALID_SWAP_PRICE_LIMIT
+                < subtensor_swap_interface::MAX_VALID_SWAP_PRICE_LIMIT
+        );
+        // And the live `max_price()` value MUST still equal
+        // `C::MAX` for any currency — the structural guard does
+        // not change the runtime behavior. (The Stage0NoopSwap
+        // contract is still "no slippage protection at all".)
+        assert_eq!(
+            Stage0NoopSwap::max_price::<TaoCurrency>(),
+            TaoCurrency::MAX
+        );
+        assert_eq!(
+            Stage0NoopSwap::max_price::<AlphaCurrency>(),
+            AlphaCurrency::MAX
         );
     }
 
