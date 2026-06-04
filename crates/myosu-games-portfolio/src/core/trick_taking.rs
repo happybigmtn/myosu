@@ -795,6 +795,321 @@ const HEARTS_SCENARIO_PACK: &[HeartsScenario] = &[
     },
 ];
 
+/// Hand-verified 22-scenario pack for the F-010 Spades benchmark dossier.
+///
+/// The Spades engine reads `trump_count`, `contract_pressure`, `winners`,
+/// `void_suits`, `cards_in_trick`, `follow_suit_forced`, and `nil_viable`
+/// from the typed `TrickTakingChallenge`. `penalty_pressure` and
+/// `moon_shot_viable` are pinned to 0 / `false` because the Spades engine
+/// does not use them (`feature_view` keeps them at the Spades-correct
+/// values); they are kept in the struct for shape parity with
+/// `TrickTakingChallenge` and the dossier hash.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SpadesScenario {
+    pub scenario_id: &'static str,
+    pub decision: &'static str,
+    pub trump_count: u8,
+    pub winners: u8,
+    pub void_suits: u8,
+    pub contract_pressure: i8,
+    pub penalty_pressure: u8,
+    pub cards_in_trick: u8,
+    pub follow_suit_forced: bool,
+    pub nil_viable: bool,
+}
+
+/// Return the canonical 22-scenario Spades benchmark pack.
+///
+/// Coverage requirements (mirrors `genesis/plans/009-cribbage-deepening.md`
+/// R1 layout, scoped to the Spades engine surface):
+/// - trump_control dominance × 6 (heavy-control, rich-mid-pressure,
+///   winners-rich, voided-hand, pressure-tied, with-forced-follow)
+/// - follow_suit dominance × 6 (clean, with-winners, voided, trick-end,
+///   mid-winners, cards-in-trick)
+/// - bid_nil dominance × 6 (clean-window, with-light-winners, void-clean,
+///   cards-in-trick, penalty-pressure, low-winners-clean)
+/// - mixed/edge × 4 (trump-vs-nil-edge, mixed-trump-nil-penalty,
+///   forced-follow-with-nil-spot, trump-vs-forced-follow)
+///
+/// Total: 22 labeled scenarios, exceeds the 20-scenario floor. Each scenario
+/// is hand-verified against the `state-aware spades trump heuristic` math
+/// in `engines/trick_taking.rs::spades` so the dossier's expected
+/// recommendations are stable across runs.
+pub fn spades_scenario_pack() -> &'static [SpadesScenario] {
+    SPADES_SCENARIO_PACK
+}
+
+const SPADES_SCENARIO_PACK: &[SpadesScenario] = &[
+    // ---- trump_control bucket (×6) ----
+    SpadesScenario {
+        scenario_id: "trump-heavy-control",
+        decision: "Heavy trump count plus contract pressure on a free lead",
+        trump_count: 4,
+        winners: 1,
+        void_suits: 1,
+        contract_pressure: 3,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "trump-rich-mid-pressure",
+        decision: "Trump-rich hand with mid contract pressure",
+        trump_count: 5,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 2,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "trump-winners-rich",
+        decision: "Trump + high winners on a free lead",
+        trump_count: 3,
+        winners: 3,
+        void_suits: 1,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "trump-voided-hand",
+        decision: "Trump + void suit on a free lead",
+        trump_count: 3,
+        winners: 0,
+        void_suits: 2,
+        contract_pressure: 1,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "trump-pressure-tied",
+        decision: "Heavy trump with heavy contract pressure",
+        trump_count: 6,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 5,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "trump-with-forced-follow",
+        decision: "Trump + forced follow with low penalty pressure — trump still wins",
+        trump_count: 4,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 2,
+        penalty_pressure: 0,
+        cards_in_trick: 1,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    // ---- follow_suit bucket (×6) ----
+    SpadesScenario {
+        scenario_id: "forced-follow-clean",
+        decision: "Forced to follow suit with no other pressure",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "forced-follow-winners",
+        decision: "Forced to follow suit holding four high-card winners",
+        trump_count: 0,
+        winners: 4,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "forced-follow-voided",
+        decision: "Forced to follow suit with two void suits",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 2,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "forced-follow-trick-end",
+        decision: "Forced to follow suit late in the trick (trick-end cleanup)",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 3,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "forced-follow-mid-winners",
+        decision: "Forced to follow suit with mid winners",
+        trump_count: 0,
+        winners: 2,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    SpadesScenario {
+        scenario_id: "forced-follow-cards-in-trick",
+        decision: "Forced to follow suit with two cards in trick",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 2,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    // ---- bid_nil bucket (×6) ----
+    SpadesScenario {
+        scenario_id: "nil-clean-window",
+        decision: "Nil-viable spot with no other pressure",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: true,
+    },
+    SpadesScenario {
+        scenario_id: "nil-with-light-winners",
+        decision: "Nil-viable spot with one light winner",
+        trump_count: 0,
+        winners: 1,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: true,
+    },
+    SpadesScenario {
+        scenario_id: "nil-void-clean",
+        decision: "Nil-viable spot with two void suits",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 2,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: true,
+    },
+    SpadesScenario {
+        scenario_id: "nil-cards-in-trick",
+        decision: "Nil-viable spot late in the trick",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 2,
+        follow_suit_forced: false,
+        nil_viable: true,
+    },
+    SpadesScenario {
+        scenario_id: "nil-penalty-pressure",
+        decision: "Nil-viable spot with light penalty pressure",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 1,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: true,
+    },
+    SpadesScenario {
+        scenario_id: "nil-low-winners-clean",
+        decision: "Nil-viable spot with one mid winner",
+        trump_count: 0,
+        winners: 1,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: true,
+    },
+    // ---- mixed/edge bucket (×4) ----
+    SpadesScenario {
+        scenario_id: "trump-vs-nil-edge",
+        decision: "Trump-heavy hand where nil is also viable — trump wins",
+        trump_count: 3,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: true,
+    },
+    SpadesScenario {
+        scenario_id: "mixed-trump-nil-penalty",
+        decision: "Trump + nil-viable + light penalty — trump still dominates",
+        trump_count: 3,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 1,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: true,
+    },
+    SpadesScenario {
+        scenario_id: "forced-follow-with-nil-spot",
+        decision: "Forced to follow suit on a nil-viable spot — follow wins",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: true,
+    },
+    SpadesScenario {
+        scenario_id: "trump-vs-forced-follow",
+        decision: "Mid trump + forced follow with no other pressure — trump still wins",
+        trump_count: 2,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+];
+
 #[cfg(test)]
 mod tests {
     use myosu_games::CanonicalStateSnapshot;

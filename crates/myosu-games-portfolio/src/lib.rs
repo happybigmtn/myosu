@@ -16,6 +16,7 @@ pub mod game;
 pub mod gin_rummy_benchmark;
 pub mod hearts_benchmark;
 pub mod protocol;
+pub mod spades_benchmark;
 pub mod quality;
 pub mod renderer;
 pub mod rng;
@@ -32,6 +33,7 @@ pub use game::{
     ALL_PORTFOLIO_ROUTED_GAMES, ALL_RESEARCH_GAMES, ParseResearchGameError, ResearchGame,
 };
 pub use hearts_benchmark::{HeartsBenchmarkDossier, HeartsDossierError};
+pub use spades_benchmark::{SpadesBenchmarkDossier, SpadesDossierError};
 pub use protocol::{
     PortfolioAction, PortfolioInfo, PortfolioStrategyQuery, PortfolioStrategyResponse,
     PortfolioStrengthInfo, PortfolioStrengthQuery, STRENGTH_WIRE_VERSION, recommended_action,

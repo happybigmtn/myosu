@@ -456,6 +456,11 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/gin_rummy_benchmark_dossier.sh
 
+      - name: Verify F-010 Spades benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/spades_benchmark_dossier.sh
+
   developer-quickstart:
     name: Developer Quickstart
     runs-on: ubuntu-latest
