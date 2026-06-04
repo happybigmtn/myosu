@@ -37,6 +37,12 @@ operator bundle, or runtime build surfaces.
 Use this path when you want to confirm the repo is healthy and explore the
 local gameplay surface before touching operator tooling.
 
+The consolidated critical-caveat and first-success contributor guide lives at
+[`docs/developer-quickstart.md`](docs/developer-quickstart.md). The executable
+gate `tests/e2e/developer_quickstart.sh` enforces the four-step fastest
+first-success path; the `developer-quickstart` CI job runs it on every push
+and pull request.
+
 Current low-friction proofs:
 
 ```bash

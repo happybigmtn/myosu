@@ -434,6 +434,33 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/cribbage_benchmark_dossier.sh
 
+  developer-quickstart:
+    name: Developer Quickstart
+    runs-on: ubuntu-latest
+    needs: repo-shape
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214f5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Verify DX-001 developer quickstart gate
+        run: bash tests/e2e/developer_quickstart.sh
+
   plan-quality:
     name: Plan Quality
     runs-on: ubuntu-latest
