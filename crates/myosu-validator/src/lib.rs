@@ -1,6 +1,12 @@
 pub mod chain;
 pub mod cli;
+pub mod http_axon;
 pub mod validation;
+
+/// Re-export the HTTP axon report formatter so an operator reproduction
+/// script can `use myosu_validator::http_axon_report;` without depending
+/// on the public module shape.
+pub use http_axon::http_axon_report;
 
 /// Formats a stable operator-facing startup report for the current chain probe.
 ///
