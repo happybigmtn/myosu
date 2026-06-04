@@ -521,6 +521,280 @@ fn usize_to_u8(value: usize) -> u8 {
     u8::try_from(value).unwrap_or(u8::MAX)
 }
 
+/// One labeled representative decision point in the Hearts search space.
+///
+/// Scenarios are intentionally narrow: each row targets a specific Hearts
+/// engine heuristic (avoid-penalty, follow-suit, shoot-moon) and is used by
+/// both the benchmark dossier writer and the e2e promotion proof. The fields
+/// mirror the typed `TrickTakingChallenge` so a scenario can be replayed
+/// through the same engine dispatch as a live portfolio challenge.
+///
+/// The Hearts engine reads the `penalty_pressure`, `winners`, `void_suits`,
+/// `follow_suit_forced`, and `moon_shot_viable` fields. `trump_count` and
+/// `contract_pressure` are pinned to 0 and `nil_viable` to `false` because
+/// the Hearts engine does not use them (`feature_view` keeps them at the
+/// Hearts-correct values); they are kept in the struct for shape parity with
+/// `TrickTakingChallenge` and the dossier hash.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HeartsScenario {
+    pub scenario_id: &'static str,
+    pub decision: &'static str,
+    pub penalty_pressure: u8,
+    pub winners: u8,
+    pub void_suits: u8,
+    pub cards_in_trick: u8,
+    pub follow_suit_forced: bool,
+    pub moon_shot_viable: bool,
+}
+
+/// Return the canonical 22-scenario Hearts benchmark pack.
+///
+/// Coverage requirements (mirrors `genesis/plans/009-cribbage-deepening.md`
+/// R1 layout, scoped to the Hearts engine surface):
+/// - avoid_penalty dominance × 6 (queen-risk, light-pressure, zero-pressure,
+///   multi-penalty, forced-follow-but-still-avoid, heavy-tricks-no-moon)
+/// - follow_suit dominance × 5 (clean follow, voided, winner, trick-end,
+///   void-low-penalty)
+/// - shoot_moon dominance × 5 (fresh, mid, with-winner, with-void, mid-trick)
+/// - mixed/edge × 6 (light-penalty-moon-viable, forced-follow-moon-low,
+///   forced-follow-moon-voided, zero-everything-no-moon, low-penalty-avoid,
+///   penalty-pressured-moon-viable)
+///
+/// Total: 22 labeled scenarios, exceeds the 20-scenario floor. Each scenario
+/// is hand-verified against the `state-aware hearts penalty heuristic` math
+/// in `engines/trick_taking.rs::hearts` so the dossier's expected
+/// recommendations are stable across runs.
+pub fn hearts_scenario_pack() -> &'static [HeartsScenario] {
+    HEARTS_SCENARIO_PACK
+}
+
+const HEARTS_SCENARIO_PACK: &[HeartsScenario] = &[
+    // ---- avoid_penalty bucket (×6) ----
+    HeartsScenario {
+        scenario_id: "queen-risk-avoidance-v2",
+        decision: "Avoid taking the queen of spades with 4 penalty cards visible",
+        penalty_pressure: 4,
+        winners: 2,
+        void_suits: 1,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "light-pressure-avoid",
+        decision: "Avoid light penalty pressure on the lead",
+        penalty_pressure: 1,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "zero-pressure-avoid",
+        decision: "Avoid even without penalty pressure (default safe play)",
+        penalty_pressure: 0,
+        winners: 2,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "multi-penalty-avoid",
+        decision: "Avoid with maximum penalty pressure",
+        penalty_pressure: 6,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "forced-follow-but-still-avoid",
+        decision: "Follow suit is forced but penalty pressure still dominates",
+        penalty_pressure: 3,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "heavy-tricks-no-moon",
+        decision: "Many high-card winners but no moon shot — avoid still wins",
+        penalty_pressure: 2,
+        winners: 4,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: false,
+    },
+    // ---- follow_suit bucket (×5) ----
+    HeartsScenario {
+        scenario_id: "forced-follow-clean",
+        decision: "Forced to follow suit with no penalty or moon pressure",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "forced-follow-voided",
+        decision: "Forced to follow suit with two voided suits (extra follow pressure)",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 2,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "forced-follow-with-winner",
+        decision: "Forced to follow suit holding three high-card winners",
+        penalty_pressure: 0,
+        winners: 3,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "forced-follow-trick-end",
+        decision: "Forced to follow suit late in the trick (trick-end cleanup)",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 3,
+        follow_suit_forced: true,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "forced-follow-with-void-low-penalty",
+        decision: "Forced to follow suit with one void suit and light winners",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 1,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        moon_shot_viable: false,
+    },
+    // ---- shoot_moon bucket (×5) ----
+    HeartsScenario {
+        scenario_id: "moon-viable-fresh",
+        decision: "Moon shot viable with five winners in hand",
+        penalty_pressure: 0,
+        winners: 5,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: true,
+    },
+    HeartsScenario {
+        scenario_id: "moon-viable-mid",
+        decision: "Moon shot viable with three winners in hand",
+        penalty_pressure: 0,
+        winners: 3,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: true,
+    },
+    HeartsScenario {
+        scenario_id: "moon-viable-with-winner",
+        decision: "Moon shot viable with two winners in hand",
+        penalty_pressure: 0,
+        winners: 2,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: true,
+    },
+    HeartsScenario {
+        scenario_id: "moon-viable-with-void",
+        decision: "Moon shot viable with one void suit and four winners",
+        penalty_pressure: 0,
+        winners: 4,
+        void_suits: 1,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: true,
+    },
+    HeartsScenario {
+        scenario_id: "moon-viable-mid-trick",
+        decision: "Moon shot viable mid-trick (no penalty pressure)",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 1,
+        follow_suit_forced: false,
+        moon_shot_viable: true,
+    },
+    // ---- mixed/edge bucket (×6) ----
+    HeartsScenario {
+        scenario_id: "light-penalty-moon-viable",
+        decision: "Moon shot viable with no penalty pressure (default moon hand)",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: true,
+    },
+    HeartsScenario {
+        scenario_id: "forced-follow-moon-low",
+        decision: "Forced to follow suit with a moon shot available (shoot still wins)",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        moon_shot_viable: true,
+    },
+    HeartsScenario {
+        scenario_id: "forced-follow-moon-voided",
+        decision: "Forced to follow suit with a moon shot but two void suits (follow wins)",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 1,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        moon_shot_viable: true,
+    },
+    HeartsScenario {
+        scenario_id: "zero-everything-no-moon",
+        decision: "No penalty, no winners, no moon — default safe avoid",
+        penalty_pressure: 0,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "low-penalty-avoid",
+        decision: "Light penalty pressure with no moon — avoid still wins",
+        penalty_pressure: 2,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: false,
+    },
+    HeartsScenario {
+        scenario_id: "penalty-pressured-moon-viable",
+        decision: "Penalty pressure outweighs a moon shot — avoid dominates",
+        penalty_pressure: 2,
+        winners: 0,
+        void_suits: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        moon_shot_viable: true,
+    },
+];
+
 #[cfg(test)]
 mod tests {
     use myosu_games::CanonicalStateSnapshot;

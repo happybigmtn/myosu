@@ -446,6 +446,11 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/cribbage_benchmark_dossier.sh
 
+      - name: Verify F-008 Hearts benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/hearts_benchmark_dossier.sh
+
   developer-quickstart:
     name: Developer Quickstart
     runs-on: ubuntu-latest
@@ -643,3 +648,53 @@ jobs:
         # above `0.70` will fail this gate and force the
         # operator-guide update.
         run: bash tests/e2e/quality_benchmark_liars_dice.sh
+
+  miner-convergence-doc:
+    name: Miner convergence doc-reg drift guard (F-003)
+    runs-on: ubuntu-latest
+    needs: repo-shape
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        # Pinned via the same toolchain action the rest of the
+        # workspace uses so the rust-cache key stays coherent
+        # (see `.github/zizmor.yml` `dtolnay/rust-toolchain`
+        # rule with the per-line `# reason:` justification).
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+
+      - name: Verify F-003 miner convergence doc-reg drift guard
+        # F-003 doc-reg drift guard: asserts (1) the new
+        # `docs/operator-guide/miner-convergence.md` exists
+        # and is labeled with F-003, (2) it publishes the
+        # `recommended_minimum_iterations=512` Liar's Dice
+        # recommendation at the `0.70` exploitability
+        # threshold and points at
+        # `tests/e2e/quality_benchmark_liars_dice.sh` as the
+        # source of truth, (3) it records `nlhe-heads-up` as
+        # blocked with the `isomorphism not found` /
+        # `postflop_complete=false` rationale, (4) it records
+        # `kuhn_poker` as closed-form / 0 iterations, (5)
+        # `docs/operator-guide/quickstart.md` still links to
+        # the new doc, and (6) the live `quality_benchmark`
+        # example's `QUALITY_BENCHMARK_RECOMMENDATION` line
+        # still emits `recommended_minimum_iterations=512` at
+        # `threshold=0.700000` and the live
+        # `LIARS_DICE_SOLVER_TREES` constant is still 1024 (so
+        # the doc and the live benchmark cannot drift apart
+        # silently). A drift in any of the above forces the
+        # operator-facing per-game table to be updated in
+        # lockstep with the live benchmark, the live unit
+        # test, and the live solver constant.
+        run: bash tests/e2e/miner_convergence_doc_keeps_truthful_thresholds.sh

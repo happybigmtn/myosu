@@ -14,15 +14,22 @@
 # Decision record: see `docs/adr/013-zizmor-policy-decision.md`
 # (CI-SEC-001 in WORKLIST.md / IMPLEMENTATION_PLAN.md). The
 # short version: zizmor's `superfluous-actions` audit flags the
-# `dtolnay/rust-toolchain` action in 7 places because rustup is
+# `dtolnay/rust-toolchain` action in 9 places because rustup is
 # preinstalled on `ubuntu-latest` runners. We carry a per-line
-# ignore for those 7 places instead of switching to a raw
+# ignore for those 9 places instead of switching to a raw
 # `rustup` script step, because (a) `dtolnay/rust-toolchain`
 # is a single-line cache-aware pin that is easier to audit than
 # a hand-rolled `curl https://sh.rustup.rs | sh` invocation,
 # and (b) the `Swatinem/rust-cache` action we already use
 # requires the toolchain action's cache key, not rustup's
 # default ~/.cargo location.
+#
+# Maintenance: when a new `dtolnay/rust-toolchain` line is added to
+# `ci.yml` (e.g. by a new F-series CI job), a new `# reason:`
+# justified entry must be appended to the ignore list below AND the
+# `tests/e2e/zizmor_policy.sh` harness will fail-closed if the line
+# numbers drift. The `reason_lines == rule_lines` 1:1 check is the
+# proof harness's drift guard.
 #
 # Each ignore rule below is annotated with a one-line reason.
 # New ignore rules MUST come with a reason; the proof harness
@@ -31,7 +38,7 @@
 
 rules:
   superfluous-actions:
-    # dtolnay/rust-toolchain is intentionally used in 7 places because
+    # dtolnay/rust-toolchain is intentionally used in 9 places because
     # (a) it is a single-line, fully-pinned action that the audit
     # `unpinned-uses` is happy with, (b) Swatinem/rust-cache keys off
     # the toolchain it installs rather than the rustup default
@@ -39,6 +46,14 @@ rules:
     # one redundant action with a multi-line `curl ... | sh` chain
     # which zizmor's `artipacked` and `template-injection` audits
     # routinely flag. See ADR-013 for the rejected alternative.
+    #
+    # Note: the `repo-shape` job at ci.yml:92 also carries
+    # `components: clippy, rustfmt` and `targets: wasm32-unknown-unknown`
+    # overrides, but zizmor 1.25.x still flags it as superfluous
+    # (the audit is conservative about which `with:` keys make the
+    # action non-superfluous). We carry an explicit ignore for that
+    # line as well so the repo-shape job's cache key stays coherent
+    # with the rest of the toolchain-action pins.
     ignore:
       # reason: dtolnay/rust-toolchain intentional in repo-shape job (caching its install)
       - ci.yml:92
@@ -49,12 +64,14 @@ rules:
       # reason: dtolnay/rust-toolchain intentional in dependency-audit job (cargo-audit needs stable Rust)
       - ci.yml:352
       # reason: dtolnay/rust-toolchain intentional in developer-quickstart job (DX-001 gate)
-      - ci.yml:470
+      - ci.yml:475
       # reason: dtolnay/rust-toolchain intentional in operator-network job (operator bundle build)
-      - ci.yml:511
+      - ci.yml:516
       # reason: dtolnay/rust-toolchain intentional in chain-clippy job (workspace clippy)
-      - ci.yml:543
+      - ci.yml:548
       # reason: dtolnay/rust-toolchain intentional in zizmor-policy job (CI-SEC-001 gate)
-      - ci.yml:577
+      - ci.yml:582
       # reason: dtolnay/rust-toolchain intentional in quality-benchmark job (F-003 gate, Swatinem/rust-cache keying)
-      - ci.yml:617
+      - ci.yml:622
+      # reason: dtolnay/rust-toolchain intentional in miner-convergence-doc job (F-003 doc-reg drift guard gate)
+      - ci.yml:670

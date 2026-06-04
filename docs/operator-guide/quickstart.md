@@ -296,6 +296,15 @@ have the required robopoker/PostgreSQL hardware footprint. Use
 and `bash ops/poker_quality_benchmark.sh` when you need a real exploitability
 ladder instead of the bounded bootstrap artifacts.
 
+The per-game convergence table (Liar's Dice: 512 iterations at exploitability
+≤ 0.70; Kuhn poker: closed form / 0 iterations; NLHE: blocked on richer
+encoder artifacts) lives in
+[`miner-convergence.md`](miner-convergence.md) and is the F-003
+operator-facing source of truth. The doc-reg drift guard
+`bash tests/e2e/miner_convergence_doc_keeps_truthful_thresholds.sh` keeps
+the published table in sync with the live `quality_benchmark` example and
+the live `LIARS_DICE_SOLVER_TREES` constant.
+
 ## 7. Start a Validator
 
 The current validator surface is a bounded bootstrap/scoring command, not a
