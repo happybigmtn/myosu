@@ -19,6 +19,7 @@ pub mod game;
 pub mod gin_rummy_benchmark;
 pub mod hanafuda_benchmark;
 pub mod hearts_benchmark;
+pub mod hwatu_benchmark;
 pub mod protocol;
 pub mod quality;
 pub mod renderer;
@@ -41,6 +42,7 @@ pub use game::{
 };
 pub use hanafuda_benchmark::{HanafudaBenchmarkDossier, HanafudaDossierError};
 pub use hearts_benchmark::{HeartsBenchmarkDossier, HeartsDossierError};
+pub use hwatu_benchmark::{HwatuBenchmarkDossier, HwatuDossierError};
 pub use protocol::{
     PortfolioAction, PortfolioInfo, PortfolioStrategyQuery, PortfolioStrategyResponse,
     PortfolioStrengthInfo, PortfolioStrengthQuery, STRENGTH_WIRE_VERSION, recommended_action,
