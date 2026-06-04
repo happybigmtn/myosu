@@ -461,6 +461,11 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/spades_benchmark_dossier.sh
 
+      - name: Verify F-011 Bridge benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/bridge_benchmark_dossier.sh
+
   developer-quickstart:
     name: Developer Quickstart
     runs-on: ubuntu-latest
