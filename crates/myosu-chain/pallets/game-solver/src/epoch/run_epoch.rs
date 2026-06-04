@@ -462,6 +462,30 @@ impl<T: Config> Pallet<T> {
         }
 
         // Compute rao based emission scores. range: I96F32(0, rao_emission)
+        //
+        // NEM-003B: per-UID `I96F32 -> u64` truncation boundary.
+        // The `server_emission` and `validator_emission` vectors below are
+        // computed as I96F32 fixed-point products (per-UID share * rao_emission)
+        // and then independently floored to `u64` via `saturating_to_num::<u64>()`.
+        // Each per-UID truncation drops the fractional rao (each fraction is
+        // strictly less than 1 rao), so the sum of the per-UID `server_emission`
+        // and the sum of the per-UID `validator_emission` can each be at most
+        // `n_neurons` rao short of the requested `rao_emission`. The combined
+        // `emission` vector is bounded by the same `n_neurons`-rao drift, and
+        // the per-UID truncated values are always <= the float values, so the
+        // truncated sum can never exceed `rao_emission` (i.e. the drift is
+        // strictly one-directional — fractional rao can only be lost, never
+        // minted).
+        //
+        // This is the *epoch path* emission math. It is distinct from the
+        // coinbase split (the `close_integer_emission_split` invariant in
+        // `coinbase/run_coinbase.rs` + the `stage_0_coinbase_truncation_dust_is_closed_exactly_sweep`
+        // unit test), which closes the owner_cut / server / validator three-way
+        // split at the pending-emission layer with zero drift. NEM-003A
+        // (the `epoch_per_uid_emission_sum_equals_total_within_truncation_bound`
+        // and `epoch_per_uid_emission_per_uid_dominance_holds_for_uniform_stake`
+        // unit tests in `tests/stage_0_flow.rs`) enforces this `n_neurons`-rao
+        // truncation bound for the epoch path.
         let float_rao_emission: I96F32 = I96F32::saturating_from_num(rao_emission);
 
         let server_emission: Vec<I96F32> = normalized_server_emission
@@ -927,6 +951,30 @@ impl<T: Config> Pallet<T> {
         }
 
         // Compute rao based emission scores. range: I96F32(0, rao_emission)
+        //
+        // NEM-003B: per-UID `I96F32 -> u64` truncation boundary.
+        // The `server_emission` and `validator_emission` vectors below are
+        // computed as I96F32 fixed-point products (per-UID share * rao_emission)
+        // and then independently floored to `u64` via `saturating_to_num::<u64>()`.
+        // Each per-UID truncation drops the fractional rao (each fraction is
+        // strictly less than 1 rao), so the sum of the per-UID `server_emission`
+        // and the sum of the per-UID `validator_emission` can each be at most
+        // `n_neurons` rao short of the requested `rao_emission`. The combined
+        // `emission` vector is bounded by the same `n_neurons`-rao drift, and
+        // the per-UID truncated values are always <= the float values, so the
+        // truncated sum can never exceed `rao_emission` (i.e. the drift is
+        // strictly one-directional — fractional rao can only be lost, never
+        // minted).
+        //
+        // This is the *epoch path* emission math. It is distinct from the
+        // coinbase split (the `close_integer_emission_split` invariant in
+        // `coinbase/run_coinbase.rs` + the `stage_0_coinbase_truncation_dust_is_closed_exactly_sweep`
+        // unit test), which closes the owner_cut / server / validator three-way
+        // split at the pending-emission layer with zero drift. NEM-003A
+        // (the `epoch_per_uid_emission_sum_equals_total_within_truncation_bound`
+        // and `epoch_per_uid_emission_per_uid_dominance_holds_for_uniform_stake`
+        // unit tests in `tests/stage_0_flow.rs`) enforces this `n_neurons`-rao
+        // truncation bound for the epoch path.
         let float_rao_emission: I96F32 = I96F32::saturating_from_num(rao_emission);
 
         let server_emission: Vec<I96F32> = normalized_server_emission

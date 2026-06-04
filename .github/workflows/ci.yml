@@ -261,6 +261,9 @@ jobs:
       - name: Pallet stage-0 tests
         run: cargo test -p pallet-game-solver --quiet -- stage_0
 
+      - name: NEM-003A epoch per-UID emission sweep harness
+        run: bash tests/e2e/epoch_per_uid_emission_sweep.sh
+
       - name: Runtime tests
         run: cargo test -p myosu-chain-runtime --quiet
 

@@ -658,6 +658,312 @@ fn legacy_epoch_skip_emits_event_when_state_is_inconsistent() {
     });
 }
 
+// ===========================================================================
+// NEM-003A: Epoch per-UID emission accumulation sweep test
+// ===========================================================================
+//
+// `epoch_mechanism` (in `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs`)
+// computes per-UID `server_emission`, `validator_emission`, and `combined_emission`
+// as `I96F32` fixed-point values and then truncates them to `u64` independently
+// per UID. The per-UID truncation drops the fractional rao (each fraction is
+// strictly less than 1 rao), so the sum of the per-UID combined emissions can be
+// at most `n_neurons` rao short of the requested `rao_emission`. This test sweeps
+// a representative grid of (n_miners, n_validators, rao_emission) and asserts the
+// truncation gap stays within the documented bound of (n_miners + n_validators)
+// rao per epoch — exactly the per-UID truncation boundary NEM-003B documents.
+//
+// This is the *epoch path* emission math. The coinbase split (verified by
+// `stage_0_coinbase_truncation_dust_is_closed_exactly_sweep`) is a separate
+// invariant: it covers the owner_cut / server / validator three-way split at
+// the pending-emission layer, while NEM-003A covers the per-UID `I96F32 -> u64`
+// truncation at the epoch-distribution layer.
+
+/// Set up a synthetic `n` neuron subnet with uniform `alpha_stake` per neuron
+/// and either all-validators or a `validators` count of leading-uid validators
+/// (the rest are miners). No weights are set, so the math falls into the
+/// `active_stake`-normalized branch: per-UID `combined_emission[i] =
+/// active_stake[i] * rao_emission` (in I96F32, then truncated to u64). With
+/// uniform stake, the per-UID truncation drops at most 1 rao each.
+fn setup_epoch_per_uid_subnet(
+    netuid: NetUid,
+    n_neurons: u16,
+    validators: u16,
+    alpha_stake: u64,
+    coldkey: U256,
+) {
+    NetworksAdded::<Test>::insert(netuid, true);
+    SubnetworkN::<Test>::insert(netuid, n_neurons);
+    // Activity cutoff default (5000) vs. registration block 0 and current block 1
+    // means all neurons count as recently-registered, so they all pass the
+    // activity gate for the purposes of the per-UID emission sum.
+    BlockAtRegistration::<Test>::insert(netuid, 0u16, 0u64);
+    for uid in 1..n_neurons {
+        BlockAtRegistration::<Test>::insert(netuid, uid, 0u64);
+    }
+    let permit_vec: Vec<bool> = (0..n_neurons).map(|uid| uid < validators).collect();
+    ValidatorPermit::<Test>::insert(netuid, permit_vec);
+    MechanismCountCurrent::<Test>::insert(netuid, MechId::from(1));
+    let netuid_index = GameSolver::get_mechanism_storage_index(netuid, MechId::from(0));
+    LastUpdate::<Test>::insert(netuid_index, vec![1u64; n_neurons as usize]);
+
+    for uid in 0..n_neurons {
+        let hotkey = U256::from(1000u64 + uid as u64);
+        Keys::<Test>::insert(netuid, uid, hotkey);
+        Uids::<Test>::insert(netuid, hotkey, uid);
+        GameSolver::increase_stake_for_hotkey_and_coldkey_on_subnet(
+            &hotkey,
+            &coldkey,
+            netuid,
+            AlphaCurrency::from(alpha_stake),
+        );
+    }
+}
+
+#[test]
+fn epoch_per_uid_emission_sum_equals_total_within_truncation_bound() {
+    // Sweep a representative grid of (n_neurons, n_validators, rao_emission).
+    // The truncation-bound invariant must hold for every grid cell.
+    let neuron_counts: [u16; 6] = [1, 2, 4, 8, 12, 16];
+    let validator_splits: [u16; 4] = [0, 1, 2, 4];
+    // Mixed rao magnitudes: small (where truncation can dominate the math),
+    // mid (typical), and large (where truncation is negligible).
+    let rao_emissions: [u64; 5] = [1, 7, 1_000, 1_000_003, 100_000_001];
+    let coldkey = U256::from(9_999u64);
+    let alpha_stake: u64 = 1_000_000_000;
+
+    for &n_neurons in &neuron_counts {
+        for &validators in &validator_splits {
+            let validators = validators.min(n_neurons);
+            for &rao_emission in &rao_emissions {
+                new_test_ext(1).execute_with(|| {
+                    // Use a distinct netuid per cell so storage state from prior
+                    // cells cannot leak into the next (the mock has no built-in
+                    // reset between iterations inside a single `execute_with`).
+                    let netuid: NetUid = NetUid::from(7u16);
+                    setup_epoch_per_uid_subnet(
+                        netuid,
+                        n_neurons,
+                        validators,
+                        alpha_stake,
+                        coldkey,
+                    );
+
+                    // Run the epoch. The returned `EpochOutput` carries one
+                    // `EpochTerms` per UID with the per-UID `emission` (the
+                    // `combined_emission` vector, which is the value the
+                    // runtime writes to `Emission::<T>` storage as well as the
+                    // value the operator reads from the on-chain state). Using
+                    // the returned map directly avoids any pallet-storage
+                    // decoding subtleties in the test mock externalities.
+                    let output = GameSolver::epoch_mechanism(
+                        netuid,
+                        MechId::from(0),
+                        AlphaCurrency::from(rao_emission),
+                    );
+                    let per_uid_combined: Vec<AlphaCurrency> = output
+                        .as_map()
+                        .values()
+                        .map(|t| t.emission)
+                        .collect();
+
+                    // The runtime always writes one entry per UID, so the
+                    // length must match the subnet size.
+                    assert_eq!(
+                        per_uid_combined.len() as u16,
+                        n_neurons,
+                        "Emission vector must hold one entry per UID: n={} validators={} rao={}",
+                        n_neurons,
+                        validators,
+                        rao_emission
+                    );
+
+                    // The truncation bound: every per-UID `I96F32 -> u64`
+                    // conversion drops the fractional rao (each fraction is
+                    // strictly less than 1 rao), so the sum can be at most
+                    // `n_neurons` rao short of the requested `rao_emission`.
+                    // The opposite direction cannot drift: per-UID truncated
+                    // values are <= the float values, and the float values
+                    // sum to rao_emission exactly, so the sum of truncated
+                    // values is <= rao_emission.
+                    let sum_truncated: u64 = per_uid_combined
+                        .iter()
+                        .map(|e| u64::from(*e))
+                        .sum();
+                    let truncation_drift =
+                        rao_emission.saturating_sub(sum_truncated);
+                    assert!(
+                        truncation_drift <= u64::from(n_neurons),
+                        "per-UID truncation drift must be <= n_neurons rao: n={} validators={} rao={} sum={} drift={}",
+                        n_neurons,
+                        validators,
+                        rao_emission,
+                        sum_truncated,
+                        truncation_drift
+                    );
+                    assert!(
+                        sum_truncated <= rao_emission,
+                        "per-UID truncated sum cannot exceed rao_emission: n={} validators={} rao={} sum={}",
+                        n_neurons,
+                        validators,
+                        rao_emission,
+                        sum_truncated
+                    );
+
+                    // The returned `EpochOutput` also carries the per-UID
+                    // `server_emission` + `validator_emission` values, which
+                    // are independently truncated. Sum the per-UID
+                    // server+validator pairs and assert they are at most
+                    // `rao_emission` (each per-UID pair has at most 1 rao of
+                    // truncation, so the total drift is at most `n_neurons`
+                    // rao — same bound as the combined vector).
+                    let mut total_se_plus_ve: u128 = 0u128;
+                    for terms in output.as_map().values() {
+                        let se: u64 = u64::from(terms.server_emission);
+                        let ve: u64 = u64::from(terms.validator_emission);
+                        total_se_plus_ve =
+                            total_se_plus_ve.saturating_add(u128::from(se));
+                        total_se_plus_ve =
+                            total_se_plus_ve.saturating_add(u128::from(ve));
+                    }
+                    let total_se_plus_ve: u64 = total_se_plus_ve
+                        .try_into()
+                        .expect("per-UID emissions must fit u64");
+                    assert!(
+                        total_se_plus_ve <= rao_emission,
+                        "per-UID server+validator sum cannot exceed rao_emission: n={} validators={} rao={} sum={}",
+                        n_neurons,
+                        validators,
+                        rao_emission,
+                        total_se_plus_ve
+                    );
+                    let pair_drift = rao_emission.saturating_sub(total_se_plus_ve);
+                    assert!(
+                        pair_drift <= u64::from(n_neurons),
+                        "per-UID server+validator drift must be <= n_neurons rao: n={} validators={} rao={} sum={} drift={}",
+                        n_neurons,
+                        validators,
+                        rao_emission,
+                        total_se_plus_ve,
+                        pair_drift
+                    );
+                });
+            }
+        }
+    }
+}
+
+#[test]
+fn epoch_per_uid_emission_per_uid_dominance_holds_for_uniform_stake() {
+    // For uniform stake + zero weights, the epoch math falls into the
+    // `active_stake`-normalized branch: per-UID `combined_emission[i] =
+    // active_stake[i] * rao_emission` (in I96F32, then truncated to u64).
+    // With no weights, the validator trust + incentive + dividends path sums
+    // to 0, so the fallback (`emission_sum == 0` → `normalized_combined =
+    // active_stake`) is hit. `active_stake` only carries validator UIDs
+    // (miners are masked as inactive for the emission distribution), so the
+    // contract the operator can rely on for a uniform-stake + no-weights
+    // subnet is: validator UIDs split `rao_emission` evenly via their
+    // truncated I96F32 share, and miner UIDs receive 0. This pins that
+    // contract: the per-UID truncation drops at most 1 rao, so the sum of
+    // the per-validator emissions is within `n_validators` rao of
+    // `rao_emission`, and `validator_emission` carries the entire emission
+    // (no `server_emission` is contributed in the stake-fallback path).
+    let coldkey = U256::from(9_999u64);
+    let alpha_stake: u64 = 1_000_000_000;
+    let n_neurons: u16 = 7;
+    let n_validators: u16 = 2;
+    let rao_emission: u64 = 1_000;
+    new_test_ext(1).execute_with(|| {
+        let netuid: NetUid = NetUid::from(7u16);
+        setup_epoch_per_uid_subnet(netuid, n_neurons, n_validators, alpha_stake, coldkey);
+
+        let output = GameSolver::epoch_mechanism(
+            netuid,
+            MechId::from(0),
+            AlphaCurrency::from(rao_emission),
+        );
+        let stored: Vec<AlphaCurrency> = output
+            .as_map()
+            .values()
+            .map(|t| t.emission)
+            .collect();
+        assert_eq!(stored.len() as u16, n_neurons);
+
+        // Miner UIDs (the 5 trailing UIDs with no validator permit) must
+        // receive 0 emission in the stake-fallback path: the active_stake
+        // mask applied in the fallback branch zeroes them out, so the
+        // combined emission per UID is 0 for every miner.
+        let miner_emission: u64 = stored[n_validators as usize..]
+            .iter()
+            .map(|e| u64::from(*e))
+            .sum();
+        assert_eq!(
+            miner_emission, 0,
+            "no-weights stake-fallback path must zero out miner UIDs"
+        );
+
+        // Validator UIDs split rao_emission evenly in the stake-fallback
+        // path. With uniform active_stake, each validator's I96F32 share
+        // is `rao_emission / n_validators` and the per-UID I96F32 -> u64
+        // truncation drops the fractional rao (at most 1 rao per UID).
+        // The first n_validators UIDs each receive either
+        // `floor(rao_emission / n_validators)` or
+        // `floor(rao_emission / n_validators) + 1`, and the rest receive 0.
+        let floor_share = rao_emission / u64::from(n_validators);
+        let remainder = rao_emission % u64::from(n_validators);
+        let above_floor = stored[..n_validators as usize]
+            .iter()
+            .filter(|e| u64::from(**e) == floor_share + 1)
+            .count() as u64;
+        let at_floor = stored[..n_validators as usize]
+            .iter()
+            .filter(|e| u64::from(**e) == floor_share)
+            .count() as u64;
+        assert_eq!(
+            above_floor, remainder,
+            "validator UIDs must distribute the rao remainder as +1 rao shares: rao={} n_validators={} floor={} remainder={} above_floor={}",
+            rao_emission, n_validators, floor_share, remainder, above_floor
+        );
+        assert_eq!(
+            at_floor,
+            u64::from(n_validators) - remainder,
+            "remaining validator UIDs must receive the floor share: rao={} n_validators={} floor={} remainder={} at_floor={}",
+            rao_emission, n_validators, floor_share, remainder, at_floor
+        );
+
+        // In the no-weights stake-fallback path, `server_emission` is 0
+        // and `validator_emission` carries the full per-UID share. The
+        // total validator emission in the returned map must equal the
+        // stored per-UID combined sum.
+        let mut validator_emission_total: u64 = 0;
+        let mut server_emission_total: u64 = 0;
+        for terms in output.as_map().values() {
+            validator_emission_total =
+                validator_emission_total.saturating_add(u64::from(terms.validator_emission));
+            server_emission_total =
+                server_emission_total.saturating_add(u64::from(terms.server_emission));
+        }
+        assert_eq!(
+            server_emission_total, 0,
+            "no-weights stake-fallback path must carry zero server emission"
+        );
+        let stored_sum: u64 = stored.iter().map(|e| u64::from(*e)).sum();
+        assert_eq!(
+            validator_emission_total, stored_sum,
+            "validator_emission must equal the stored per-UID combined sum in the stake-fallback path"
+        );
+        let drift = rao_emission.saturating_sub(stored_sum);
+        assert!(
+            drift <= u64::from(n_validators),
+            "uniform-stake per-validator drift must be <= n_validators rao: rao={} sum={} drift={} n_validators={}",
+            rao_emission,
+            stored_sum,
+            drift,
+            n_validators
+        );
+    });
+}
+
 #[test]
 fn stage_0_coinbase_emission_accounting_matches_accrued_epoch_budget() {
     new_test_ext(1).execute_with(|| {

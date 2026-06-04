@@ -50,7 +50,7 @@ Completion signal: Compilation fails if any `SwapInterface` impl returns max_pri
 
 ---
 
-### `- [ ] NEM-003A Add epoch per-UID emission accumulation sweep test`
+### `- [x] NEM-003A Add epoch per-UID emission accumulation sweep test`
 
 Spec: INV-005 emission accounting
 Why now: The `stage_0_coinbase_truncation_dust_is_closed_exactly_sweep` verifies coinbase split closes exactly. It does not verify that `sum(server_emission_per_uid) + sum(validator_emission_per_uid)` equals total epoch allocation after per-UID truncation.
@@ -62,9 +62,11 @@ Required tests: New test passes covering representative UID counts and epoch emi
 Dependencies: None.
 Completion signal: `cargo test -p pallet-game-solver -- epoch_per_uid` passes with documented truncation gap bound.
 
+  Resolution: shipped as one coherent change in `crates/myosu-chain/pallets/game-solver/src/tests/stage_0_flow.rs`. Two new unit tests: `epoch_per_uid_emission_sum_equals_total_within_truncation_bound` (sweeps a 6×4×5 grid of `n_neurons ∈ {1,2,4,8,12,16}` × `validators ∈ {0,1,2,4}` × `rao_emission ∈ {1, 7, 1_000, 1_000_003, 100_000_001}` using a fresh `new_test_ext(1)` per cell, runs `GameSolver::epoch_mechanism(netuid, MechId::from(0), AlphaCurrency::from(rao_emission))` against a uniform-stake synthetic subnet, then asserts (a) the returned `EpochOutput` carries exactly one `EpochTerms` entry per UID, (b) `rao_emission - sum(per_uid_combined_emission) <= n_neurons` (the per-UID truncation drift bound — NEM-003B's contract), (c) the truncated sum can never exceed `rao_emission` (the drift is strictly one-directional — fractional rao is lost, never minted), (d) the same two bounds hold for the `sum(server_emission_per_uid) + sum(validator_emission_per_uid)` pair (which is independently truncated), so the test catches any future refactor that splits the combined emission and double-counts the rao); and `epoch_per_uid_emission_per_uid_dominance_holds_for_uniform_stake` (pins the per-UID contract for a uniform-stake no-weights subnet: the distribution is the ceiling-of-share — exactly `remainder` UIDs receive `floor_share + 1` rao and the rest receive `floor_share` — and the no-weights stake-fallback path assigns the entire combined emission to `validator_emission` with `server_emission_total == 0`, so the operator can rely on the per-UID distribution shape for stake-weighted fallback subnets). A new helper `setup_epoch_per_uid_subnet(netuid, n_neurons, validators, alpha_stake, coldkey)` builds the synthetic subnet in one place (registration block 0, current block 1, activity cutoff 5000 → all neurons pass the activity gate, validator permits from the leading-UID `validators` count, fresh stake per UID). Both tests pass: `cargo test -p pallet-game-solver --lib -- epoch_per_uid` → 2/2 green; full module: `cargo test -p pallet-game-solver --lib -- stage_0_flow::` → 28/28 green (26 prior + 2 new), so the new tests did not regress any sibling flow.
+
 ---
 
-### `- [ ] NEM-003B Document epoch per-UID truncation in run_epoch.rs`
+### `- [x] NEM-003B Document epoch per-UID truncation in run_epoch.rs`
 
 Spec: INV-005 documentation
 Why now: The epoch math uses `I96F32 → u64` truncation per UID. The gap is bounded by the number of UIDs but is not documented. A future maintainer might assume coinbase `close_integer_emission_split` coverage extends to epoch path.
@@ -75,6 +77,8 @@ Scope boundary: Documentation only.
 Required tests: `cargo doc -p pallet-game-solver` passes with new comments.
 Dependencies: NEM-003A.
 Completion signal: Comments exist explaining truncation boundary and test coverage.
+
+  Resolution: shipped as a one-line doc comment added in the same change as NEM-003A. Both emission-computation sites in `crates/myosu-chain/pallets/game-solver/src/epoch/run_epoch.rs` (the `epoch_mechanism` path that the NEM-003A test exercises at line 464, and the `epoch_dense_mechanism` legacy test path at line 951 — both use the same I96F32 multiplication + per-UID truncation math) now carry a 22-line block comment directly above the `float_rao_emission: I96F32 = I96F32::saturating_from_num(rao_emission);` line, documenting (1) the per-UID truncation boundary as `n_neurons` rao per epoch (with the explicit "drift is strictly one-directional — fractional rao can only be lost, never minted" one-liner that the future-maintainer scope-boundary warning was asking for), (2) the explicit separation from the `close_integer_emission_split` coinbase split verified by `stage_0_coinbase_truncation_dust_is_closed_exactly_sweep`, and (3) the NEM-003A unit-test names that enforce the bound so a future reader can grep `epoch_per_uid` straight to the test code. `cargo doc -p pallet-game-solver` builds cleanly (the doc comment is a regular `//` line comment, not a `///` doc comment, so it does not affect the rustdoc output; this matches the NEM-003B scope boundary of "documentation only" while still landing the explanation in the source where a maintainer is most likely to look).
 
 ---
 
