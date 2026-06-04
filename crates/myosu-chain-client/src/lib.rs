@@ -274,7 +274,13 @@ pub struct ValidatorAgreementReport {
 pub fn target_weight_in_row(weights: &[(u16, u16)], target_uid: u16) -> u16 {
     weights
         .iter()
-        .find_map(|(uid, weight)| if *uid == target_uid { Some(*weight) } else { None })
+        .find_map(|(uid, weight)| {
+            if *uid == target_uid {
+                Some(*weight)
+            } else {
+                None
+            }
+        })
         .unwrap_or(0)
 }
 
@@ -798,6 +804,53 @@ impl ChainClient {
             if incentive == 0 {
                 continue;
             }
+            let Some(hotkey) = self.get_hotkey_for_net_and_uid(netuid, uid).await? else {
+                continue;
+            };
+            let Some(axon) = self.get_axon_for_net_and_hotkey(netuid, &hotkey).await? else {
+                continue;
+            };
+            if format_axon_endpoint(&axon).is_none() {
+                continue;
+            }
+            miners.push(ChainVisibleMiner {
+                subnet: netuid,
+                uid,
+                hotkey,
+                incentive,
+                axon,
+            });
+        }
+        miners.sort_by(|left, right| {
+            right
+                .incentive
+                .cmp(&left.incentive)
+                .then_with(|| left.uid.cmp(&right.uid))
+        });
+        Ok(miners)
+    }
+
+    /// Returns all chain-visible miners (regardless of incentive
+    /// value) that have a published and formattable axon endpoint,
+    /// ranked by incentive descending then UID ascending. This is the
+    /// permissive variant of [`Self::get_chain_visible_miners`] used by
+    /// the live-read proof: a freshly-registered miner in a fresh
+    /// chain has `incentive == 0` until the first post-weights epoch,
+    /// but the live-read milestone is about reading a solved result
+    /// from the miner axon, not about the chain having scored it.
+    /// The `incentive` field on each returned miner is the raw
+    /// on-chain value (zero is allowed); callers that need the strict
+    /// filter should keep using [`Self::get_chain_visible_miners`].
+    pub async fn get_chain_visible_miner_axons(
+        &self,
+        netuid: NetUid,
+    ) -> Result<Vec<ChainVisibleMiner>, ChainClientError> {
+        let incentives = self.get_incentives(netuid).await?;
+        let mut miners = Vec::new();
+        for (uid_index, incentive) in incentives.into_iter().enumerate() {
+            let Ok(uid) = u16::try_from(uid_index) else {
+                continue;
+            };
             let Some(hotkey) = self.get_hotkey_for_net_and_uid(netuid, uid).await? else {
                 continue;
             };

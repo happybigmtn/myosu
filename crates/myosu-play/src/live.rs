@@ -64,7 +64,7 @@ pub async fn query_live_miner(
     })
 }
 
-fn connect_endpoint(endpoint: &str) -> io::Result<String> {
+pub(crate) fn connect_endpoint(endpoint: &str) -> io::Result<String> {
     let endpoint = SocketAddr::from_str(endpoint).map_err(|error| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -77,6 +77,15 @@ fn connect_endpoint(endpoint: &str) -> io::Result<String> {
         ip => ip,
     };
     Ok(SocketAddr::new(host, endpoint.port()).to_string())
+}
+
+/// Re-export the connect-endpoint helper under a stable cross-module name
+/// so the live-read proof can reuse it without re-exporting private items
+/// to dependents.
+pub(crate) fn connect_endpoint_for_chain(
+    miner: &crate::discovery::DiscoveredMiner,
+) -> io::Result<String> {
+    connect_endpoint(&miner.endpoint)
 }
 
 async fn check_health(endpoint: &str) -> io::Result<()> {

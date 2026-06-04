@@ -173,6 +173,12 @@ pub(crate) struct Cli {
     #[arg(long)]
     pub(crate) subnet: Option<u16>,
 
+    /// Run the live-read proof in place of the subcommand. Requires
+    /// `--chain` and `--subnet`. Prints `bundle_hash`, `miner_uid`, and
+    /// `emission` as key=value lines (the P0 #5 milestone).
+    #[arg(long)]
+    pub(crate) read_solved: bool,
+
     #[command(subcommand)]
     pub(crate) command: Option<Mode>,
 }
@@ -184,6 +190,13 @@ pub(crate) enum Mode {
 
     /// Emit plain-text pipe output and handle a single input line.
     Pipe(AdviceArgs),
+
+    /// Run the live-read proof: connect to a running chain, discover the
+    /// miner axon, play one poker hand, and print `bundle_hash`,
+    /// `miner_uid`, and `emission` as key=value lines. This is the P0 #5
+    /// milestone; an external observer can replay the proof with curl +
+    /// `state_getStorage` and confirm the three values match.
+    LiveRead(LiveReadArgs),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -195,6 +208,22 @@ pub(crate) struct AdviceArgs {
     /// Optional manifest-backed encoder directory paired with --checkpoint.
     #[arg(long = "encoder-dir")]
     pub(crate) encoder_dir: Option<PathBuf>,
+}
+
+/// CLI args for the `myosu-play live-read` subcommand and the
+/// `--read-solved` top-level flag.
+#[derive(Args, Debug, Clone)]
+pub(crate) struct LiveReadArgs {
+    /// Chain WebSocket RPC endpoint to read the live solved result from.
+    /// Alias of the top-level `--chain` flag for ergonomic parity with
+    /// the P0 row's literal `--chain-endpoint ws://...` wording.
+    #[arg(long = "chain-endpoint")]
+    pub(crate) chain_endpoint: Option<String>,
+
+    /// Subnet to read the live solved result from. Alias of the
+    /// top-level `--subnet` flag.
+    #[arg(long)]
+    pub(crate) subnet: Option<u16>,
 }
 
 #[derive(Clone, Debug)]
@@ -388,5 +417,43 @@ mod tests {
                 .to_string()
                 .contains("--game bridge does not support --chain/--subnet")
         );
+    }
+
+    #[test]
+    fn cli_parses_read_solved_flag() {
+        let cli = Cli::parse_from([
+            "myosu-play",
+            "--chain",
+            "ws://127.0.0.1:9944",
+            "--subnet",
+            "7",
+            "--read-solved",
+        ]);
+
+        assert!(cli.read_solved);
+        assert_eq!(cli.chain.as_deref(), Some("ws://127.0.0.1:9944"));
+        assert_eq!(cli.subnet, Some(7));
+        assert!(cli.command.is_none());
+    }
+
+    #[test]
+    fn cli_parses_live_read_subcommand_with_chain_endpoint_alias() {
+        let cli = Cli::parse_from([
+            "myosu-play",
+            "live-read",
+            "--chain-endpoint",
+            "ws://127.0.0.1:9944",
+            "--subnet",
+            "7",
+        ]);
+
+        match cli.command.as_ref() {
+            Some(crate::cli::Mode::LiveRead(args)) => {
+                assert_eq!(args.chain_endpoint.as_deref(), Some("ws://127.0.0.1:9944"));
+                assert_eq!(args.subnet, Some(7));
+            }
+            other => panic!("expected Mode::LiveRead, got {other:?}"),
+        }
+        assert!(!cli.read_solved);
     }
 }

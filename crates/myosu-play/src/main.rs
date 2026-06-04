@@ -24,8 +24,9 @@ mod blueprint;
 mod cli;
 mod discovery;
 mod live;
+mod live_read;
 
-use crate::cli::{AdviceArgs, Cli, DiscoveryRequest, GameSelection, Mode};
+use crate::cli::{AdviceArgs, Cli, DiscoveryRequest, GameSelection, LiveReadArgs, Mode};
 
 #[derive(Clone, Debug)]
 struct DiscoverySelection {
@@ -97,13 +98,64 @@ async fn main() -> io::Result<()> {
         .await;
     }
 
+    if cli.read_solved {
+        return run_read_solved(&cli).await;
+    }
+
     match cli.command {
         Some(Mode::Train(args)) => run_train(cli.game, args, discovery_request).await,
         Some(Mode::Pipe(args)) => run_pipe(cli.game, args, discovery_request).await,
+        Some(Mode::LiveRead(args)) => run_live_read(args).await,
         None => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "expected subcommand (`train` or `pipe`) or --smoke-test",
+            "expected subcommand (`train`, `pipe`, or `live-read`) or --smoke-test / --read-solved",
         )),
+    }
+}
+
+async fn run_read_solved(cli: &Cli) -> io::Result<()> {
+    let chain_endpoint = cli.chain.clone().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "--read-solved requires --chain (e.g. --chain ws://127.0.0.1:9944)",
+        )
+    })?;
+    let subnet = cli.subnet.ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "--read-solved requires --subnet (e.g. --subnet 7)",
+        )
+    })?;
+    run_live_read(LiveReadArgs {
+        chain_endpoint: Some(chain_endpoint),
+        subnet: Some(subnet),
+    })
+    .await
+}
+
+async fn run_live_read(args: LiveReadArgs) -> io::Result<()> {
+    if args.chain_endpoint.is_none() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "live-read requires --chain-endpoint (e.g. --chain-endpoint ws://127.0.0.1:9944)",
+        ));
+    }
+    if args.subnet.is_none() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "live-read requires --subnet (e.g. --subnet 7)",
+        ));
+    }
+
+    let report = live_read::run_live_read(&args).await?;
+    print!("{}", report.render_keyvalue());
+    if report.is_solved() {
+        Ok(())
+    } else {
+        Err(io::Error::other(format!(
+            "live-read did not produce a solved result (status={})",
+            report.status.label()
+        )))
     }
 }
 
@@ -505,6 +557,7 @@ fn mode_label(smoke_test: bool, command: Option<&Mode>) -> &'static str {
     match command {
         Some(Mode::Train(_)) => "train",
         Some(Mode::Pipe(_)) => "pipe",
+        Some(Mode::LiveRead(_)) => "live_read",
         None => "none",
     }
 }
