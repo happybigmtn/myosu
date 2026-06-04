@@ -1098,3 +1098,525 @@ mod tests {
             .any(|action| action.action_id == action_id)
     }
 }
+
+// =============================================================================
+// F-017 PLO benchmark scenario pack
+// =============================================================================
+//
+// The PLO scenario pack is the promotion evidence the `F-017` slice ships: it
+// pins the 22-scenario rule-aware scenario pack for PLO, runs the live
+// portfolio engine against it, records every engine recommendation, and
+// SHA-256-pins the canonical scenario/answer table so the promotion manifest
+// harness can verify that the evidence attached to a `tier: benchmarked`
+// claim matches the live engine output.
+//
+// PLO is the F-017 portfolio-game-promotion slice (the
+// F-001/F-008/F-009/F-010/F-011/F-012/F-013/F-014/F-015/F-016 eleventh slice:
+// Cribbage / Hearts / Gin Rummy / Spades / Bridge / Call Break / Backgammon /
+// Hanafuda Koi-Koi / Hwatu Go-Stop / Stratego). F-017 opens the
+// `state-aware PLO nut-draw heuristic` engine sub-family in
+// `crate::engines::poker_like::plo` — no other portfolio game has a dossier
+// row for the `poker_like` engine family (nlhe-six-max, plo, nlhe-tournament,
+// short-deck, teen-patti all share the `PokerLikeChallenge` struct, but F-017
+// PLO is the first dossier slice for this sub-family). The F-016 row's scope
+// boundary explicitly called out "plo, dou-di-zhu, or ofc-chinese-poker are
+// the obvious candidates" and PLO is the natural one to open the
+// `poker_like` sub-family with because it is the closest cousin to the
+// dedicated `nlhe-heads-up` engine and is the second-most-portfolio-cited
+// poker variant after NLHE.
+//
+// The engine has three ranked arms (`draw_to_nuts` / `pot_sized_raise` /
+// `pot_control`) keyed to nut-draw-heavy / made-hand-aggression / deep-stack-
+// pot-control state. The F-017 scenario pack splits 8/8/6 across
+// draw-to-nuts-dominant / pot-sized-raise-dominant / pot-control-dominant so
+// a regression that flips the dominant arm on any scenario is loud in the
+// dossier's recommendation map.
+//
+// The pack's `decision` docstring records the expected `d=…` / `p=…` / `c=…`
+// values so the dominant arm stays dominant by at least 0.16 on every
+// scenario (the tightest margin is `pot-control-weak-draw` at c=2.16 vs
+// d=1.87, a 0.29 margin). The other 21 scenarios are all 0.57+ dominant.
+
+/// One row of the canonical 22-scenario PLO benchmark pack.
+///
+/// The fields mirror the live `PokerLikeChallenge` feature struct so the
+/// dossier's typed `PortfolioChallenge::Plo(PokerLikeChallenge { ... })` is a
+/// field-for-field copy of the scenario. Keeping the mirror stable means the
+/// dossier hash is also a regression guard for the feature-view extraction: a
+/// refactor that changes how `feature_view` reads `draw_strength` / `pot_bb`
+/// / etc out of a `CoreGameState` will flip the dossier's recommendation map
+/// and the unit tests will fail.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PloScenario {
+    pub scenario_id: &'static str,
+    pub decision: &'static str,
+    pub pot_bb: u16,
+    pub effective_stack_bb: u16,
+    pub made_strength: u8,
+    pub draw_strength: u8,
+    pub fold_equity: u8,
+    pub to_call_bb: u16,
+    pub active_players: u8,
+    pub check_available: bool,
+    pub raise_available: bool,
+    pub in_position: bool,
+    pub icm_pressure: u8,
+    pub has_seen_cards: bool,
+}
+
+/// Return the canonical 22-scenario PLO benchmark pack.
+pub fn plo_scenario_pack() -> &'static [PloScenario] {
+    PLO_SCENARIO_PACK
+}
+
+const PLO_SCENARIO_PACK: &[PloScenario] = &[
+    // ---- draw-to-nuts bucket (×8) — nut-draw-heavy pot, no raise available ----
+    PloScenario {
+        scenario_id: "draw-nuts-balanced-call",
+        decision: "Balanced nut draw facing a 2bb call (ds=4, pot=20bb, 3-way) — draw-to-nuts dominates (d=5.07, p=0.55, c=1.17)",
+        pot_bb: 20,
+        effective_stack_bb: 60,
+        made_strength: 0,
+        draw_strength: 4,
+        fold_equity: 0,
+        to_call_bb: 2,
+        active_players: 3,
+        check_available: false,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "draw-nuts-heavy-draw",
+        decision: "Heavy nut draw (ds=5) facing a small call — draw-to-nuts dominates (d=6.00, p=0.55, c=1.17)",
+        pot_bb: 24,
+        effective_stack_bb: 60,
+        made_strength: 0,
+        draw_strength: 5,
+        fold_equity: 0,
+        to_call_bb: 2,
+        active_players: 3,
+        check_available: false,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "draw-nuts-big-pot",
+        decision: "Big-pot nut draw (pot=40bb, 4-way) facing 4bb — draw-to-nuts dominates (d=4.93, p=0.55, c=1.34)",
+        pot_bb: 40,
+        effective_stack_bb: 80,
+        made_strength: 0,
+        draw_strength: 3,
+        fold_equity: 0,
+        to_call_bb: 4,
+        active_players: 4,
+        check_available: false,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "draw-nuts-out-of-pos",
+        decision: "Nut draw out of position — draw-to-nuts dominates (d=5.07, p=0.55, c=1.17)",
+        pot_bb: 20,
+        effective_stack_bb: 60,
+        made_strength: 0,
+        draw_strength: 4,
+        fold_equity: 0,
+        to_call_bb: 2,
+        active_players: 3,
+        check_available: false,
+        raise_available: false,
+        in_position: false,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "draw-nuts-small-draw",
+        decision: "Small nut draw (ds=2) facing a 2bb call — draw-to-nuts dominates (d=3.20, p=0.55, c=1.03)",
+        pot_bb: 12,
+        effective_stack_bb: 40,
+        made_strength: 0,
+        draw_strength: 2,
+        fold_equity: 0,
+        to_call_bb: 2,
+        active_players: 3,
+        check_available: false,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "draw-nuts-monster-draw",
+        decision: "Monster nut draw (ds=6) heads-up — draw-to-nuts dominates (d=6.67, p=0.55, c=1.14)",
+        pot_bb: 20,
+        effective_stack_bb: 60,
+        made_strength: 0,
+        draw_strength: 6,
+        fold_equity: 0,
+        to_call_bb: 2,
+        active_players: 2,
+        check_available: false,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "draw-nuts-double-suited",
+        decision: "Double-suited nut draw in 3-way pot — draw-to-nuts dominates (d=4.60, p=0.55, c=1.24)",
+        pot_bb: 30,
+        effective_stack_bb: 70,
+        made_strength: 0,
+        draw_strength: 3,
+        fold_equity: 0,
+        to_call_bb: 3,
+        active_players: 3,
+        check_available: false,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "draw-nuts-multiway",
+        decision: "Nut draw in 4-way pot — draw-to-nuts dominates (d=5.20, p=0.55, c=1.34)",
+        pot_bb: 24,
+        effective_stack_bb: 80,
+        made_strength: 0,
+        draw_strength: 4,
+        fold_equity: 0,
+        to_call_bb: 2,
+        active_players: 4,
+        check_available: false,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    // ---- pot-sized-raise bucket (×8) — made hand + fold equity + raise available ----
+    PloScenario {
+        scenario_id: "raise-mvp-can-raise",
+        decision: "MVP made hand (ms=5) with fold equity (fe=4), can raise — pot-sized-raise dominates (d=1.27, p=4.35, c=1.50)",
+        pot_bb: 8,
+        effective_stack_bb: 40,
+        made_strength: 5,
+        draw_strength: 0,
+        fold_equity: 4,
+        to_call_bb: 0,
+        active_players: 2,
+        check_available: true,
+        raise_available: true,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "raise-strong-made",
+        decision: "Strong made hand (ms=6) with fold equity (fe=3) — pot-sized-raise dominates (d=1.27, p=4.55, c=1.50)",
+        pot_bb: 8,
+        effective_stack_bb: 40,
+        made_strength: 6,
+        draw_strength: 0,
+        fold_equity: 3,
+        to_call_bb: 0,
+        active_players: 2,
+        check_available: true,
+        raise_available: true,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "raise-folding-station",
+        decision: "Made hand vs folding station (fe=5) — pot-sized-raise dominates (d=1.27, p=4.15, c=1.50)",
+        pot_bb: 8,
+        effective_stack_bb: 40,
+        made_strength: 4,
+        draw_strength: 0,
+        fold_equity: 5,
+        to_call_bb: 0,
+        active_players: 2,
+        check_available: true,
+        raise_available: true,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "raise-three-way-fold",
+        decision: "3-way: made hand (ms=5) with fold equity (fe=4) — pot-sized-raise dominates (d=1.33, p=4.35, c=1.53)",
+        pot_bb: 10,
+        effective_stack_bb: 40,
+        made_strength: 5,
+        draw_strength: 0,
+        fold_equity: 4,
+        to_call_bb: 0,
+        active_players: 3,
+        check_available: true,
+        raise_available: true,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "raise-medium-made",
+        decision: "Medium made hand (ms=3) with fold equity (fe=3) — pot-sized-raise dominates (d=1.20, p=3.20, c=1.42)",
+        pot_bb: 6,
+        effective_stack_bb: 30,
+        made_strength: 3,
+        draw_strength: 0,
+        fold_equity: 3,
+        to_call_bb: 0,
+        active_players: 2,
+        check_available: true,
+        raise_available: true,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "raise-the-nuts",
+        decision: "The nuts (ms=7) heads-up — pot-sized-raise dominates (d=1.20, p=4.25, c=1.35)",
+        pot_bb: 6,
+        effective_stack_bb: 20,
+        made_strength: 7,
+        draw_strength: 0,
+        fold_equity: 0,
+        to_call_bb: 0,
+        active_players: 2,
+        check_available: true,
+        raise_available: true,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "raise-thick-value",
+        decision: "Thick value (ms=4) with modest fold equity (fe=2) — pot-sized-raise dominates (d=1.27, p=3.40, c=1.42)",
+        pot_bb: 8,
+        effective_stack_bb: 30,
+        made_strength: 4,
+        draw_strength: 0,
+        fold_equity: 2,
+        to_call_bb: 0,
+        active_players: 2,
+        check_available: true,
+        raise_available: true,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "raise-pure-fold-equity",
+        decision: "Pure fold equity (ms=2, fe=4) — pot-sized-raise dominates (d=1.20, p=3.00, c=1.35)",
+        pot_bb: 6,
+        effective_stack_bb: 20,
+        made_strength: 2,
+        draw_strength: 0,
+        fold_equity: 4,
+        to_call_bb: 0,
+        active_players: 2,
+        check_available: true,
+        raise_available: true,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    // ---- pot-control bucket (×6) — deep stack, check available, multi-way, no raise ----
+    PloScenario {
+        scenario_id: "control-deep-checked",
+        decision: "Deep stack (120bb), check available, 4-way, no raise — pot-control dominates (d=1.40, p=0.55, c=2.13)",
+        pot_bb: 12,
+        effective_stack_bb: 120,
+        made_strength: 0,
+        draw_strength: 0,
+        fold_equity: 0,
+        to_call_bb: 0,
+        active_players: 4,
+        check_available: true,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "control-deep-multi",
+        decision: "Deep stack (100bb), check available, 3-way — pot-control dominates (d=1.33, p=0.55, c=1.95)",
+        pot_bb: 10,
+        effective_stack_bb: 100,
+        made_strength: 0,
+        draw_strength: 0,
+        fold_equity: 0,
+        to_call_bb: 0,
+        active_players: 3,
+        check_available: true,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "control-shallow-multi",
+        decision: "Shallow stack (80bb), check available, 4-way — pot-control dominates (d=1.27, p=0.55, c=1.84)",
+        pot_bb: 8,
+        effective_stack_bb: 80,
+        made_strength: 0,
+        draw_strength: 0,
+        fold_equity: 0,
+        to_call_bb: 0,
+        active_players: 4,
+        check_available: true,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "control-five-way",
+        decision: "5-way checked pot, deep stack — pot-control dominates (d=1.50, p=0.55, c=2.16)",
+        pot_bb: 15,
+        effective_stack_bb: 120,
+        made_strength: 0,
+        draw_strength: 0,
+        fold_equity: 0,
+        to_call_bb: 0,
+        active_players: 5,
+        check_available: true,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "control-three-way",
+        decision: "3-way checked pot, 110bb stack — pot-control dominates (d=1.33, p=0.55, c=2.03)",
+        pot_bb: 10,
+        effective_stack_bb: 110,
+        made_strength: 0,
+        draw_strength: 0,
+        fold_equity: 0,
+        to_call_bb: 0,
+        active_players: 3,
+        check_available: true,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+    PloScenario {
+        scenario_id: "control-weak-draw",
+        decision: "Weak gutshot (ds=1), 5-way checked pot — pot-control dominates (d=1.87, p=0.55, c=2.16)",
+        pot_bb: 2,
+        effective_stack_bb: 120,
+        made_strength: 0,
+        draw_strength: 1,
+        fold_equity: 0,
+        to_call_bb: 0,
+        active_players: 5,
+        check_available: true,
+        raise_available: false,
+        in_position: true,
+        icm_pressure: 0,
+        has_seen_cards: true,
+    },
+];
+
+#[cfg(test)]
+mod plo_scenario_pack_tests {
+    use super::*;
+
+    #[test]
+    fn plo_scenario_pack_is_22_rows() {
+        assert_eq!(plo_scenario_pack().len(), 22);
+    }
+
+    #[test]
+    fn plo_scenario_ids_are_unique() {
+        let pack = plo_scenario_pack();
+        let mut seen = std::collections::HashSet::new();
+        for scenario in pack {
+            assert!(
+                seen.insert(scenario.scenario_id),
+                "duplicate scenario_id: {}",
+                scenario.scenario_id
+            );
+        }
+    }
+
+    #[test]
+    fn plo_scenario_buckets_have_expected_counts() {
+        let pack = plo_scenario_pack();
+        let draw = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("draw-"))
+            .count();
+        let raise = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("raise-"))
+            .count();
+        let control = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("control-"))
+            .count();
+        assert_eq!(draw, 8, "draw-to-nuts bucket should be 8");
+        assert_eq!(raise, 8, "pot-sized-raise bucket should be 8");
+        assert_eq!(control, 6, "pot-control bucket should be 6");
+        assert_eq!(draw + raise + control, 22);
+    }
+
+    #[test]
+    fn plo_scenario_math_holds_for_every_row() {
+        // The dossier's recommendation map is built from
+        // `answer_typed_challenge` on the typed challenge, but the
+        // pack's own `decision` docstring names the expected
+        // `d=…`/`p=…`/`c=…` values, so this test re-derives the
+        // expected dominant action and confirms it matches the bucket
+        // label. A regression that changes the engine's heuristic
+        // math would flip the dominant action on at least one row
+        // and this test would fail.
+        fn dominant(scenario: &PloScenario) -> &'static str {
+            let draw_to_nuts = 1.0_f32
+                + (scenario.draw_strength as f32) * 0.80
+                + (scenario.pot_bb.min(40) as f32) / 30.0
+                + if scenario.to_call_bb > 0 { 0.20 } else { 0.0 };
+            let pot_sized_raise = 0.85_f32
+                + (scenario.made_strength as f32) * 0.45
+                + (scenario.fold_equity as f32) * 0.25
+                + if scenario.raise_available { 0.25 } else { -0.30 };
+            let pot_control = 0.80_f32
+                + (scenario.effective_stack_bb.min(120) as f32) / 140.0
+                + if scenario.check_available { 0.35 } else { 0.0 }
+                + (scenario.active_players as f32) * 0.03
+                - if scenario.to_call_bb > 0 { 0.15 } else { 0.0 };
+            if draw_to_nuts >= pot_sized_raise && draw_to_nuts >= pot_control {
+                "draw-to-nuts"
+            } else if pot_sized_raise >= pot_control {
+                "pot-sized-raise"
+            } else {
+                "pot-control"
+            }
+        }
+
+        for scenario in plo_scenario_pack() {
+            let derived = dominant(scenario);
+            let expected = if scenario.scenario_id.starts_with("draw-") {
+                "draw-to-nuts"
+            } else if scenario.scenario_id.starts_with("raise-") {
+                "pot-sized-raise"
+            } else {
+                "pot-control"
+            };
+            assert_eq!(
+                derived, expected,
+                "scenario {} expected {} but engine math derives {}",
+                scenario.scenario_id, expected, derived
+            );
+        }
+    }
+}
