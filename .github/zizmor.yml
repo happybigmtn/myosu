@@ -77,3 +77,5 @@ rules:
       - ci.yml:743
       # reason: dtolnay/rust-toolchain intentional in solver-read job (W-03 operator read-only solver surface gate, Swatinem/rust-cache keying)
       - ci.yml:833
+      # reason: dtolnay/rust-toolchain intentional in validator-scoring-metric job (W-06 first-class observability gate, Swatinem/rust-cache keying)
+      - ci.yml:883

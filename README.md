@@ -132,6 +132,28 @@ here:
 - `bash tests/e2e/solver_read.sh` and the `solver-read` CI job
   for the executable line-protocol and supported-slug drift guard
 
+### Validator scoring observability
+
+Every bounded validator scoring pass emits one grep-friendly
+`VALIDATOR_SCORING_METRIC` line so an operator can scrape the
+per-run latency (`elapsed_ms`) and L1-distance distribution
+(`mean_l1` / `p50_l1` / `p99_l1`) into a CSV without going
+through the chain RPC. The line protocol is byte-stable across
+hosts (the metric's `percentile` helper uses nearest-rank, the
+constructor rejects non-finite L1 distances, and the `f64`
+rendering is `%.6` deterministic) so the INV-003 determinism
+invariant carries through to the metric.
+
+- [docs/operator-guide/observability.md](docs/operator-guide/observability.md)
+  for the `VALIDATOR_SCORING_METRIC` line protocol, the
+  field contract, the nearest-rank percentile algorithm, the
+  byte-stability guarantee, the failure-mode table, and a
+  `grep` / `awk` pipeline an operator can run on the validator's
+  stderr to scrape the metric into a CSV
+- `bash tests/e2e/validator_scoring_metric.sh` and the
+  `validator-scoring-metric` CI job for the executable
+  line-protocol and metric-construction drift guard
+
 ## Current Runnable Truth
 
 These are the currently proven local surfaces:

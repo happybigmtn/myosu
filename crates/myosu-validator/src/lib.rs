@@ -1,12 +1,20 @@
 pub mod chain;
 pub mod cli;
 pub mod http_axon;
+pub mod metric;
 pub mod validation;
 
 /// Re-export the HTTP axon report formatter so an operator reproduction
 /// script can `use myosu_validator::http_axon_report;` without depending
 /// on the public module shape.
 pub use http_axon::http_axon_report;
+
+/// Re-export the validator scoring metric surface (W-06) so an
+/// operator reproduction script can
+/// `use myosu_validator::emit_validator_scoring_metric;` (or import
+/// the `ValidatorScoringMetric` / `MetricError` types directly)
+/// without depending on the public module shape.
+pub use metric::{MetricError, ValidatorScoringMetric, emit as emit_validator_scoring_metric};
 
 /// Formats a stable operator-facing startup report for the current chain probe.
 ///

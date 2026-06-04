@@ -43,6 +43,8 @@ use tracing::info;
 
 use crate::cli::Cli;
 use crate::cli::GameSelection;
+use crate::metric::ValidatorScoringMetric;
+use crate::metric::emit as emit_validator_scoring_metric;
 
 /// Number of MCCFR trees the Liar's Dice solver is trained on across all
 /// validator and operator-facing surfaces. The public constant is the
@@ -590,6 +592,31 @@ pub fn score_response(plan: &ValidationPlan) -> Result<ValidationReport, Validat
         elapsed_ms = started_at.elapsed().as_millis(),
         "scored bounded validator response"
     );
+
+    // W-06 first-class observability: emit exactly one
+    // `VALIDATOR_SCORING_METRIC` line per scoring run so an operator
+    // can scrape the per-run latency / quality distribution without
+    // going through the chain RPC. The line protocol is byte-stable
+    // across hosts (the metric's `percentile` helper uses
+    // nearest-rank, the constructor rejects non-finite L1 distances,
+    // and the `f64` rendering is `%.6` deterministic) so the INV-003
+    // determinism invariant carries through to the metric. The
+    // single-scenario constructor collapses `mean_l1` / `p50_l1` /
+    // `p99_l1` to the run's L1 distance, which is the truthful
+    // surface the `score_response` shape supports today.
+    let elapsed_ms = started_at.elapsed().as_millis() as u64;
+    let game_slug = format!("{:?}", report.game);
+    match ValidatorScoringMetric::single(&game_slug, report.l1_distance, elapsed_ms) {
+        Ok(metric) => print!("{}", emit_validator_scoring_metric(&metric)),
+        Err(err) => tracing::warn!(
+            error = %err,
+            game = %game_slug,
+            l1_distance = report.l1_distance,
+            elapsed_ms,
+            "scoring metric construction failed; VALIDATOR_SCORING_METRIC line not emitted"
+        ),
+    }
+
     Ok(report)
 }
 

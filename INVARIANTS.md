@@ -39,6 +39,15 @@ Hard rules for the myosu game-solving subnet chain.
 - Measurement: max divergence across validator scores for identical inputs.
 - No-ship rule: validator disagreement above epsilon on identical inputs is `S0`.
 - Fallback mode: freeze solver emissions until determinism is restored.
+- Multi-host proof: `tests/e2e/validator_determinism.sh` (the on-host
+  base surface). Two-host extension: `tests/e2e/multi_host_validator_determinism.sh`
+  (planned under W-04).
+- Scoring-metric determinism proof: `tests/e2e/validator_scoring_metric.sh`
+  (W-06). The metric's `percentile` helper uses nearest-rank (no
+  interpolation) and the `emit` line protocol is byte-stable across
+  hosts, so the per-run `mean_l1` / `p50_l1` / `p99_l1` summary
+  cannot drift between operators (the same bug class as a score
+  that disagrees).
 
 ## INV-004: Solver-Gameplay Separation
 
