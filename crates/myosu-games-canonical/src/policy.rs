@@ -226,6 +226,7 @@ pub const fn code_reported_bundle_support(game: ResearchGame) -> PolicyPromotion
         ResearchGame::Bridge => PolicyPromotionTier::Benchmarked,
         ResearchGame::CallBreak => PolicyPromotionTier::Benchmarked,
         ResearchGame::Backgammon => PolicyPromotionTier::Benchmarked,
+        ResearchGame::HanafudaKoiKoi => PolicyPromotionTier::Benchmarked,
         _ => PolicyPromotionTier::Routed,
     }
 }
@@ -703,6 +704,7 @@ mod tests {
                 ResearchGame::Bridge => PolicyPromotionTier::Benchmarked,
                 ResearchGame::CallBreak => PolicyPromotionTier::Benchmarked,
                 ResearchGame::Backgammon => PolicyPromotionTier::Benchmarked,
+                ResearchGame::HanafudaKoiKoi => PolicyPromotionTier::Benchmarked,
                 _ => PolicyPromotionTier::Routed,
             };
 
@@ -762,6 +764,11 @@ mod tests {
         }));
         assert!(rows.iter().any(|row| {
             row.game == ResearchGame::Backgammon
+                && row.tier == PolicyPromotionTier::Benchmarked
+                && row.code_bundle_support == PolicyPromotionTier::Benchmarked
+        }));
+        assert!(rows.iter().any(|row| {
+            row.game == ResearchGame::HanafudaKoiKoi
                 && row.tier == PolicyPromotionTier::Benchmarked
                 && row.code_bundle_support == PolicyPromotionTier::Benchmarked
         }));

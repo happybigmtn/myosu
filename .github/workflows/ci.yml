@@ -494,6 +494,11 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/backgammon_benchmark_dossier.sh
 
+      - name: Verify F-014 HanafudaKoiKoi benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/hanafuda_koi_koi_benchmark_dossier.sh
+
   developer-quickstart:
     name: Developer Quickstart
     runs-on: ubuntu-latest
