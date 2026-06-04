@@ -12,6 +12,7 @@ pub mod cards;
 pub mod combinatorics;
 pub mod core;
 pub mod cribbage_benchmark;
+pub mod dou_di_zhu_benchmark;
 pub mod engine;
 mod engines;
 pub mod eval;
@@ -36,6 +37,7 @@ pub use backgammon_benchmark::{BackgammonBenchmarkDossier, BackgammonDossierErro
 pub use bridge_benchmark::{BridgeBenchmarkDossier, BridgeDossierError};
 pub use call_break_benchmark::{CallBreakBenchmarkDossier, CallBreakDossierError};
 pub use cribbage_benchmark::{CribbageBenchmarkDossier, CribbageDossierError};
+pub use dou_di_zhu_benchmark::{DouDiZhuBenchmarkDossier, DouDiZhuDossierError};
 pub use engine::{
     EngineAnswer, EngineTier, PortfolioEngineError, answer_game, answer_typed_challenge,
 };

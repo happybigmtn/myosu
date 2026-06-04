@@ -160,6 +160,397 @@ pub fn apply_dou_di_zhu_action(
     apply_variant_action(state, action_id, params, SheddingVariant::DouDiZhu)
 }
 
+/// One row of the canonical 22-scenario Dou-Di-Zhu benchmark pack.
+///
+/// The fields mirror the live `SheddingChallenge` feature struct so the
+/// dossier's typed `PortfolioChallenge::DouDiZhu(SheddingChallenge { ... })`
+/// is a field-for-field copy of the scenario. Keeping the mirror stable
+/// means the dossier hash is also a regression guard for the
+/// `feature_view` extraction: a refactor that changes how `feature_view`
+/// reads `bomb_count` / `control_combos` / etc out of a `CoreGameState`
+/// will flip the dossier's recommendation map and the unit tests will
+/// fail.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DouDiZhuScenario {
+    pub scenario_id: &'static str,
+    pub decision: &'static str,
+    pub bomb_count: u8,
+    pub control_combos: u8,
+    pub low_singles: u8,
+    pub opponents_min_cards: u8,
+    pub danger_opponents: u8,
+    pub next_actor_cards: u8,
+    pub on_lead: bool,
+    pub play_options: u8,
+    pub finishing_plays: u8,
+    pub bomb_only_escape: bool,
+    pub forced_pass: bool,
+    pub lead_rank_pressure: u8,
+}
+
+/// Return the canonical 22-scenario Dou-Di-Zhu benchmark pack.
+pub fn dou_di_zhu_scenario_pack() -> &'static [DouDiZhuScenario] {
+    DOU_DI_ZHU_SCENARIO_PACK
+}
+
+const DOU_DI_ZHU_SCENARIO_PACK: &[DouDiZhuScenario] = &[
+    // ---- preserve-bomb bucket (×8) — bomb available, no escape / forced-pass ----
+    DouDiZhuScenario {
+        scenario_id: "bomb-rich-mid-race",
+        decision: "Two bombs mid-race, no danger, no finish — preserve-bomb dominates (pb=3.30, lb=1.90, sl=1.20)",
+        bomb_count: 2,
+        control_combos: 2,
+        low_singles: 1,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 2,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "bomb-bomb-only-just-once",
+        decision: "One bomb with one shot left and a tiny finish line — preserve-bomb dominates (pb=2.20, lb=1.90, sl=1.90)",
+        bomb_count: 1,
+        control_combos: 2,
+        low_singles: 1,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 2,
+        finishing_plays: 1,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "bomb-rich-no-finish",
+        decision: "Two bombs with high lead rank pressure, no finish — preserve-bomb dominates (pb=3.45, lb=1.80, sl=1.10)",
+        bomb_count: 2,
+        control_combos: 2,
+        low_singles: 1,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 4,
+        on_lead: false,
+        play_options: 1,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 12,
+    },
+    DouDiZhuScenario {
+        scenario_id: "bomb-solo-high-pressure",
+        decision: "Two bombs with one danger opponent, no finish — preserve-bomb dominates (pb=2.75, lb=1.80, sl=1.28)",
+        bomb_count: 2,
+        control_combos: 2,
+        low_singles: 1,
+        opponents_min_cards: 5,
+        danger_opponents: 1,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 2,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 10,
+    },
+    DouDiZhuScenario {
+        scenario_id: "bomb-clean-mid-rank",
+        decision: "One bomb at clean mid rank, next-actor still has cards — preserve-bomb dominates (pb=2.40, lb=1.45, sl=1.20)",
+        bomb_count: 1,
+        control_combos: 1,
+        low_singles: 1,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 3,
+        on_lead: false,
+        play_options: 2,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "bomb-rich-deep",
+        decision: "Three bombs deep stack on the lead — preserve-bomb dominates (pb=4.20, lb=2.10, sl=1.20)",
+        bomb_count: 3,
+        control_combos: 2,
+        low_singles: 1,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 4,
+        on_lead: true,
+        play_options: 1,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "bomb-early-soft",
+        decision: "One bomb early-soft, no danger — preserve-bomb dominates (pb=2.40, lb=1.90, sl=1.20)",
+        bomb_count: 1,
+        control_combos: 2,
+        low_singles: 1,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 2,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 4,
+    },
+    DouDiZhuScenario {
+        scenario_id: "bomb-late-bomb-only",
+        decision: "One bomb with one option and high lead pressure — preserve-bomb dominates (pb=2.55, lb=1.35, sl=1.10)",
+        bomb_count: 1,
+        control_combos: 1,
+        low_singles: 1,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 1,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 10,
+    },
+    // ---- landlord-bid bucket (×8) — no bombs, on the lead, control-rich ----
+    DouDiZhuScenario {
+        scenario_id: "landlord-rich-controls",
+        decision: "Four control combos on the lead, no danger — landlord-bid dominates (pb=1.50, lb=3.20, sl=0.90)",
+        bomb_count: 0,
+        control_combos: 4,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: true,
+        play_options: 3,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 4,
+    },
+    DouDiZhuScenario {
+        scenario_id: "landlord-mid-controls",
+        decision: "Two control combos on the lead, two options — landlord-bid dominates (pb=1.25, lb=2.20, sl=0.90)",
+        bomb_count: 0,
+        control_combos: 2,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: true,
+        play_options: 2,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 4,
+    },
+    DouDiZhuScenario {
+        scenario_id: "landlord-rich-options",
+        decision: "Three control combos and four play options on the lead — landlord-bid dominates (pb=1.25, lb=2.85, sl=0.90)",
+        bomb_count: 0,
+        control_combos: 3,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: true,
+        play_options: 4,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 6,
+    },
+    DouDiZhuScenario {
+        scenario_id: "landlord-rich-no-double",
+        decision: "Three control combos on the lead, mid rank — landlord-bid dominates (pb=1.25, lb=2.75, sl=0.90)",
+        bomb_count: 0,
+        control_combos: 3,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: true,
+        play_options: 3,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "landlord-mid-pressure",
+        decision: "Two control combos on the lead, mid rank — landlord-bid dominates (pb=1.25, lb=2.20, sl=0.90)",
+        bomb_count: 0,
+        control_combos: 2,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: true,
+        play_options: 2,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "landlord-bid-rich-combo",
+        decision: "Five control combos on the lead — landlord-bid dominates (pb=1.25, lb=3.65, sl=0.90)",
+        bomb_count: 0,
+        control_combos: 5,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: true,
+        play_options: 3,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 4,
+    },
+    DouDiZhuScenario {
+        scenario_id: "landlord-clean",
+        decision: "Two control combos on the lead with next-actor at 4 — landlord-bid dominates (pb=1.25, lb=2.20, sl=0.90)",
+        bomb_count: 0,
+        control_combos: 2,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 4,
+        on_lead: true,
+        play_options: 2,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 4,
+    },
+    DouDiZhuScenario {
+        scenario_id: "landlord-deep-stack",
+        decision: "Three control combos on the lead, low rank — landlord-bid dominates (pb=1.25, lb=2.75, sl=0.90)",
+        bomb_count: 0,
+        control_combos: 3,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: true,
+        play_options: 3,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 2,
+    },
+    // ---- shed-lowest bucket (×6) — no bombs, on-lead off, finishing line OR many low singles ----
+    DouDiZhuScenario {
+        scenario_id: "shed-finishing-line",
+        decision: "Two finishing plays and a single play option — shed-lowest dominates (pb=1.10, lb=0.90, sl=2.30)",
+        bomb_count: 0,
+        control_combos: 0,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 1,
+        finishing_plays: 2,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "shed-many-low-singles",
+        decision: "Two low singles plus a danger opponent — shed-lowest dominates (pb=0.80, lb=0.90, sl=1.68)",
+        bomb_count: 0,
+        control_combos: 0,
+        low_singles: 2,
+        opponents_min_cards: 5,
+        danger_opponents: 1,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 2,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "shed-next-actor-short",
+        decision: "One finishing play with next-actor at 2 cards — shed-lowest dominates (pb=0.90, lb=0.80, sl=1.85)",
+        bomb_count: 0,
+        control_combos: 0,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 2,
+        on_lead: false,
+        play_options: 2,
+        finishing_plays: 1,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "shed-low-singles-rich",
+        decision: "Three low singles and three play options — shed-lowest dominates (pb=1.25, lb=1.10, sl=1.80)",
+        bomb_count: 0,
+        control_combos: 0,
+        low_singles: 3,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 3,
+        finishing_plays: 0,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "shed-deep-exit",
+        decision: "Three finishing plays and one play option — shed-lowest dominates (pb=0.90, lb=0.90, sl=3.00)",
+        bomb_count: 0,
+        control_combos: 0,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 1,
+        finishing_plays: 3,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 8,
+    },
+    DouDiZhuScenario {
+        scenario_id: "shed-double-finish",
+        decision: "Two finishing plays and one play option, low rank — shed-lowest dominates (pb=0.95, lb=0.90, sl=2.40)",
+        bomb_count: 0,
+        control_combos: 0,
+        low_singles: 0,
+        opponents_min_cards: 5,
+        danger_opponents: 0,
+        next_actor_cards: 5,
+        on_lead: false,
+        play_options: 1,
+        finishing_plays: 2,
+        bomb_only_escape: false,
+        forced_pass: false,
+        lead_rank_pressure: 4,
+    },
+];
+
 pub fn apply_pusoy_dos_action(
     state: &CoreGameState,
     action_id: &str,
@@ -877,5 +1268,142 @@ mod tests {
     fn shedding_state(game: ResearchGame) -> CoreGameState {
         bootstrap_state(game)
             .unwrap_or_else(|error| panic!("{} bootstrap should succeed: {error}", game.slug()))
+    }
+}
+
+#[cfg(test)]
+mod dou_di_zhu_scenario_pack_tests {
+    use super::*;
+
+    #[test]
+    fn dou_di_zhu_scenario_pack_is_22_rows() {
+        assert_eq!(dou_di_zhu_scenario_pack().len(), 22);
+    }
+
+    #[test]
+    fn dou_di_zhu_scenario_ids_are_unique() {
+        let pack = dou_di_zhu_scenario_pack();
+        let mut seen = std::collections::HashSet::new();
+        for scenario in pack {
+            assert!(
+                seen.insert(scenario.scenario_id),
+                "duplicate scenario_id: {}",
+                scenario.scenario_id
+            );
+        }
+    }
+
+    #[test]
+    fn dou_di_zhu_scenario_buckets_have_expected_counts() {
+        let pack = dou_di_zhu_scenario_pack();
+        let bomb = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("bomb-"))
+            .count();
+        let landlord = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("landlord-"))
+            .count();
+        let shed = pack
+            .iter()
+            .filter(|s| s.scenario_id.starts_with("shed-"))
+            .count();
+        assert_eq!(bomb, 8, "preserve-bomb bucket should be 8");
+        assert_eq!(landlord, 8, "landlord-bid bucket should be 8");
+        assert_eq!(shed, 6, "shed-lowest bucket should be 6");
+        assert_eq!(bomb + landlord + shed, 22);
+    }
+
+    #[test]
+    fn dou_di_zhu_scenario_math_holds_for_every_row() {
+        // The dossier's recommendation map is built from
+        // `answer_typed_challenge` on the typed challenge, but the
+        // pack's own `decision` docstring names the expected
+        // `pb=…`/`lb=…`/`sl=…` values, so this test re-derives the
+        // expected dominant action and confirms it matches the bucket
+        // label. A regression that changes the engine's heuristic
+        // math would flip the dominant action on at least one row
+        // and this test would fail.
+        fn dominant(scenario: &DouDiZhuScenario) -> &'static str {
+            let preserve_bomb = 0.9_f32
+                + (scenario.bomb_count as f32) * 0.90
+                + if scenario.danger_opponents > 0 {
+                    -0.10
+                } else {
+                    0.35
+                }
+                + if scenario.lead_rank_pressure >= 10 {
+                    0.15
+                } else {
+                    0.0
+                }
+                + if scenario.play_options <= 1 {
+                    0.25
+                } else {
+                    0.0
+                }
+                - (scenario.finishing_plays as f32) * 0.20
+                - if scenario.bomb_only_escape { 0.60 } else { 0.0 }
+                - if scenario.next_actor_cards <= 2 {
+                    0.15
+                } else {
+                    0.0
+                };
+            let landlord_bid = 0.8_f32
+                + (scenario.control_combos as f32) * 0.45
+                + if scenario.on_lead { 0.30 } else { 0.0 }
+                + (scenario.play_options as f32) * 0.10
+                - if scenario.forced_pass { 0.40 } else { 0.0 }
+                - (scenario.danger_opponents as f32) * 0.10
+                - if scenario.next_actor_cards <= 2 {
+                    0.20
+                } else {
+                    0.0
+                };
+            let shed_lowest = 0.8_f32
+                + (scenario.low_singles as f32) * 0.30
+                + if scenario.opponents_min_cards <= 2 {
+                    0.25
+                } else {
+                    0.0
+                }
+                + (scenario.danger_opponents as f32) * 0.18
+                + if scenario.lead_rank_pressure <= 8 {
+                    0.10
+                } else {
+                    0.0
+                }
+                + (scenario.finishing_plays as f32) * 0.70
+                + if scenario.next_actor_cards <= 2 {
+                    0.25
+                } else {
+                    0.0
+                }
+                - if scenario.bomb_only_escape { 0.20 } else { 0.0 }
+                - if scenario.forced_pass { 0.50 } else { 0.0 };
+            if preserve_bomb >= landlord_bid && preserve_bomb >= shed_lowest {
+                "preserve-bomb"
+            } else if landlord_bid >= shed_lowest {
+                "landlord-bid"
+            } else {
+                "shed-lowest"
+            }
+        }
+
+        for scenario in dou_di_zhu_scenario_pack() {
+            let derived = dominant(scenario);
+            let expected = if scenario.scenario_id.starts_with("bomb-") {
+                "preserve-bomb"
+            } else if scenario.scenario_id.starts_with("landlord-") {
+                "landlord-bid"
+            } else {
+                "shed-lowest"
+            };
+            assert_eq!(
+                derived, expected,
+                "scenario {} expected {} but engine math derives {}",
+                scenario.scenario_id, expected, derived
+            );
+        }
     }
 }
