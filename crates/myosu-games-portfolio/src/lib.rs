@@ -13,6 +13,7 @@ pub mod engine;
 mod engines;
 pub mod eval;
 pub mod game;
+pub mod gin_rummy_benchmark;
 pub mod hearts_benchmark;
 pub mod protocol;
 pub mod quality;

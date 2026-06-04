@@ -493,3 +493,266 @@ mod tests {
         }
     }
 }
+
+/// One labeled representative decision point in the Gin Rummy search space.
+///
+/// Scenarios are intentionally narrow: each row targets a specific engine
+/// heuristic (meld distance, knock pressure, gin pressure, discard pressure,
+/// pot control) and is used by both the benchmark dossier writer and the
+/// e2e promotion proof. The fields mirror the typed `GinRummyChallenge` so a
+/// scenario can be replayed through the same engine dispatch as a live
+/// portfolio challenge.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GinRummyScenario {
+    pub scenario_id: &'static str,
+    pub decision: &'static str,
+    pub deadwood: u8,
+    pub meld_count: u8,
+    pub live_draws: u8,
+    pub knock_available: bool,
+    pub gin_available: bool,
+    pub discard_options: u8,
+}
+
+/// Return the canonical 22-scenario Gin Rummy benchmark pack.
+///
+/// Coverage buckets:
+/// - knock_window × 5 (clean, forced, gin-pressure, deadwood-tight, discard-tight)
+/// - gin_conversion × 5 (clean gin, gin-via-discard, last-card gin, mid-hand gin, blocked gin)
+/// - meld_rebuild × 4 (one-meld hand, two-meld hand, three-meld hand, weak-meld hand)
+/// - discard_deadwood × 4 (clean high-deadwood, low-discard-options, fresh-draw, late-draw)
+/// - pot_control × 4 (long-draw, mid-draw, early-draw, no-knock-pressure)
+///
+/// Total: 22 labeled scenarios, exceeds the 20-scenario floor and matches
+/// the F-001 Cribbage / F-008 Hearts benchmark pack shape.
+pub fn gin_rummy_scenario_pack() -> &'static [GinRummyScenario] {
+    SCENARIO_PACK
+}
+
+const SCENARIO_PACK: &[GinRummyScenario] = &[
+    // knock_window
+    GinRummyScenario {
+        scenario_id: "knock-window-clean",
+        decision: "Clean knock window with moderate deadwood",
+        deadwood: 7,
+        meld_count: 3,
+        live_draws: 2,
+        knock_available: true,
+        gin_available: false,
+        discard_options: 3,
+    },
+    GinRummyScenario {
+        scenario_id: "knock-window-forced",
+        decision: "Forced knock under heavy deadwood",
+        deadwood: 10,
+        meld_count: 2,
+        live_draws: 1,
+        knock_available: true,
+        gin_available: false,
+        discard_options: 2,
+    },
+    GinRummyScenario {
+        scenario_id: "knock-window-gin-pressure",
+        decision: "Knock window with gin conversion in reach",
+        deadwood: 5,
+        meld_count: 3,
+        live_draws: 1,
+        knock_available: true,
+        gin_available: true,
+        discard_options: 2,
+    },
+    GinRummyScenario {
+        scenario_id: "knock-window-deadwood-tight",
+        decision: "Tight deadwood knock (undercut risk)",
+        deadwood: 9,
+        meld_count: 3,
+        live_draws: 3,
+        knock_available: true,
+        gin_available: false,
+        discard_options: 4,
+    },
+    GinRummyScenario {
+        scenario_id: "knock-window-discard-tight",
+        decision: "Knock window with few discard options",
+        deadwood: 6,
+        meld_count: 2,
+        live_draws: 2,
+        knock_available: true,
+        gin_available: false,
+        discard_options: 1,
+    },
+    // gin_conversion
+    GinRummyScenario {
+        scenario_id: "gin-conversion-clean",
+        decision: "Clean gin conversion with one card to draw",
+        deadwood: 1,
+        meld_count: 3,
+        live_draws: 1,
+        knock_available: true,
+        gin_available: true,
+        discard_options: 1,
+    },
+    GinRummyScenario {
+        scenario_id: "gin-conversion-via-discard",
+        decision: "Gin conversion achievable by discarding one card",
+        deadwood: 2,
+        meld_count: 3,
+        live_draws: 2,
+        knock_available: true,
+        gin_available: true,
+        discard_options: 2,
+    },
+    GinRummyScenario {
+        scenario_id: "gin-conversion-last-card",
+        decision: "Gin conversion on the last draw (forced)",
+        deadwood: 0,
+        meld_count: 3,
+        live_draws: 1,
+        knock_available: true,
+        gin_available: true,
+        discard_options: 1,
+    },
+    GinRummyScenario {
+        scenario_id: "gin-conversion-mid-hand",
+        decision: "Gin conversion mid-hand with multiple draws left",
+        deadwood: 3,
+        meld_count: 3,
+        live_draws: 3,
+        knock_available: true,
+        gin_available: true,
+        discard_options: 3,
+    },
+    GinRummyScenario {
+        scenario_id: "gin-conversion-blocked",
+        decision: "Gin blocked by opponent's discard (cannot draw)",
+        deadwood: 4,
+        meld_count: 3,
+        live_draws: 2,
+        knock_available: true,
+        gin_available: true,
+        discard_options: 2,
+    },
+    // meld_rebuild
+    GinRummyScenario {
+        scenario_id: "meld-rebuild-one-meld",
+        decision: "Hand with only one meld, heavy rebuild",
+        deadwood: 14,
+        meld_count: 1,
+        live_draws: 4,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 5,
+    },
+    GinRummyScenario {
+        scenario_id: "meld-rebuild-two-meld",
+        decision: "Hand with two melds, partial structure",
+        deadwood: 11,
+        meld_count: 2,
+        live_draws: 3,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 4,
+    },
+    GinRummyScenario {
+        scenario_id: "meld-rebuild-three-meld",
+        decision: "Hand with three melds, near-knock",
+        deadwood: 8,
+        meld_count: 3,
+        live_draws: 2,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 3,
+    },
+    GinRummyScenario {
+        scenario_id: "meld-rebuild-weak-meld",
+        decision: "Hand with weak meld structure, deep rebuild",
+        deadwood: 16,
+        meld_count: 1,
+        live_draws: 5,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 6,
+    },
+    // discard_deadwood
+    GinRummyScenario {
+        scenario_id: "discard-clean-high-deadwood",
+        decision: "Clean discard of high deadwood, no knock in reach",
+        deadwood: 17,
+        meld_count: 1,
+        live_draws: 4,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 5,
+    },
+    GinRummyScenario {
+        scenario_id: "discard-low-options",
+        decision: "Discard deadwood with very few discard options",
+        deadwood: 12,
+        meld_count: 2,
+        live_draws: 2,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 1,
+    },
+    GinRummyScenario {
+        scenario_id: "discard-fresh-draw",
+        decision: "Discard deadwood on a fresh draw",
+        deadwood: 13,
+        meld_count: 1,
+        live_draws: 5,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 4,
+    },
+    GinRummyScenario {
+        scenario_id: "discard-late-draw",
+        decision: "Discard deadwood on a late draw (knock risk)",
+        deadwood: 9,
+        meld_count: 2,
+        live_draws: 1,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 3,
+    },
+    // pot_control
+    GinRummyScenario {
+        scenario_id: "pot-control-long-draw",
+        decision: "Long draw remaining, pot-control priority",
+        deadwood: 6,
+        meld_count: 2,
+        live_draws: 5,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 4,
+    },
+    GinRummyScenario {
+        scenario_id: "pot-control-mid-draw",
+        decision: "Mid-draw, balanced pot-control",
+        deadwood: 8,
+        meld_count: 2,
+        live_draws: 3,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 3,
+    },
+    GinRummyScenario {
+        scenario_id: "pot-control-early-draw",
+        decision: "Early draw, weak meld structure",
+        deadwood: 15,
+        meld_count: 1,
+        live_draws: 6,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 5,
+    },
+    GinRummyScenario {
+        scenario_id: "pot-control-no-knock-pressure",
+        decision: "No knock pressure, conservative pot-control",
+        deadwood: 10,
+        meld_count: 2,
+        live_draws: 4,
+        knock_available: false,
+        gin_available: false,
+        discard_options: 4,
+    },
+];
