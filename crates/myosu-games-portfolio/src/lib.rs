@@ -21,6 +21,7 @@ pub mod gin_rummy_benchmark;
 pub mod hanafuda_benchmark;
 pub mod hearts_benchmark;
 pub mod hwatu_benchmark;
+pub mod nlhe_six_max_benchmark;
 pub mod plo_benchmark;
 pub mod protocol;
 pub mod quality;
@@ -47,6 +48,7 @@ pub use game::{
 pub use hanafuda_benchmark::{HanafudaBenchmarkDossier, HanafudaDossierError};
 pub use hearts_benchmark::{HeartsBenchmarkDossier, HeartsDossierError};
 pub use hwatu_benchmark::{HwatuBenchmarkDossier, HwatuDossierError};
+pub use nlhe_six_max_benchmark::{NlheSixMaxBenchmarkDossier, NlheSixMaxDossierError};
 pub use plo_benchmark::{PloBenchmarkDossier, PloDossierError};
 pub use protocol::{
     PortfolioAction, PortfolioInfo, PortfolioStrategyQuery, PortfolioStrategyResponse,

@@ -519,6 +519,11 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/dou_di_zhu_benchmark_dossier.sh
 
+      - name: Verify F-019 NLHE-six-max benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/nlhe_six_max_benchmark_dossier.sh
+
   developer-quickstart:
     name: Developer Quickstart
     runs-on: ubuntu-latest

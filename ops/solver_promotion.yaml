@@ -10,13 +10,13 @@ games:
     notes: tier_stays_benchmarked_until_full_artifact_dossier; bundle_builder_is_promotable_local; bundle_surface_operator_verifiable_via_nlhe_policy_bundle_example
   - game: nlhe-six-max
     route: portfolio
-    tier: routed
-    benchmark_surface: none
-    benchmark_threshold: none
-    artifact_requirement: none_until_benchmarked
-    bundle_support: routed
+    tier: benchmarked
+    benchmark_surface: rule_aware_scenario_pack
+    benchmark_threshold: recommendation_count_eq_scenario_count
+    artifact_requirement: none_until_promotable_local
+    bundle_support: benchmarked
     bitino_target_phase: future
-    notes: portfolio_rule_aware_route_only
+    notes: nlhe_six_max_rule_aware_engine_scenario_pack_promoted_from_routed
   - game: plo
     route: portfolio
     tier: benchmarked
