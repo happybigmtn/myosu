@@ -8,6 +8,7 @@
 pub mod cards;
 pub mod combinatorics;
 pub mod core;
+pub mod cribbage_benchmark;
 pub mod engine;
 mod engines;
 pub mod eval;
@@ -21,6 +22,7 @@ pub mod solver;
 pub mod state;
 pub mod wire;
 
+pub use cribbage_benchmark::{CribbageBenchmarkDossier, CribbageDossierError};
 pub use engine::{
     EngineAnswer, EngineTier, PortfolioEngineError, answer_game, answer_typed_challenge,
 };

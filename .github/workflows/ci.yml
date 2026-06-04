@@ -429,6 +429,11 @@ jobs:
       - name: Verify SEC-001 allowlist consistency
         run: bash tests/e2e/sec001_allowlist_consistency.sh
 
+      - name: Verify F-001 Cribbage benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/cribbage_benchmark_dossier.sh
+
   plan-quality:
     name: Plan Quality
     runs-on: ubuntu-latest

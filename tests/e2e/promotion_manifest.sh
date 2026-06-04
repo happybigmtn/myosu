@@ -112,6 +112,7 @@ done < <(printf '%s\n' "$manifest" | grep '^SOLVER_PROMOTION_GAME ')
 
 assert_tier_at_least nlhe-heads-up benchmarked
 assert_tier_at_least liars-dice promotable_local
+assert_tier_at_least cribbage benchmarked
 
 printf '%s\n' "$manifest"
 printf 'PROMOTION_MANIFEST_HARNESS myosu e2e ok rows=%s ledger=%s\n' \

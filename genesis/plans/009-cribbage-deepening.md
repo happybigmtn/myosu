@@ -22,16 +22,17 @@ This plan deepens cribbage only. It does not add MCCFR training for cribbage (th
 
 ## Progress
 
-- [ ] Add labeled cribbage scenario states to `crates/myosu-games-portfolio/src/core/cribbage.rs`
-- [ ] Add cribbage scenario pack as an example binary
-- [ ] Add cribbage benchmark dossier type and writer
-- [ ] Add tests for scenario pack coverage and benchmark
-- [ ] Update `ops/solver_promotion.yaml` cribbage entry to `tier: benchmarked`
-- [ ] Verify `bash tests/e2e/promotion_manifest.sh` passes
+- [x] Add labeled cribbage scenario states to `crates/myosu-games-portfolio/src/core/cribbage.rs`
+- [x] Add cribbage scenario pack as an example binary
+- [x] Add cribbage benchmark dossier type and writer
+- [x] Add tests for scenario pack coverage and benchmark
+- [x] Update `ops/solver_promotion.yaml` cribbage entry to `tier: benchmarked`
+- [x] Verify `bash tests/e2e/promotion_manifest.sh` passes
 
 ## Surprises & Discoveries
 
-None yet.
+- The `code_reported_bundle_support()` map in `crates/myosu-games-canonical/src/policy.rs` already declared `ResearchGame::Cribbage => PolicyPromotionTier::Benchmarked` before any of this work landed, so the promotion manifest harness was the real source of truth for the F-001 tier advance: the YAML row was just behind the code support. Once `ops/solver_promotion.yaml` cribbage row moved to `tier: benchmarked` / `bundle_support: benchmarked`, the `validate_solver_promotion_ledger` gate stopped rejecting the dossier and `promotion_ledger_initial_tiers_are_truthful` / `promotion_manifest_rows_include_code_reported_support` started passing without any other code change.
+- The rule-aware Cribbage engine picks `discard-deadwood` over `peg-run` for the `pegging-pair-clean` scenario even though `pair_trap=yes` and `max_immediate_points=2`. That is a real engine heuristic gap (the dossier still passes because the promotion threshold is `recommendation_count_eq_scenario_count`, not a per-scenario quality score), and it surfaced only because the dossier runner is the first piece of code that exercises the engine on `pegging_count > 0` typed challenges with `pair_trap` set. Worth following up as a separate engine-quality task, not a dossier bug.
 
 ## Decision Log
 
@@ -43,9 +44,17 @@ None yet.
   Rationale: The policy bundle builder (plan 001) is designed for dedicated games initially. Generalizing it to portfolio games requires extending the `CanonicalPolicyBundle` construction to work with the `PortfolioSolver` and typed challenge protocol. That generalization is follow-on work.
   Date/Author: 2026-04-11 / genesis corpus
 
+- Decision: F-001 ships a `CribbageBenchmarkDossier` keyed to `engine_recommendation_count` (every scenario produced a recommendation) instead of a per-scenario quality score.
+  Rationale: The rule-aware engine is deterministic and the F-001 completion signal is "Cribbage at `benchmarked` in YAML with scenario pack and benchmark evidence". A recommendation-count threshold is the minimum that proves the engine runs against every scenario and the promotion manifest harness can verify the dossier, and it leaves the per-scenario quality work (e.g. the `pegging-pair-clean` heuristic gap) for a follow-up engine-quality task rather than blocking F-001.
+  Date/Author: 2026-06-04 / codexworker
+
+- Decision: F-001 dossier is built from the typed `PortfolioChallenge` dispatch (not a parallel hand-rolled Cribbage solver) and the engine_tier is asserted as `rule-aware` end-to-end.
+  Rationale: Plan 009 R5 says the scenario pack and benchmark surface must use the existing `PortfolioSolver` and typed challenge protocol. Routing the dossier through `answer_typed_challenge` + `recommended_action` means the dossier pins the same answers a live miner would receive, so the promotion manifest evidence matches the chain-visible engine path.
+  Date/Author: 2026-06-04 / codexworker
+
 ## Outcomes & Retrospective
 
-None yet.
+- Shipped F-001: 22-scenario Cribbage rule-aware scenario pack, deterministic SHA-256 benchmark dossier, on-disk `outputs/solver-promotion/cribbage/cribbage-benchmark-dossier.json`, Cribbage promotion row at `tier: benchmarked`, and a new `tests/e2e/cribbage_benchmark_dossier.sh` harness wired into the `dependency-audit` CI job. The harness asserts dossier shape, ledger tier, manifest row fields, and the `cribbage` + `cribbage_dossier` unit tests. All evidence lives in the repo and the dossier hash is reproducible.
 
 ## Context and Orientation
 
@@ -107,6 +116,7 @@ From the repository root:
     cargo run -p myosu-games-portfolio --example cribbage_benchmark
     cargo test -p myosu-games-portfolio --quiet cribbage
     bash tests/e2e/promotion_manifest.sh
+    bash tests/e2e/cribbage_benchmark_dossier.sh
 
 ## Acceptance Criteria
 

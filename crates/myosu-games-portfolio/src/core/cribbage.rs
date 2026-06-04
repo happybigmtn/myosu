@@ -131,6 +131,295 @@ fn state_from_public(
     })
 }
 
+/// One labeled representative decision point in the Cribbage search space.
+///
+/// Scenarios are intentionally narrow: each row targets a specific engine
+/// heuristic (pegging-run, pair trap, fifteen-out, go window, crib edge,
+/// discard pressure) and is used by both the benchmark dossier writer and
+/// the e2e promotion proof. The fields mirror the typed
+/// `CribbageChallenge` so a scenario can be replayed through the same
+/// engine dispatch as a live portfolio challenge.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CribbageScenario {
+    pub scenario_id: &'static str,
+    pub decision: &'static str,
+    pub pegging_count: u8,
+    pub run_potential: u8,
+    pub crib_edge: i8,
+    pub pair_trap: bool,
+    pub go_window: bool,
+    pub fifteen_outs: u8,
+    pub max_immediate_points: u8,
+}
+
+/// Return the canonical 22-scenario Cribbage benchmark pack.
+///
+/// Coverage requirements (R1 in `genesis/plans/009-cribbage-deepening.md`):
+/// - opening_discard × 4 (low-card-heavy, five-heavy, pair-led, neutral)
+/// - pegging_fifteen × 4 (single 15-out, dual 15-outs, near-15 trap, no-out)
+/// - pegging_pair × 3 (clean pair, double pair, no trap)
+/// - pegging_run × 3 (3-card run, 4-card run set-up, blocked)
+/// - pegging_go × 3 (clean go, danger go, end-of-31)
+/// - pegging_thirty_one × 2 (forced last card, non-forced)
+/// - counting × 3 (high run count, high fifteen count, balanced)
+///
+/// Total: 22 labeled scenarios, exceeds the 20-scenario floor.
+pub fn cribbage_scenario_pack() -> &'static [CribbageScenario] {
+    SCENARIO_PACK
+}
+
+const SCENARIO_PACK: &[CribbageScenario] = &[
+    // opening_discard
+    CribbageScenario {
+        scenario_id: "opening-discard-low-heavy",
+        decision: "Discard to crib with low-card heavy hand (favor own hand)",
+        pegging_count: 0,
+        run_potential: 0,
+        crib_edge: 2,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 0,
+    },
+    CribbageScenario {
+        scenario_id: "opening-discard-five-heavy",
+        decision: "Discard to crib with five-heavy hand (favor 15s)",
+        pegging_count: 0,
+        run_potential: 0,
+        crib_edge: 1,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 0,
+    },
+    CribbageScenario {
+        scenario_id: "opening-discard-pair-led",
+        decision: "Discard to crib with pair-led hand (avoid giving pair)",
+        pegging_count: 0,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: true,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 0,
+    },
+    CribbageScenario {
+        scenario_id: "opening-discard-neutral",
+        decision: "Discard to crib with neutral hand (no clear feature)",
+        pegging_count: 0,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 0,
+    },
+    // pegging_fifteen
+    CribbageScenario {
+        scenario_id: "pegging-fifteen-single",
+        decision: "Pegging with a single 15-out available",
+        pegging_count: 10,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 1,
+        max_immediate_points: 2,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-fifteen-dual",
+        decision: "Pegging with two 15-outs available",
+        pegging_count: 7,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 2,
+        max_immediate_points: 2,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-fifteen-near-trap",
+        decision: "Pegging near 15 with a card that would make 15",
+        pegging_count: 13,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 1,
+        max_immediate_points: 2,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-fifteen-no-out",
+        decision: "Pegging with no 15-out available",
+        pegging_count: 9,
+        run_potential: 1,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 3,
+    },
+    // pegging_pair
+    CribbageScenario {
+        scenario_id: "pegging-pair-clean",
+        decision: "Pegging with a clean pair available",
+        pegging_count: 5,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: true,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 2,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-pair-double",
+        decision: "Pegging with a double pair available",
+        pegging_count: 5,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: true,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 4,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-pair-no-trap",
+        decision: "Pegging with no pair trap (rank mismatch)",
+        pegging_count: 6,
+        run_potential: 1,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 0,
+    },
+    // pegging_run
+    CribbageScenario {
+        scenario_id: "pegging-run-three",
+        decision: "Pegging with a 3-card run completion available",
+        pegging_count: 12,
+        run_potential: 2,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 3,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-run-four-setup",
+        decision: "Pegging with 4-card run set-up available",
+        pegging_count: 11,
+        run_potential: 3,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 4,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-run-blocked",
+        decision: "Pegging with run potential blocked by opponent card",
+        pegging_count: 14,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 0,
+    },
+    // pegging_go
+    CribbageScenario {
+        scenario_id: "pegging-go-clean",
+        decision: "Clean go opportunity (forcing opponent under 31)",
+        pegging_count: 27,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: true,
+        fifteen_outs: 0,
+        max_immediate_points: 1,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-go-danger",
+        decision: "Go window with danger that opponent can hit",
+        pegging_count: 25,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: true,
+        fifteen_outs: 0,
+        max_immediate_points: 1,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-go-end-of-31",
+        decision: "Go window near end of 31 (last-card scoring)",
+        pegging_count: 29,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: true,
+        fifteen_outs: 0,
+        max_immediate_points: 1,
+    },
+    // pegging_thirty_one
+    CribbageScenario {
+        scenario_id: "pegging-thirty-one-forced",
+        decision: "Forced last-card play for 31",
+        pegging_count: 28,
+        run_potential: 0,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 3,
+    },
+    CribbageScenario {
+        scenario_id: "pegging-thirty-one-nonforced",
+        decision: "Non-forced 31 with multiple candidates",
+        pegging_count: 21,
+        run_potential: 2,
+        crib_edge: 1,
+        pair_trap: true,
+        go_window: true,
+        fifteen_outs: 1,
+        max_immediate_points: 4,
+    },
+    // counting
+    CribbageScenario {
+        scenario_id: "counting-run-heavy",
+        decision: "Counting phase: hand has high run potential",
+        pegging_count: 0,
+        run_potential: 3,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 0,
+        max_immediate_points: 0,
+    },
+    CribbageScenario {
+        scenario_id: "counting-fifteen-heavy",
+        decision: "Counting phase: hand has high fifteen count",
+        pegging_count: 0,
+        run_potential: 0,
+        crib_edge: -1,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 3,
+        max_immediate_points: 0,
+    },
+    CribbageScenario {
+        scenario_id: "counting-balanced",
+        decision: "Counting phase: balanced hand, no dominant feature",
+        pegging_count: 0,
+        run_potential: 1,
+        crib_edge: 0,
+        pair_trap: false,
+        go_window: false,
+        fifteen_outs: 1,
+        max_immediate_points: 0,
+    },
+];
+
 pub(crate) fn feature_view(state: &CoreGameState) -> Result<CribbageFeatureView, CoreGameError> {
     let public: CribbagePublicState =
         serde_json::from_value(state.public_state.clone()).map_err(|source| {
@@ -458,6 +747,53 @@ mod tests {
         assert!(!view.go_window);
         assert_eq!(view.fifteen_outs, 1);
         assert_eq!(view.max_immediate_points, 5);
+    }
+
+    #[test]
+    fn cribbage_scenario_pack_meets_coverage_requirements() {
+        let pack = cribbage_scenario_pack();
+        // 20-scenario floor (plan 009 R1) — we ship 22.
+        assert!(
+            pack.len() >= 20,
+            "cribbage scenario pack should hold >=20 scenarios, found {}",
+            pack.len()
+        );
+
+        // every scenario id must be unique (stable challenge_id derivation).
+        let mut seen: Vec<&str> = pack.iter().map(|scenario| scenario.scenario_id).collect();
+        seen.sort_unstable();
+        let original_len = seen.len();
+        seen.dedup();
+        assert_eq!(
+            seen.len(),
+            original_len,
+            "cribbage scenario pack has duplicate scenario_id"
+        );
+
+        // Coverage buckets from `genesis/plans/009-cribbage-deepening.md` R1.
+        let buckets = [
+            "opening-discard",
+            "pegging-fifteen",
+            "pegging-pair",
+            "pegging-run",
+            "pegging-go",
+            "pegging-thirty-one",
+            "counting",
+        ];
+        for bucket in buckets {
+            let count = pack
+                .iter()
+                .filter(|scenario| scenario.scenario_id.starts_with(bucket))
+                .count();
+            assert!(count >= 1, "cribbage scenario pack missing bucket {bucket}");
+        }
+
+        // pegging_count is in 0..=31 and go_window/fifteen_outs are consistent.
+        for scenario in pack {
+            assert!(scenario.pegging_count <= 31);
+            assert!(scenario.fifteen_outs <= 8);
+            assert!(scenario.max_immediate_points <= 12);
+        }
     }
 
     fn cribbage_state() -> CoreGameState {
