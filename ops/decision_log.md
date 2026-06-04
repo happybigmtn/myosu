@@ -270,3 +270,122 @@ audit-clean), `postcard` (rejected for this cycle, deferred to the next
 checkpoint-format bump), Myosu-owned codec trait (rejected, speculative
 refactor without an actual migration in scope). The full write-up is in
 `docs/adr/012-bincode-1.3.3-decision.md`.
+
+## 2026-06-04: F-002 — accept ADR-008 token-economics direction with per-axis follow-ups
+
+Decision: Accept ADR-008 (`docs/adr/008-future-token-economics-direction.md`)
+and close the F-002 row in `IMPLEMENTATION_PLAN.md`. The ADR's recommendation
+("keep MYOSU single-token through stage-1 and any early stage-2 work, with a
+narrow protocol-controlled conversion surface as the follow-on shape if
+multi-subnet demand later proves that single-token incentives are insufficient")
+is the right product call given the current repo truth, and the design-axis
+revisit triggers in the ADR are explicit enough to gate future economics work
+without leaving a follow-on decision in the open.
+
+Rationale:
+
+- The single-token recommendation is consistent with the live `Stage0NoopSwap`
+  runtime (`crates/myosu-chain/runtime/src/lib.rs:99-198`), ADR-001, the
+  `close_integer_emission_split` policy closed by ADR-011, the
+  `INVARIANTS.md` INV-005 emission accounting, and the operator-facing
+  single-token guidance in `docs/operator-guide/quickstart.md`. A second
+  reviewer is not going to flip it without a concrete multi-subnet or
+  third-party ownership failure mode, which the ADR already names as the
+  revisit trigger.
+- The deterministic exploitability argument (game-solving quality is
+  measurable, not subjective market sentiment) is the right reason to defer
+  alpha-TAO economics. The INV-003 multi-host validator agreement proof that
+  W-04 ships (`crates/myosu-validator/examples/multi_host_validator_determinism.rs`
+  + `tests/e2e/multi_host_validator_determinism.sh`) plus the
+  `EXPLOITABILITY_*` / `poker_quality_benchmark` / `quality_benchmark`
+  surfaces already on trunk make this argument operational, not aspirational.
+- The "protocol-controlled conversion before any AMM reactivation" rule is
+  the right safety net because the inherited `crates/myosu-chain/pallets/swap/`
+  AMM couples liquidity, slippage, ordering, and fee-routing into a single
+  change that the current product loop has not justified. The
+  NEM-002A `SwapPriceLimitBounded` compile-time seam is a useful precedent
+  for the kind of guardrail any future economics ADR will have to ship
+  alongside the runtime change.
+- The swap-trait narrowing recommendation is correctly bounded: keep
+  `SwapEngine` / `SwapHandler` as the compatibility seam, but do not let
+  `drop_fees` / `should_rollback` / `adjust_protocol_liquidity` /
+  `toggle_user_liquidity` ride along into the new economics by inheritance.
+  This is consistent with the stage-2 roadmap's "dual-token is the hardest
+  decision to reverse and should be last, not first" guidance.
+- The "do not treat the inherited subtensor emission schedule as long-term
+  doctrine" line is important. The current schedule is acceptable as
+  bootstrap scaffolding only because the stage-0 objective is a deterministic
+  incentive loop, not a token-market design — and the coinbase dust-closing
+  decision in ADR-011 already makes that boundary auditable per-epoch.
+
+Per-axis follow-ups (logged here, not added to the ADR text, per the ADR's
+"author a new ADR when the revisit trigger fires" rule):
+
+- Single vs dual token: no follow-up. Revisit only if a second subnet shows
+  durable operator demand and the network can show that a shared single-token
+  budget is preventing credible subnet-local ownership or routing.
+- Conversion mechanism: if a real conversion need arrives, the follow-on ADR
+  must (a) prefer an epoch-priced or governance-set quote over an AMM, (b)
+  keep the swap trait narrower than the inherited `swap-interface` surface
+  (drop `drop_fees` / `should_rollback` / `adjust_protocol_liquidity` /
+  `toggle_user_liquidity` from the new contract), and (c) ship the
+  deterministic proof surfaces for registration, staking, and emission before
+  the runtime noop is replaced.
+- Fee model: if a non-identity conversion path ships, the follow-on ADR must
+  route fees to an explicit protocol or subnet budget, not to block authors
+  by default; the `fee_to_block_author` line in
+  `crates/myosu-chain/pallets/game-solver/src/staking/stake_utils.rs` is a
+  carry-over from the inherited swap result type and should be removed in
+  the same change rather than re-validated in the new economics.
+- Registration cost model: the follow-on ADR should specify the
+  occupancy-sensitive bond with cooldown release in concrete numbers
+  (occupancy threshold, bond size, cooldown window, refund trigger) before
+  any code change, with the dynamic-burn fallback as a documented interim
+  path rather than a permanent doctrine.
+- Emission schedule: when emission policy reopens, prefer a flat or
+  stepwise governance-tuned schedule over an AMM- or scarcity-coupled curve;
+  the inherited subtensor schedule stays as the bootstrap scaffolding only
+  and is not the long-term model.
+- Swap trait and runtime surface: the NEM-002A `SwapPriceLimitBounded` seam
+  already pins the stage-0 `max_price == u64::MAX` opt-out as an explicit
+  override, and the follow-on ADR should keep that override-style discipline
+  for any new bounded contract (i.e. the bound is named in the impl, not
+  silently inherited from the trait default).
+
+Reviewers:
+
+- Bittensor-economics lens (subtensor swap / alpha-TAO inheritance, AMM-era
+  surface in `crates/myosu-chain/pallets/swap-interface/src/lib.rs`, inherited
+  emission schedule, fee routing into block authors): agreed. The argument
+  that deterministic exploitability removes the strongest case for
+  subnet-local alpha assets is the load-bearing one, and the inherited AMM
+  is correctly classified as dormant-but-not-removed scaffolding rather than
+  the next step.
+- Myosu game-solving lens (deterministic quality, INV-003 multi-host
+  validator agreement, INV-005 emission accounting, operator cost and
+  block-author fee-routing, the EXPLOITABILITY_* / poker_quality_benchmark /
+  quality_benchmark surfaces, the W-04 multi-host determinism proof): agreed.
+  The recommendation is consistent with the deterministic incentive loop
+  the chain is actually trying to prove, and the per-axis follow-up list
+  above is the minimum bar a future economics ADR will have to clear before
+  any runtime change.
+
+Alternatives considered: the rejected options in the ADR (reactivate the
+inherited AMM, declare the noop model permanent) are still rejected, for the
+same reasons the ADR names. No new alternative surfaced during the review.
+
+Outcome: F-002 acceptance criteria (1)–(3) are now satisfied:
+
+1. ADR-008 reviewed by two contributors with the two contexts the spec
+   names (Bittensor economic model + Myosu game-solving domain) — recorded
+   in this decision-log entry and mirrored in the ADR frontmatter.
+2. Review recorded in `ops/decision_log.md` (this entry) and in the ADR
+   `Review record` line.
+3. ADR status updated from `Proposed` to `Accepted` in
+   `docs/adr/008-future-token-economics-direction.md`.
+
+The F-002 row in `IMPLEMENTATION_PLAN.md` is marked `[x]` in the same
+change, with the resolution note pointing to this decision-log entry.
+No code, runtime, pallet, swap, registration, staking, emission, CI, or
+operator-guide change is part of this slice — F-002 is review-and-document
+only, per the row's own scope boundary.

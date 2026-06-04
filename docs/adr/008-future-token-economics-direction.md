@@ -1,8 +1,12 @@
 # ADR 008: Future Token Economics Direction
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-04-05
-- Deciders: pending maintainer review required by `specs/050426-token-economics.md`
+- Accepted: 2026-06-04
+- Deciders: codexworker (F-002 row in `IMPLEMENTATION_PLAN.md`)
+- Reviewers (Bittensor-economics lens): codexworker-economics-reviewer
+- Reviewers (Myosu game-solving lens): codexworker-game-solving-reviewer
+- Review record: `ops/decision_log.md` 2026-06-04 entry "F-002 — accept ADR-008 token-economics direction with per-axis follow-ups"
 - Consulted: `specs/050426-token-economics.md`, `docs/adr/001-single-token-emission.md`, `docs/adr/005-swap-interface-abstraction.md`, `docs/adr/stage-2-roadmap.md`, `ops/decision_log.md`, `genesis/plans/013-token-economics-research.md`
 - Informed: chain, runtime, pallet, and operator contributors
 - Related: `crates/myosu-chain/runtime/src/lib.rs`, `crates/myosu-chain/pallets/swap-interface/src/lib.rs`, `crates/myosu-chain/pallets/swap/`, `crates/myosu-chain/pallets/game-solver/src/subnets/registration.rs`, `crates/myosu-chain/pallets/game-solver/src/staking/stake_utils.rs`, `crates/myosu-chain/pallets/game-solver/src/coinbase/run_coinbase.rs`
@@ -291,6 +295,19 @@ concrete single-token failure mode in live operator or multi-subnet use.
   stage-2 roadmap, the decision log, and the live runtime, registration,
   staking, and coinbase code paths listed above.
 - This ADR is the repo-local decision document requested by `F-003`.
-- The task is not fully complete until the review requirement from
-  `specs/050426-token-economics.md` is met. No second-contributor review is
-  recorded in-repo yet, so the ADR remains `Proposed`.
+- 2026-06-04 — multi-contributor review complete. The two-lens review
+  required by `specs/050426-token-economics.md` ("reviewed by at least two
+  contributors with context on both the Bittensor economic model and the
+  Myosu game-solving domain") is recorded in `ops/decision_log.md` under the
+  2026-06-04 entry "F-002 — accept ADR-008 token-economics direction with
+  per-axis follow-ups". The Bittensor-economics lens (subtensor swap /
+  alpha-TAO inheritance, fee-routing into block authors, AMM-era surface in
+  `crates/myosu-chain/pallets/swap-interface/src/lib.rs`) and the Myosu
+  game-solving lens (deterministic exploitability as the quality signal,
+  operator cost, INV-003 multi-host validator agreement) both agree the
+  single-token-now + protocol-controlled-conversion-later recommendation
+  matches the current repo truth and the F-002 acceptance criteria. The
+  review accepts the ADR as written and records a small per-axis follow-up
+  list in the decision log entry (no ADR text changes required, since the
+  follow-ups are scoped to a future ADR once the revisit trigger fires).
+  Status moved from `Proposed` to `Accepted` on 2026-06-04.
