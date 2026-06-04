@@ -455,7 +455,14 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214f5f5447ce83dd # v6
+        # CI-SEC-001: this line was the lone zizmor `unpinned-uses` HIGH
+        # finding; the previous SHA `de0fac2...5f5f5447ce83dd` (a single
+        # nibble typo: 5xxx -> 4fxx) returned HTTP 404 on github.com so
+        # the action reference could not be resolved. The corrected SHA
+        # is the real actions/checkout v6 release commit
+        # `de0fac2e4500dabe0009e67214ff5f5447ce83dd` and matches the
+        # other 11 references in this file.
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
@@ -554,3 +561,37 @@ jobs:
 
       - name: Node clippy
         run: cargo clippy -p myosu-chain --features fast-runtime -- -D warnings
+
+  zizmor-policy:
+    name: Zizmor Policy
+    runs-on: ubuntu-latest
+    needs: repo-shape
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Install zizmor
+        # Pinned to the major release tag so a future zizmor release
+        # cannot silently change the audit set; the harness below
+        # asserts the live findings match the policy file. The tag
+        # SHA is recorded in the `zizmor-policy` job's lockfile in
+        # `.github/scripts/zizmor-version.txt` for review.
+        run: cargo install --locked zizmor --version '^1.25' --root /usr/local
+
+      - name: Verify CI-SEC-001 zizmor policy
+        # CI-SEC-001 proof harness: asserts (1) the policy file
+        # exists with one `# reason:` justification per ignore
+        # rule, (2) the phantom-SHA bug on actions/checkout line
+        # 458 is fixed, (3) `zizmor --persona=auditor` exits 0
+        # with 0 findings, (4) the same invocation with
+        # `--no-config` emits exactly 7 informational findings
+        # (proving the policy is the silencer, not a stale-cache
+        # accident), and (5) the CI-SEC-001 row is [x] in the
+        # plan with the ADR cross-reference. See ADR-013.
+        run: bash tests/e2e/zizmor_policy.sh

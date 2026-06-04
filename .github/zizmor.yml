@@ -1,0 +1,58 @@
+# zizmor policy for the myosu repository.
+#
+# This file is the single source of truth for which zizmor findings are
+# accepted as intentional (with a documented reason) vs. which must be
+# fixed before merge. It is wired into CI by the `zizmor-policy` job in
+# `.github/workflows/ci.yml` and verified by `tests/e2e/zizmor_policy.sh`.
+#
+# Discovery: this file lives at `.github/zizmor.yml` so a bare
+# `zizmor .github/workflows/ci.yml` invocation from the repo root
+# picks it up via local discovery (the `.github/` parent of the
+# workflows directory is the documented special case for this
+# directory layout).
+#
+# Decision record: see `docs/adr/013-zizmor-policy-decision.md`
+# (CI-SEC-001 in WORKLIST.md / IMPLEMENTATION_PLAN.md). The
+# short version: zizmor's `superfluous-actions` audit flags the
+# `dtolnay/rust-toolchain` action in 7 places because rustup is
+# preinstalled on `ubuntu-latest` runners. We carry a per-line
+# ignore for those 7 places instead of switching to a raw
+# `rustup` script step, because (a) `dtolnay/rust-toolchain`
+# is a single-line cache-aware pin that is easier to audit than
+# a hand-rolled `curl https://sh.rustup.rs | sh` invocation,
+# and (b) the `Swatinem/rust-cache` action we already use
+# requires the toolchain action's cache key, not rustup's
+# default ~/.cargo location.
+#
+# Each ignore rule below is annotated with a one-line reason.
+# New ignore rules MUST come with a reason; the proof harness
+# `tests/e2e/zizmor_policy.sh` fails the build if a rule is
+# added without a `# reason:` comment.
+
+rules:
+  superfluous-actions:
+    # dtolnay/rust-toolchain is intentionally used in 7 places because
+    # (a) it is a single-line, fully-pinned action that the audit
+    # `unpinned-uses` is happy with, (b) Swatinem/rust-cache keys off
+    # the toolchain it installs rather than the rustup default
+    # ~/.cargo dir, and (c) raw `rustup` script steps would replace
+    # one redundant action with a multi-line `curl ... | sh` chain
+    # which zizmor's `artipacked` and `template-injection` audits
+    # routinely flag. See ADR-013 for the rejected alternative.
+    ignore:
+      # reason: dtolnay/rust-toolchain intentional in repo-shape job (caching its install)
+      - ci.yml:92
+      # reason: dtolnay/rust-toolchain intentional in active-crates job (uses Swatinem/rust-cache keying)
+      - ci.yml:238
+      # reason: dtolnay/rust-toolchain intentional in chain-core job (Rust toolchain pin)
+      - ci.yml:291
+      # reason: dtolnay/rust-toolchain intentional in dependency-audit job (cargo-audit needs stable Rust)
+      - ci.yml:352
+      # reason: dtolnay/rust-toolchain intentional in developer-quickstart job (DX-001 gate)
+      - ci.yml:470
+      # reason: dtolnay/rust-toolchain intentional in operator-network job (operator bundle build)
+      - ci.yml:511
+      # reason: dtolnay/rust-toolchain intentional in chain-clippy job (workspace clippy)
+      - ci.yml:543
+      # reason: dtolnay/rust-toolchain intentional in zizmor-policy job (CI-SEC-001 gate)
+      - ci.yml:577
