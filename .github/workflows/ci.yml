@@ -469,6 +469,11 @@ jobs:
           SKIP_WASM_BUILD: "1"
         run: bash tests/e2e/bridge_benchmark_dossier.sh
 
+      - name: Verify F-012 Call Break benchmark dossier
+        env:
+          SKIP_WASM_BUILD: "1"
+        run: bash tests/e2e/call_break_benchmark_dossier.sh
+
   developer-quickstart:
     name: Developer Quickstart
     runs-on: ubuntu-latest

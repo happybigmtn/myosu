@@ -6,6 +6,7 @@
 //! surface.
 
 pub mod bridge_benchmark;
+pub mod call_break_benchmark;
 pub mod cards;
 pub mod combinatorics;
 pub mod core;
@@ -27,6 +28,7 @@ pub mod state;
 pub mod wire;
 
 pub use bridge_benchmark::{BridgeBenchmarkDossier, BridgeDossierError};
+pub use call_break_benchmark::{CallBreakBenchmarkDossier, CallBreakDossierError};
 pub use cribbage_benchmark::{CribbageBenchmarkDossier, CribbageDossierError};
 pub use engine::{
     EngineAnswer, EngineTier, PortfolioEngineError, answer_game, answer_typed_challenge,

@@ -1110,6 +1110,334 @@ const SPADES_SCENARIO_PACK: &[SpadesScenario] = &[
     },
 ];
 
+/// Hand-verified 22-scenario pack for the F-012 Call Break benchmark dossier.
+///
+/// The Call Break `state-aware call-break trick heuristic` engine reads
+/// `trump_count`, `contract_pressure`, `winners`, `void_suits`,
+/// `cards_in_trick`, and `follow_suit_forced` from the typed
+/// `TrickTakingChallenge`. The engine does not read `nil_viable` or
+/// `moon_shot_viable` (`feature_view` keeps them at the Call Break-correct
+/// values — `nil_viable = (winners == 0 && trump_count == 0)` and
+/// `moon_shot_viable = false`); they are kept in the struct for shape
+/// parity with `TrickTakingChallenge` and the dossier hash. `penalty_pressure`
+/// is pinned to 0 (only the Hearts engine reads it; `feature_view` keeps
+/// it at 0 for Call Break).
+///
+/// Every scenario below is hand-verified against the
+/// `state-aware call-break trick heuristic` math in
+/// `engines/trick_taking.rs::call_break` (the three legal actions are
+/// `CallTrump` / `TrumpControl` / `FollowSuit`), and the inline docstring
+/// on each row records the expected heuristic values so the dominant arm
+/// stays dominant by at least 0.04 even on the tightest edge cases.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CallBreakScenario {
+    pub scenario_id: &'static str,
+    pub decision: &'static str,
+    pub trump_count: u8,
+    pub winners: u8,
+    pub void_suits: u8,
+    pub contract_pressure: i8,
+    pub penalty_pressure: u8,
+    pub cards_in_trick: u8,
+    pub follow_suit_forced: bool,
+    pub nil_viable: bool,
+}
+
+/// Return the canonical 22-scenario Call Break benchmark pack.
+///
+/// Coverage requirements (mirrors `genesis/plans/009-cribbage-deepening.md`
+/// R1 layout, scoped to the Call Break engine surface):
+/// - call_trump dominance × 6 (rich-cp, rich-mid-cp, cp-mid, cp-rich-voided,
+///   clean-cp, trump-rich-with-winners)
+/// - trump_control dominance × 6 (winners-rich-voided, winners-rich-cp-zero,
+///   winners-mid-voided, winners-rich-mixed, voided-rich-winners,
+///   cards-in-trick-winners)
+/// - follow_suit dominance × 6 (clean-forced, forced-voided,
+///   forced-with-light-winners, forced-trick-end, forced-cards-in-trick,
+///   forced-mid-cp)
+/// - mixed/edge × 4 (call-rich-everything, ct-tc-edge-voided,
+///   fs-tc-edge, call-rich-winners)
+///
+/// Total: 22 labeled scenarios, exceeds the 20-scenario floor. Each scenario
+/// is hand-verified against the `state-aware call-break trick heuristic`
+/// math in `engines/trick_taking.rs::call_break` so the dossier's expected
+/// recommendations are stable across runs. The hand-checked heuristic
+/// values are documented inline in the per-row docstring.
+pub fn call_break_scenario_pack() -> &'static [CallBreakScenario] {
+    CALL_BREAK_SCENARIO_PACK
+}
+
+const CALL_BREAK_SCENARIO_PACK: &[CallBreakScenario] = &[
+    // ---- call_trump bucket (×6) ----
+    CallBreakScenario {
+        scenario_id: "ct-call-trump-rich-cp",
+        decision: "Heavy trump + mid contract pressure on a free lead — call_trump dominates (ct≈3.95, tcc≈1.10, fs≈0.70)",
+        trump_count: 4,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 2,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "ct-trump-rich-mid-cp",
+        decision: "Five trumps + light contract pressure — call_trump dominates (ct≈4.20, tcc≈1.10, fs≈0.70)",
+        trump_count: 5,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 1,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "ct-trump-cp-mid",
+        decision: "Three trumps + mid contract pressure with one card already in trick — call_trump dominates (ct≈3.05, tcc≈1.10, fs≈0.70)",
+        trump_count: 3,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 2,
+        penalty_pressure: 0,
+        cards_in_trick: 1,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "ct-trump-cp-rich-voided",
+        decision: "Three trumps + heavy contract pressure + one void on a free lead — call_trump dominates (ct≈3.70, tcc≈1.25, fs≈0.70)",
+        trump_count: 3,
+        winners: 0,
+        void_suits: 1,
+        contract_pressure: 3,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "ct-clean-cp",
+        decision: "Light trumps + mid contract pressure on a free lead — call_trump dominates (ct≈2.85, tcc≈1.10, fs≈0.70)",
+        trump_count: 2,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 2,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "ct-trump-rich-with-winners",
+        decision: "Four trumps + two winners + light contract pressure — call_trump still dominates (ct≈3.65, tcc≈1.80, fs≈0.94)",
+        trump_count: 4,
+        winners: 2,
+        void_suits: 0,
+        contract_pressure: 1,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    // ---- trump_control bucket (×6) ----
+    CallBreakScenario {
+        scenario_id: "tc-winners-rich-voided",
+        decision: "Four winners + two voids + no contract pressure — trump_control dominates (tcc≈2.80, ct≈1.15, fs≈1.18)",
+        trump_count: 0,
+        winners: 4,
+        void_suits: 2,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "tc-winners-rich-cp-zero",
+        decision: "Four winners + one trump + no contract pressure — trump_control dominates (tcc≈2.50, ct≈1.70, fs≈1.18)",
+        trump_count: 1,
+        winners: 4,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "tc-winners-mid-voided",
+        decision: "Three winners + one void + one card in trick + no contract pressure — trump_control dominates (tcc≈2.30, ct≈0.80, fs≈1.06)",
+        trump_count: 0,
+        winners: 3,
+        void_suits: 1,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 1,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "tc-winners-rich-mixed",
+        decision: "Four winners + one void + light contract pressure — trump_control dominates (tcc≈2.65, ct≈1.45, fs≈1.18)",
+        trump_count: 0,
+        winners: 4,
+        void_suits: 1,
+        contract_pressure: 1,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "tc-voided-rich-winners",
+        decision: "Three winners + three voids + no contract pressure — trump_control dominates (tcc≈2.60, ct≈1.15, fs≈1.06)",
+        trump_count: 0,
+        winners: 3,
+        void_suits: 3,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "tc-cards-in-trick-winners",
+        decision: "Three winners + one trump + two cards in trick — trump_control dominates (tcc≈2.15, ct≈1.35, fs≈1.06)",
+        trump_count: 1,
+        winners: 3,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 2,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    // ---- follow_suit bucket (×6) ----
+    CallBreakScenario {
+        scenario_id: "fs-clean-forced",
+        decision: "Forced to follow suit with no other pressure — follow dominates (fs≈1.40, ct≈1.15, tcc≈0.90)",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "fs-forced-voided",
+        decision: "Forced to follow suit with two void suits — follow dominates (fs≈1.40, tcc≈1.20, ct≈1.15)",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 2,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "fs-forced-with-light-winners",
+        decision: "Forced to follow suit with one light winner — follow dominates (fs≈1.52, tcc≈1.25, ct≈1.15)",
+        trump_count: 0,
+        winners: 1,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "fs-forced-trick-end",
+        decision: "Forced to follow suit late in the trick (trick-end cleanup) — follow dominates (fs≈1.40, tcc≈0.90, ct≈0.80)",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 3,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "fs-forced-cards-in-trick",
+        decision: "Forced to follow suit with one card in trick — follow dominates (fs≈1.40, tcc≈0.90, ct≈0.80)",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 1,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "fs-forced-mid-cp",
+        decision: "Forced to follow suit with one trump + one card in trick + zero contract pressure — follow dominates (fs≈1.40, ct≈1.35, tcc≈0.90)",
+        trump_count: 1,
+        winners: 0,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 1,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    // ---- mixed/edge bucket (×4) ----
+    CallBreakScenario {
+        scenario_id: "mixed-call-rich-everything",
+        decision: "Three trumps + one winner + one void + mid contract pressure — call_trump dominates (ct≈3.40, tcc≈1.60, fs≈0.82)",
+        trump_count: 3,
+        winners: 1,
+        void_suits: 1,
+        contract_pressure: 2,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "mixed-ct-tc-edge-voided",
+        decision: "Zero trumps + two voids + light contract pressure on a free lead — call_trump edges trump_control (ct≈1.45, tcc≈1.40, fs≈0.70)",
+        trump_count: 0,
+        winners: 0,
+        void_suits: 2,
+        contract_pressure: 1,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "mixed-fs-tc-edge",
+        decision: "Forced follow + two winners + zero contract pressure — follow edges trump_control (fs≈1.64, tcc≈1.60, ct≈1.15)",
+        trump_count: 0,
+        winners: 2,
+        void_suits: 0,
+        contract_pressure: 0,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: true,
+        nil_viable: false,
+    },
+    CallBreakScenario {
+        scenario_id: "mixed-call-rich-winners",
+        decision: "Two trumps + two winners + light contract pressure — call_trump dominates (ct≈2.55, tcc≈1.80, fs≈0.94)",
+        trump_count: 2,
+        winners: 2,
+        void_suits: 0,
+        contract_pressure: 1,
+        penalty_pressure: 0,
+        cards_in_trick: 0,
+        follow_suit_forced: false,
+        nil_viable: false,
+    },
+];
+
 /// The Bridge `state-aware bridge control heuristic` engine reads
 /// `winners`, `trump_count`, `contract_pressure`, `cards_in_trick`,
 /// `follow_suit_forced`, and `void_suits` from the typed
