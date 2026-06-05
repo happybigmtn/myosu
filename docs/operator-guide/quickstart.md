@@ -345,6 +345,12 @@ That path should emit:
 
 Use the deeper docs when you need more than the zero-to-running path:
 
+- [`zero-to-running.md`](./zero-to-running.md) for the executable
+  end-to-end proof that composes the per-step path below into one
+  on-host zero-to-running harness
+  (`bash tests/e2e/operator_bundle_live.sh` walks an operator through
+  chain boot → miner registration → two-validator scoring → chain
+  restart → live-read proof, with the failure mode for every step)
 - [`architecture.md`](./architecture.md) for the operator-facing explanation of
   how chain, miner, validator, gameplay, and keys fit together
 - [`upgrading.md`](./upgrading.md) for release semantics, upgrade windows,

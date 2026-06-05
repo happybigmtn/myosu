@@ -1044,3 +1044,72 @@ jobs:
         # failing sub-check. See `INVARIANTS.md` INV-003 for the
         # public determinism contract this job pins.
         run: bash tests/e2e/multi_host_validator_determinism.sh
+
+  operator-bundle-live:
+    name: Operator bundle end-to-end live proof (W-05)
+    runs-on: ubuntu-latest
+    needs: repo-shape
+    timeout-minutes: 60
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        # Pinned via the same toolchain action the rest of the
+        # workspace uses so the rust-cache key stays coherent
+        # (see `.github/zizmor.yml` `dtolnay/rust-toolchain` rule
+        # with the per-line `# reason:` justification).
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: wasm32v1-none
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+
+      - name: Verify W-05 operator-bundle end-to-end live proof
+        # W-05 proof harness: composes the existing P0 surfaces
+        # into one operator-facing zero-to-running proof that an
+        # operator can run from a clean machine and walk through
+        # end-to-end. Asserts (1) the chain's `chain_getHeader`
+        # returns a parseable block (the live RPC half of the
+        # operator-bundle invariant), (2) the chain reaches the
+        # operator-side target block, (3) the subnet-owner init
+        # prints the `SUBTOKEN ... subnet ok` line (proves the
+        # testnet-spec bootstrap is reached), (4) the miner
+        # bootstrap prints `MINER ... bootstrap ok` +
+        # `REGISTRATION ... subnet ok` + `AXON ... publish ok` +
+        # `TRAINING ... batch ok` + `STRATEGY ... query ok`, (5)
+        # both validator bootstraps print `VALIDATOR ... bootstrap
+        # ok` + `REGISTRATION ... subnet ok` + `PERMIT ... ready
+        # ok` + `VALIDATION ... score ok` + `WEIGHTS ...
+        # submission ok`, (6) `compose_proof_driver` reports
+        # `agreement_within_epsilon=true` AND
+        # `validator_a_target_weight == validator_b_target_weight`
+        # (the integer-equal INV-003 agreement check on the
+        # on-chain `Weights` row), (7) after the chain restart,
+        # the new `chain_getHeader` returns a parseable block
+        # AND the post-restart tip is strictly greater than the
+        # pre-restart tip, and (8) after the restart,
+        # `myosu-play --read-solved` reports `status=solved` with
+        # a 64-hex `bundle_hash` and a non-negative `emission`
+        # value. The harness composes the testnet entrypoint,
+        # the multi-validator compose proof, and the live-read
+        # proof into a single operator-bundle path. The
+        # companion drift guard is wired into the
+        # `operator-bundle-live` CI job, which uses the
+        # harness's default tunables. See
+        # `docs/operator-guide/zero-to-running.md` for the
+        # operator-facing walkthrough.
+        run: bash tests/e2e/operator_bundle_live.sh
