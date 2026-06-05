@@ -208,3 +208,137 @@ testnet contract for the chain-RPC equivalent).
 - [genesis/plans/000-ceo-testnet-roadmap.md](../../genesis/plans/000-ceo-testnet-roadmap.md) —
   the CEO testnet roadmap that names the read surface as a
   milestone
+
+## Dedicated-solver games (liars-dice, nlhe-heads-up)
+
+The W-03 `myosu-solver-read` binary explicitly rejects the two
+non-portfolio-routed dedicated-solver games (`nlhe-heads-up` and
+`liars-dice`). The W-07 `myosu-solver-read-dedicated` binary is the
+read-only, JSON-in / line-out solver surface for those two games.
+It is a separate binary because the dedicated solver crates have
+different input contracts (a checkpoint file path, and for NLHE an
+encoder directory) than the rule-aware portfolio engine.
+
+### Build
+
+```bash
+SKIP_WASM_BUILD=1 cargo build -p myosu-solver-read-dedicated --bin myosu-solver-read-dedicated
+```
+
+The binary lives at `target/debug/myosu-solver-read-dedicated`.
+
+### Stable input JSON shape
+
+The binary reads a single JSON object from stdin:
+
+```json
+{
+  "game": "liars-dice",
+  "checkpoint": "/absolute/path/to/checkpoint.bin",
+  "query": { <LiarsDiceStrategyQuery JSON> }
+}
+```
+
+or for NLHE:
+
+```json
+{
+  "game": "nlhe-heads-up",
+  "checkpoint": "/absolute/path/to/checkpoint.bin",
+  "encoder_dir": "/absolute/path/to/nlhe/encoder/dir",
+  "query": { <NlheStrategyQuery JSON> }
+}
+```
+
+`game` is one of `liars-dice` or `nlhe-heads-up`. `checkpoint` is a
+`MYOS`-magic + version-1 checkpoint file produced by the matching
+dedicated solver crate. `encoder_dir` is required only for NLHE and
+must be the bootstrap encoder directory shape the
+`myosu-games-poker` artifact surface documents. `query` is the same
+wire type the W-02 policy-bundle examples serialize. The outer
+request uses `#[serde(deny_unknown_fields)]`, so unknown top-level
+fields fail closed.
+
+### Stable line protocol
+
+For every well-formed request, the binary prints exactly one line
+to stdout:
+
+```text
+SOLVER_READ game=<slug> action=<edge-debug> confidence=<f32> engine_tier=dedicated-cfr checkpoint_sha256=<64-hex> legal_action_count=<usize> elapsed_ms=<u64>
+```
+
+The `checkpoint_sha256` field is the SHA-256 of the checkpoint file
+bytes the answer was computed from, so an operator can `sha256sum`
+the checkpoint locally and verify the answer's provenance.
+
+For every malformed / fail-closed request, the binary prints
+exactly one line to stdout and exits non-zero:
+
+```text
+SOLVER_READ_FAIL reason=<reason>
+```
+
+The `reason` field is sanitized (embedded newlines collapsed to
+`\\n`, embedded `=` replaced with `_`) so a wrapper script can
+`grep ^SOLVER_READ_FAIL reason=...` without a multi-line parser.
+
+### Fail-closed responses
+
+| Trigger | Line | Exit code |
+|---|---|---|
+| Empty stdin | `SOLVER_READ_FAIL reason=io: empty stdin` | non-zero |
+| Malformed JSON | `SOLVER_READ_FAIL reason=query_decode: ...` | non-zero |
+| Unknown `game` slug | `SOLVER_READ_FAIL reason=unknown_game: <slug>` | non-zero |
+| Missing `checkpoint` field | `SOLVER_READ_FAIL reason=query_decode: ...` | non-zero |
+| Checkpoint does not exist | `SOLVER_READ_FAIL reason=not_a_directory: <path>` | non-zero |
+| Checkpoint is empty | `SOLVER_READ_FAIL reason=empty_checkpoint: <path>` | non-zero |
+| Checkpoint magic wrong | `SOLVER_READ_FAIL reason=checkpoint_magic: <found>` | non-zero |
+| Checkpoint version wrong | `SOLVER_READ_FAIL reason=checkpoint_version: found=X expected=1` | non-zero |
+| Missing `encoder_dir` (NLHE) | `SOLVER_READ_FAIL reason=missing_encoder_dir` | non-zero |
+| `encoder_dir` not a directory | `SOLVER_READ_FAIL reason=not_a_directory: <path>` | non-zero |
+| Encoder directory fails to load | `SOLVER_READ_FAIL reason=encoder_load: ...` | non-zero |
+| Solver fails to load checkpoint | `SOLVER_READ_FAIL reason=solver_load: ...` | non-zero |
+| Query decode fails | `SOLVER_READ_FAIL reason=query_decode: ...` | non-zero |
+| Empty recommendation | `SOLVER_READ_FAIL reason=empty_recommendation` | non-zero |
+| Non-finite confidence | `SOLVER_READ_FAIL reason=non_finite_confidence: ...` | non-zero |
+
+### How the surface is wired
+
+- **Binary**: `crates/myosu-solver-read-dedicated/src/bin/myosu_solver_read_dedicated.rs`
+  (the entry point, stdin→JSON→dispatch→`SOLVER_READ` line, plus
+  sanitize-and-exit-1 failure path)
+- **Public dispatch surface**: `myosu_solver_read_dedicated::answer_liars_dice`
+  and `myosu_solver_read_dedicated::answer_nlhe` (the typed helpers
+  that load the checkpoint + encoder and run the query)
+- **Recommended-action helpers**:
+  `myosu_solver_read_dedicated::liars_dice_recommendation` and
+  `myosu_solver_read_dedicated::nlhe_recommendation` (the argmax
+  pickers that turn a solver response into the single label the
+  line protocol prints)
+- **Checkpoint hash helper**:
+  `myosu_solver_read_dedicated::checkpoint_sha256` (SHA-256 over
+  the checkpoint bytes, lowercase hex)
+- **Proof harness**: `tests/e2e/solver_read_dedicated.sh` (8
+  sub-checks: binary builds, Liar's Dice happy path, NLHE happy
+  path, unknown slug fail-closed, missing checkpoint fail-closed,
+  missing encoder_dir fail-closed, checkpoint SHA-256 byte-stable,
+  crate unit tests green)
+- **CI job**: `.github/workflows/ci.yml`
+  `solver-read-dedicated` job (the executable gate that runs the
+  proof harness on every push / PR)
+- **README pointer**: `README.md` Operator Path (the one-line link
+  an operator follows to reach this doc)
+
+### Companion docs
+
+- [docs/operator-guide/public-testnet.md](public-testnet.md) — the
+  chain-side public read contract (W-01)
+- [docs/operator-guide/quickstart.md](quickstart.md) — the operator
+  path that this surface is a thin slice of
+- `crates/myosu-games-liars-dice/src/policy_bundle.rs` — the Liar's
+  Dice policy-bundle builder that defines the `LiarsDiceStrategyQuery`
+  JSON contract
+- `crates/myosu-games-poker/src/policy_bundle.rs` — the NLHE
+  policy-bundle builder that defines the `NlheStrategyQuery` JSON
+  contract

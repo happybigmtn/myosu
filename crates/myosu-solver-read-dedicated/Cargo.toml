@@ -1,0 +1,29 @@
+[package]
+name = "myosu-solver-read-dedicated"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Read-only, JSON-in / line-out solver surface for the two dedicated-solver games (liars-dice, nlhe-heads-up). W-07 sibling to the W-03 portfolio `myosu-solver-read` binary."
+
+[[bin]]
+name = "myosu-solver-read-dedicated"
+path = "src/bin/myosu_solver_read_dedicated.rs"
+
+[lib]
+name = "myosu_solver_read_dedicated"
+path = "src/lib.rs"
+
+[dependencies]
+myosu-games-liars-dice = { path = "../myosu-games-liars-dice" }
+myosu-games-poker = { path = "../myosu-games-poker" }
+rbp-gameplay = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef" }
+rbp-mccfr = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
+rbp-nlhe = { git = "https://github.com/happybigmtn/robopoker", rev = "04716310143094ab41ec7172e6cea5a2a66744ef", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "1"
+
+[lints]
+workspace = true

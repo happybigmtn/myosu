@@ -90,7 +90,7 @@ fn main() -> ExitCode {
     }
     if !parsed_game.is_portfolio_routed() {
         return fail(format!(
-            "not_portfolio_routed: {parsed_game} has a dedicated solver crate; use that crate's read surface"
+            "not_portfolio_routed: {parsed_game} has a dedicated solver crate; use myosu-solver-read-dedicated"
         ));
     }
 

@@ -159,6 +159,17 @@ here:
 - `bash tests/e2e/solver_read.sh` and the `solver-read` CI job
   for the executable line-protocol and supported-slug drift guard
 
+The two dedicated-solver games (`nlhe-heads-up`, `liars-dice`) are
+explicitly rejected by the portfolio binary and have their own
+read-only surface:
+
+- [docs/operator-guide/agent-api.md#dedicated-solver-games-liars-dice-nlhe-heads-up](docs/operator-guide/agent-api.md)
+  for the `myosu-solver-read-dedicated` binary contract, the
+  checkpoint + encoder-dir input shape, the dedicated-game
+  `SOLVER_READ` line protocol, and the W-07 proof harness
+- `bash tests/e2e/solver_read_dedicated.sh` and the
+  `solver-read-dedicated` CI job for the executable drift guard
+
 ### Validator scoring observability
 
 Every bounded validator scoring pass emits one grep-friendly

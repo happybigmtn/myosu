@@ -1113,3 +1113,53 @@ jobs:
         # `docs/operator-guide/zero-to-running.md` for the
         # operator-facing walkthrough.
         run: bash tests/e2e/operator_bundle_live.sh
+
+  solver-read-dedicated:
+    name: Operator dedicated-solver read surface (W-07)
+    runs-on: ubuntu-latest
+    needs: active-crates
+    env:
+      SKIP_WASM_BUILD: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        # Pinned via the same toolchain action the rest of the
+        # workspace uses so the rust-cache key stays coherent
+        # (see `.github/zizmor.yml` `dtolnay/rust-toolchain` rule
+        # with the per-line `# reason:` justification).
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          cache-on-failure: true
+
+      - name: Verify W-07 operator dedicated-solver read surface
+        # W-07 proof harness: asserts (1) the
+        # `myosu-solver-read-dedicated` binary builds, (2) a
+        # Liar's Dice JSON request round-trips through the binary
+        # and emits a `SOLVER_READ game=liars-dice action=...
+        # confidence=... engine_tier=dedicated-cfr
+        # checkpoint_sha256=64-hex legal_action_count=N
+        # elapsed_ms=N` line, (3) the same for NLHE
+        # (`game=nlhe-heads-up`), (4) an unknown game slug fails
+        # closed with `SOLVER_READ_FAIL reason=unknown_game: ...`,
+        # (5) a missing checkpoint fails closed with
+        # `SOLVER_READ_FAIL reason=not_a_directory: ...`, (6) a
+        # missing `encoder_dir` for NLHE fails closed with
+        # `SOLVER_READ_FAIL reason=missing_encoder_dir`, (7) the
+        # checkpoint SHA-256 is byte-stable across two runs of the
+        # same checkpoint, and (8) the full
+        # `myosu-solver-read-dedicated` crate test suite stays
+        # green. The harness has no chain or runtime dependency;
+        # it is a pure cargo build + cargo test + process-spawn
+        # gate. A drift in any of the eight checks fails the gate
+        # with a concrete error message that names the failing
+        # sub-check. See `docs/operator-guide/agent-api.md` for
+        # the public contract this job pins.
+        run: bash tests/e2e/solver_read_dedicated.sh

@@ -307,4 +307,20 @@ full_pass_line="$(
 )"
 printf 'SOLVER_READ_HARNESS full portfolio suite: %s\n' "$full_pass_line"
 
+# -- 10. The dedicated-solver pointer is present in the W-03 binary's
+# `not_portfolio_routed` source path so an operator running the W-03
+# binary discovers the W-07 `myosu-solver-read-dedicated` binary when
+# they accidentally route `liars-dice` or `nlhe-heads-up` through the
+# portfolio surface. The runtime path to this message requires a
+# portfolio-challenge shape that matches the dedicated slug; that
+# shape does not exist (NlheHeadsUp and LiarsDice have no
+# PortfolioChallenge variants by design), so the source-path grep is
+# the regression guard instead.
+if ! grep -Fq 'use myosu-solver-read-dedicated' \
+    crates/myosu-games-portfolio/src/bin/myosu_solver_read.rs; then
+    printf 'solver_read: W-03 not_portfolio_routed reason does not reference myosu-solver-read-dedicated\n' >&2
+    exit 1
+fi
+printf 'SOLVER_READ_HARNESS dedicated_solver_pointer=ok source=myosu_solver_read.rs\n'
+
 printf 'SOLVER_READ_HARNESS myosu e2e ok binary=%s\n' "$binary_path"

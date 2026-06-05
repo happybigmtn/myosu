@@ -14,6 +14,7 @@ members = [
     "crates/myosu-miner",
     "crates/myosu-validator",
     "crates/myosu-chain/pallets/game-solver",  # Stage 0: Core pallet (CF-06)
+    "crates/myosu-solver-read-dedicated",      # W-07: dedicated-solver read surface
     "crates/myosu-chain/runtime",             # Plan 007: runtime packaging restart
     "crates/myosu-chain/node",                # Plan 007: node packaging restart
 ]

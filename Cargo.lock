@@ -8016,6 +8016,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "myosu-solver-read-dedicated"
+version = "0.1.0"
+dependencies = [
+ "myosu-games-liars-dice",
+ "myosu-games-poker",
+ "rbp-gameplay",
+ "rbp-mccfr",
+ "rbp-nlhe",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "myosu-tui"
 version = "0.1.0"
 dependencies = [
