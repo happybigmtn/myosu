@@ -72,6 +72,7 @@ ignore = [
   "RUSTSEC-2026-0105",
   "RUSTSEC-2026-0118",
   "RUSTSEC-2026-0119",
+  "RUSTSEC-2026-0173",
 ]
 
 # The SEC-001 allowlist is the source of truth. The list above is a

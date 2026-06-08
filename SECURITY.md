@@ -90,7 +90,7 @@ This repository does not currently run a bug bounty program.
 
 ## SEC-001 Advisory Triage Table
 
-All 38 RUSTSEC advisories currently suppressed in
+All 39 RUSTSEC advisories currently suppressed in
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) and
 [`.cargo/audit.toml`](.cargo/audit.toml) are triaged below per the
 [security-posture spec](specs/110426-security-posture.md) (plan 008).
@@ -113,7 +113,7 @@ not actively blocked.
 | Bucket | Count | Definition |
 |--------|------:|-----------|
 | `direct-owned`     |  1 | Myosu crates depend on the affected crate directly. We own the decision to remediate, accept, or defer. |
-| `inherited-chain`  | 12 | Affected crate is reachable only through the opentensor `polkadot-sdk` fork. No Myosu game, miner, validator, or operator code path reaches the affected component. The fork is pinned to rev `71629fd93b6c12a362a5cfb6331accef9b2b2b61` and not rebased in this repository. |
+| `inherited-chain`  | 13 | Affected crate is reachable only through the opentensor `polkadot-sdk` fork. No Myosu game, miner, validator, or operator code path reaches the affected component. The fork is pinned to rev `71629fd93b6c12a362a5cfb6331accef9b2b2b61` and not rebased in this repository. |
 | `inherited-wasm`   | 17 | `wasmtime 8.0.1` advisories on the chain runtime's prepare / PVF (parachain validation function) path. Live mainnet operations are blocked; only the dev / local loop exercises this code. |
 | `inherited-misc`   |  8 | One-off `libp2p` / `rand` / `libsecp256k1` / `rustls-webpki` / `hickory-proto` / `core2` surface in the chain runtime; no direct Myosu game or operator code path reaches them. |
 
@@ -152,6 +152,7 @@ repository (SEC-001 scope boundary).
 | RUSTSEC-2025-0055 | `tracing-subscriber 0.2.25` | Logging user input may result in poisoning logs with ANSI escape sequences | `tracing-subscriber = "0.3"` is used directly by `myosu-miner`, `myosu-validator`, and `myosu-play` (`Cargo.toml:30`). The vulnerable 0.2.25 instance is reached only through a polkadot-sdk fork transitive (via `sc-tracing` / `tracing-log`). Myosu writes operator-controlled strings into spans but not into the chain-runtime tracing path that contains the unpatched 0.2.25. The fork cannot be rebased in this repo (SEC-001 scope boundary). |
 | RUSTSEC-2025-0057 | `fxhash 0.2.1` | `fxhash` is no longer maintained | Reached via polkadot-sdk fork. No direct Myosu code path uses `fxhash`. |
 | RUSTSEC-2026-0002 | `lru 0.11.1` / `0.12.5` | `IterMut` violates Stacked Borrows by invalidating internal pointer | `lru` is reached only via polkadot-sdk fork (no direct Myosu `Cargo.toml` dependency). The fork is pinned; remediation requires a fork rebase which is out of scope for SEC-001. |
+| RUSTSEC-2026-0173 | `proc-macro-error2 2.0.1` | `proc-macro-error2` is unmaintained | Build-time proc-macro reached transitively via `subxt-macro 0.41.0` (used by `frame-benchmarking-cli` and `alloy-sol-macro-expander`) inside the opentensor `polkadot-sdk` fork. No Myosu game, miner, validator, or operator binary imports `subxt-macro` or `proc-macro-error2` directly; the only reachable code path is the chain runtime's `construct_runtime!` macro expansion. The fork is pinned and not rebased in this repository. |
 
 ### `inherited-wasm` (17)
 
