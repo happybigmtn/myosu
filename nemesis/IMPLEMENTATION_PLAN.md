@@ -130,7 +130,7 @@ Completion signal: Log output for >0 rao diff includes actual diff magnitude, ex
 
 ---
 
-### `- [ ] NEM-007 Document INV-006 MCCFR review gate as blocking in CI`
+### `- [x] NEM-007 Document INV-006 MCCFR review gate as blocking in CI`
 
 Spec: INV-006 enforcement
 Why now: INV-006 states MCCFR algorithm changes require review but enforcement is advisory (`continue-on-error: true`). A silent MCCFR correctness change could ship without review.
@@ -141,6 +141,8 @@ Scope boundary: Documentation and proposed process hardening. Does not change CI
 Required tests: ADR file exists and is linked from `INVARIANTS.md` INV-006 section.
 Dependencies: None.
 Completion signal: ADR exists at `docs/adr/007-mccfr-review-gate.md` with review checklist and proposed blocking gate criteria.
+
+Resolution: shipped NEM-007 as one coherent documented-policy + checklist + proof-harness change. The new ADR lives at `docs/adr/015-mccfr-review-gate.md` (the original plan called for ADR 007 but `docs/adr/007-checkpoint-versioning.md` was already taken; ADR 015 was the next free slot). The ADR records (a) the current advisory enforcement (the `robopoker-fork-coherence` CI job runs with `continue-on-error: true` and `.github/scripts/check_robopoker_fork_status.sh` emits only a `::warning` annotation on divergence), (b) the chosen direction (land a documented review gate + checklist + proof harness with the existing advisory enforcement still in place; the blocking-gate follow-on is `docs/adr/016-mccfr-blocking-gate.md` per the ADR's `## Follow-up` section), (c) the four MCCFR-relevant change criteria (regret update formula, averaging/sampling formula, sampling method, public MCCFR-API signature change — the single, stable, grep-able definition of "what counts as MCCFR" for the purposes of INV-006), (d) the ten-item review checklist template (copy-paste into the PR description when a fork commit triggers it). `INVARIANTS.md` INV-006 section cross-references the new ADR from the `Enforcement` and `Fallback mode` lines. `docs/robopoker-fork-changelog.md` gains a `## Review Checklist Pointer` section that links the changelog to the new ADR. `tests/e2e/mccfr_review_gate.sh` is the new executable end-to-end gate (7 sub-checks: ADR exists with expected header, INV-006 cross-references ADR, fork changelog has Review Checklist Pointer linking to ADR, all 4 MCCFR-relevant change criteria phrases present in ADR, review checklist code block contains exactly 10 numbered items, `mccfr-review-gate` CI job wired in `.github/workflows/ci.yml`, NEM-007 row `[x]` in both `IMPLEMENTATION_PLAN.md` and `nemesis/IMPLEMENTATION_PLAN.md`). `.github/workflows/ci.yml` gains a `mccfr-review-gate` CI job (pure bash + grep, no `dtolnay/rust-toolchain` step, so the existing `.github/zizmor.yml` per-line `superfluous-actions` ignore list is unchanged). Proof: `bash tests/e2e/mccfr_review_gate.sh` exits 0 with `mccfr_review_gate: ok (ADR exists; INV-006 cross-references ADR; fork changelog has Review Checklist Pointer; 4 MCCFR-relevant change criteria present; review checklist has 10 numbered items; mccfr-review-gate CI job wired; NEM-007 row [x] in both plans)`; `bash tests/e2e/sec001_allowlist_consistency.sh` still exits 0; `bash tests/e2e/sec001_allowlist_staleness_probe.sh` still exits 0; `bash tests/e2e/zizmor_policy.sh` still exits 0.
 
 ---
 

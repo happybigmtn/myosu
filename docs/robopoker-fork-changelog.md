@@ -64,3 +64,18 @@ in the same slice that changes the pinned robopoker rev in the workspace.
 Security-driven pin changes follow
 [`ops/cve-tracking-process.md`](../ops/cve-tracking-process.md) and should
 update both this changelog and the stage-0 security audit snapshot together.
+
+## Review Checklist Pointer
+
+Any robopoker fork commit that touches one of the four
+MCCFR-relevant change criteria in
+[`docs/adr/015-mccfr-review-gate.md`](../adr/015-mccfr-review-gate.md)
+(regret update formula, averaging / sampling formula, sampling method,
+or public MCCFR-API signature change) must complete the
+review checklist template in that ADR. The four criteria are the
+single, stable, grep-able definition of "what counts as MCCFR"
+for the purposes of INV-006. The
+`tests/e2e/mccfr_review_gate.sh` proof harness is the
+executable end-to-end gate that asserts this pointer, the
+criteria list, the checklist template, the INV-006
+cross-reference, and the CI job wiring all stay in sync.

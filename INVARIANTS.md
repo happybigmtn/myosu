@@ -97,7 +97,18 @@ Hard rules for the myosu game-solving subnet chain.
 - Why: We own the fork but the v1.0.0 MCCFR engine is proven. Diverging from
   core algorithm correctness risks solver quality.
 - Enforcement: workspace `Cargo.toml` pins plus
-  `docs/robopoker-fork-changelog.md`.
-- Measurement: diff between fork and v1.0.0 tag is documented and intentional.
+  `docs/robopoker-fork-changelog.md`, plus the MCCFR review gate in
+  `docs/adr/015-mccfr-review-gate.md` (which defines the four
+  MCCFR-relevant change criteria and the review checklist template
+  that a reviewer must complete when a robopoker fork commit
+  touches a regret-update, averaging/sampling, sampling-method, or
+  public-API signature surface in `rbp-mccfr`).
+- Measurement: diff between fork and v1.0.0 tag is documented and intentional;
+  the `tests/e2e/mccfr_review_gate.sh` proof harness asserts the
+  ADR/INVARIANTS/changelog trio stays in sync.
 - No-ship rule: undocumented algorithm changes are `S2`.
-- Fallback mode: document the change, review for correctness.
+- Fallback mode: document the change, review for correctness. The
+  review checklist template in `docs/adr/015-mccfr-review-gate.md`
+  is the auditable surface for the review (the CI enforcement of
+  "block on MCCFR-relevant change" is a follow-on ADR; see the
+  `## Follow-up` section of `docs/adr/015-mccfr-review-gate.md`).
