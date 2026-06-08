@@ -183,15 +183,9 @@ impl<T: Config> Pallet<T> {
 
                     // Cleanup WeightCommits
                     let _ = WeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
-
-                    #[cfg(feature = "legacy-subtensor-tests")]
-                    {
-                        let _ = TimelockedWeightCommits::<T>::clear_prefix(
-                            netuid_index,
-                            u32::MAX,
-                            None,
-                        );
-                    }
+                    // (TimelockedWeightCommits clear_prefix removed 2026-06-08 —
+                    //  CHAIN-SDK-002 / p-006 Batch 1. The storage itself is removed
+                    //  from `pallet-game-solver` lib.rs.)
                 }
             }
 

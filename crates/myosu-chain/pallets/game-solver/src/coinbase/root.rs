@@ -376,12 +376,10 @@ impl<T: Config> Pallet<T> {
             LastUpdate::<T>::remove(netuid_index);
             Incentive::<T>::remove(netuid_index);
             let _ = WeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
-            #[cfg(feature = "legacy-subtensor-tests")]
-            {
-                let _ = TimelockedWeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
-                let _ = CRV3WeightCommits::<T>::clear_prefix(netuid_index, u32::MAX, None);
-                let _ = CRV3WeightCommitsV2::<T>::clear_prefix(netuid_index, u32::MAX, None);
-            }
+            // (TimelockedWeightCommits / CRV3WeightCommits / CRV3WeightCommitsV2
+            //  clear_prefix removed 2026-06-08 — CHAIN-SDK-002 / p-006 Batch 1.
+            //  The storages themselves are removed from `pallet-game-solver` lib.rs;
+            //  this gated cleanup no longer has any keys to clear.)
             let _ = Bonds::<T>::clear_prefix(netuid_index, u32::MAX, None);
             let _ = Weights::<T>::clear_prefix(netuid_index, u32::MAX, None);
         }
@@ -473,15 +471,11 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        #[cfg(feature = "legacy-subtensor-tests")]
-        {
-            // Remove any carried lease-scoped state linked to this netuid.
-            if let Some(lease_id) = SubnetUidToLeaseId::<T>::take(netuid) {
-                SubnetLeases::<T>::remove(lease_id);
-                let _ = SubnetLeaseShares::<T>::clear_prefix(lease_id, u32::MAX, None);
-                AccumulatedLeaseDividends::<T>::remove(lease_id);
-            }
-        }
+        // (SubnetUidToLeaseId / SubnetLeases / SubnetLeaseShares /
+        //  AccumulatedLeaseDividends lease-cleanup block removed 2026-06-08 —
+        //  CHAIN-SDK-002 / p-006 Batch 1. The storages themselves are removed from
+        //  `pallet-game-solver` lib.rs; this gated cleanup no longer has any
+        //  lease_id to look up.)
 
         // --- Final removal logging.
         log::debug!(

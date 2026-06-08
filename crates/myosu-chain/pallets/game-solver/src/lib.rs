@@ -1212,9 +1212,12 @@ pub mod pallet {
         DefaultZeroU64<T>,
     >;
 
-    /// Ensures unique IDs for StakeJobs storage map
-    #[pallet::storage]
-    pub type NextStakeJobId<T> = StorageValue<_, u64, ValueQuery, DefaultZeroU64<T>>;
+    // (NextStakeJobId removed 2026-06-08 — CHAIN-SDK-002 / p-006 Batch 1.
+    //  Declared at lib.rs:1217 with zero references anywhere in the workspace
+    //  (`grep -rn 'NextStakeJobId' --include='*.rs' crates/` returns only the
+    //  declaration itself). `DefaultZeroU64` is retained because 4 other storage
+    //  items still use it (`NominatorMinRequiredStake`, `TxRateLimit`,
+    //  `LastTxBlockChildKeyTake`, `NumStakingColdkeys`).)
 
     /// ============================
     /// ==== Staking Variables ====
@@ -2294,61 +2297,6 @@ pub mod pallet {
         OptionQuery,
     >;
 
-    /// MAP (netuid, epoch) → VecDeque<(who, commit_block, ciphertext, reveal_round)>
-    #[cfg(feature = "legacy-subtensor-tests")]
-    #[pallet::storage]
-    pub type TimelockedWeightCommits<T: Config> = StorageDoubleMap<
-        _,
-        Twox64Concat,
-        NetUidStorageIndex,
-        Twox64Concat,
-        u64,
-        VecDeque<(
-            T::AccountId,
-            u64,
-            BoundedVec<u8, ConstU32<{ MAX_CRV3_COMMIT_SIZE_BYTES }>>,
-            u64,
-        )>,
-        ValueQuery,
-    >;
-
-    /// MAP (netuid, epoch) → VecDeque<(who, ciphertext, reveal_round)>
-    /// DEPRECATED for CRV3WeightCommitsV2
-    #[cfg(feature = "legacy-subtensor-tests")]
-    #[pallet::storage]
-    pub type CRV3WeightCommits<T: Config> = StorageDoubleMap<
-        _,
-        Twox64Concat,
-        NetUidStorageIndex,
-        Twox64Concat,
-        u64,
-        VecDeque<(
-            T::AccountId,
-            BoundedVec<u8, ConstU32<{ MAX_CRV3_COMMIT_SIZE_BYTES }>>,
-            u64,
-        )>,
-        ValueQuery,
-    >;
-
-    /// MAP (netuid, epoch) → VecDeque<(who, commit_block, ciphertext, reveal_round)>
-    /// DEPRECATED for TimelockedWeightCommits
-    #[cfg(feature = "legacy-subtensor-tests")]
-    #[pallet::storage]
-    pub type CRV3WeightCommitsV2<T: Config> = StorageDoubleMap<
-        _,
-        Twox64Concat,
-        NetUidStorageIndex,
-        Twox64Concat,
-        u64,
-        VecDeque<(
-            T::AccountId,
-            u64,
-            BoundedVec<u8, ConstU32<{ MAX_CRV3_COMMIT_SIZE_BYTES }>>,
-            u64,
-        )>,
-        ValueQuery,
-    >;
-
     /// --- Map (netuid) --> Number of epochs allowed for commit reveal periods
     #[pallet::storage]
     pub type RevealPeriodEpochs<T: Config> =
@@ -2438,35 +2386,11 @@ pub mod pallet {
     /// ========================
     /// ==== Subnet Leasing ====
     /// ========================
-    /// --- MAP ( lease_id ) --> subnet lease | The subnet lease for a given lease id.
-    #[cfg(feature = "legacy-subtensor-tests")]
-    #[pallet::storage]
-    pub type SubnetLeases<T: Config> =
-        StorageMap<_, Twox64Concat, LeaseId, SubnetLeaseOf<T>, OptionQuery>;
-
-    /// --- DMAP ( lease_id, contributor ) --> shares | The shares of a contributor for a given lease.
-    #[cfg(feature = "legacy-subtensor-tests")]
-    #[pallet::storage]
-    pub type SubnetLeaseShares<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, LeaseId, Identity, T::AccountId, U64F64, ValueQuery>;
-
-    /// --- MAP ( netuid ) --> lease_id | The lease id for a given netuid.
-    #[cfg(feature = "legacy-subtensor-tests")]
-    #[pallet::storage]
-    pub type SubnetUidToLeaseId<T: Config> =
-        StorageMap<_, Twox64Concat, NetUid, LeaseId, OptionQuery>;
-
-    /// --- ITEM ( next_lease_id ) | The next lease id.
-    #[cfg(feature = "legacy-subtensor-tests")]
-    #[pallet::storage]
-    pub type NextSubnetLeaseId<T: Config> = StorageValue<_, LeaseId, ValueQuery, ConstU32<0>>;
-
-    /// --- MAP ( lease_id ) --> accumulated_dividends | The accumulated dividends for a given lease that needs to be distributed.
-    #[cfg(feature = "legacy-subtensor-tests")]
-    #[pallet::storage]
-    pub type AccumulatedLeaseDividends<T: Config> =
-        StorageMap<_, Twox64Concat, LeaseId, AlphaCurrency, ValueQuery, DefaultZeroAlpha<T>>;
-
+    // (SubnetLeases / SubnetLeaseShares / SubnetUidToLeaseId / NextSubnetLeaseId /
+    //  AccumulatedLeaseDividends removed 2026-06-08 — CHAIN-SDK-002 / p-006 Batch 1.
+    //  Every item was already gated behind `#[cfg(feature = "legacy-subtensor-tests")]`
+    //  and only referenced from the now-also-gated `tests/leasing.rs` module, so the
+    //  default-build pallet metadata and the live testnet runtime are unchanged.)
     /// ITEM( NetworkRegistrationStartBlock )
     #[pallet::storage]
     pub type NetworkRegistrationStartBlock<T> =
