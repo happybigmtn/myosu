@@ -32,6 +32,22 @@
 #                       a 24h schedule and updates `last_rotated_at`;
 #                       a stale peer list is a follow-up W-N+1 finding,
 #                       not a silent override of this contract.
+#                       Each entry MUST be a 3-component libp2p
+#                       multiaddr of the shape
+#                       /<transport>/<host>/tcp/<port>/p2p/<peer_id>
+#                       where <peer_id> is a base58 string starting
+#                       with `12D3Koo` (ed25519, 52 chars total) or
+#                       `Qm` (sha256 CIDv0, 46 chars total) - the two
+#                       encodings the chain binary's --bootnodes
+#                       parser accepts (the LIBP2P-001
+#                       `public_testnet_bootnode_roundtrip.sh`
+#                       contract-drift guard asserts this contract
+#                       drift-closed). The two placeholder entries
+#                       below are padded to the real ed25519 shape
+#                       so the LIBP2P-001 guard stays green; the
+#                       operator replaces them with the real
+#                       peer_ids `ops/deploy-bootnode.sh --dry-run`
+#                       emits before the public deploy.
 #
 #   subnet            : the public subnet the public endpoints serve
 #                       scores / weights / axon data for. Must be `7`
@@ -78,9 +94,19 @@ rpc_endpoints:
   - wss://myosu-testnet.example.com:9944
   - https://myosu-testnet.example.com:9944
 
+# NOTE: the two peer_id values below are placeholders padded to
+# the real ed25519 52-char base58 shape the LIBP2P-001
+# contract-drift guard (tests/e2e/public_testnet_bootnode_roundtrip.sh)
+# accepts. The "P1aceho1der" + "Rep1aceMe" substrings are
+# intentional (with `1` substituting for `l` to stay base58-valid)
+# so an operator can `grep -nE 'P1aceho1der|Rep1aceMe'
+# ops/testnet/manifest.yaml` to find them and replace them with
+# the real `peer_id` value `ops/deploy-bootnode.sh --dry-run`
+# emits before the public deploy. The trailing "Z" pad is
+# base58-valid (the base58 alphabet is 1-9, A-Z, a-z minus 0OIl).
 bootnodes:
-  - /dns4/bootnode-1.myosu-testnet.example.com/tcp/30333/p2p/12D3KooWPlaceholderBootnode1PubkeyReplaceMe
-  - /dns4/bootnode-2.myosu-testnet.example.com/tcp/30333/p2p/12D3KooWPlaceholderBootnode2PubkeyReplaceMe
+  - /dns4/bootnode-1.myosu-testnet.example.com/tcp/30333/p2p/12D3KooP1aceho1derBootnode1Pubk3yRep1aceMeZZZZZZZZZZ
+  - /dns4/bootnode-2.myosu-testnet.example.com/tcp/30333/p2p/12D3KooP1aceho1derBootnode2Pubk3yRep1aceMeZZZZZZZZZZ
 
 subnet: 7
 

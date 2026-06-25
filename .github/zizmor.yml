@@ -87,3 +87,5 @@ rules:
       - ci.yml:1067
       # reason: dtolnay/rust-toolchain intentional in solver-read-dedicated job (W-07 dedicated-solver read surface gate, Swatinem/rust-cache keying)
       - ci.yml:1135
+      # reason: dtolnay/rust-toolchain intentional in public-testnet-bootnode-roundtrip job (LIBP2P-001 public-testnet bootnode contract-drift guard gate, Swatinem/rust-cache keying)
+      - ci.yml:844
